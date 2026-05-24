@@ -5,11 +5,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { PlaylistsService } from '../services/playlists.service';
-import { PlaylistSummary, PlaylistDetail } from '../../../shared/models/api.models';
-import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
+import { PlaylistSummary, PlaylistDetail, PlaylistTrackItem } from '../../../shared/models/api.models';
+import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
+import { MusicPlayerService } from '../../../shared/services/music-player.service';
+import { CoverArtService } from '../../../shared/services/cover-art.service';
+import { PlayableTrack } from '../../../shared/models/player.models';
 
 const COVERS = [
-  'linear-gradient(135deg, #ff8c42, #7c3aed)',
+  'linear-gradient(135deg, #1ed896, #148f5e)',
   'linear-gradient(135deg, #3b82f6, #1e40af)',
   'linear-gradient(135deg, #10b981, #047857)',
   'linear-gradient(135deg, #ec4899, #9d174d)',
@@ -20,12 +23,14 @@ const COVERS = [
 @Component({
   selector: 'app-playlists',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FavoriteBtnComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent],
   templateUrl: './playlists.component.html',
   styleUrls: ['./playlists.component.css'],
 })
 export class PlaylistsComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  private player = inject(MusicPlayerService);
+  private covers = inject(CoverArtService);
 
   playlists = signal<PlaylistSummary[]>([]);
   selected = signal<PlaylistDetail | null>(null);
@@ -53,6 +58,28 @@ export class PlaylistsComponent implements OnInit {
 
   cover(i: number): string {
     return COVERS[i % COVERS.length];
+  }
+
+  detailGradient(): string {
+    const det = this.selected();
+    return det ? this.covers.gradientFor('pl-' + det.id) : COVERS[0];
+  }
+
+  playlistQueue(tracks: PlaylistTrackItem[]): PlayableTrack[] {
+    return tracks.map((t) => ({
+      id: t.id_track,
+      title: t.nombre_track ?? '—',
+      artist: t.nombre_artista ?? '—',
+      audioUrl: `/assets/audio/demo-${String((t.id_track % 8) + 1).padStart(2, '0')}.wav`,
+      coverGradient: this.covers.gradientFor(t.id_track),
+    }));
+  }
+
+  playPlaylist() {
+    const det = this.selected();
+    if (!det?.tracks.length) return;
+    const queue = this.playlistQueue(det.tracks);
+    this.player.setQueue(queue, 0);
   }
 
   mockDuration(tracks: number): string {

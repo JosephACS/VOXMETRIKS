@@ -34,7 +34,7 @@ from app.packages.streaming.routes import (
     artists_router, genres_router, tracks_router,
     playlists_router, favorites_router,
 )
-from app.packages.analytics.routes import stats_router
+from app.packages.analytics.routes import stats_router, analytics_router
 from app.packages.users.routes import users_router
 from app.shared.schemas.models import HealthResponse
 
@@ -102,6 +102,7 @@ app.include_router(tracks_router,  prefix="/api/v1")
 app.include_router(playlists_router, prefix="/api/v1")
 app.include_router(favorites_router, prefix="/api/v1")
 app.include_router(stats_router,   prefix="/api/v1")
+app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(users_router,   prefix="/api/v1")
 
 

@@ -29,6 +29,13 @@ export const APP_ROUTES: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
+          import('./packages/streaming/home/home.component').then(
+            (m) => m.HomeComponent
+          ),
+      },
+      {
+        path: 'dashboard/analytics',
+        loadComponent: () =>
           import('./packages/analytics/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent
           ),

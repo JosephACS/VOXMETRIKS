@@ -6,6 +6,7 @@ import { FavoritesService } from '../../packages/streaming/services/favorites.se
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { AuthService } from '../../core/services/auth.service';
 import { IconRenderService } from '../../shared/services/icon-render.service';
+import { PlayerBarComponent } from '../../shared/components/player-bar/player-bar.component';
 import { SafeHtml } from '@angular/platform-browser';
 
 interface NavItem {
@@ -22,7 +23,7 @@ interface NavSection {
 @Component({
   selector: 'app-dashboard-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, PlayerBarComponent],
   templateUrl: './dashboard-layout.component.html',
   styleUrls: ['./dashboard-layout.component.css'],
 })
@@ -41,11 +42,21 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private static readonly COLLAPSE_KEY = 'voxmetrik_sidebar_collapsed';
 
   userName = computed(() => this.auth.getUser()?.username ?? 'Usuario');
-  userPlan = computed(() => this.auth.getUser()?.plan ?? 'Free');
+  userPlan = computed(() => {
+    const plan = this.auth.getUser()?.plan ?? 'Free';
+    if (plan.toLowerCase() === 'free') return 'Gratis';
+    return plan;
+  });
   isDemoUser = computed(() => {
     const email = this.auth.getUser()?.email ?? '';
     return email.includes('demo@') || this.userPlan().toLowerCase() === 'demo';
   });
+  isEngineerUser = computed(() => this.auth.hasEngineerAccess());
+  visibleNavSections = computed(() =>
+    this.isEngineerUser()
+      ? this.navSections
+      : this.navSections.filter((s) => s.title !== 'DATOS'),
+  );
   userInitial = computed(() => this.userName().charAt(0).toUpperCase());
   avatarGradient = computed(() => {
     const id = this.auth.getUser()?.id ?? 0;
@@ -63,19 +74,19 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   navSections: NavSection[] = [
     {
-      title: 'MAIN',
+      title: 'PRINCIPAL',
       items: [
         {
           path: '/dashboard',
-          label: 'Dashboard',
+          label: 'Inicio',
           icon: this.svgIcon(
-            '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'
+            '<path d="M3 9.5L12 4l9 5.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>'
           ),
         },
       ],
     },
     {
-      title: 'STREAMING',
+      title: 'MÚSICA',
       items: [
         {
           path: '/artists',
@@ -100,7 +111,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         },
         {
           path: '/audio-features',
-          label: 'Audio Features',
+          label: 'Características de audio',
           icon: this.svgIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
         },
         {
@@ -110,14 +121,14 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         },
         {
           path: '/playlists',
-          label: 'Playlists',
+          label: 'Listas',
           icon: this.svgIcon(
             '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'
           ),
         },
         {
           path: '/liked',
-          label: 'Liked Songs',
+          label: 'Canciones que te gustan',
           icon: this.svgIcon(
             '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'
           ),
@@ -125,16 +136,16 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
-      title: 'ANALYTICS',
+      title: 'ANÁLISIS',
       items: [
         {
           path: '/analytics',
-          label: 'Analytics',
+          label: 'Análisis',
           icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
         },
         {
           path: '/trending',
-          label: 'Trending',
+          label: 'Tendencias',
           icon: this.svgIcon(
             '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
           ),
@@ -149,11 +160,11 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
-      title: 'RECOMMENDATIONS',
+      title: 'RECOMENDACIONES',
       items: [
         {
           path: '/recommendations',
-          label: 'Recommendations',
+          label: 'Recomendaciones',
           icon: this.svgIcon(
             '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
           ),
@@ -161,7 +172,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
-      title: 'DATA ENGINEERING',
+      title: 'DATOS',
       items: [
         {
           path: '/elt-pipeline',
@@ -172,7 +183,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         },
         {
           path: '/explorer',
-          label: 'Data Explorer',
+          label: 'Explorador de datos',
           icon: this.svgIcon(
             '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
           ),
@@ -180,7 +191,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
-      title: 'SYSTEM',
+      title: 'SISTEMA',
       items: [
         {
           path: '/settings',

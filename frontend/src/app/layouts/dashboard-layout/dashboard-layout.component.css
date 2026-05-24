@@ -368,9 +368,18 @@
 .page-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.page-shell {
+  flex: 1;
   min-height: 0;
 }
 

@@ -53,7 +53,7 @@
 
 .r-pop { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem; }
 .pop-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; max-width: 80px; }
-.pop-fill { height: 100%; background: linear-gradient(90deg, #ff8c42, #7c3aed); border-radius: 2px; }
+.pop-fill { height: 100%; background: linear-gradient(90deg, #1ed896, #148f5e); border-radius: 2px; }
 .mono { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
 
 .empty, .hint {

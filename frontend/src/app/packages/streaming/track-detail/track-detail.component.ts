@@ -30,10 +30,10 @@ export class TrackDetailComponent implements OnInit {
     const t = this.track();
     if (!t) return [];
     return [
-      { label: 'Energy', value: (t.energy ?? 0) * 100, color: '#ff8c42' },
-      { label: 'Danceability', value: (t.danceability ?? 0) * 100, color: '#7c3aed' },
-      { label: 'Valence', value: (t.valence ?? 0) * 100, color: '#10b981' },
-      { label: 'Acousticness', value: (t.acousticness ?? 0) * 100, color: '#3b82f6' },
+      { label: 'Energía', value: (t.energy ?? 0) * 100, color: '#1ed896' },
+      { label: 'Bailabilidad', value: (t.danceability ?? 0) * 100, color: '#7c3aed' },
+      { label: 'Valencia', value: (t.valence ?? 0) * 100, color: '#10b981' },
+      { label: 'Acústica', value: (t.acousticness ?? 0) * 100, color: '#3b82f6' },
     ];
   });
 
@@ -95,7 +95,7 @@ export class TrackDetailComponent implements OnInit {
   coverGradient(): string {
     const t = this.track();
     const seed = t?.id_track ?? 0;
-    const hues = ['#ff8c42', '#7c3aed', '#3b82f6', '#10b981'];
+    const hues = ['#1ed896', '#7c3aed', '#3b82f6', '#10b981'];
     return `linear-gradient(135deg, ${hues[seed % hues.length]}, ${hues[(seed + 1) % hues.length]})`;
   }
 

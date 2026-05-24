@@ -31,6 +31,21 @@
 .liked-hero h1 { font-size: 1.75rem; font-weight: 800; margin: 0.15rem 0; }
 .liked-hero p { font-size: 0.8125rem; color: var(--text-muted); margin: 0; }
 
+.play-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  background: #1ed896;
+  color: #000;
+  font-weight: 700;
+  cursor: pointer;
+}
+.play-all-btn:hover { background: #fff; }
+
 .track-list { padding: 0.5rem; }
 .track-row {
   display: flex;
@@ -63,9 +78,9 @@
   padding: 2.5rem; text-align: center; color: var(--text-muted);
 }
 .link-btn {
-  padding: 0.45rem 1rem; background: rgba(255,140,66,0.12);
-  border: 1px solid rgba(255,140,66,0.3); border-radius: 2rem;
-  color: #ff8c42; text-decoration: none; font-size: 0.8125rem; font-weight: 600;
+  padding: 0.45rem 1rem; background: rgba(30,216,150,0.12);
+  border: 1px solid rgba(30,216,150,0.3); border-radius: 2rem;
+  color: #1ed896; text-decoration: none; font-size: 0.8125rem; font-weight: 600;
 }
 
 @media (max-width: 640px) { .t-genre { display: none; } }

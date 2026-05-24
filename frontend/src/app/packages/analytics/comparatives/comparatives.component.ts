@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { GenresService } from '../../streaming/services/genres.service';
 import { GeneroPopularidad } from '../../../shared/models/api.models';
 
-const GENRE_COLORS = ['#ff8c42', '#7c3aed', '#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#6366f1', '#ef4444'];
+const GENRE_COLORS = ['#1ed896', '#148f5e', '#38bdf8', '#b794f6', '#f472b6', '#fbbf24', '#6366f1', '#ef4444'];
 
 @Component({
   selector: 'app-comparatives',
@@ -32,9 +32,9 @@ export class ComparativesComponent implements OnInit {
     const top = g[0];
     return [
       { label: 'Géneros', value: g.length, iconKey: 'layers', trend: 'activos', trendClass: 'neutral' },
-      { label: 'Avg Popularidad', value: avgPop.toFixed(1), iconKey: 'star', trend: '+2.4%', trendClass: 'up' },
-      { label: 'Avg Energía', value: (avgEn * 100).toFixed(0) + '%', iconKey: 'zap', trend: 'estable', trendClass: 'neutral' },
-      { label: 'Total Tracks', value: this.fmt(totalTracks), iconKey: 'music', trend: top?.nombre_genero ?? '—', trendClass: 'neutral' },
+      { label: 'Popularidad media', value: avgPop.toFixed(1), iconKey: 'star', trend: '+2.4%', trendClass: 'up' },
+      { label: 'Energía media', value: (avgEn * 100).toFixed(0) + '%', iconKey: 'zap', trend: 'estable', trendClass: 'neutral' },
+      { label: 'Total canciones', value: this.fmt(totalTracks), iconKey: 'music', trend: top?.nombre_genero ?? '—', trendClass: 'neutral' },
     ];
   });
 
@@ -83,7 +83,7 @@ export class ComparativesComponent implements OnInit {
     const metrics = [
       { key: 'popularidad_promedio' as const, metric: 'Popularidad', max: 100, scale: 1 },
       { key: 'energia_promedio' as const, metric: 'Energía', max: 1, scale: 1 },
-      { key: 'total_tracks' as const, metric: 'Tracks', max: Math.max(...top.map((g) => g.total_tracks ?? 0), 1), scale: 1 },
+      { key: 'total_tracks' as const, metric: 'Canciones', max: Math.max(...top.map((g) => g.total_tracks ?? 0), 1), scale: 1 },
     ];
     return metrics.map((m) => ({
       metric: m.metric,

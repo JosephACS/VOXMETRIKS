@@ -1,7 +1,7 @@
 <div class="comp-page">
   <header class="vx-page-header">
     <div>
-      <h1>Comparatives</h1>
+      <h1>Comparativas</h1>
       <p class="page-subtitle">Visual insights · Géneros del catálogo</p>
     </div>
     <span class="insight-badge">{{ genres().length }} géneros analizados</span>
@@ -43,7 +43,7 @@
             <line [attr.x1]="140" [attr.y1]="140" [attr.x2]="axis.x" [attr.y2]="axis.y" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
             <text [attr.x]="axis.lx" [attr.y]="axis.ly" fill="rgba(255,255,255,0.45)" font-size="8" text-anchor="middle">{{ axis.label }}</text>
           }
-          <polygon [attr.points]="radarPopPoints()" fill="rgba(255,140,66,0.15)" stroke="#ff8c42" stroke-width="2"/>
+          <polygon [attr.points]="radarPopPoints()" fill="rgba(30,216,150,0.15)" stroke="#1ed896" stroke-width="2"/>
           <polygon [attr.points]="radarEnergyPoints()" fill="rgba(124,58,237,0.12)" stroke="#7c3aed" stroke-width="2"/>
           <circle cx="140" cy="140" r="3" fill="rgba(255,255,255,0.3)"/>
         </svg>
@@ -114,18 +114,18 @@
           </div>
           <div class="gc-metrics">
             <div class="gc-metric">
-              <span class="gc-m-lbl">Pop</span>
+              <span class="gc-m-lbl">Pop.</span>
               <div class="gc-bar"><div class="gc-fill pop" [style.width.%]="g.popularidad_promedio ?? 0"></div></div>
               <span class="gc-m-val">{{ (g.popularidad_promedio ?? 0) | number:'1.0-0' }}</span>
             </div>
             <div class="gc-metric">
-              <span class="gc-m-lbl">Energy</span>
+              <span class="gc-m-lbl">Energía</span>
               <div class="gc-bar"><div class="gc-fill en" [style.width.%]="(g.energia_promedio ?? 0) * 100"></div></div>
               <span class="gc-m-val">{{ ((g.energia_promedio ?? 0) * 100) | number:'1.0-0' }}%</span>
             </div>
           </div>
           <div class="gc-footer">
-            <span class="gc-tracks">{{ g.total_tracks ?? 0 | number }} tracks</span>
+            <span class="gc-tracks">{{ g.total_tracks ?? 0 | number }} canciones</span>
             <span class="gc-score" [style.color]="genreColor(i)">{{ compositeScore(g) }}</span>
           </div>
         </article>

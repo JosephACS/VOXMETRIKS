@@ -31,6 +31,17 @@ from pathlib import Path
 _HERE        = Path(__file__).resolve().parent          # elt/pipelines/
 _PROJECT_ROOT = _HERE.parent.parent                     # VOXMETRIK_V2/
 
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from elt.extract.bootstrap_catalog import ensure_bronze_parquet
+from elt.transform.enterprise_analytics import (
+    build_enterprise_warehouse,
+    ENTERPRISE_EXPORT_TABLES,
+    register_pipeline_stage,
+    apply_enterprise_schema,
+)
+
 for _env_candidate in [
     _PROJECT_ROOT / ".env",
     _HERE.parent / ".env",
@@ -263,6 +274,12 @@ def bronze_extract(pb: Optional[PocketBaseClient]) -> pd.DataFrame:
 
     if df is None or df.empty:
         df = _bronze_from_parquet(BRONZE_PARQUET)
+
+    if df is None or df.empty:
+        logger.warning("[BRONZE] No source — bootstrapping demo catalog…")
+        BRONZE_DIR.mkdir(parents=True, exist_ok=True)
+        df = ensure_bronze_parquet(BRONZE_PARQUET, n_tracks=8_500)
+        logger.info(f"[BRONZE] Bootstrap catalog ✓  shape={df.shape}")
 
     if df is None or df.empty:
         raise RuntimeError(
@@ -1019,11 +1036,12 @@ def gold_build_warehouse(conn: duckdb.DuckDBPyConnection) -> None:
     _build_dim_album(conn)
     _build_dim_track(conn)
     _build_dim_playlist(conn)
-    _build_fact_streaming(conn)
+    ent_stats = build_enterprise_warehouse(conn)
     _build_agg_top_artistas(conn)
     _build_agg_genero_popularidad(conn)
     _build_agg_distribucion_energia(conn)
     _build_agg_tracks_populares(conn)
+    logger.info(f"[GOLD] Enterprise facts loaded: {ent_stats.get('fact_rows', 0):,} rows")
     logger.info("[GOLD] Warehouse build complete ✓")
 
 
@@ -1041,7 +1059,7 @@ def _export_gold_parquets(conn: duckdb.DuckDBPyConnection) -> None:
         "fact_streaming",
         "agg_top_artistas", "agg_genero_popularidad",
         "agg_distribucion_energia", "agg_tracks_populares",
-    ]
+    ] + ENTERPRISE_EXPORT_TABLES
     for table in tables:
         out = GOLD_DIR / f"{table}.parquet"
         try:
@@ -1103,6 +1121,7 @@ def verify_warehouse(conn: duckdb.DuckDBPyConnection) -> bool:
     required = [
         "dim_usuario", "dim_artista", "dim_genero", "dim_album",
         "dim_track", "dim_playlist", "dim_tiempo", "fact_streaming",
+        "agg_daily_streams", "agg_platform_usage", "agg_user_engagement",
     ]
     all_ok = True
     for table in required:
@@ -1151,27 +1170,43 @@ def run_pipeline() -> None:
 
     # ── Open DuckDB ──────────────────────────────────────────────────────────
     conn = _open_connection(DB_PATH)
+    run_id = int(time.time())
+
+    def _stage(name: str, layer: str, fn, rows_in: int = 0):
+        t0 = time.time()
+        result = fn()
+        ms = int((time.time() - t0) * 1000)
+        if isinstance(result, int):
+            rows_out = result
+        elif isinstance(result, dict):
+            rows_out = int(result.get("fact_rows", rows_in))
+        elif hasattr(result, "__len__") and not isinstance(result, (str, bytes)):
+            rows_out = len(result)
+        else:
+            rows_out = rows_in
+        register_pipeline_stage(conn, run_id, name, layer, ms, rows_in, rows_out)
+        logger.info(f"[STAGE] {layer}/{name} — {ms}ms — rows_out={rows_out:,}")
+        return result
 
     try:
-        # ── Apply schema ─────────────────────────────────────────────────────
         apply_schema(conn)
+        apply_enterprise_schema(conn)
 
-        # ── BRONZE: Extract ──────────────────────────────────────────────────
-        df_bronze = bronze_extract(pb)
+        df_bronze = _stage("extract", "Bronze", lambda: bronze_extract(pb))
+        rows_bronze = len(df_bronze)
 
-        # ── SILVER: Clean ────────────────────────────────────────────────────
-        df_silver = silver_transform(df_bronze)
+        df_silver = _stage("transform", "Silver", lambda: silver_transform(df_bronze), rows_bronze)
+        rows_silver = len(df_silver)
 
-        # ── GOLD: Load staging ───────────────────────────────────────────────
-        total_raw = gold_load_staging(conn, df_silver)
+        total_raw = _stage("load_staging", "Gold", lambda: gold_load_staging(conn, df_silver), rows_silver)
 
-        # ── GOLD: Build dimensional model ────────────────────────────────────
-        gold_build_warehouse(conn)
+        def _build_wh():
+            gold_build_warehouse(conn)
+            return int(conn.execute("SELECT COUNT(*) FROM fact_streaming").fetchone()[0])
 
-        # ── GOLD: Export Parquet snapshots ───────────────────────────────────
+        _stage("build_warehouse", "Gold", _build_wh, total_raw)
+
         _export_gold_parquets(conn)
-
-        # ── Verify ───────────────────────────────────────────────────────────
         verify_warehouse(conn)
 
         # ── Register success ─────────────────────────────────────────────────

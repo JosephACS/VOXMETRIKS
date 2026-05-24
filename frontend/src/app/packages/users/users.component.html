@@ -16,7 +16,7 @@
             <h1>{{ displayProfile().name }}</h1>
             <span class="username">{{ displayProfile().username }}</span>
           </div>
-          <span class="badge-demo">{{ profile()?.plan ?? 'Free' }}</span>
+          <span class="badge-demo">{{ profile()?.plan === 'Free' ? 'Gratis' : (profile()?.plan ?? 'Gratis') }}</span>
         </div>
         <div class="hero-badges">
           @for (b of displayProfile().badges; track b) {
@@ -42,7 +42,7 @@
         </div>
         <div class="quick-stat">
           <span class="qs-value">{{ stats().playlists }}</span>
-          <span class="qs-label">Playlists</span>
+          <span class="qs-label">Listas</span>
         </div>
         <div class="quick-stat">
           <span class="qs-value">{{ topArtists().length }}</span>
@@ -54,9 +54,9 @@
 
   <!-- KPI strip -->
   <section class="stats-strip vx-kpi-grid">
-    <app-kpi-card label="Tracks recientes" [value]="listenHistory().length" iconKey="clock" color="primary" subtitle="historial local" />
-    <app-kpi-card label="Tracks favoritos" [value]="stats().favorites" iconKey="heart" color="info" subtitle="guardados" />
-    <app-kpi-card label="Playlists" [value]="stats().playlists" iconKey="playlist" color="warning" subtitle="propias" />
+    <app-kpi-card label="Canciones recientes" [value]="listenHistory().length" iconKey="clock" color="primary" subtitle="historial local" />
+    <app-kpi-card label="Canciones favoritas" [value]="stats().favorites" iconKey="heart" color="info" subtitle="guardadas" />
+    <app-kpi-card label="Listas" [value]="stats().playlists" iconKey="playlist" color="warning" subtitle="propias" />
     <app-kpi-card label="Artistas" [value]="topArtists().length" iconKey="user" color="secondary" subtitle="en historial" />
   </section>
 
@@ -94,15 +94,15 @@
           <svg viewBox="0 0 360 100" class="activity-chart" aria-hidden="true">
             <defs>
               <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#ff8c42" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#ff8c42" stop-opacity="0"/>
+                <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
               </linearGradient>
             </defs>
             <line x1="0" y1="88" x2="360" y2="88" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
             <polygon [attr.points]="activityArea()" fill="url(#actGrad)"/>
-            <polyline [attr.points]="activityLine()" fill="none" stroke="#ff8c42" stroke-width="2" stroke-linecap="round"/>
+            <polyline [attr.points]="activityLine()" fill="none" stroke="#1ed896" stroke-width="2" stroke-linecap="round"/>
             @for (pt of activityPoints(); track pt.x) {
-              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" fill="#ff8c42"/>
+              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" fill="#1ed896"/>
             }
             @for (lbl of weekLabels; track lbl.x) {
               <text [attr.x]="lbl.x" y="98" fill="rgba(255,255,255,0.3)" font-size="8">{{ lbl.label }}</text>
@@ -164,8 +164,8 @@
       <!-- Favorite playlists -->
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>Playlists favoritas</h2>
-          <span class="section-meta">{{ favoritePlaylists().length }} playlists</span>
+          <h2>Listas favoritas</h2>
+          <span class="section-meta">{{ favoritePlaylists().length }} listas</span>
         </div>
         <div class="playlist-grid">
           @for (pl of favoritePlaylists(); track pl.id) {
@@ -173,7 +173,7 @@
               <div class="pl-overlay">
                 <span class="pl-icon" [innerHTML]="icon('playlist', 20)"></span>
                 <span class="pl-name">{{ pl.name }}</span>
-                <span class="pl-tracks">{{ pl.tracks }} tracks</span>
+                <span class="pl-tracks">{{ pl.tracks }} canciones</span>
               </div>
             </article>
           }

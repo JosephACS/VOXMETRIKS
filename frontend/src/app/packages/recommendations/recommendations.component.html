@@ -2,7 +2,7 @@
   <!-- Header -->
   <header class="page-header">
     <div class="header-text">
-      <h1>Recommendations</h1>
+      <h1>Recomendaciones</h1>
       <p class="page-subtitle">Recomendaciones inteligentes basadas en preferencias musicales</p>
     </div>
     <div class="header-badges">
@@ -30,7 +30,7 @@
       color="info"
       subtitle="Modelo simulado"
       trend="87.3%"
-      trendLabel="score"
+      trendLabel="puntuación"
     />
     <app-kpi-card
       label="Géneros analizados"
@@ -56,7 +56,7 @@
     <section class="panel chart-panel">
       <div class="panel-header">
         <h2>Afinidad por género</h2>
-        <span class="panel-meta">Score simulado 0–100</span>
+        <span class="panel-meta">Puntuación simulada 0–100</span>
       </div>
       <div class="genre-chart">
         @for (g of genreAffinities; track g.genre) {
@@ -77,14 +77,14 @@
 
     <section class="panel chart-panel">
       <div class="panel-header">
-        <h2>Distribución de scores</h2>
+        <h2>Distribución de puntuaciones</h2>
         <span class="panel-meta">Compatibilidad global</span>
       </div>
       <svg viewBox="0 0 320 160" class="distribution-chart" aria-hidden="true">
         <defs>
           <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ff8c42" stop-opacity="0.35"/>
-            <stop offset="100%" stop-color="#ff8c42" stop-opacity="0"/>
+            <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <line x1="40" y1="130" x2="300" y2="130" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
@@ -96,13 +96,13 @@
         <polyline
           points="40,130 80,95 120,110 160,70 200,85 240,55 280,75 300,60"
           fill="none"
-          stroke="#ff8c42"
+          stroke="#1ed896"
           stroke-width="2.5"
           stroke-linecap="round"
           stroke-linejoin="round"
         />
         @for (pt of chartPoints; track pt.x) {
-          <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#ff8c42"/>
+          <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#1ed896"/>
         }
         <text x="40" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Lun</text>
         <text x="120" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Mié</text>
@@ -182,7 +182,7 @@
   <section class="panel">
     <div class="panel-header">
       <h2>Recomendaciones por mood</h2>
-      <span class="panel-meta">Playlists contextuales simuladas</span>
+      <span class="panel-meta">Listas contextuales simuladas</span>
     </div>
     <div class="mood-grid">
       @for (mood of moodCards; track mood.id) {
@@ -196,7 +196,7 @@
           <span class="mood-icon" [innerHTML]="icon(mood.iconKey, 22)"></span>
           <span class="mood-name">{{ mood.name }}</span>
           <span class="mood-desc">{{ mood.description }}</span>
-          <span class="mood-tracks">{{ mood.tracks }} tracks</span>
+          <span class="mood-tracks">{{ mood.tracks }} canciones</span>
         </button>
       }
     </div>

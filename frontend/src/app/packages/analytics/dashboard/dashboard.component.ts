@@ -13,7 +13,7 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
   template: `
     <header class="vx-page-header">
       <div>
-        <h1>Dashboard</h1>
+        <h1>Panel analítico</h1>
         <p class="page-subtitle">Resumen del catálogo musical</p>
       </div>
       <span class="vx-badge live-badge">
@@ -31,7 +31,7 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
 
     @if (!isLoading() && summary()) {
       <section class="vx-kpi-grid">
-        <app-kpi-card label="Tracks" [value]="summary()!.total_tracks" iconKey="music" color="primary" subtitle="en catálogo" />
+        <app-kpi-card label="Canciones" [value]="summary()!.total_tracks" iconKey="music" color="primary" subtitle="en catálogo" />
         <app-kpi-card label="Artistas" [value]="summary()!.total_artistas" iconKey="users" color="info" subtitle="únicos" />
         <app-kpi-card label="Géneros" [value]="summary()!.total_generos" iconKey="layers" color="warning" subtitle="clasificados" />
         <app-kpi-card label="Álbumes" [value]="summary()!.total_albumes" iconKey="album" color="secondary" subtitle="registrados" />
@@ -43,13 +43,13 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
       <section class="glass-panel dataset-strip">
         <div class="dataset-left">
           <span class="dataset-label">Warehouse actual</span>
-          <span class="dataset-total">{{ fmt(summary()!.total_tracks) }} <small>tracks en DuckDB</small></span>
+          <span class="dataset-total">{{ fmt(summary()!.total_tracks) }} <small>canciones en DuckDB</small></span>
         </div>
         <div class="dataset-entities">
           <span class="entity-chip"><strong>{{ fmt(summary()!.total_artistas) }}</strong> artistas</span>
           <span class="entity-chip"><strong>{{ fmt(summary()!.total_generos) }}</strong> géneros</span>
           <span class="entity-chip"><strong>{{ fmt(summary()!.total_albumes) }}</strong> álbumes</span>
-          <span class="entity-chip"><strong>{{ fmt(summary()!.total_streams) }}</strong> streams</span>
+          <span class="entity-chip"><strong>{{ fmt(summary()!.total_streams) }}</strong> reproducciones</span>
         </div>
         <span class="dataset-hint">Datos en vivo desde <strong>voxmetrik.duckdb</strong></span>
       </section>
@@ -62,13 +62,13 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
         <svg viewBox="0 0 480 100" class="vx-mini-chart" aria-hidden="true">
           <defs>
             <linearGradient id="dashArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#ff8c42" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#ff8c42" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#1ed896" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
             </linearGradient>
           </defs>
           <line x1="0" y1="85" x2="480" y2="85" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
           <polygon [attr.points]="sparkArea()" fill="url(#dashArea)"/>
-          <polyline [attr.points]="sparkLine()" fill="none" stroke="#ff8c42" stroke-width="2" stroke-linecap="round"/>
+          <polyline [attr.points]="sparkLine()" fill="none" stroke="#1ed896" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </section>
     }
@@ -76,7 +76,7 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
     @if (!isLoading() && topTracks().length) {
       <section class="glass-panel table-panel">
         <div class="panel-head">
-          <h2>Top Tracks</h2>
+          <h2>Top canciones</h2>
           <span class="panel-meta">{{ topTracks().length }} más populares</span>
         </div>
         <div class="table-scroll">
@@ -240,15 +240,14 @@ export class DashboardComponent implements OnInit {
   hasError = signal(false);
   summary = signal<StatsSummary | null>(null);
   topTracks = signal<TopTrack[]>([]);
+  growthValues = signal<number[]>([]);
   skeletonCards = Array(6).fill(0);
-
-  private sparkData = [42, 58, 51, 72, 65, 88, 76, 94, 82, 91, 85, 97];
 
   constructor(private stats: StatsService) {}
 
   ngOnInit() {
     let done = 0;
-    const finish = () => { if (++done >= 2) this.isLoading.set(false); };
+    const finish = () => { if (++done >= 3) this.isLoading.set(false); };
 
     this.stats.getSummary().subscribe({
       next: (d) => { this.summary.set(d); finish(); },
@@ -257,6 +256,14 @@ export class DashboardComponent implements OnInit {
 
     this.stats.getTopTracks(10).subscribe({
       next: (d) => { this.topTracks.set(d ?? []); finish(); },
+      error: () => finish(),
+    });
+
+    this.stats.getCatalogGrowth(12).subscribe({
+      next: (pts) => {
+        this.growthValues.set((pts ?? []).map((p) => p.total || p.added));
+        finish();
+      },
       error: () => finish(),
     });
   }
@@ -276,12 +283,19 @@ export class DashboardComponent implements OnInit {
   }
 
   sparkLine(): string {
-    return this.sparkData.map((v, i) => `${i * 40},${90 - v * 0.7}`).join(' ');
+    const data = this.growthValues();
+    if (!data.length) return '';
+    const max = Math.max(...data, 1);
+    const step = 440 / Math.max(data.length - 1, 1);
+    return data.map((v, i) => `${i * step},${90 - (v / max) * 70}`).join(' ');
   }
 
   sparkArea(): string {
-    const line = this.sparkData.map((v, i) => `${i * 40},${90 - v * 0.7}`).join(' ');
-    return `0,90 ${line} ${(this.sparkData.length - 1) * 40},90`;
+    const data = this.growthValues();
+    if (!data.length) return '';
+    const line = this.sparkLine();
+    const w = (data.length - 1) * (440 / Math.max(data.length - 1, 1));
+    return `0,90 ${line} ${w},90`;
   }
 
   fmt(val?: number | null): string {

@@ -4,7 +4,8 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
+import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
+import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { TracksService } from '../services/tracks.service';
 import { GenresService } from '../services/genres.service';
 import { ArtistsService } from '../services/artists.service';
@@ -15,12 +16,13 @@ type ModalMode = 'create' | 'edit' | 'delete' | null;
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FavoriteBtnComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent],
   templateUrl: './tracks.component.html',
   styleUrls: ['./tracks.component.css'],
 })
 export class TracksComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  player = inject(MusicPlayerService);
 
   tracks      = signal<Track[]>([]);
   genres      = signal<Genero[]>([]);
@@ -91,6 +93,9 @@ export class TracksComponent implements OnInit {
   }
   getArtistName(id?: number): string { return this.artists().find(a => a.id_artista === id)?.nombre_artista ?? (id ? `#${id}` : '—'); }
   getGenreName(id?: number): string { return this.genres().find(g => g.id_genero === id)?.nombre_genero ?? (id ? `#${id}` : '—'); }
+  trackQueue() {
+    return this.tracks().map((t) => this.player.fromTrack(t, this.getArtistName(t.id_artista)));
+  }
   skeletonRows = Array(12).fill(0);
 
   openCreate() { this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }

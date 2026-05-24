@@ -47,9 +47,9 @@
 }
 
 .badge-ai {
-  background: rgba(255, 140, 66, 0.1);
-  border-color: rgba(255, 140, 66, 0.25);
-  color: #ff8c42;
+  background: rgba(30, 216, 150, 0.1);
+  border-color: rgba(30, 216, 150, 0.25);
+  color: var(--accent);
 }
 
 /* KPI grid — KpiCardComponent fills cells */
@@ -173,7 +173,7 @@
   flex: 0 0 260px;
   scroll-snap-align: start;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-subtle, #1e2347);
+  border: 1px solid var(--border-subtle, var(--spotify-base));
   border-radius: 0.75rem;
   overflow: hidden;
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
@@ -181,13 +181,13 @@
 
 .for-you-card:hover {
   transform: translateY(-3px);
-  border-color: var(--accent, var(--accent, #ff8c42));
+  border-color: var(--accent);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .fy-artwork {
   height: 100px;
-  background: linear-gradient(135deg, var(--accent, #ff8c42), rgba(124, 58, 237, 0.6));
+  background: linear-gradient(135deg, var(--accent, var(--accent)), rgba(124, 58, 237, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,7 +230,7 @@
 .score-value {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--accent, #ff8c42);
+  color: var(--accent, var(--accent));
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -260,13 +260,13 @@
   gap: 1rem;
   padding: 1.125rem;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-subtle, #1e2347);
+  border: 1px solid var(--border-subtle, var(--spotify-base));
   border-radius: 0.75rem;
   transition: border-color 0.2s;
 }
 
 .artist-card:hover {
-  border-color: rgba(255, 140, 66, 0.3);
+  border-color: rgba(30, 216, 150, 0.3);
 }
 
 .artist-avatar {
@@ -404,7 +404,7 @@
 .data-table th {
   text-align: left;
   padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--border-subtle, #1e2347);
+  border-bottom: 1px solid var(--border-subtle, var(--spotify-base));
   color: rgba(255, 255, 255, 0.45);
   font-size: 0.68rem;
   font-weight: 600;

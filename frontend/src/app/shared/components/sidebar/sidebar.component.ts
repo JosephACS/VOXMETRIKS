@@ -112,7 +112,7 @@ interface MenuItem {
     .sidebar-header {
       padding: var(--spacing-xl) var(--spacing-lg);
       border-bottom: 1px solid var(--vox-border);
-      background: linear-gradient(180deg, rgba(255, 140, 66, 0.05) 0%, transparent 100%);
+      background: linear-gradient(180deg, rgba(30, 216, 150, 0.05) 0%, transparent 100%);
     }
 
     .logo-container {
@@ -181,12 +181,12 @@ interface MenuItem {
 
     .nav-item:hover {
       color: var(--vox-white);
-      background: rgba(255, 140, 66, 0.1);
+      background: rgba(30, 216, 150, 0.1);
     }
 
     .nav-item.active {
       color: var(--vox-white);
-      background: linear-gradient(90deg, rgba(255, 140, 66, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%);
+      background: linear-gradient(90deg, rgba(30, 216, 150, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%);
       border-left: 3px solid var(--vox-orange);
       font-weight: 600;
     }
@@ -276,38 +276,38 @@ export class SidebarComponent {
 
   mainMenu: MenuItem[] = [
     {
-      label: 'Dashboard', route: '/dashboard',
+      label: 'Inicio', route: '/dashboard',
       iconSvg: this.svg('<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>'),
     },
     {
-      label: 'Artists', route: '/artists',
+      label: 'Artistas', route: '/artists',
       iconSvg: this.svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>'),
     },
     {
-      label: 'Tracks', route: '/tracks',
+      label: 'Canciones', route: '/tracks',
       iconSvg: this.svg('<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>'),
     },
     {
-      label: 'Genres', route: '/genres',
+      label: 'Géneros', route: '/genres',
       iconSvg: this.svg('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>'),
     },
     {
-      label: 'Audio Features', route: '/audio-features',
+      label: 'Características de audio', route: '/audio-features',
       iconSvg: this.svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>'),
     },
   ];
 
   analyticsMenu: MenuItem[] = [
     {
-      label: 'Trending', route: '/trending',
+      label: 'Tendencias', route: '/trending',
       iconSvg: this.svg('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>'),
     },
     {
-      label: 'Analytics', route: '/analytics',
+      label: 'Análisis', route: '/analytics',
       iconSvg: this.svg('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>'),
     },
     {
-      label: 'Comparatives', route: '/comparatives',
+      label: 'Comparativas', route: '/comparatives',
       iconSvg: this.svg('<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>'),
     },
   ];
@@ -318,11 +318,11 @@ export class SidebarComponent {
       iconSvg: this.svg('<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>'),
     },
     {
-      label: 'Data Explorer', route: '/explorer',
+      label: 'Explorador de datos', route: '/explorer',
       iconSvg: this.svg('<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>'),
     },
     {
-      label: 'Settings', route: '/settings',
+      label: 'Configuración', route: '/settings',
       iconSvg: this.svg('<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>'),
     },
   ];

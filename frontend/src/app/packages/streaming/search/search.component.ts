@@ -56,7 +56,7 @@ export class SearchComponent implements OnInit {
 
   cover(i: number): string {
     const g = [
-      'linear-gradient(135deg, #ff8c42, #7c3aed)',
+      'linear-gradient(135deg, #1ed896, #148f5e)',
       'linear-gradient(135deg, #3b82f6, #1e40af)',
       'linear-gradient(135deg, #10b981, #047857)',
     ];

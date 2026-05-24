@@ -24,7 +24,7 @@
 .hero-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 20% 100%, rgba(255, 140, 66, 0.25), transparent),
+  background: radial-gradient(ellipse 60% 80% at 20% 100%, rgba(30, 216, 150, 0.25), transparent),
               radial-gradient(ellipse 50% 60% at 80% 20%, rgba(124, 58, 237, 0.2), transparent);
 }
 
@@ -68,8 +68,8 @@
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 140, 66, 0.5);
-  box-shadow: 0 0 16px rgba(255, 140, 66, 0.2);
+  border: 2px solid rgba(30, 216, 150, 0.5);
+  box-shadow: 0 0 16px rgba(30, 216, 150, 0.2);
 }
 
 .hero-info {
@@ -117,9 +117,9 @@
 }
 
 .badge-premium {
-  background: rgba(255, 140, 66, 0.12);
-  border-color: rgba(255, 140, 66, 0.35);
-  color: #ff8c42;
+  background: rgba(30, 216, 150, 0.12);
+  border-color: rgba(30, 216, 150, 0.35);
+  color: var(--accent);
 }
 
 .hero-meta {
@@ -145,7 +145,7 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
-.plan-premium { color: #ff8c42; font-weight: 600; }
+.plan-premium { color: var(--accent); font-weight: 600; }
 .activity { color: #34d399; }
 
 .hero-quick-stats {
@@ -401,7 +401,7 @@
   outline: none;
 }
 
-.search-input:focus { border-color: rgba(255, 140, 66, 0.4); }
+.search-input:focus { border-color: rgba(30, 216, 150, 0.4); }
 
 .history-list {
   display: flex;
@@ -624,7 +624,7 @@
   transition: transform 0.2s;
 }
 
-.toggle input:checked + .toggle-slider { background: #ff8c42; }
+.toggle input:checked + .toggle-slider { background: var(--accent); }
 .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
 
 /* Timeline */

@@ -19,6 +19,7 @@ export class AnalyticsComponent implements OnInit {
   isLoading    = signal(true);
   energyDist   = signal<DistribucionEnergia[]>([]);
   genreStats   = signal<GeneroPopularidad[]>([]);
+  engagement   = signal<{ skip_rate?: number; completion_rate?: number; engagement_score?: number; avg_session_time_min?: number } | null>(null);
   maxTracks    = computed(() => Math.max(...this.genreStats().map(g => g.total_tracks ?? 0), 1));
   maxEnergy    = computed(() => Math.max(...this.energyDist().map(e => e.cantidad_tracks ?? 0), 1));
   topGenres    = computed(() => this.genreStats().slice(0, 12));
@@ -35,9 +36,13 @@ export class AnalyticsComponent implements OnInit {
   constructor(private stats: StatsService, private genres: GenresService) {}
 
   ngOnInit() {
-    let n = 0; const done = () => { if (++n >= 2) this.isLoading.set(false); };
+    let n = 0; const done = () => { if (++n >= 3) this.isLoading.set(false); };
     this.stats.getEnergyDistribution().subscribe({ next: d => { this.energyDist.set(d ?? []); done(); }, error: () => done() });
     this.genres.getGenreStats(50).subscribe({ next: d => { this.genreStats.set(d ?? []); done(); }, error: () => done() });
+    this.stats.getEngagementAnalytics().subscribe({
+      next: d => { this.engagement.set(d); done(); },
+      error: () => done(),
+    });
   }
 
   energyBarH(count: number): number { return Math.round((count / this.maxEnergy()) * 100); }

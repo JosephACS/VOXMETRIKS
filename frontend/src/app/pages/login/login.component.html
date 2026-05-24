@@ -2,11 +2,11 @@
   <aside class="login-cover" aria-hidden="true">
     <div class="cover-glow"></div>
     <div class="cover-content">
-      <h2>Music Intelligence<br/>Platform</h2>
-      <p>Analytics · Streaming · Recommendations</p>
+      <h2>Plataforma de<br/>inteligencia musical</h2>
+      <p>Análisis · Streaming · Recomendaciones</p>
       <div class="cover-stats">
         @if (summary()?.total_tracks != null) {
-          <span>{{ formatStat(summary()?.total_tracks) }} tracks</span>
+          <span>{{ formatStat(summary()?.total_tracks) }} canciones</span>
         }
         @if (summary()?.total_artistas != null) {
           <span>{{ formatStat(summary()?.total_artistas) }} artistas</span>
@@ -30,7 +30,7 @@
 
     @if (mode() === 'login') {
       <h1 class="login-title">Bienvenido de vuelta</h1>
-      <p class="login-subtitle">Accede a tu catálogo y playlists</p>
+      <p class="login-subtitle">Accede a tu catálogo y listas</p>
 
       <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
         <div class="field">

@@ -45,7 +45,7 @@ interface RecentItem extends ListenRecord {
 }
 
 const COVER_GRADIENTS = [
-  'linear-gradient(135deg, #ff8c42 0%, #7c3aed 100%)',
+  'linear-gradient(135deg, #1ed896 0%, #7c3aed 100%)',
   'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
   'linear-gradient(135deg, #10b981 0%, #047857 100%)',
   'linear-gradient(135deg, #ec4899 0%, #9d174d 100%)',
@@ -89,27 +89,37 @@ export class UsersComponent implements OnInit {
 
   private activityData = [32, 48, 41, 65, 58, 78, 72];
 
+  private translatePlan(plan: string): string {
+    const map: Record<string, string> = {
+      Free: 'Gratis',
+      Demo: 'Demo',
+      Premium: 'Premium',
+    };
+    return map[plan] ?? plan;
+  }
+
   displayProfile = computed(() => {
     const p = this.profile();
     if (!p) {
       return {
         name: 'Usuario',
         username: '@user',
-        plan: 'Free',
+        plan: 'Gratis',
         initial: 'U',
         avatarGradient: COVER_GRADIENTS[0],
-        badges: ['Listener'],
+        badges: ['Oyente'],
         lastActive: '—',
         registered: '—',
       };
     }
+    const planLabel = this.translatePlan(p.plan);
     return {
       name: p.username,
       username: `@${p.username}`,
-      plan: p.plan,
+      plan: planLabel,
       initial: p.username.charAt(0).toUpperCase(),
       avatarGradient: COVER_GRADIENTS[p.id % COVER_GRADIENTS.length],
-      badges: [p.plan, p.favorite_genre ?? 'Multi-genre'].filter(Boolean),
+      badges: [planLabel, p.favorite_genre ?? 'Multi-género'].filter(Boolean),
       lastActive: 'Activo ahora',
       registered: p.created_at ? new Date(p.created_at).toLocaleDateString('es') : '—',
     };
@@ -155,7 +165,7 @@ export class UsersComponent implements OnInit {
         counts.set(h.artist, (counts.get(h.artist) ?? 0) + 1);
       }
     }
-    const colors = ['#ff8c42', '#7c3aed', '#10b981', '#3b82f6', '#ec4899'];
+    const colors = ['#1ed896', '#7c3aed', '#10b981', '#3b82f6', '#ec4899'];
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -164,8 +174,8 @@ export class UsersComponent implements OnInit {
 
   topGenres = computed((): TopItem[] => {
     const genre = this.profile()?.favorite_genre;
-    if (!genre) return [{ name: 'Sin datos', value: 0, color: '#ff8c42' }];
-    return [{ name: genre, value: 100, color: '#ff8c42' }];
+    if (!genre) return [{ name: 'Sin datos', value: 0, color: '#1ed896' }];
+    return [{ name: genre, value: 100, color: '#1ed896' }];
   });
 
   activities = computed((): ActivityItem[] => {

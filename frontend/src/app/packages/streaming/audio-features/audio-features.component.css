@@ -43,7 +43,7 @@
 }
 
 .kpi-card {
-  background: var(--bg-card, #16192b);
+  background: var(--spotify-card);
   border: 1px solid var(--border-subtle, #1e2347);
   border-radius: var(--radius, 0.75rem);
   padding: 1.125rem 1.25rem;
@@ -63,7 +63,7 @@
 .kpi-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--accent, #ff8c42);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .panel {
-  background: var(--bg-card, #16192b);
+  background: var(--spotify-card);
   border: 1px solid var(--border-subtle, #1e2347);
   border-radius: var(--radius, 0.75rem);
   padding: 1.5rem;
@@ -144,8 +144,8 @@
 }
 
 .data-table tbody tr.selected {
-  background: rgba(255, 140, 66, 0.08);
-  border-left: 2px solid var(--accent, #ff8c42);
+  background: rgba(30, 216, 150, 0.08);
+  border-left: 2px solid var(--accent);
 }
 
 .track-name {

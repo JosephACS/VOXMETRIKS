@@ -60,11 +60,11 @@ import { DecimalPipe }      from '@angular/common';
       flex-direction: column;
       gap: 0.35rem;
       padding: 0.875rem 1rem;
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
+      background: var(--spotify-card);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       overflow: hidden;
       transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
       cursor: default;
@@ -73,6 +73,7 @@ import { DecimalPipe }      from '@angular/common';
 
     .kpi-card:hover {
       transform: translateY(-2px);
+      background: var(--spotify-card-hover);
       box-shadow: var(--shadow-glow);
       border-color: var(--color-border-hover);
     }
@@ -92,11 +93,11 @@ import { DecimalPipe }      from '@angular/common';
 
     /* ── Color variants ── */
     .kpi-color-primary {
-      border-color: rgba(34, 197, 94, 0.18);
+      border-color: rgba(30, 216, 150, 0.18);
     }
     .kpi-color-primary:hover {
-      border-color: rgba(34, 197, 94, 0.35);
-      box-shadow: 0 8px 32px rgba(34, 197, 94, 0.09);
+      border-color: rgba(30, 216, 150, 0.35);
+      box-shadow: 0 8px 32px rgba(30, 216, 150, 0.12);
     }
     .kpi-color-primary .kpi-value-num { color: var(--color-primary); }
     .kpi-color-primary .kpi-accent {

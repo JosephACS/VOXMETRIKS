@@ -4,11 +4,12 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
+import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { StatsService } from '../services/stats.service';
 import { TopTrack } from '../../../shared/models/api.models';
 
 const COVER_GRADIENTS = [
-  'linear-gradient(135deg, #ff8c42, #7c3aed)',
+  'linear-gradient(135deg, #1ed896, #148f5e)',
   'linear-gradient(135deg, #3b82f6, #1e40af)',
   'linear-gradient(135deg, #10b981, #047857)',
   'linear-gradient(135deg, #ec4899, #9d174d)',
@@ -27,10 +28,12 @@ const COVER_GRADIENTS = [
 })
 export class TrendingComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  player = inject(MusicPlayerService);
 
   isLoading = signal(true);
   hasError = signal(false);
   tracks = signal<TopTrack[]>([]);
+  dailyStreams = signal<{ fecha: string; total_streams?: number }[]>([]);
   skeletonRows = Array(10).fill(0);
 
   weekLabels = [
@@ -55,7 +58,7 @@ export class TrendingComponent implements OnInit {
   popDistribution = computed(() => {
     const t = this.tracks();
     const buckets = [
-      { label: '90+', min: 90, color: '#ff8c42', count: 0 },
+      { label: '90+', min: 90, color: '#1ed896', count: 0 },
       { label: '70', min: 70, color: '#7c3aed', count: 0 },
       { label: '50', min: 50, color: '#3b82f6', count: 0 },
       { label: '<50', min: 0, color: '#64748b', count: 0 },
@@ -77,6 +80,10 @@ export class TrendingComponent implements OnInit {
     this.stats.getTopTracks(25).subscribe({
       next: (d) => { this.tracks.set(d ?? []); this.isLoading.set(false); },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+    this.stats.getTrendingAnalytics(25).subscribe({
+      next: (d) => { this.dailyStreams.set(d.daily_streams ?? []); },
+      error: () => {},
     });
   }
 
@@ -113,5 +120,15 @@ export class TrendingComponent implements OnInit {
 
   icon(key: string, size = 18): SafeHtml {
     return this.iconRender.render(key, size);
+  }
+
+  trackQueue() {
+    return this.tracks().map((t) => this.player.fromTopTrack(t));
+  }
+
+  playHero() {
+    const hero = this.topTrack();
+    if (!hero) return;
+    this.player.playTrack(this.player.fromTopTrack(hero), this.trackQueue());
   }
 }

@@ -58,6 +58,12 @@ export interface GeneroPopularidad {
   total_artistas?: number;
 }
 
+export interface CatalogGrowthPoint {
+  label: string;
+  total: number;
+  added: number;
+}
+
 export interface DistribucionEnergia {
   rango_energia: string;
   cantidad_tracks?: number;
@@ -105,6 +111,11 @@ export interface StatsSummary {
   total_albumes: number;
   total_streams?: number;
   total_audio_features?: number;
+  active_users?: number;
+  total_playlists?: number;
+  skip_rate?: number;
+  completion_rate?: number;
+  engagement_score?: number;
   promedio_popularidad?: number;
   promedio_danceability?: number;
   promedio_energy?: number;
@@ -112,12 +123,77 @@ export interface StatsSummary {
   promedio_tempo?: number;
 }
 
+export interface WarehouseStatus {
+  pipeline_status: string;
+  db_size_mb: number;
+  layers: {
+    bronze: { file: string; size_mb: number };
+    silver: { file: string; size_mb: number };
+    gold: {
+      parquet_dir: string;
+      parquet_files: number;
+      dimensions: Record<string, number>;
+      facts: Record<string, number>;
+      aggregates: Record<string, number>;
+      total_rows: number;
+    };
+  };
+  kpis: Record<string, number>;
+  last_load?: LoadRecord | null;
+  recent_stages?: Array<{
+    stage: string; layer: string; duration_ms: number;
+    rows_in: number; rows_out: number; status: string;
+  }>;
+}
+
+export interface TrendingAnalytics {
+  top_tracks: Array<{
+    id_track: number; nombre_track?: string;
+    recommendation_score?: number; engagement_score?: number; popularity?: number;
+  }>;
+  top_genres: Array<{
+    id_genero: number; nombre_genero?: string;
+    streams_7d?: number; trend_pct?: number; avg_popularity?: number;
+  }>;
+  daily_streams: Array<{ fecha: string; total_streams?: number; unique_users?: number; skip_count?: number }>;
+  trending_score_avg: number;
+}
+
+export interface PlatformAnalytics {
+  devices: Array<{ device_type: string; stream_count?: number; unique_users?: number; share_pct?: number }>;
+  platform_usage: Array<{ platform: string; device_type?: string; session_count?: number; total_streams?: number; share_pct?: number }>;
+  active_users: number;
+  sessions: number;
+  total_streams: number;
+}
+
+export interface EngagementAnalytics {
+  skip_rate: number;
+  completion_rate: number;
+  avg_session_time_min: number;
+  engagement_score: number;
+  user_segments: Array<{ segment: string; user_count?: number; avg_plays?: number; retention_pct?: number }>;
+  user_retention: Array<{ cohort_week: string; week_1_pct?: number; week_2_pct?: number; week_4_pct?: number }>;
+  top_searches: Array<{ query_text: string; search_count?: number }>;
+  recommendation_avg?: number;
+}
+
 export interface SyntheticResult {
   before: number;
   after: number;
   created: number;
+  target_total: number;
   source_rows: number;
-  multiplier: number;
+  batches?: number;
+  warning?: string | null;
+}
+
+export interface SyntheticLimits {
+  max_target_total: number;
+  max_create_per_run: number;
+  warn_create_above: number;
+  batch_size: number;
+  duckdb_note: string;
 }
 export type SummaryStats = StatsSummary;
 

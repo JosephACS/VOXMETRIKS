@@ -49,7 +49,7 @@
   font-size: 0.75rem;
   cursor: pointer;
 }
-.btn-pl:hover { border-color: rgba(255,140,66,0.4); }
+.btn-pl:hover { border-color: rgba(30,216,150,0.4); }
 
 .pl-picker {
   display: flex;

@@ -579,7 +579,7 @@ uvicorn main:app --reload
 | **Backend Framework** | FastAPI | 0.111.0 | REST API |
 | **Web Server** | Uvicorn | 0.30.1 | ASGI server |
 | **Database** | DuckDB | 1.1.3 | Analytical warehouse |
-| **Data Processing** | Pandas | 2.2.2 | ETL transformations |
+| **Data Processing** | Pandas | 2.2.2 | ELT transformations |
 | **Data Format** | PyArrow | 16.1.0 | Parquet support |
 | **Validation** | Pydantic | 2.7.4 | Schema validation |
 | **HTTP Client** | httpx | 0.27.0 | PocketBase integration |

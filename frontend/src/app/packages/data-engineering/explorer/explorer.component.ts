@@ -265,7 +265,7 @@ export class ExplorerComponent implements OnInit {
 
   kindLabel(kind: TableKind): string {
     const map: Record<TableKind, string> = {
-      dimension: 'Dimension', fact: 'Fact', aggregation: 'Aggregation',
+      dimension: 'Dimensión', fact: 'Hecho', aggregation: 'Agregación',
     };
     return map[kind];
   }

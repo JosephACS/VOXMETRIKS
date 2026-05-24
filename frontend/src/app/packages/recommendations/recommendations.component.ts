@@ -62,7 +62,7 @@ export class RecommendationsComponent {
 
   forYouTracks: ForYouTrack[] = [
     { id: 1, track: 'Midnight City', artist: 'M83', score: 96, tags: ['Synth-pop', 'Energético', 'Nostálgico'], accent: '#7c3aed' },
-    { id: 2, track: 'Electric Feel', artist: 'MGMT', score: 94, tags: ['Indie', 'Psichedélico', 'Dance'], accent: '#ff8c42' },
+    { id: 2, track: 'Electric Feel', artist: 'MGMT', score: 94, tags: ['Indie', 'Psichedélico', 'Dance'], accent: '#1ed896' },
     { id: 3, track: 'Redbone', artist: 'Childish Gambino', score: 92, tags: ['R&B', 'Soul', 'Chill'], accent: '#10b981' },
     { id: 4, track: 'Titanium', artist: 'David Guetta ft. Sia', score: 91, tags: ['EDM', 'Pop', 'Workout'], accent: '#3b82f6' },
     { id: 5, track: 'Starboy', artist: 'The Weeknd', score: 89, tags: ['R&B', 'Dark Pop', 'Nocturno'], accent: '#ec4899' },
@@ -70,7 +70,7 @@ export class RecommendationsComponent {
   ];
 
   recommendedArtists: RecommendedArtist[] = [
-    { id: 1, name: 'Dua Lipa', genre: 'Pop / Dance', popularity: 89, affinity: 94, gradient: 'linear-gradient(135deg, #ff8c42, #ec4899)', initial: 'DL' },
+    { id: 1, name: 'Dua Lipa', genre: 'Pop / Dance', popularity: 89, affinity: 94, gradient: 'linear-gradient(135deg, #1ed896, #ec4899)', initial: 'DL' },
     { id: 2, name: 'The Weeknd', genre: 'R&B / Pop', popularity: 92, affinity: 91, gradient: 'linear-gradient(135deg, #7c3aed, #1e1b4b)', initial: 'TW' },
     { id: 3, name: 'Billie Eilish', genre: 'Alternative', popularity: 87, affinity: 88, gradient: 'linear-gradient(135deg, #10b981, #064e3b)', initial: 'BE' },
     { id: 4, name: 'Calvin Harris', genre: 'EDM', popularity: 85, affinity: 86, gradient: 'linear-gradient(135deg, #3b82f6, #1e3a8a)', initial: 'CH' },
@@ -82,7 +82,7 @@ export class RecommendationsComponent {
     { id: 'chill', name: 'Chill', description: 'Relajado y atmosférico', tracks: 48, gradient: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', iconKey: 'moon' },
     { id: 'workout', name: 'Workout', description: 'Alta energía para entrenar', tracks: 62, gradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)', iconKey: 'dumbbell' },
     { id: 'focus', name: 'Focus', description: 'Concentración y productividad', tracks: 35, gradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', iconKey: 'target' },
-    { id: 'party', name: 'Party', description: 'Fiesta y buen ambiente', tracks: 55, gradient: 'linear-gradient(135deg, #ff8c42 0%, #ea580c 100%)', iconKey: 'party' },
+    { id: 'party', name: 'Party', description: 'Fiesta y buen ambiente', tracks: 55, gradient: 'linear-gradient(135deg, #1ed896 0%, #148f5e 100%)', iconKey: 'party' },
     { id: 'relax', name: 'Relax', description: 'Calma y bienestar', tracks: 41, gradient: 'linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%)', iconKey: 'leaf' },
   ];
 
@@ -98,7 +98,7 @@ export class RecommendationsComponent {
   ];
 
   genreAffinities: GenreAffinity[] = [
-    { genre: 'Pop', score: 92, color: '#ff8c42' },
+    { genre: 'Pop', score: 92, color: '#1ed896' },
     { genre: 'R&B', score: 85, color: '#7c3aed' },
     { genre: 'Indie', score: 78, color: '#10b981' },
     { genre: 'EDM', score: 74, color: '#3b82f6' },

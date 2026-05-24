@@ -19,7 +19,7 @@
   @if (!isLoading() && !hasError() && allGenres().length > 0) {
     <div class="kpi-row">
       <div class="kpi-card"><div class="kpi-icon kpi-primary" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ allGenres().length | number }}</span><span class="kpi-label">Géneros</span><span class="kpi-sub">en catálogo</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-info" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">Tracks — Top Género</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-info" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">Canciones — top género</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
       <div class="kpi-card"><div class="kpi-icon kpi-warning" [innerHTML]="icon('target', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPopularity() ?? '—' }}</span><span class="kpi-label">Pop. Promedio Global</span><span class="kpi-sub">popularidad media</span></div></div>
       <div class="kpi-card"><div class="kpi-icon kpi-secondary" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() != null ? ((avgEnergy()! * 100) | number:'1.0-1') + '%' : '—' }}</span><span class="kpi-label">Energía Promedio</span><span class="kpi-sub">energía media global</span></div></div>
     </div>
@@ -46,7 +46,7 @@
             <tr>
               <th class="col-rank">#</th>
               <th class="col-name">Género</th>
-              <th class="col-tracks">Tracks</th>
+              <th class="col-tracks">Canciones</th>
               <th class="col-artists">Artistas</th>
               <th class="col-pop">Popularidad</th>
               <th class="col-energy">Energía</th>

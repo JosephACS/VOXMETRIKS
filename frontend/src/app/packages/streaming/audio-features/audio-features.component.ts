@@ -31,13 +31,13 @@ interface FeatureDef {
 })
 export class AudioFeaturesComponent {
   featureDefs: FeatureDef[] = [
-    { key: 'danceability', label: 'Danceability', color: '#ff8c42' },
-    { key: 'energy', label: 'Energy', color: '#7c3aed' },
-    { key: 'valence', label: 'Valence', color: '#10b981' },
-    { key: 'acousticness', label: 'Acousticness', color: '#3b82f6' },
-    { key: 'speechiness', label: 'Speechiness', color: '#f59e0b' },
-    { key: 'instrumentalness', label: 'Instrumentalness', color: '#ec4899' },
-    { key: 'liveness', label: 'Liveness', color: '#6366f1' },
+    { key: 'danceability', label: 'Bailabilidad', color: '#1ed896' },
+    { key: 'energy', label: 'Energía', color: '#7c3aed' },
+    { key: 'valence', label: 'Valencia', color: '#10b981' },
+    { key: 'acousticness', label: 'Acústica', color: '#3b82f6' },
+    { key: 'speechiness', label: 'Locución', color: '#f59e0b' },
+    { key: 'instrumentalness', label: 'Instrumental', color: '#ec4899' },
+    { key: 'liveness', label: 'En vivo', color: '#6366f1' },
   ];
 
   tracks = signal<AudioFeatureTrack[]>([

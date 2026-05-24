@@ -29,6 +29,15 @@ export class AuthService {
   getUser = () => this.authState().user;
   userId = computed(() => this.authState().user?.id ?? null);
 
+  /** Acceso a ingeniería de datos (Pipeline ELT, Explorer). Usuario admin en demo. */
+  hasEngineerAccess(): boolean {
+    const u = this.getUser();
+    if (!u) return false;
+    const email = (u.email ?? '').toLowerCase();
+    const username = (u.username ?? '').toLowerCase();
+    return username === 'admin' || email.startsWith('admin@');
+  }
+
   constructor() {
     this.syncFromStorage();
   }

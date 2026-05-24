@@ -8,12 +8,12 @@
 
 .chart-badge {
   padding: 0.3rem 0.75rem;
-  background: rgba(255, 140, 66, 0.1);
-  border: 1px solid rgba(255, 140, 66, 0.25);
+  background: rgba(30, 216, 150, 0.1);
+  border: 1px solid rgba(30, 216, 150, 0.25);
   border-radius: 2rem;
   font-size: 0.68rem;
   font-weight: 600;
-  color: #ff8c42;
+  color: var(--accent);
 }
 
 /* Hero #1 */
@@ -30,7 +30,7 @@
 .hero-glow-bg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 50% 80% at 0% 50%, rgba(255, 140, 66, 0.08), transparent),
+  background: radial-gradient(ellipse 50% 80% at 0% 50%, rgba(30, 216, 150, 0.08), transparent),
               radial-gradient(ellipse 40% 60% at 100% 50%, rgba(124, 58, 237, 0.06), transparent);
   pointer-events: none;
 }
@@ -41,7 +41,7 @@
   left: 1rem;
   font-size: 3rem;
   font-weight: 900;
-  color: rgba(255, 140, 66, 0.12);
+  color: rgba(30, 216, 150, 0.12);
   line-height: 1;
   pointer-events: none;
 }
@@ -54,7 +54,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 8px 32px rgba(255, 140, 66, 0.2);
+  box-shadow: 0 8px 32px rgba(30, 216, 150, 0.2);
   flex-shrink: 0;
   z-index: 1;
 }
@@ -80,7 +80,7 @@
   border-radius: 2rem;
   font-size: 0.6rem;
   font-weight: 600;
-  color: #ff8c42;
+  color: var(--accent);
   white-space: nowrap;
 }
 
@@ -91,7 +91,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #ff8c42;
+  color: var(--accent);
 }
 
 .hero-title {
@@ -120,7 +120,7 @@
 
 .pop-fill-lg {
   height: 100%;
-  background: linear-gradient(90deg, #ff8c42, #7c3aed);
+  background: var(--chart-fill-h);
   border-radius: 3px;
 }
 
@@ -153,12 +153,29 @@
   margin-top: 0.75rem;
 }
 
+.hero-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: #1ed896;
+  color: #000;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.hero-play:hover { background: #fff; }
+
+.hero-cover { cursor: pointer; }
+
 .hero-link {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-decoration: none;
 }
-.hero-link:hover { color: #ff8c42; }
+.hero-link:hover { color: var(--accent); }
 
 .hero-spark {
   width: 160px;
@@ -348,7 +365,7 @@
 
 .pop-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff8c42, #7c3aed);
+  background: var(--chart-fill-h);
   border-radius: 2px;
 }
 

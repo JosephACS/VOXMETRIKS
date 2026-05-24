@@ -44,7 +44,7 @@ export class SettingsComponent {
   tabs: { id: SettingsTab; label: string; iconKey: string }[] = [
     { id: 'general', label: 'General', iconKey: 'settings' },
     { id: 'api', label: 'API', iconKey: 'link' },
-    { id: 'warehouse', label: 'Warehouse', iconKey: 'database' },
+    { id: 'warehouse', label: 'Almacén de datos', iconKey: 'database' },
     { id: 'pipeline', label: 'Pipeline ELT', iconKey: 'zap' },
   ];
 

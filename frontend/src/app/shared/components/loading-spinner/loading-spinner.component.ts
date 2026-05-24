@@ -50,7 +50,7 @@ import { Observable } from 'rxjs';
       border-right-color: var(--vox-purple);
       border-radius: 50%;
       animation: spin 1.5s linear infinite;
-      box-shadow: 0 0 20px rgba(255, 140, 66, 0.2), 0 0 40px rgba(124, 58, 237, 0.1);
+      box-shadow: 0 0 20px rgba(30, 216, 150, 0.2), 0 0 40px rgba(124, 58, 237, 0.1);
     }
 
     .loader-text {

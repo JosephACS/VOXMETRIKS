@@ -1,7 +1,7 @@
 <div class="af-page">
   <header class="page-header">
     <div>
-      <h1>Audio Features</h1>
+      <h1>Características de audio</h1>
       <p class="page-subtitle">Análisis de características acústicas del catálogo musical</p>
     </div>
     <span class="mock-badge">Datos de demostración</span>
@@ -10,19 +10,19 @@
   <!-- KPIs -->
   <section class="kpi-grid">
     <div class="kpi-card">
-      <span class="kpi-label">Tracks analizados</span>
+      <span class="kpi-label">Canciones analizadas</span>
       <span class="kpi-value">{{ tracks().length }}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Energy promedio</span>
+      <span class="kpi-label">Energía promedio</span>
       <span class="kpi-value kpi-purple">{{ avgEnergy() }}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Danceability promedio</span>
+      <span class="kpi-label">Bailabilidad promedio</span>
       <span class="kpi-value">{{ avgDanceability() }}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Valence promedio</span>
+      <span class="kpi-label">Valencia promedio</span>
       <span class="kpi-value kpi-green">{{ avgValence() }}</span>
     </div>
   </section>
@@ -32,19 +32,19 @@
     <section class="panel table-panel">
       <div class="panel-header">
         <h2>Catálogo con features</h2>
-        <span class="panel-meta">Selecciona un track para el radar</span>
+        <span class="panel-meta">Selecciona una canción para el radar</span>
       </div>
 
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Track</th>
+              <th>Canción</th>
               <th>Artista</th>
               <th>Pop.</th>
-              <th>Energy</th>
-              <th>Dance</th>
-              <th>Valence</th>
+              <th>Energía</th>
+              <th>Bailab.</th>
+              <th>Valencia</th>
             </tr>
           </thead>
           <tbody>
@@ -112,8 +112,8 @@
           <!-- Data polygon -->
           <polygon
             [attr.points]="radarPoints(selectedTrack())"
-            fill="rgba(255, 140, 66, 0.2)"
-            stroke="#ff8c42"
+            fill="rgba(30, 216, 150, 0.2)"
+            stroke="#1ed896"
             stroke-width="2"
           />
 

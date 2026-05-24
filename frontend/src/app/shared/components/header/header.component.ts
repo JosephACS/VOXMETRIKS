@@ -18,7 +18,7 @@ import { RouterModule } from '@angular/router';
           </svg>
         </button>
         <div class="breadcrumb">
-          <span class="breadcrumb-item">Dashboard</span>
+          <span class="breadcrumb-item">Inicio</span>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ import { RouterModule } from '@angular/router';
     }
 
     .menu-toggle:hover {
-      background: rgba(255, 140, 66, 0.1);
+      background: rgba(30, 216, 150, 0.1);
       color: var(--vox-orange);
     }
 
@@ -131,7 +131,7 @@ import { RouterModule } from '@angular/router';
     .search-box:focus-within {
       border-color: var(--vox-orange);
       background: var(--vox-surface);
-      box-shadow: 0 0 0 2px rgba(255, 140, 66, 0.1);
+      box-shadow: 0 0 0 2px rgba(30, 216, 150, 0.1);
     }
 
     .search-box svg { flex-shrink: 0; }

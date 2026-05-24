@@ -3,18 +3,23 @@
     <div>
       <h1 class="page-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Analytics
+        Análisis
       </h1>
-      <p class="page-subtitle">Análisis detallado · audio features & géneros</p>
+      <p class="page-subtitle">Análisis detallado · características de audio y géneros</p>
     </div>
   </div>
 
   @if (!isLoading()) {
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Tracks Analizados</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Canciones analizadas</span></div></div>
       <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">Popularidad Media</span></div></div>
       <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">Energía Media</span></div></div>
       <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">Géneros</span></div></div>
+      @if (engagement(); as e) {
+        <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">Puntuación de engagement</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">Tasa de finalización</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">Sesión promedio</span></div></div>
+      }
     </div>
   }
 
@@ -43,7 +48,7 @@
     </div>
 
     <div class="chart-card">
-      <h3 class="chart-title">Top Géneros por Tracks</h3>
+      <h3 class="chart-title">Top géneros por canciones</h3>
       @if (isLoading()) { <div class="skel-chart"></div> }
       @else if (topGenres().length === 0) { <div class="empty">Sin datos</div> }
       @else {
@@ -72,12 +77,12 @@
                 <span class="bubble-label">{{ g.nombre_genero ?? '—' }}</span>
                 <div class="bubble-bars">
                   <div class="bubble-bar-wrap">
-                    <span class="bubble-bar-label">Pop</span>
+                    <span class="bubble-bar-label">Pop.</span>
                     <div class="bubble-bar"><div class="b-fill b-pop" [style.width.%]="g.popularidad_promedio ?? 0"></div></div>
                     <span class="bubble-bar-val mono">{{ (g.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
                   </div>
                   <div class="bubble-bar-wrap">
-                    <span class="bubble-bar-label">Ener</span>
+                    <span class="bubble-bar-label">Energ.</span>
                     <div class="bubble-bar"><div class="b-fill b-energy" [style.width.%]="(g.energia_promedio ?? 0) * 100"></div></div>
                     <span class="bubble-bar-val mono">{{ ((g.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
                   </div>

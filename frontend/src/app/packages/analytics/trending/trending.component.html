@@ -1,10 +1,10 @@
 <div class="trending-page">
   <header class="vx-page-header">
     <div>
-      <h1>Trending</h1>
-      <p class="page-subtitle">Top Charts · Catálogo VOXMETRIK</p>
+      <h1>Tendencias</h1>
+      <p class="page-subtitle">Rankings · Catálogo VOXMETRIK</p>
     </div>
-    <span class="chart-badge">Global Top 25</span>
+    <span class="chart-badge">Top 25 global</span>
   </header>
 
   @if (isLoading()) {
@@ -21,30 +21,34 @@
       <section class="hero-card glass-panel">
         <div class="hero-glow-bg"></div>
         <div class="hero-rank">#1</div>
-        <div class="hero-cover" [style.background]="coverGradient(0)">
+        <div class="hero-cover" [style.background]="coverGradient(0)" (click)="playHero()" role="button" tabindex="0">
           <span class="cover-letter">{{ trackInitial(hero.nombre_track) }}</span>
-          <div class="hero-badge"><span [innerHTML]="icon('star', 14)"></span> Top Track</div>
+          <div class="hero-badge"><span [innerHTML]="icon('star', 14)"></span> Canción #1</div>
         </div>
         <div class="hero-details">
-          <span class="hero-label">Chart Leader</span>
+          <span class="hero-label">Líder del ranking</span>
           <h2 class="hero-title">{{ hero.nombre_track ?? '—' }}</h2>
           <p class="hero-artist">{{ hero.nombre_artista ?? '—' }}</p>
           <div class="hero-pop">
             <div class="pop-track-lg">
               <div class="pop-fill-lg" [style.width.%]="hero.popularity ?? 0"></div>
             </div>
-            <span class="pop-val">{{ hero.popularity ?? 0 }} popularity</span>
+            <span class="pop-val">{{ hero.popularity ?? 0 }} popularidad</span>
           </div>
           <div class="hero-trend up">
             <span [innerHTML]="icon('trend-up', 14)"></span> +12% esta semana
           </div>
           <div class="hero-actions">
+            <button type="button" class="hero-play" (click)="playHero()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Reproducir
+            </button>
             <app-favorite-btn [trackId]="hero.id_track" />
             <a class="hero-link" [routerLink]="['/tracks', hero.id_track]">Ver detalle →</a>
           </div>
         </div>
         <svg viewBox="0 0 200 60" class="hero-spark" aria-hidden="true">
-          <polyline points="0,50 25,35 50,42 75,28 100,32 125,18 150,25 175,12 200,20" fill="none" stroke="#ff8c42" stroke-width="2"/>
+          <polyline points="0,50 25,35 50,42 75,28 100,32 125,18 150,25 175,12 200,20" fill="none" stroke="#1ed896" stroke-width="2"/>
         </svg>
       </section>
     }
@@ -53,8 +57,8 @@
       <!-- Weekly chart -->
       <section class="glass-panel chart-section">
         <div class="panel-head">
-          <h2>Weekly Chart</h2>
-          <span class="panel-meta">Streams simulados</span>
+          <h2>Chart semanal</h2>
+          <span class="panel-meta">Reproducciones simuladas</span>
         </div>
         <svg viewBox="0 0 400 120" class="weekly-chart" aria-hidden="true">
           <defs>
@@ -74,19 +78,19 @@
 
       <!-- Stats mini -->
       <section class="glass-panel stats-mini">
-        <div class="panel-head"><h2>Chart Stats</h2></div>
+        <div class="panel-head"><h2>Estadísticas del chart</h2></div>
         <div class="mini-stats">
           <div class="ms-item">
             <span class="ms-val">{{ tracks().length }}</span>
-            <span class="ms-lbl">Tracks</span>
+            <span class="ms-lbl">Canciones</span>
           </div>
           <div class="ms-item">
             <span class="ms-val">{{ avgPopularity() }}</span>
-            <span class="ms-lbl">Avg Pop</span>
+            <span class="ms-lbl">Pop. media</span>
           </div>
           <div class="ms-item">
             <span class="ms-val">{{ maxPopularity() }}</span>
-            <span class="ms-lbl">Peak</span>
+            <span class="ms-lbl">Máximo</span>
           </div>
         </div>
         <div class="dist-bars">
@@ -137,14 +141,14 @@
   @if (!isLoading() && !tracks().length && !hasError()) {
     <div class="empty-state glass-panel">
       <span [innerHTML]="icon('music', 32)"></span>
-      <p>No hay datos de trending disponibles.</p>
+      <p>No hay datos de tendencias disponibles.</p>
     </div>
   }
 
   @if (hasError()) {
     <div class="error-state glass-panel">
       <span class="error-icon" [innerHTML]="icon('alert', 20)"></span>
-      <p>Error al cargar trending. Verifica que FastAPI esté corriendo.</p>
+      <p>Error al cargar tendencias. Verifica que FastAPI esté corriendo.</p>
     </div>
   }
 </div>

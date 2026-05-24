@@ -52,6 +52,19 @@
   --page-pad-y: 1rem;
   --section-gap: 0.875rem;
   --panel-pad: 1rem 1.125rem;
+
+  /* Spotify-inspired tokens */
+  --spotify-black:   #000000;
+  --spotify-base:    #121212;
+  --spotify-card:    #181818;
+  --spotify-card-hover: #282828;
+  --spotify-elevated: #1a1a1a;
+  --spotify-muted:   #b3b3b3;
+  --accent-hover:    #1fdf8f;
+  --accent-glow:     rgba(30, 216, 150, 0.18);
+  --chart-fill:      linear-gradient(180deg, #1ed896 0%, #148f5e 100%);
+  --chart-stroke:    #1ed896;
+  --chart-fill-h:    linear-gradient(90deg, #1ed896, #148f5e);
 }
 
 html { font-size: 16px; }
@@ -413,4 +426,81 @@ input, select, textarea { font-family: inherit; }
 .form-select:focus {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px var(--accent-dim) !important;
+}
+
+/* ── Spotify-style unified module theme ── */
+.page .kpi-card,
+.kpi-row .kpi-card,
+.analytics-grid .kpi-card,
+.chart-card,
+.top-artist-card,
+.kpi-card:not(app-kpi-card .kpi-card) {
+  background: var(--spotify-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.chart-card:hover,
+.top-artist-card:hover,
+.kpi-row .kpi-card:hover {
+  background: var(--spotify-card-hover) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.kpi-orange,
+.kpi-primary,
+.kpi-green,
+.stat-pill.popularity {
+  color: var(--accent) !important;
+}
+
+.kpi-purple { color: #b794f6 !important; }
+.kpi-blue { color: var(--color-info) !important; }
+
+.e-bar,
+.b-pop,
+.fill-pop {
+  background: var(--chart-fill) !important;
+}
+
+.b-energy {
+  background: linear-gradient(90deg, #148f5e, #1ed896) !important;
+}
+
+.top-artist-card:hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 8px 24px var(--accent-glow) !important;
+}
+
+.top-artist-avatar,
+.artist-avatar-initials {
+  background: linear-gradient(135deg, #1ed896 0%, #148f5e 100%) !important;
+}
+
+.stat-pill.popularity {
+  background: var(--accent-dim) !important;
+}
+
+.insight-badge {
+  background: var(--accent-dim) !important;
+  border-color: rgba(30, 216, 150, 0.25) !important;
+  color: var(--accent) !important;
+}
+
+.form-input {
+  background: var(--spotify-base) !important;
+  border-color: var(--border) !important;
+}
+
+.modal-footer {
+  border-top-color: var(--border) !important;
+}
+
+.page-title {
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  color: var(--spotify-muted) !important;
 }

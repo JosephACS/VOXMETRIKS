@@ -1,7 +1,7 @@
 <div class="explorer-page">
   <header class="page-header">
     <div>
-      <h1>Data Explorer</h1>
+      <h1>Explorador de datos</h1>
       <p class="page-subtitle">Explorador visual del Data Warehouse — capa Gold & DuckDB</p>
     </div>
     <span class="badge-demo">Preview simulado — no ejecuta SQL real</span>
@@ -11,7 +11,7 @@
   <section class="kpi-grid">
     <app-kpi-card label="Total tablas" [value]="12" iconKey="grid" color="primary" subtitle="Gold + aggs" />
     <app-kpi-card label="Dimensiones" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
-    <app-kpi-card label="Facts" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
+    <app-kpi-card label="Hechos" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
     <app-kpi-card label="Agregaciones" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
   </section>
 
@@ -38,7 +38,7 @@
           >
             <span class="table-name">{{ t.name }}</span>
             <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
-            <span class="table-rows">{{ fmt(t.rowCount) }} rows</span>
+            <span class="table-rows">{{ fmt(t.rowCount) }} filas</span>
           </button>
         }
       </nav>
@@ -63,7 +63,7 @@
         <div class="sql-client">
           <div class="sql-bar">
             <span class="sql-dot"></span>
-            <span>SQL Client — preview</span>
+            <span>Cliente SQL — vista previa</span>
           </div>
           <pre class="sql-code">{{ mockQuery() }}</pre>
         </div>
