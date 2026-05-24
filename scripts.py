@@ -1,20 +1,41 @@
 import duckdb
 
+# Conexión a DuckDB
 conn = duckdb.connect("duckdb/voxmetrik.duckdb")
 
+# Obtener tablas
 tables = conn.execute("SHOW TABLES").fetchall()
 
-with open("schema_dump.txt", "w", encoding="utf-8") as f:
-    for table in tables:
-        table_name = table[0]
+schema_output = []
 
-        f.write(f"\n{'='*80}\n")
-        f.write(f"TABLE: {table_name}\n")
-        f.write(f"{'='*80}\n\n")
+for table in tables:
+    table_name = table[0]
 
-        schema = conn.execute(f"DESCRIBE {table_name}").fetchdf()
+    schema_output.append(f"\n-- TABLE: {table_name}\n")
 
-        f.write(schema.to_string())
-        f.write("\n\n")
+    describe = conn.execute(f"DESCRIBE {table_name}").fetchall()
 
-print("✅ Schema exportado a schema_dump.txt")
+    schema_output.append(f"CREATE TABLE {table_name} (\n")
+
+    columns = []
+
+    for col in describe:
+        col_name = col[0]
+        col_type = col[1]
+        nullable = col[2]
+
+        line = f"    {col_name} {col_type}"
+
+        if nullable == "NO":
+            line += " NOT NULL"
+
+        columns.append(line)
+
+    schema_output.append(",\n".join(columns))
+    schema_output.append("\n);\n")
+
+# Guardar schema.sql
+with open("schema.sql", "w", encoding="utf-8") as f:
+    f.write("".join(schema_output))
+
+print("✅ schema.sql generado correctamente")

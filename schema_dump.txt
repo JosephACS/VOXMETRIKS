@@ -1,0 +1,166 @@
+
+================================================================================
+TABLE: agg_distribucion_energia
+================================================================================
+
+             column_name column_type null   key default extra
+0          rango_energia     VARCHAR   NO   PRI    None  None
+1        cantidad_tracks     INTEGER  YES  None    None  None
+2   popularidad_promedio      DOUBLE  YES  None    None  None
+3  danceability_promedio      DOUBLE  YES  None    None  None
+
+
+================================================================================
+TABLE: agg_genero_popularidad
+================================================================================
+
+            column_name column_type null   key default extra
+0             id_genero     INTEGER   NO   PRI    None  None
+1         nombre_genero     VARCHAR  YES  None    None  None
+2  popularidad_promedio      DOUBLE  YES  None    None  None
+3      energia_promedio      DOUBLE  YES  None    None  None
+4          total_tracks     INTEGER  YES  None    None  None
+5        total_artistas     INTEGER  YES  None    None  None
+
+
+================================================================================
+TABLE: agg_top_artistas
+================================================================================
+
+            column_name column_type null   key default extra
+0            id_artista     INTEGER   NO   PRI    None  None
+1        nombre_artista     VARCHAR  YES  None    None  None
+2  promedio_popularidad      DOUBLE  YES  None    None  None
+3          total_tracks     INTEGER  YES  None    None  None
+
+
+================================================================================
+TABLE: ctl_auditoria
+================================================================================
+
+      column_name column_type null   key            default extra
+0    id_auditoria     INTEGER   NO   PRI               None  None
+1          accion     VARCHAR   NO  None               None  None
+2  tabla_afectada     VARCHAR  YES  None               None  None
+3    fecha_evento   TIMESTAMP   NO  None  CURRENT_TIMESTAMP  None
+4        detalles     VARCHAR  YES  None               None  None
+
+
+================================================================================
+TABLE: ctl_carga_dataset
+================================================================================
+
+        column_name column_type null   key            default extra
+0          id_carga     INTEGER   NO   PRI               None  None
+1       fecha_carga   TIMESTAMP   NO  None  CURRENT_TIMESTAMP  None
+2              modo     VARCHAR   NO  None               None  None
+3  registros_nuevos     INTEGER  YES  None                  0  None
+4         total_raw     INTEGER  YES  None                  0  None
+5            estado     VARCHAR   NO  None        'PENDIENTE'  None
+
+
+================================================================================
+TABLE: ctl_reporte
+================================================================================
+
+        column_name column_type null   key            default extra
+0        id_reporte     INTEGER   NO   PRI               None  None
+1  fecha_generacion   TIMESTAMP   NO  None  CURRENT_TIMESTAMP  None
+2      tipo_reporte     VARCHAR  YES  None               None  None
+3           usuario     VARCHAR  YES  None               None  None
+4          detalles     VARCHAR  YES  None               None  None
+
+
+================================================================================
+TABLE: dim_album
+================================================================================
+
+    column_name column_type null   key default extra
+0      id_album     INTEGER   NO   PRI    None  None
+1  nombre_album     VARCHAR   NO  None    None  None
+2    id_artista     INTEGER  YES  None    None  None
+
+
+================================================================================
+TABLE: dim_artista
+================================================================================
+
+      column_name column_type null  key default extra
+0      id_artista     INTEGER   NO  PRI    None  None
+1  nombre_artista     VARCHAR   NO  UNI    None  None
+
+
+================================================================================
+TABLE: dim_genero
+================================================================================
+
+     column_name column_type null  key default extra
+0      id_genero     INTEGER   NO  PRI    None  None
+1  nombre_genero     VARCHAR   NO  UNI    None  None
+
+
+================================================================================
+TABLE: dim_track
+================================================================================
+
+        column_name column_type null   key default extra
+0          id_track     INTEGER   NO   PRI    None  None
+1  spotify_track_id     VARCHAR  YES  None    None  None
+2      nombre_track     VARCHAR   NO  None    None  None
+3        id_artista     INTEGER  YES  None    None  None
+4          id_album     INTEGER  YES  None    None  None
+5         id_genero     INTEGER  YES  None    None  None
+6          explicit     BOOLEAN  YES  None    None  None
+7       duration_ms     INTEGER  YES  None    None  None
+
+
+================================================================================
+TABLE: fact_audio_features
+================================================================================
+
+         column_name column_type null   key default extra
+0            id_fact     INTEGER   NO   PRI    None  None
+1           id_track     INTEGER  YES  None    None  None
+2         popularity     INTEGER  YES  None    None  None
+3       danceability      DOUBLE  YES  None    None  None
+4             energy      DOUBLE  YES  None    None  None
+5           loudness      DOUBLE  YES  None    None  None
+6        speechiness      DOUBLE  YES  None    None  None
+7       acousticness      DOUBLE  YES  None    None  None
+8   instrumentalness      DOUBLE  YES  None    None  None
+9           liveness      DOUBLE  YES  None    None  None
+10           valence      DOUBLE  YES  None    None  None
+11             tempo      DOUBLE  YES  None    None  None
+12           key_col     INTEGER  YES  None    None  None
+13          mode_col     INTEGER  YES  None    None  None
+14    time_signature     INTEGER  YES  None    None  None
+
+
+================================================================================
+TABLE: raw_spotify
+================================================================================
+
+         column_name column_type null   key            default extra
+0                 id     INTEGER   NO   PRI               None  None
+1           track_id     VARCHAR  YES  None               None  None
+2         track_name     VARCHAR  YES  None               None  None
+3            artists     VARCHAR  YES  None               None  None
+4         album_name     VARCHAR  YES  None               None  None
+5         popularity     INTEGER  YES  None               None  None
+6        duration_ms     INTEGER  YES  None               None  None
+7           explicit     BOOLEAN  YES  None               None  None
+8       danceability      DOUBLE  YES  None               None  None
+9             energy      DOUBLE  YES  None               None  None
+10           key_col     INTEGER  YES  None               None  None
+11          loudness      DOUBLE  YES  None               None  None
+12          mode_col     INTEGER  YES  None               None  None
+13       speechiness      DOUBLE  YES  None               None  None
+14      acousticness      DOUBLE  YES  None               None  None
+15  instrumentalness      DOUBLE  YES  None               None  None
+16          liveness      DOUBLE  YES  None               None  None
+17           valence      DOUBLE  YES  None               None  None
+18             tempo      DOUBLE  YES  None               None  None
+19    time_signature     INTEGER  YES  None               None  None
+20       track_genre     VARCHAR  YES  None               None  None
+21     fecha_ingesta   TIMESTAMP  YES  None  CURRENT_TIMESTAMP  None
+
