@@ -25,6 +25,9 @@ data/processed/
 .vscode/
 .idea/
 *.swp
+VOXMETRIKS.git/
+.git-rewrite-clean.sh
+.git-purge-bare-clone.sh
 
 # Docker
 *.log

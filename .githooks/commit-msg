@@ -1,0 +1,8 @@
+#!/bin/sh
+# Strip Cursor co-author trailers (Cursor adds them automatically on commit).
+if grep -qiE 'Co-authored-by:.*(cursor|cursoragent)|cursoragent@cursor.com' "$1"; then
+  tmp="$(mktemp)"
+  grep -viE 'Co-authored-by:.*(cursor|cursoragent)|cursoragent@cursor.com' "$1" > "$tmp"
+  mv "$tmp" "$1"
+fi
+exit 0

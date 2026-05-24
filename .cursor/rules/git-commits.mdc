@@ -1,0 +1,10 @@
+---
+description: Git commit rules for VOXMETRIK
+alwaysApply: true
+---
+
+# Git commits
+
+- Never add `Co-authored-by: Cursor`, `Co-authored-by: cursoragent`, or any Cursor/agent co-author trailer to commit messages.
+- All commits must use author: **JosephACS** / **calderonsaltos1234@gmail.com** only.
+- Do not run `git commit` with `--author` pointing to Cursor or cursoragent.
