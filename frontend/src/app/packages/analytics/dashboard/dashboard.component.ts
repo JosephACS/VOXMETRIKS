@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { StatsService } from '../services/stats.service';
 import { StatsSummary, TopTrack } from '../../../shared/models/api.models';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
+import { UiPreferencesService } from '../../../core/services/ui-preferences.service';
+import { CoverArtService } from '../../../shared/services/cover-art.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -29,7 +31,7 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
       </div>
     }
 
-    @if (!isLoading() && summary()) {
+    @if (!isLoading() && summary() && ui.showKpis()) {
       <section class="vx-kpi-grid">
         <app-kpi-card label="Canciones" [value]="summary()!.total_tracks" iconKey="music" color="primary" subtitle="en catálogo" />
         <app-kpi-card label="Artistas" [value]="summary()!.total_artistas" iconKey="users" color="info" subtitle="únicos" />
@@ -93,7 +95,14 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
               @for (t of topTracks(); track t.nombre_track; let i = $index) {
                 <tr>
                   <td class="mono rank">{{ i + 1 }}</td>
-                  <td class="track-name">{{ t.nombre_track ?? '—' }}</td>
+                  <td class="track-cell">
+                    <div class="track-cell-inner">
+                      <span class="cover-thumb cover-thumb--sm" [style.background]="coverFor(t.id_track)">
+                        <span class="cover-initial">{{ trackInitial(t.nombre_track) }}</span>
+                      </span>
+                      <span class="track-name">{{ t.nombre_track ?? '—' }}</span>
+                    </div>
+                  </td>
                   <td>{{ t.nombre_artista ?? '—' }}</td>
                   <td>
                     <div class="pop-cell">
@@ -207,7 +216,14 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
     .table-panel .vx-table th, .table-panel .vx-table td { padding: 0.5rem 1rem; }
     .mono { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
     .rank { width: 2rem; color: var(--accent); font-weight: 600; }
-    .track-name { font-weight: 500; color: var(--text); }
+    .track-cell { min-width: 180px; }
+    .track-cell-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-width: 0;
+    }
+    .track-name { font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pop-cell { display: flex; align-items: center; gap: 0.5rem; min-width: 120px; }
     .pop-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
     .pop-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #148f5e); border-radius: 2px; }
@@ -235,6 +251,8 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.c
 })
 export class DashboardComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  private covers = inject(CoverArtService);
+  ui = inject(UiPreferencesService);
 
   isLoading = signal(true);
   hasError = signal(false);
@@ -303,5 +321,13 @@ export class DashboardComponent implements OnInit {
     if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
     if (val >= 1_000) return `${(val / 1_000).toFixed(1)}K`;
     return val.toLocaleString('es-ES');
+  }
+
+  coverFor(id: number): string {
+    return this.covers.gradientFor(id);
+  }
+
+  trackInitial(name?: string | null): string {
+    return this.covers.initialFor(name);
   }
 }

@@ -113,8 +113,8 @@ export const APP_ROUTES: Routes = [
       {
         path: 'elt-pipeline',
         loadComponent: () =>
-          import('./packages/data-engineering/etl-pipeline/etl-pipeline.component').then(
-            (m) => m.EtlPipelineComponent
+          import('./packages/data-engineering/elt-pipeline/elt-pipeline.component').then(
+            (m) => m.EltPipelineComponent
           ),
       },
       {

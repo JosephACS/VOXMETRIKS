@@ -3,6 +3,7 @@
  */
 
 import { Component, inject, signal, OnInit } from '@angular/core';
+import { UpperCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   ReactiveFormsModule,
@@ -11,6 +12,9 @@ import {
 } from '@angular/forms';
 
 import { AuthService } from '../../core/services/auth.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { UiPreferencesService, AppLanguage } from '../../core/services/ui-preferences.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { StatsService } from '../../packages/analytics/services/stats.service';
 import { StatsSummary } from '../../shared/models/api.models';
 
@@ -19,7 +23,7 @@ type AuthMode = 'login' | 'register';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslatePipe, UpperCasePipe],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
@@ -28,6 +32,10 @@ export class LoginComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly stats = inject(StatsService);
+  private readonly i18n = inject(I18nService);
+  private readonly ui = inject(UiPreferencesService);
+
+  protected readonly language = this.ui.language;
 
   protected readonly mode = signal<AuthMode>('login');
   protected readonly isLoading = signal(false);
@@ -55,6 +63,10 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  protected setLanguage(lang: AppLanguage): void {
+    this.ui.setLanguage(lang);
+  }
+
   protected setMode(m: AuthMode): void {
     this.mode.set(m);
     this.errorMessage.set('');
@@ -76,7 +88,7 @@ export class LoginComponent implements OnInit {
       if (ok) {
         this.router.navigate(['/dashboard']);
       } else {
-        this.errorMessage.set('Credenciales inválidas. Prueba demo@voxmetrik.io / demo123');
+        this.errorMessage.set(this.i18n.t('login.invalidCredentials'));
         this.isLoading.set(false);
       }
     });
@@ -94,7 +106,7 @@ export class LoginComponent implements OnInit {
       if (res.ok) {
         this.router.navigate(['/dashboard']);
       } else {
-        this.errorMessage.set(res.error ?? 'Error al registrar');
+        this.errorMessage.set(res.error ?? this.i18n.t('login.registerError'));
         this.isLoading.set(false);
       }
     });

@@ -2,20 +2,27 @@
   <aside class="login-cover" aria-hidden="true">
     <div class="cover-glow"></div>
     <div class="cover-content">
-      <h2>Plataforma de<br/>inteligencia musical</h2>
-      <p>Análisis · Streaming · Recomendaciones</p>
+      <h2>{{ 'login.coverTitle' | t }}</h2>
+      <p>{{ 'login.coverSub' | t }}</p>
       <div class="cover-stats">
         @if (summary()?.total_tracks != null) {
-          <span>{{ formatStat(summary()?.total_tracks) }} canciones</span>
+          <span>{{ 'login.statTracks' | t: { count: formatStat(summary()?.total_tracks) } }}</span>
         }
         @if (summary()?.total_artistas != null) {
-          <span>{{ formatStat(summary()?.total_artistas) }} artistas</span>
+          <span>{{ 'login.statArtists' | t: { count: formatStat(summary()?.total_artistas) } }}</span>
         }
       </div>
     </div>
   </aside>
 
   <div class="login-card glass" role="main">
+    <div class="login-toolbar">
+      <div class="lang-toggle" role="group" [attr.aria-label]="'settings.language' | t">
+        <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t }}</button>
+        <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t }}</button>
+      </div>
+    </div>
+
     <div class="login-brand">
       <picture class="login-brand-logo-wrap" aria-hidden="true">
         <source srcset="/assets/images/voxmetrik-logo.png" type="image/png" />
@@ -24,26 +31,26 @@
     </div>
 
     <div class="auth-tabs">
-      <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">Iniciar sesión</button>
-      <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">Registrarse</button>
+      <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t }}</button>
+      <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t }}</button>
     </div>
 
     @if (mode() === 'login') {
-      <h1 class="login-title">Bienvenido de vuelta</h1>
-      <p class="login-subtitle">Accede a tu catálogo y listas</p>
+      <h1 class="login-title">{{ 'login.welcomeTitle' | t }}</h1>
+      <p class="login-subtitle">{{ 'login.subtitle' | t }}</p>
 
       <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="email">EMAIL</label>
+          <label class="field-label" for="email">{{ 'login.email' | t | uppercase }}</label>
           <div class="input-wrap" [class.invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched">
             <input id="email" type="email" formControlName="email" placeholder="demo@voxmetrik.io" class="field-input" autocomplete="username" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="password">CONTRASEÑA</label>
+          <label class="field-label" for="password">{{ 'login.password' | t | uppercase }}</label>
           <div class="input-wrap">
             <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="••••••••" class="field-input" autocomplete="current-password" />
-            <button type="button" class="toggle-pw" (click)="togglePassword()" aria-label="Mostrar contraseña">
+            <button type="button" class="toggle-pw" (click)="togglePassword()" [attr.aria-label]="showPassword() ? ('login.hidePassword' | t) : ('login.showPassword' | t)">
               @if (showPassword()) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
               } @else {
@@ -55,41 +62,41 @@
         <div class="form-options">
           <label class="checkbox-label">
             <input type="checkbox" formControlName="remember" />
-            Recordarme
+            {{ 'login.remember' | t }}
           </label>
         </div>
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
         <button type="submit" class="submit-btn" [disabled]="isLoading()" [class.loading]="isLoading()">
-          @if (isLoading()) { Autenticando... } @else { Entrar al panel → }
+          @if (isLoading()) { {{ 'login.submitting' | t }} } @else { {{ 'login.submit' | t }} }
         </button>
       </form>
     } @else {
-      <h1 class="login-title">Crea tu cuenta</h1>
-      <p class="login-subtitle">Únete a VOXMETRIK en segundos</p>
+      <h1 class="login-title">{{ 'login.registerTitle' | t }}</h1>
+      <p class="login-subtitle">{{ 'login.registerSubtitle' | t }}</p>
 
       <form [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="username">USUARIO</label>
+          <label class="field-label" for="username">{{ 'login.username' | t | uppercase }}</label>
           <div class="input-wrap">
             <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="reg-email">EMAIL</label>
+          <label class="field-label" for="reg-email">{{ 'login.email' | t | uppercase }}</label>
           <div class="input-wrap">
             <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="reg-password">CONTRASEÑA</label>
+          <label class="field-label" for="reg-password">{{ 'login.password' | t | uppercase }}</label>
           <div class="input-wrap">
             <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="genre">GÉNERO FAVORITO</label>
+          <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t | uppercase }}</label>
           <div class="input-wrap">
             <input id="genre" type="text" formControlName="favoriteGenre" placeholder="Pop, Rock, Latin..." class="field-input" />
           </div>
@@ -98,11 +105,11 @@
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
         <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
-          @if (isLoading()) { Creando cuenta... } @else { Crear cuenta → }
+          @if (isLoading()) { {{ 'login.registerSubmitting' | t }} } @else { {{ 'login.registerSubmit' | t }} }
         </button>
       </form>
     }
 
-    <p class="login-hint">Demo: <code>demo@voxmetrik.io</code> / <code>demo123</code></p>
+    <p class="login-hint">{{ 'login.demoHint' | t }}</p>
   </div>
 </div>

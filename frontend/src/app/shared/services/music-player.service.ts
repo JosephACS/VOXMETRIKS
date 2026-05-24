@@ -27,6 +27,7 @@ export class MusicPlayerService {
   shuffle = signal(false);
   repeat = signal(false);
   queue = signal<PlayableTrack[]>([]);
+  expandedOpen = signal(false);
 
   progressPct = computed(() => {
     const d = this.duration();
@@ -146,6 +147,20 @@ export class MusicPlayerService {
 
   toggleShuffle() { this.shuffle.update((v) => !v); }
   toggleRepeat() { this.repeat.update((v) => !v); }
+
+  openExpandedView() {
+    if (!this.currentTrack()) return;
+    this.expandedOpen.set(true);
+  }
+
+  closeExpandedView() {
+    this.expandedOpen.set(false);
+  }
+
+  toggleExpandedView() {
+    if (!this.currentTrack()) return;
+    this.expandedOpen.update((v) => !v);
+  }
 
   formatTime(sec: number): string {
     if (!Number.isFinite(sec)) return '0:00';

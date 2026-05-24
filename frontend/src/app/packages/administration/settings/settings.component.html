@@ -1,206 +1,450 @@
 <div class="settings-page">
+
   <header class="page-header">
+
     <div>
-      <h1>Configuración</h1>
-      <p class="page-subtitle">Preferencias de la plataforma VOXMETRIK</p>
+
+      <h1>{{ 'settings.title' | t }}</h1>
+
+      <p class="page-subtitle">{{ 'settings.subtitle' | t }}</p>
+
     </div>
+
   </header>
 
+
+
   <div class="settings-layout">
+
     <nav class="settings-nav">
-      @for (tab of tabs; track tab.id) {
+
+      @for (tab of tabs(); track tab.id) {
+
         <button
+
           type="button"
+
           class="nav-tab"
+
           [class.active]="activeTab() === tab.id"
+
           (click)="selectTab(tab.id)"
+
         >
+
           <span class="tab-icon" [innerHTML]="icon(tab.iconKey, 16)"></span>
+
           <span class="tab-label">{{ tab.label }}</span>
+
         </button>
+
       }
+
     </nav>
 
+
+
     <div class="settings-content">
+
       @switch (activeTab()) {
 
+
+
         @case ('general') {
+
           <section class="settings-section">
-            <h2>Preferencias generales</h2>
-            <p class="section-desc">Ajustes visuales de la interfaz (simulación — sin persistencia)</p>
+
+            <h2>{{ 'settings.general.title' | t }}</h2>
+
+            <p class="section-desc">{{ 'settings.general.desc' | t }}</p>
+
+
 
             <div class="setting-row">
+
               <div class="setting-info">
-                <label for="theme">Tema</label>
-                <span class="setting-hint">Apariencia de la aplicación</span>
+
+                <span class="setting-title">{{ 'settings.theme' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.themeHint' | t:{ active: activeThemeLabel() } }}</span>
+
               </div>
-              <select id="theme" class="setting-control" [ngModel]="theme()" (ngModelChange)="theme.set($event)">
-                <option value="dark">Modo oscuro</option>
-                <option value="light">Modo claro</option>
-                <option value="system">Sistema</option>
-              </select>
+
+              <div class="segmented-control" role="group" [attr.aria-label]="'settings.theme' | t">
+
+                @for (opt of themeOptions(); track opt.value) {
+
+                  <button
+
+                    type="button"
+
+                    class="seg-btn"
+
+                    [class.active]="ui.theme() === opt.value"
+
+                    (click)="ui.setTheme(opt.value)"
+
+                  >{{ opt.label }}</button>
+
+                }
+
+              </div>
+
             </div>
 
-            <div class="setting-row">
-              <div class="setting-info">
-                <label for="language">Idioma</label>
-                <span class="setting-hint">Idioma de la interfaz</span>
-              </div>
-              <select id="language" class="setting-control" [ngModel]="language()" (ngModelChange)="language.set($event)">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-              </select>
-            </div>
+
 
             <div class="setting-row">
+
               <div class="setting-info">
-                <span class="setting-title">Modo compacto</span>
-                <span class="setting-hint">Reduce espaciado en tablas y cards</span>
+
+                <span class="setting-title">{{ 'settings.language' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.languageHint' | t }}</span>
+
               </div>
+
+              <div class="segmented-control" role="group" [attr.aria-label]="'settings.language' | t">
+
+                @for (opt of languageOptions(); track opt.value) {
+
+                  <button
+
+                    type="button"
+
+                    class="seg-btn"
+
+                    [class.active]="ui.language() === opt.value"
+
+                    (click)="ui.setLanguage(opt.value)"
+
+                  >{{ opt.label }}</button>
+
+                }
+
+              </div>
+
+            </div>
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.compact' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.compactHint' | t }}</span>
+
+              </div>
+
               <label class="toggle">
-                <input type="checkbox" [ngModel]="compactMode()" (ngModelChange)="compactMode.set($event)" />
+
+                <input type="checkbox" [checked]="ui.compactMode()" (change)="ui.setCompactMode($any($event.target).checked)" />
+
                 <span class="toggle-slider"></span>
+
               </label>
+
             </div>
 
+
+
             <div class="setting-row">
+
               <div class="setting-info">
-                <span class="setting-title">Mostrar KPIs en el panel</span>
-                <span class="setting-hint">Tarjetas de métricas principales</span>
+
+                <span class="setting-title">{{ 'settings.showKpis' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.showKpisHint' | t }}</span>
+
               </div>
+
               <label class="toggle">
-                <input type="checkbox" [ngModel]="showKpis()" (ngModelChange)="showKpis.set($event)" />
+
+                <input type="checkbox" [checked]="ui.showKpis()" (change)="ui.setShowKpis($any($event.target).checked)" />
+
                 <span class="toggle-slider"></span>
+
               </label>
+
             </div>
+
           </section>
+
         }
+
+
 
         @case ('api') {
+
           <section class="settings-section">
-            <h2>Conexión API</h2>
-            <p class="section-desc">Backend FastAPI — solo lectura</p>
+
+            <h2>{{ 'settings.api.title' | t }}</h2>
+
+            <p class="section-desc">{{ 'settings.api.desc' | t }}</p>
+
+
 
             <div class="info-card">
+
               <div class="info-row">
-                <span class="info-label">URL del backend</span>
+
+                <span class="info-label">{{ 'settings.api.url' | t }}</span>
+
                 <code class="info-value">{{ apiUrl }}</code>
+
               </div>
+
               <div class="info-row">
-                <span class="info-label">Versión API</span>
+
+                <span class="info-label">{{ 'settings.api.version' | t }}</span>
+
                 <span class="info-value">v1</span>
+
               </div>
+
               <div class="info-row">
-                <span class="info-label">Documentación</span>
+
+                <span class="info-label">{{ 'settings.api.docs' | t }}</span>
+
                 <code class="info-value">http://localhost:8000/docs</code>
+
               </div>
+
               <div class="info-row">
-                <span class="info-label">Health check</span>
+
+                <span class="info-label">{{ 'settings.api.health' | t }}</span>
+
                 <code class="info-value">http://localhost:8000/health</code>
+
               </div>
+
             </div>
+
+
 
             <div class="status-banner status-ok">
+
               <span class="status-dot"></span>
-              Configuración de API en modo desarrollo local
+
+              {{ 'settings.api.status' | t }}
+
             </div>
+
           </section>
+
         }
+
+
 
         @case ('warehouse') {
+
           <section class="settings-section">
-            <h2>Data Warehouse</h2>
-            <p class="section-desc">DuckDB — capa Gold y agregaciones</p>
+
+            <h2>{{ 'settings.wh.title' | t }}</h2>
+
+            <p class="section-desc">{{ 'settings.wh.desc' | t }}</p>
+
+
 
             <div class="info-card">
+
               <div class="info-row">
-                <span class="info-label">Motor</span>
+
+                <span class="info-label">{{ 'settings.wh.engine' | t }}</span>
+
                 <span class="info-value">DuckDB</span>
+
               </div>
+
               <div class="info-row">
-                <span class="info-label">Archivo</span>
+
+                <span class="info-label">{{ 'settings.wh.file' | t }}</span>
+
                 <code class="info-value">{{ warehousePath }}</code>
+
               </div>
+
               <div class="info-row">
-                <span class="info-label">Formato capas</span>
-                <span class="info-value">Parquet (Bronze / Silver / Gold)</span>
+
+                <span class="info-label">{{ 'settings.wh.format' | t }}</span>
+
+                <span class="info-value">{{ 'settings.wh.formatValue' | t }}</span>
+
               </div>
+
             </div>
 
-            <h3 class="subsection-title">Dimensiones</h3>
+
+
+            <h3 class="subsection-title">{{ 'settings.wh.dimensions' | t }}</h3>
+
             <div class="chip-grid">
+
               @for (table of goldTables; track table) {
+
                 <span class="chip chip-dim">{{ table }}</span>
+
               }
+
             </div>
 
-            <h3 class="subsection-title">Agregaciones</h3>
+
+
+            <h3 class="subsection-title">{{ 'settings.wh.aggregations' | t }}</h3>
+
             <div class="chip-grid">
+
               @for (agg of aggregations; track agg) {
+
                 <span class="chip chip-agg">{{ agg }}</span>
+
               }
+
             </div>
+
           </section>
+
         }
+
+
 
         @case ('pipeline') {
+
           <section class="settings-section">
-            <h2>Pipeline ELT</h2>
-            <p class="section-desc">Preferencias de carga de datos (simulación visual)</p>
+
+            <h2>{{ 'settings.pipeline.title' | t }}</h2>
+
+            <p class="section-desc">{{ 'settings.pipeline.desc' | t }}</p>
+
+
 
             <div class="setting-row">
+
               <div class="setting-info">
-                <label for="defaultRecords">Registros por defecto</label>
-                <span class="setting-hint">Volumen al generar datasets</span>
+
+                <span class="setting-title">{{ 'settings.pipeline.records' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.pipeline.recordsHint' | t }}</span>
+
               </div>
-              <select
-                id="defaultRecords"
-                class="setting-control"
-                [ngModel]="defaultRecords()"
-                (ngModelChange)="defaultRecords.set($event)"
-              >
-                @for (opt of recordOptions; track opt.value) {
-                  <option [value]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
+
+              <div class="select-wrap">
+
+                <select
+
+                  class="setting-control"
+
+                  [ngModel]="ui.defaultRecords()"
+
+                  (ngModelChange)="ui.setDefaultRecords($event)"
+
+                >
+
+                  @for (opt of recordOptions(); track opt.value) {
+
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+
+                  }
+
+                </select>
+
+              </div>
+
             </div>
 
-            <div class="setting-row">
-              <div class="setting-info">
-                <label for="loadMode">Modo de carga</label>
-                <span class="setting-hint">Estrategia de ingesta</span>
-              </div>
-              <select id="loadMode" class="setting-control" [ngModel]="loadMode()" (ngModelChange)="loadMode.set($event)">
-                <option value="incremental">Incremental</option>
-                <option value="full">Completa</option>
-              </select>
-            </div>
+
 
             <div class="setting-row">
+
               <div class="setting-info">
-                <span class="setting-title">Auto-refresh warehouse</span>
-                <span class="setting-hint">Actualizar métricas tras cada ejecución</span>
+
+                <span class="setting-title">{{ 'settings.pipeline.loadMode' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.pipeline.loadModeHint' | t }}</span>
+
               </div>
+
+              <div class="select-wrap">
+
+                <select
+
+                  class="setting-control"
+
+                  [ngModel]="ui.loadMode()"
+
+                  (ngModelChange)="ui.setLoadMode($event)"
+
+                >
+
+                  @for (opt of loadModeOptions(); track opt.value) {
+
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+
+                  }
+
+                </select>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.pipeline.autoRefresh' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.pipeline.autoRefreshHint' | t }}</span>
+
+              </div>
+
               <label class="toggle">
-                <input type="checkbox" [ngModel]="autoRefresh()" (ngModelChange)="autoRefresh.set($event)" />
+
+                <input type="checkbox" [checked]="ui.autoRefresh()" (change)="ui.setAutoRefresh($any($event.target).checked)" />
+
                 <span class="toggle-slider"></span>
+
               </label>
+
             </div>
+
+
 
             <div class="flow-summary">
-              <span class="flow-step">Extract</span>
+
+              <span class="flow-step">{{ 'settings.pipeline.extract' | t }}</span>
+
               <span class="flow-arrow">→</span>
+
               <span class="flow-step">Bronze</span>
+
               <span class="flow-arrow">→</span>
+
               <span class="flow-step">Silver</span>
+
               <span class="flow-arrow">→</span>
+
               <span class="flow-step">Gold</span>
+
               <span class="flow-arrow">→</span>
+
               <span class="flow-step">DuckDB</span>
+
             </div>
+
           </section>
+
         }
+
       }
+
     </div>
+
   </div>
+
 </div>
+

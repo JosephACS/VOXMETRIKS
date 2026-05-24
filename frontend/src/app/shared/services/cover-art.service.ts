@@ -20,6 +20,25 @@ export class CoverArtService {
     return GRADIENTS[Math.abs(n) % GRADIENTS.length];
   }
 
+  /** Primera letra visible para portadas sin imagen. */
+  initialFor(text?: string | null): string {
+    const t = text?.trim();
+    if (!t) return '?';
+    return t.charAt(0).toUpperCase();
+  }
+
+  /** Iniciales (p. ej. artista: "Dua Lipa" → "DL"). */
+  initialsFor(text?: string | null, max = 2): string {
+    const t = text?.trim();
+    if (!t) return '?';
+    const parts = t.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return parts
+      .slice(0, max)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join('');
+  }
+
   private hash(s: string): number {
     let h = 0;
     for (let i = 0; i < s.length; i++) h = (h << 5) - h + s.charCodeAt(i);

@@ -1,18 +1,19 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-horizontal-section',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslatePipe],
   template: `
     <section class="h-section">
       <div class="h-head">
         <h2>{{ title }}</h2>
         @if (subtitle) { <span class="h-sub">{{ subtitle }}</span> }
         @if (link) {
-          <a class="h-link" [routerLink]="link">Ver todo</a>
+          <a class="h-link" [routerLink]="link">{{ 'home.viewAll' | t }}</a>
         }
       </div>
       <div class="h-scroll-wrap">
@@ -39,13 +40,13 @@ import { RouterModule } from '@angular/router';
     }
     .h-sub {
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.4);
+      color: var(--text-muted);
     }
     .h-link {
       margin-left: auto;
       font-size: 0.6875rem;
       font-weight: 600;
-      color: rgba(255,255,255,0.45);
+      color: var(--shell-fg-muted, var(--text-muted));
       text-decoration: none;
       text-transform: uppercase;
       letter-spacing: 0.06em;

@@ -1,16 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { LoadingSpinnerComponent } from './shared/components/loading-spinner/loading-spinner.component';
+import { UiPreferencesService } from './core/services/ui-preferences.service';
+import { I18nService } from './core/services/i18n.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, LoadingSpinnerComponent],
-  template: `
-    <app-loading-spinner></app-loading-spinner>
-    <router-outlet></router-outlet>
-  `,
+  imports: [RouterOutlet],
+  template: `<router-outlet></router-outlet>`,
 })
 export class App {
   title = 'VOXMETRIK';
+  private readonly _ui = inject(UiPreferencesService);
+  private readonly _i18n = inject(I18nService);
 }

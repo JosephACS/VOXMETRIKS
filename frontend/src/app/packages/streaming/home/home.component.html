@@ -3,27 +3,27 @@
     <header class="home-hero">
       <div class="hero-glow"></div>
       <div class="hero-text">
-        <p class="hero-greet">Buenas tardes</p>
-        <h1>Descubre tu música</h1>
-        <p class="hero-sub">Tu biblioteca · catálogo en vivo</p>
+        <p class="hero-greet">{{ greetingKey() | t }}</p>
+        <h1>{{ 'home.title' | t }}</h1>
+        <p class="hero-sub">{{ 'home.subtitle' | t }}</p>
       </div>
       <a routerLink="/search" class="hero-search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Buscar canciones, artistas...
+        {{ 'home.searchPlaceholder' | t }}
       </a>
     </header>
 
     @if (summary(); as s) {
       <div class="home-quick-stats">
-        <span class="stat-chip"><strong>{{ fmt(s.total_tracks) }}</strong> canciones</span>
-        <span class="stat-chip"><strong>{{ fmt(s.total_streams) }}</strong> reproducciones</span>
-        <span class="stat-chip"><strong>{{ fmt(s.total_artistas) }}</strong> artistas</span>
+        <span class="stat-chip"><strong>{{ fmt(s.total_tracks) }}</strong> {{ 'home.stat.tracks' | t }}</span>
+        <span class="stat-chip"><strong>{{ fmt(s.total_streams) }}</strong> {{ 'home.stat.streams' | t }}</span>
+        <span class="stat-chip"><strong>{{ fmt(s.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
       </div>
     }
 
     <div class="home-feed">
       @if (history().length) {
-        <app-horizontal-section title="Escuchado recientemente" subtitle="Tu historial local">
+        <app-horizontal-section [title]="'home.section.recent' | t" [subtitle]="'home.section.recentSub' | t">
           @for (h of history(); track h.id_track) {
             <app-media-card
               [title]="h.nombre_track"
@@ -37,7 +37,7 @@
       }
 
       @if (madeForYou().length) {
-        <app-horizontal-section title="Hecho para ti" subtitle="Basado en popularidad" link="/recommendations">
+        <app-horizontal-section [title]="'home.section.forYou' | t" [subtitle]="'home.section.forYouSub' | t" link="/recommendations">
           @for (t of madeForYou(); track t.id_track) {
             <app-media-card
               [title]="t.nombre_track ?? '—'"
@@ -46,13 +46,15 @@
               [link]="'/tracks/' + t.id_track"
               [track]="player.fromTopTrack(t)"
               [queue]="madeForYouPlayable()"
+              [badge]="t.popularity"
+              [meta]="energyMeta(t.energy)"
             />
           }
         </app-horizontal-section>
       }
 
       @if (trending().length) {
-        <app-horizontal-section title="Tendencias ahora" link="/trending">
+        <app-horizontal-section [title]="'home.section.trending' | t" link="/trending">
           @for (t of trending(); track t.id_track) {
             <app-media-card
               [title]="t.nombre_track ?? '—'"
@@ -61,30 +63,32 @@
               [link]="'/tracks/' + t.id_track"
               [track]="player.fromTopTrack(t)"
               [queue]="trendingPlayable()"
+              [badge]="t.popularity"
             />
           }
         </app-horizontal-section>
       }
 
       @if (artists().length) {
-        <app-horizontal-section title="Artistas destacados" link="/artists">
+        <app-horizontal-section [title]="'home.section.artists' | t" link="/artists">
           @for (a of artists(); track a.id) {
             <app-media-card
               [title]="a.name"
-              subtitle="Artista"
+              [subtitle]="'home.section.artistSub' | t"
               [gradient]="cover('artist-' + a.id)"
               [link]="'/artists'"
+              [round]="true"
             />
           }
         </app-horizontal-section>
       }
 
       @if (playlists().length) {
-        <app-horizontal-section title="Listas populares" link="/playlists">
+        <app-horizontal-section [title]="'home.section.playlists' | t" link="/playlists">
           @for (pl of playlists(); track pl.id) {
             <app-media-card
               [title]="pl.name"
-              [subtitle]="pl.total_tracks + ' canciones'"
+              [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
               [gradient]="cover('pl-' + pl.id)"
               link="/playlists"
             />
@@ -93,11 +97,11 @@
       }
 
       @if (genres().length) {
-        <app-horizontal-section title="Géneros recomendados" link="/genres">
+        <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
           @for (g of genres(); track g.id_genero) {
             <app-media-card
               [title]="g.nombre_genero ?? 'Género'"
-              [subtitle]="'Pop ' + (g.popularidad_promedio?.toFixed(0) ?? '—')"
+              [subtitle]="('home.section.genreSub' | t:{ score: g.popularidad_promedio?.toFixed(0) ?? '—' })"
               [gradient]="cover('genre-' + g.id_genero)"
               link="/genres"
             />
@@ -108,8 +112,8 @@
       @if (topTracks().length) {
         <section class="continue-section">
           <div class="sec-head">
-            <h2>Seguir escuchando</h2>
-            <a routerLink="/tracks">Ver catálogo</a>
+            <h2>{{ 'home.section.continue' | t }}</h2>
+            <a routerLink="/tracks">{{ 'home.viewCatalog' | t }}</a>
           </div>
           <div class="track-list">
             @for (t of topTracks().slice(0, 8); track t.id_track; let i = $index) {
@@ -119,6 +123,7 @@
                 [queue]="trendingPlayable()"
                 [showPopularity]="true"
                 [popularity]="t.popularity"
+                [energy]="t.energy"
               />
             }
           </div>
@@ -129,27 +134,27 @@
 
   <aside class="analytics-rail glass-panel">
     <div class="rail-head">
-      <h3>Panel analítico</h3>
-      <a routerLink="/analytics">Ver más</a>
+      <h3>{{ 'home.rail.title' | t }}</h3>
+      <a routerLink="/analytics">{{ 'home.rail.viewMore' | t }}</a>
     </div>
 
     @if (summary(); as s) {
       <div class="rail-kpis">
-        <app-kpi-card label="Canciones" [value]="s.total_tracks" iconKey="music" color="primary" subtitle="catálogo" />
-        <app-kpi-card label="Artistas" [value]="s.total_artistas" iconKey="users" color="info" subtitle="únicos" />
+        <app-kpi-card [label]="'home.rail.kpi.tracks' | t" [value]="s.total_tracks" iconKey="music" color="primary" [subtitle]="'home.rail.kpi.tracksSub' | t" />
+        <app-kpi-card [label]="'home.rail.kpi.artists' | t" [value]="s.total_artistas" iconKey="users" color="info" [subtitle]="'home.rail.kpi.artistsSub' | t" />
       </div>
       <div class="rail-strip">
-        <span><strong>{{ fmt(s.total_generos) }}</strong> géneros</span>
-        <span><strong>{{ fmt(s.total_albumes) }}</strong> álbumes</span>
-        <span><strong>{{ fmt(s.total_streams) }}</strong> reproducciones</span>
+        <span><strong>{{ fmt(s.total_generos) }}</strong> {{ 'home.rail.genres' | t }}</span>
+        <span><strong>{{ fmt(s.total_albumes) }}</strong> {{ 'home.rail.albums' | t }}</span>
+        <span><strong>{{ fmt(s.total_streams) }}</strong> {{ 'home.rail.streams' | t }}</span>
         @if (popularityKpi(); as pop) {
-          <span><strong>{{ pop }}</strong> popularidad media</span>
+          <span><strong>{{ pop }}</strong> {{ 'home.rail.avgPopularity' | t }}</span>
         }
       </div>
     }
 
     <div class="rail-chart">
-      <div class="chart-label">Actividad del catálogo</div>
+      <div class="chart-label">{{ 'home.rail.chartLabel' | t }}</div>
       @if (growthValues().length) {
         <svg viewBox="0 0 440 90" class="mini-chart" aria-hidden="true">
           <defs>
@@ -162,10 +167,10 @@
           <polyline [attr.points]="sparkLine()" fill="none" stroke="#1ed896" stroke-width="2"/>
         </svg>
       } @else {
-        <p class="chart-empty">Sin historial de cargas aún</p>
+        <p class="chart-empty">{{ 'home.rail.chartEmpty' | t }}</p>
       }
     </div>
 
-    <a routerLink="/dashboard/analytics" class="rail-link">Ver panel completo →</a>
+    <a routerLink="/dashboard/analytics" class="rail-link">{{ 'home.rail.fullPanel' | t }}</a>
   </aside>
 </div>

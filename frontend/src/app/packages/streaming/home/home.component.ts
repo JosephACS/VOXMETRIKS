@@ -9,6 +9,8 @@ import { PlaylistsService } from '../services/playlists.service';
 import { HistoryService } from '../services/history.service';
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { HorizontalSectionComponent } from '../../../shared/components/horizontal-section/horizontal-section.component';
 import { MediaCardComponent } from '../../../shared/components/media-card/media-card.component';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
@@ -23,7 +25,7 @@ import { PlayableTrack } from '../../../shared/models/player.models';
   standalone: true,
   imports: [
     CommonModule, RouterModule, HorizontalSectionComponent, MediaCardComponent,
-    TrackRowComponent, KpiCardComponent,
+    TrackRowComponent, KpiCardComponent, TranslatePipe,
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
@@ -37,6 +39,12 @@ export class HomeComponent implements OnInit {
   private historySvc = inject(HistoryService);
   player = inject(MusicPlayerService);
   private covers = inject(CoverArtService);
+  private i18n = inject(I18nService);
+
+  greetingKey = computed(() => {
+    this.i18n.tick();
+    return this.i18n.greetingKey();
+  });
 
   isLoading = signal(true);
   summary = signal<StatsSummary | null>(null);
@@ -141,5 +149,10 @@ export class HomeComponent implements OnInit {
   popularityKpi(): number | null {
     const v = this.summary()?.promedio_popularidad;
     return v != null ? Math.round(v * 10) / 10 : null;
+  }
+
+  energyMeta(energy?: number | null): string | undefined {
+    if (energy == null) return undefined;
+    return this.i18n.t('home.energy', { value: Math.round(energy) });
   }
 }

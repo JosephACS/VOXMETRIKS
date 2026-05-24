@@ -41,13 +41,13 @@ interface MultiplierPreset {
 type VolumeMode = 'multiplier' | 'custom';
 
 @Component({
-  selector: 'app-etl-pipeline',
+  selector: 'app-elt-pipeline',
   standalone: true,
   imports: [CommonModule, KpiCardComponent],
-  templateUrl: './etl-pipeline.component.html',
-  styleUrls: ['./etl-pipeline.component.css'],
+  templateUrl: './elt-pipeline.component.html',
+  styleUrls: ['./elt-pipeline.component.css'],
 })
-export class EtlPipelineComponent implements OnInit, OnDestroy {
+export class EltPipelineComponent implements OnInit, OnDestroy {
   private iconRender = inject(IconRenderService);
 
   private runTimer: ReturnType<typeof setInterval> | null = null;

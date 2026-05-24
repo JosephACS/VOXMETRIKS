@@ -4,11 +4,15 @@ import { finalize }          from 'rxjs';
 import { LoadingService }    from '../../shared/services/loading.service';
 
 /**
- * loadingInterceptor — interceptor funcional para loading global.
- * Usa el LoadingService de shared (tiene isLoading$ para el spinner).
+ * loadingInterceptor — barra superior de progreso (no overlay de pantalla completa).
+ * Ignora fuentes y peticiones estáticas para no parpadear al navegar entre módulos.
  */
 export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
-  if (req.url.startsWith('https://fonts.') || req.url.startsWith('chrome-extension')) {
+  if (
+    req.url.startsWith('https://fonts.') ||
+    req.url.startsWith('chrome-extension') ||
+    req.url.includes('/assets/')
+  ) {
     return next(req);
   }
 

@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MusicPlayerService } from '../../services/music-player.service';
+import { CoverArtService } from '../../services/cover-art.service';
 import { PlayableTrack } from '../../models/player.models';
 
 @Component({
@@ -10,7 +11,13 @@ import { PlayableTrack } from '../../models/player.models';
   imports: [CommonModule, RouterModule],
   template: `
     <article class="media-card" (click)="onCardClick()">
-      <div class="media-cover" [style.background]="gradient">
+      <div class="media-cover" [class.round]="round" [style.background]="gradient">
+        <span class="cover-thumb cover-thumb--card">
+          <span class="cover-initial">{{ displayInitial }}</span>
+        </span>
+        @if (badge != null) {
+          <span class="media-badge">{{ badge }}</span>
+        }
         <button type="button" class="play-overlay" (click)="onPlay($event)" [attr.aria-label]="'Reproducir ' + title">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>
@@ -22,6 +29,7 @@ import { PlayableTrack } from '../../models/player.models';
           <span class="media-title">{{ title }}</span>
         }
         @if (subtitle) { <span class="media-sub">{{ subtitle }}</span> }
+        @if (meta) { <span class="media-meta">{{ meta }}</span> }
       </div>
     </article>
   `,
@@ -37,12 +45,32 @@ import { PlayableTrack } from '../../models/player.models';
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
       will-change: transform;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .media-cover.round {
+      border-radius: 50%;
     }
     .media-card:hover .media-cover {
       transform: scale(1.03);
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .media-badge {
+      position: absolute;
+      top: 0.45rem;
+      left: 0.45rem;
+      font-size: 0.625rem;
+      font-weight: 700;
+      font-family: var(--font-mono, monospace);
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #1ed896;
+      backdrop-filter: blur(4px);
+      z-index: 1;
     }
     .play-overlay {
       position: absolute;
@@ -59,9 +87,10 @@ import { PlayableTrack } from '../../models/player.models';
       justify-content: center;
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity 0.2s, transform 0.2s;
+      transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1), transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
       cursor: pointer;
       box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+      z-index: 2;
     }
     .media-card:hover .play-overlay {
       opacity: 1;
@@ -73,7 +102,7 @@ import { PlayableTrack } from '../../models/player.models';
       display: block;
       font-size: 0.875rem;
       font-weight: 600;
-      color: #fff;
+      color: var(--text);
       text-decoration: none;
       white-space: nowrap;
       overflow: hidden;
@@ -83,24 +112,44 @@ import { PlayableTrack } from '../../models/player.models';
     .media-sub {
       display: block;
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.5);
+      color: var(--text-muted);
       margin-top: 0.2rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .media-meta {
+      display: block;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      font-family: var(--font-mono, monospace);
+    }
   `],
 })
 export class MediaCardComponent {
   private player = inject(MusicPlayerService);
+  private covers = inject(CoverArtService);
 
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
+  @Input() meta?: string;
   @Input() gradient = 'linear-gradient(135deg, #1ed896, #121212)';
   @Input() link?: string;
   @Input() track?: PlayableTrack;
   @Input() queue: PlayableTrack[] = [];
+  /** Etiqueta en la portada; por defecto inicial del título. */
+  @Input() coverLabel?: string;
+  /** Portada circular (artistas). */
+  @Input() round = false;
+  /** Badge numérico (p. ej. popularidad). */
+  @Input() badge?: number | string | null;
   @Output() played = new EventEmitter<PlayableTrack>();
+
+  get displayInitial(): string {
+    const label = this.coverLabel ?? this.title;
+    return this.round ? this.covers.initialsFor(label) : this.covers.initialFor(label);
+  }
 
   onPlay(e: Event) {
     e.stopPropagation();

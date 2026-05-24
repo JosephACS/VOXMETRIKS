@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FavoriteBtnComponent } from '../favorite-btn/favorite-btn.component';
 import { MusicPlayerService } from '../../services/music-player.service';
+import { CoverArtService } from '../../services/cover-art.service';
 import { PlayableTrack } from '../../models/player.models';
 
 @Component({
@@ -13,15 +14,21 @@ import { PlayableTrack } from '../../models/player.models';
     <div class="track-row" [class.playing]="isPlaying" (click)="play()">
       <span class="tr-index">{{ index }}</span>
       <button type="button" class="tr-cover" [style.background]="track.coverGradient" (click)="play($event)">
-        @if (isPlaying && player.isPlaying()) {
-          <span class="eq-bars"><span></span><span></span><span></span></span>
-        } @else {
-          <svg class="play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        }
+        <span class="cover-initial tr-cover-letter">{{ coverArt.initialFor(track.title) }}</span>
+        <span class="tr-cover-overlay">
+          @if (isPlaying && player.isPlaying()) {
+            <span class="eq-bars"><span></span><span></span><span></span></span>
+          } @else {
+            <svg class="play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          }
+        </span>
       </button>
       <div class="tr-main">
         <a class="tr-title" [routerLink]="['/tracks', track.id]" (click)="$event.stopPropagation()">{{ track.title }}</a>
         <span class="tr-artist">{{ track.artist }}</span>
+        @if (energy != null) {
+          <span class="tr-meta">Energía {{ energy | number:'1.0-0' }}%</span>
+        }
       </div>
       @if (track.explicit) { <span class="tr-explicit">E</span> }
       @if (showPopularity && popularity != null) {
@@ -47,11 +54,11 @@ import { PlayableTrack } from '../../models/player.models';
       transition: background 0.15s;
       cursor: pointer;
     }
-    .track-row:hover { background: rgba(255,255,255,0.06); }
-    .track-row.playing { background: rgba(30,216,150,0.08); }
+    .track-row:hover { background: var(--shell-hover); }
+    .track-row.playing { background: var(--accent-dim); }
     .tr-index {
       font-size: 0.8125rem;
-      color: rgba(255,255,255,0.4);
+      color: var(--text-muted);
       text-align: center;
       font-variant-numeric: tabular-nums;
     }
@@ -66,15 +73,37 @@ import { PlayableTrack } from '../../models/player.models';
       color: #fff;
       cursor: pointer;
       position: relative;
+      overflow: hidden;
+      padding: 0;
     }
-    .play-icon { opacity: 0; transition: opacity 0.15s; }
-    .track-row:hover .play-icon { opacity: 1; }
-    .track-row.playing .play-icon { opacity: 0; }
+    .tr-cover-letter {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      z-index: 0;
+    }
+    .tr-cover-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0);
+      transition: background 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 1;
+    }
+    .track-row:hover .tr-cover-overlay,
+    .track-row.playing .tr-cover-overlay {
+      background: rgba(0, 0, 0, 0.45);
+    }
+    .play-icon { opacity: 0; transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+    .track-row:hover .play-icon,
+    .track-row.playing .play-icon { opacity: 1; }
+    .track-row.playing .tr-cover-letter { opacity: 0.35; }
     .tr-main { min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
     .tr-title {
       font-size: 0.875rem;
       font-weight: 500;
-      color: #fff;
+      color: var(--text);
       text-decoration: none;
       white-space: nowrap;
       overflow: hidden;
@@ -84,38 +113,43 @@ import { PlayableTrack } from '../../models/player.models';
     .track-row.playing .tr-title { color: #1ed896; }
     .tr-artist {
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.5);
+      color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .tr-meta {
+      font-size: 0.6875rem;
+      color: rgba(30, 216, 150, 0.75);
+      font-family: var(--font-mono, monospace);
     }
     .tr-explicit {
       font-size: 0.625rem;
       font-weight: 700;
       padding: 2px 5px;
-      border: 1px solid rgba(255,255,255,0.3);
+      border: 1px solid var(--shell-border-strong);
       border-radius: 3px;
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
     }
     .tr-pop {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.55);
+      color: var(--text-muted);
       min-width: 90px;
     }
     .pop-bar {
       flex: 1;
       height: 4px;
-      background: rgba(255,255,255,0.1);
+      background: var(--shell-progress-track);
       border-radius: 999px;
       overflow: hidden;
     }
-    .pop-fill { height: 100%; background: #1ed896; border-radius: 999px; }
+    .pop-fill { height: 100%; background: var(--accent); border-radius: 999px; }
     .tr-duration {
       font-size: 0.8125rem;
-      color: rgba(255,255,255,0.45);
+      color: var(--text-muted);
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
@@ -146,12 +180,14 @@ import { PlayableTrack } from '../../models/player.models';
 })
 export class TrackRowComponent {
   player = inject(MusicPlayerService);
+  coverArt = inject(CoverArtService);
 
   @Input({ required: true }) track!: PlayableTrack;
   @Input() index = 1;
   @Input() queue: PlayableTrack[] = [];
   @Input() showPopularity = false;
   @Input() popularity?: number | null;
+  @Input() energy?: number | null;
 
   get isPlaying(): boolean {
     return this.player.currentTrack()?.id === this.track.id;

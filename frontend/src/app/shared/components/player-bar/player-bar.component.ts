@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MusicPlayerService } from '../../services/music-player.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-player-bar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './player-bar.component.html',
   styleUrls: ['./player-bar.component.css'],
 })
@@ -22,5 +23,11 @@ export class PlayerBarComponent {
   onVolumeInput(e: Event) {
     const v = parseFloat((e.target as HTMLInputElement).value);
     this.player.setVolume(v);
+  }
+
+  toggleExpand(e?: Event) {
+    e?.stopPropagation();
+    if (!this.player.currentTrack()) return;
+    this.player.toggleExpandedView();
   }
 }

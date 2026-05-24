@@ -9,10 +9,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* IMPORTANTE: background sólido oscuro, NO verde */
-  background: #090c09;
+  background: var(--bg-base);
   overflow: hidden;
   padding: 1.5rem;
+  transition: background 0.35s ease;
 }
 
 /* ── Background: gradiente radial sutil ── */
@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 20%, rgba(34, 197, 94, 0.04) 0%, transparent 40%);
+    radial-gradient(ellipse at 20% 80%, rgba(30, 216, 150, 0.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 20%, rgba(30, 216, 150, 0.05) 0%, transparent 40%);
   pointer-events: none;
 }
 
@@ -30,11 +30,30 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(90deg, rgba(34, 197, 94, 0.025) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(34, 197, 94, 0.025) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(30, 216, 150, 0.03) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(30, 216, 150, 0.03) 1px, transparent 1px);
   background-size: 48px 48px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+html[data-theme='light'] .auth-layout {
+  background: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 55% at 50% -18%, rgba(15, 168, 118, 0.1), transparent),
+    radial-gradient(ellipse 50% 45% at 100% 0%, rgba(14, 18, 26, 0.03), transparent);
+}
+
+html[data-theme='light'] .auth-bg-gradient {
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(15, 168, 118, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 20%, rgba(14, 18, 26, 0.04) 0%, transparent 40%);
+}
+
+html[data-theme='light'] .auth-bg-grid {
+  background-image:
+    linear-gradient(90deg, rgba(14, 18, 26, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(14, 18, 26, 0.04) 1px, transparent 1px);
 }
 
 /* ── Container ── */
