@@ -1,0 +1,123 @@
+<div class="login-card">
+
+  <!-- Branding -->
+  <div class="login-brand">
+    <div class="brand-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M9 19V6l12-3v13M9 19c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm12 0c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              style="color: var(--color-primary)"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <span class="brand-name">VOXMETRIK</span>
+      <span class="brand-sub">Music Intelligence Platform</span>
+    </div>
+  </div>
+
+  <!-- Badge premium -->
+  <div class="premium-badge">
+    <span class="badge-dot"></span>
+    PLATAFORMA PREMIUM
+  </div>
+
+  <h1 class="login-title">Bienvenido de vuelta</h1>
+  <p class="login-subtitle">Accede al panel de analíticas musicales</p>
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+
+    <!-- Email -->
+    <div class="field">
+      <label class="field-label" for="email">EMAIL</label>
+      <div class="input-wrap" [class.invalid]="emailCtrl.invalid && emailCtrl.touched">
+        <span class="input-icon">✉</span>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="you@voxmetrik.io"
+          autocomplete="username"
+          class="field-input"
+        />
+      </div>
+      @if (emailCtrl.invalid && emailCtrl.touched) {
+        <span class="field-error">Email inválido</span>
+      }
+    </div>
+
+    <!-- Password -->
+    <div class="field">
+      <label class="field-label" for="password">CONTRASEÑA</label>
+      <div class="input-wrap" [class.invalid]="passwordCtrl.invalid && passwordCtrl.touched">
+        <span class="input-icon">⚿</span>
+        <input
+          id="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          class="field-input"
+        />
+        <button
+          type="button"
+          class="toggle-pw"
+          (click)="togglePassword()"
+          [title]="showPassword() ? 'Ocultar' : 'Mostrar'"
+        >{{ showPassword() ? '◌' : '●' }}</button>
+      </div>
+      @if (passwordCtrl.invalid && passwordCtrl.touched) {
+        <span class="field-error">Mínimo 4 caracteres</span>
+      }
+    </div>
+
+    <!-- Options row -->
+    <div class="form-options">
+      <label class="checkbox-label">
+        <input type="checkbox" formControlName="remember" class="checkbox-input"/>
+        <span class="checkbox-custom"></span>
+        Recordarme
+      </label>
+      <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <!-- Error banner -->
+    @if (errorMessage()) {
+      <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    <!-- CTA -->
+    <button type="submit" class="submit-btn" [disabled]="isLoading()" [class.loading]="isLoading()">
+      @if (isLoading()) {
+        <span class="btn-dots"><span></span><span></span><span></span></span>
+        Autenticando...
+      } @else {
+        Entrar al panel &nbsp;→
+      }
+    </button>
+
+  </form>
+
+  <!-- Stats row — datos reales del backend -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <span class="stat-value">{{ formatStat(summary()?.total_tracks) }}</span>
+      <span class="stat-label">TRACKS</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-value">{{ formatStat(summary()?.total_artistas) }}</span>
+      <span class="stat-label">ARTISTAS</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-value">{{ formatStat(summary()?.total_generos) }}</span>
+      <span class="stat-label">GÉNEROS</span>
+    </div>
+  </div>
+
+  <p class="login-footer">
+    ¿Sin cuenta?
+    <a href="mailto:sales@voxmetrik.io" class="contact-link">Contactar ventas</a>
+  </p>
+</div>

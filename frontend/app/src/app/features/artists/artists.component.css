@@ -1,0 +1,172 @@
+/* ═══════════════════════════════════════════════════════════
+   Artists Page — Scoped Styles
+   VOXMETRIK_V2
+════════════════════════════════════════════════════════════ */
+
+/* ── Page header extensions ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-header-meta {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding-top: 0.25rem;
+}
+
+/* ── Mini rank cards ── */
+.artists-kpi {
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+}
+
+.mini-rank-card {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+  overflow: hidden;
+}
+
+.mini-rank-card:hover {
+  border-color: var(--color-border-hover);
+}
+
+.mini-rank {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.mini-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.mini-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mini-stat {
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Table card ── */
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Table column widths ── */
+.col-index     { width: 46px; }
+.col-name      { min-width: 200px; }
+.col-popularity{ width: 150px; min-width: 130px; }
+.col-followers { width: 90px; }
+.col-genres    { min-width: 130px; max-width: 200px; }
+.col-links     { width: 60px; text-align: center; }
+.col-id        { width: 60px; }
+
+/* ── Artist cell ── */
+.artist-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.artist-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.artist-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.artist-name-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.artist-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  display: block;
+}
+
+/* ── Genre tags ── */
+.genre-tags {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 190px;
+}
+
+/* ── Hover row ── */
+.data-row {
+  transition: background var(--transition-fast);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .artists-kpi {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .col-followers,
+  .col-genres,
+  .col-id { display: none; }
+
+  .artist-avatar,
+  .artist-avatar-placeholder { width: 26px; height: 26px; }
+}
+
+@media (max-width: 480px) {
+  .mini-rank-card { padding: 0.625rem; }
+  .col-links { display: none; }
+}

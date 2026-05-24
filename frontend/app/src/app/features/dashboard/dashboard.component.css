@@ -1,0 +1,361 @@
+/* ═══════════════════════════════════════════════════════════
+   DashboardComponent — Estilos de la vista principal
+   Los estilos base (card, kpi-grid, dash-grid, data-table,
+   metric-bar, badge, btn) vienen de styles.css global.
+═══════════════════════════════════════════════════════════ */
+
+/* ── Header del dashboard ── */
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dash-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  margin-top: 0.375rem;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulse-live 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ── Card header helpers ── */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+/* Sobreescribe el margin del card-title cuando está en row */
+.card-header-row .card-title { margin-bottom: 0; }
+
+.card-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+/* ── Card footer ── */
+.card-footer {
+  margin-top: 1rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.btn-sm {
+  font-size: 0.78rem !important;
+  padding: 0.35rem 0.75rem !important;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ── Error state ── */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  color: var(--color-danger);
+}
+
+.error-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.error-body {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.error-body code {
+  font-family: var(--font-mono);
+  background: var(--color-surface-2);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOP ARTISTAS
+═══════════════════════════════════════════════════════════ */
+
+.artist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.artist-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 56px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.artist-row:last-child { border-bottom: none; }
+
+.artist-row:hover {
+  background: var(--color-surface-2);
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+  margin-left: -0.375rem;
+  margin-right: -0.375rem;
+}
+
+.artist-rank {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.artist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.artist-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist-tracks {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DISTRIBUCIÓN DE ENERGÍA
+═══════════════════════════════════════════════════════════ */
+
+.energy-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.energy-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 80px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.energy-label {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.energy-bar-track {
+  height: 8px;
+  background: var(--color-surface-3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.energy-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.energy-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.energy-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOP TRACKS TABLE
+═══════════════════════════════════════════════════════════ */
+
+.table-wrapper {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+}
+
+/* Audio feature pills */
+.audio-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-danger);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+}
+
+.audio-pill-dance {
+  color: var(--color-primary);
+  background: var(--color-primary-glow);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.audio-pill-valence {
+  color: var(--color-warning);
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PIPELINE / CARGAS ELT
+═══════════════════════════════════════════════════════════ */
+
+.load-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.load-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.load-item:last-child { border-bottom: none; }
+
+.load-item:hover {
+  background: var(--color-surface-2);
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.load-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.load-mode {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.load-date {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.load-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.load-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stat-key {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stat-val {
+  font-size: 0.75rem;
+  color: var(--color-text);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .dash-header { flex-direction: column; }
+  .dash-timestamp { align-self: flex-start; }
+
+  .energy-row { grid-template-columns: 80px 1fr 70px; }
+  .artist-row { grid-template-columns: 24px 1fr 48px; }
+
+  .card-badge { display: none; }
+}

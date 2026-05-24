@@ -1,0 +1,218 @@
+<!-- ═══════════════════════════════════════════════════════════
+     VOXMETRIK — Artists Analytics View
+     Tabla paginada + búsqueda + filtros + ordenamiento
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="page-header-main">
+      <h1 class="page-title">Artistas</h1>
+      <p class="page-subtitle">Directorio completo · dim_artista + agg_top_artistas</p>
+    </div>
+    @if (!isLoading() && !hasError()) {
+      <div class="page-header-meta font-mono">
+        {{ displayTotal() | number }} artistas
+      </div>
+    }
+  </div>
+
+  <!-- ── Top 5 KPI Row ── -->
+  @if (topArtists().length > 0) {
+    <div class="kpi-grid artists-kpi" style="margin-bottom: 1.5rem">
+      @for (a of topArtists(); track a.id_artista; let i = $index) {
+        <div class="mini-rank-card">
+          <span class="mini-rank font-mono">#{{ i + 1 }}</span>
+          <div class="mini-info">
+            <span class="mini-name" [title]="a.nombre_artista ?? ''">
+              {{ a.nombre_artista ?? '—' }}
+            </span>
+            <div class="mini-meta font-mono">
+              <span class="mini-stat" title="Popularidad promedio">
+                ◎ {{ (a.promedio_popularidad ?? 0) | number:'1.0-1' }}
+              </span>
+              <span class="mini-stat text-muted" title="Total de tracks">
+                ♪ {{ (a.total_tracks ?? 0) | number }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Search + Filter Bar ── -->
+  <app-table-search
+    placeholder="Buscar artista por nombre..."
+    [total]="displayTotal()"
+    entityLabel="artistas"
+    [initialValue]="searchVal()"
+    (searchChange)="onSearch($event)"
+  />
+
+  <app-table-filter
+    [configs]="filterConfigs"
+    [active]="activeFilters()"
+    (filterChange)="onFilter($event)"
+    (clearAll)="onClearFilters()"
+  />
+
+  <!-- ── Table ── -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-index">#</th>
+            <th class="col-name">
+              <app-sort-header
+                columnKey="nombre_artista"
+                label="Artista"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-popularity">
+              <app-sort-header
+                columnKey="popularidad"
+                label="Popularidad"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-followers">
+              <app-sort-header
+                columnKey="seguidores"
+                label="Seguidores"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-genres">Géneros</th>
+            <th class="col-links">Links</th>
+            <th class="col-id">ID</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @if (isLoading()) {
+            <app-table-skeleton
+              [rows]="12"
+              [columns]="7"
+              [widths]="['36px','45%','120px','90px','100px','60px','50px']"
+            />
+          } @else if (hasError()) {
+            <tr>
+              <td colspan="7" style="padding: 0">
+                <app-empty-state
+                  type="error"
+                  (retry)="onRetry()"
+                />
+              </td>
+            </tr>
+          } @else if (artists().length === 0) {
+            <tr>
+              <td colspan="7" style="padding: 0">
+                @if (searchVal() || activeFilters().length > 0) {
+                  <app-empty-state
+                    type="no-results"
+                    [searchTerm]="searchVal()"
+                    (clearSearch)="onSearch('')"
+                  />
+                } @else {
+                  <app-empty-state type="no-data" />
+                }
+              </td>
+            </tr>
+          } @else {
+            @for (artist of artists(); track artist.id_artista; let i = $index) {
+              <tr class="data-row" [class.has-image]="!!artist.url_imagen">
+
+                <!-- # -->
+                <td class="col-index mono text-muted">
+                  {{ (page() - 1) * limit + i + 1 }}
+                </td>
+
+                <!-- Nombre -->
+                <td class="col-name">
+                  <div class="artist-cell">
+                    @if (artist.url_imagen) {
+                      <img
+                        class="artist-avatar"
+                        [src]="artist.url_imagen"
+                        [alt]="artist.nombre_artista"
+                        loading="lazy"
+                        onerror="this.style.display='none'"
+                      />
+                    } @else {
+                      <div class="artist-avatar-placeholder">
+                        <span>♪</span>
+                      </div>
+                    }
+                    <div class="artist-name-group">
+                      <span class="primary artist-name">{{ artist.nombre_artista }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Popularidad -->
+                <td class="col-popularity">
+                  @if (artist.popularidad != null) {
+                    <app-metric-bar
+                      [value]="artist.popularidad"
+                      [max]="100"
+                      color="primary"
+                      digitsInfo="1.0-0"
+                    />
+                  } @else {
+                    <span class="text-muted mono">—</span>
+                  }
+                </td>
+
+                <!-- Seguidores -->
+                <td class="col-followers mono text-secondary">
+                  {{ followersDisplay(artist.seguidores) }}
+                </td>
+
+                <!-- Géneros -->
+                <td class="col-genres">
+                  <span class="genre-tags" [title]="(artist.generos ?? []).join(', ')">
+                    {{ genreList(artist.generos) }}
+                  </span>
+                </td>
+
+                <!-- Links -->
+                <td class="col-links">
+                  @if (artist.url_spotify) {
+                    <app-spotify-link
+                      [url]="artist.url_spotify"
+                      [showId]="false"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- ID -->
+                <td class="col-id mono text-muted">{{ artist.id_artista }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Pagination ── -->
+  @if (!isLoading() && !hasError() && activeFilters().length === 0) {
+    <app-table-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [total]="serverTotal()"
+      [limit]="limit"
+      entityLabel="artistas"
+      (pageChange)="goTo($event)"
+    />
+  }
+
+</div>

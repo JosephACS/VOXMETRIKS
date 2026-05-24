@@ -1,0 +1,261 @@
+<div class="page">
+
+  <!-- ── Encabezado ── -->
+  <div class="page-header dash-header">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Visión general de analíticas musicales · Spotify Data Warehouse</p>
+    </div>
+    <div class="dash-timestamp">
+      <span class="live-dot"></span>
+      <span class="font-mono" style="font-size: 0.72rem; color: var(--color-text-muted)">LIVE DATA</span>
+    </div>
+  </div>
+
+  <!-- ── Loading ── -->
+  @if (isLoading()) {
+    <app-loading-spinner [fullpage]="true" label="Cargando warehouse..."/>
+  } @else if (hasError()) {
+    <div class="error-state">
+      <div class="error-icon">⚠</div>
+      <p class="error-title">Error de conexión</p>
+      <p class="error-body">Verifica que el backend FastAPI esté corriendo en <code>localhost:8000</code></p>
+    </div>
+
+  } @else {
+
+    <!-- ═══════════════════════════════════════════
+         KPI CARDS
+    ═══════════════════════════════════════════ -->
+    <div class="kpi-grid">
+      <app-kpi-card
+        label="Total Tracks"
+        icon="◈"
+        [value]="summary()?.total_tracks ?? null"
+        subtitle="dim_track"
+        color="primary"
+      />
+      <app-kpi-card
+        label="Artistas"
+        icon="♪"
+        [value]="summary()?.total_artistas ?? null"
+        subtitle="dim_artista"
+        color="primary"
+      />
+      <app-kpi-card
+        label="Géneros"
+        icon="◉"
+        [value]="summary()?.total_generos ?? null"
+        subtitle="dim_genero"
+        color="info"
+      />
+      <app-kpi-card
+        label="Álbumes"
+        icon="◳"
+        [value]="summary()?.total_albums ?? null"
+        subtitle="dim_album"
+        color="secondary"
+      />
+      <app-kpi-card
+        label="Audio Features"
+        icon="∿"
+        [value]="summary()?.total_audio_features ?? null"
+        subtitle="fact_audio_features"
+        color="warning"
+      />
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ANALYTICS GRID
+    ═══════════════════════════════════════════ -->
+    <div class="dash-grid">
+
+      <!-- ── Top Artistas ── -->
+      <div class="card dash-col-6">
+        <div class="card-header-row">
+          <p class="card-title">Top Artistas por Popularidad</p>
+          <span class="card-badge">agg_top_artistas</span>
+        </div>
+
+        <div class="artist-list">
+          @for (artist of topArtists(); track artist.id_artista; let i = $index) {
+            <div class="artist-row">
+              <span class="artist-rank font-mono">#{{ i + 1 }}</span>
+              <div class="artist-info">
+                <span class="artist-name">{{ artist.nombre_artista ?? '—' }}</span>
+                <div class="metric-bar-wrap">
+                  <div class="metric-bar">
+                    <div
+                      class="metric-bar-fill"
+                      [style.width]="barWidth(artist.promedio_popularidad, 100)"
+                    ></div>
+                  </div>
+                  <span class="metric-value font-mono">
+                    {{ (artist.promedio_popularidad ?? 0) | number:'1.0-1' }}
+                  </span>
+                </div>
+              </div>
+              <span class="artist-tracks font-mono text-muted">
+                {{ artist.total_tracks | number }} trk
+              </span>
+            </div>
+          }
+          @if (topArtists().length === 0) {
+            <p class="empty-state">Sin datos de artistas</p>
+          }
+        </div>
+
+        <div class="card-footer">
+          <a routerLink="/dashboard/artists" class="btn btn-ghost btn-sm">
+            Ver todos los artistas →
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Distribución de Energía ── -->
+      <div class="card dash-col-6">
+        <div class="card-header-row">
+          <p class="card-title">Distribución de Energía</p>
+          <span class="card-badge">agg_distribucion_energia</span>
+        </div>
+
+        <div class="energy-chart">
+          @for (item of energyDist(); track item.rango_energia) {
+            <div class="energy-row">
+              <span class="energy-label font-mono">{{ item.rango_energia }}</span>
+              <div class="energy-bar-track">
+                <div
+                  class="energy-bar-fill"
+                  [style.width]="barWidth(item.cantidad_tracks, maxEnergy())"
+                  [style.background]="energyColor(item.rango_energia)"
+                ></div>
+              </div>
+              <div class="energy-meta">
+                <span class="font-mono" style="font-size: 0.75rem; color: var(--color-text)">
+                  {{ item.cantidad_tracks | number }}
+                </span>
+                <span class="font-mono" style="font-size: 0.68rem; color: var(--color-text-muted)">
+                  pop {{ (item.popularidad_promedio ?? 0) | number:'1.0-1' }}
+                </span>
+              </div>
+            </div>
+          }
+          @if (energyDist().length === 0) {
+            <p class="empty-state">Sin datos de distribución</p>
+          }
+        </div>
+
+        <!-- Leyenda danceability promedio -->
+        @if (energyDist().length > 0) {
+          <div class="energy-legend">
+            <span class="legend-dot" style="background: var(--color-danger)"></span> Alta
+            <span class="legend-dot" style="background: var(--color-warning); margin-left: 0.75rem"></span> Media-alta
+            <span class="legend-dot" style="background: var(--color-primary); margin-left: 0.75rem"></span> Media
+            <span class="legend-dot" style="background: var(--color-info); margin-left: 0.75rem"></span> Baja
+          </div>
+        }
+      </div>
+
+      <!-- ── Top Tracks ── -->
+      <div class="card dash-col-8">
+        <div class="card-header-row">
+          <p class="card-title">Top Tracks por Popularidad</p>
+          <span class="card-badge">fact_audio_features JOIN dim_track</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 36px">#</th>
+                <th>Track</th>
+                <th style="min-width: 140px">Popularidad</th>
+                <th style="width: 80px">Energy</th>
+                <th style="width: 80px">Dance</th>
+                <th style="width: 80px">Valence</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (track of topTracks(); track track.id_track; let i = $index) {
+                <tr>
+                  <td class="mono text-muted">{{ i + 1 }}</td>
+                  <td class="primary">{{ track.nombre_track }}</td>
+                  <td>
+                    <div class="metric-bar-wrap">
+                      <div class="metric-bar">
+                        <div
+                          class="metric-bar-fill"
+                          [style.width]="barWidth(track.popularity, 100)"
+                        ></div>
+                      </div>
+                      <span class="metric-value font-mono">{{ track.popularity }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="audio-pill" [style.opacity]="0.4 + (track.energy ?? 0) * 0.6">
+                      {{ (track.energy ?? 0) | number:'1.2-2' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="audio-pill audio-pill-dance" [style.opacity]="0.4 + (track.danceability ?? 0) * 0.6">
+                      {{ (track.danceability ?? 0) | number:'1.2-2' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="audio-pill audio-pill-valence" [style.opacity]="0.4 + (track.valence ?? 0) * 0.6">
+                      {{ (track.valence ?? 0) | number:'1.2-2' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card-footer">
+          <a routerLink="/dashboard/tracks" class="btn btn-ghost btn-sm">
+            Explorar todos los tracks →
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Pipeline / Cargas ELT ── -->
+      <div class="card dash-col-4">
+        <div class="card-header-row">
+          <p class="card-title">Cargas ELT Recientes</p>
+          <span class="card-badge">ctl_carga_dataset</span>
+        </div>
+
+        <div class="load-list">
+          @for (load of loadHistory(); track load.id_carga) {
+            <div class="load-item">
+              <div class="load-top">
+                <span [class]="'badge ' + badgeClass(load.estado)">{{ load.estado }}</span>
+                <span class="load-mode font-mono">{{ load.modo }}</span>
+              </div>
+              <div class="load-date font-mono">{{ formatDate(load.fecha_carga) }}</div>
+              <div class="load-stats">
+                <span class="load-stat">
+                  <span class="stat-key">Nuevos</span>
+                  <span class="stat-val font-mono">+{{ load.registros_nuevos ?? 0 | number }}</span>
+                </span>
+                <span class="load-stat">
+                  <span class="stat-key">Raw</span>
+                  <span class="stat-val font-mono">{{ load.total_raw ?? 0 | number }}</span>
+                </span>
+              </div>
+            </div>
+          }
+          @if (loadHistory().length === 0) {
+            <div class="empty-state">
+              <span style="font-size: 1.5rem">📭</span>
+              <p>Sin historial de cargas</p>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div><!-- /dash-grid -->
+
+  }
+</div>

@@ -1,0 +1,66 @@
+/* ═══════════════════════════════════════════════════════════
+   Genres Page — Scoped Styles
+   VOXMETRIK_V2
+════════════════════════════════════════════════════════════ */
+
+/* ── Page header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-header-meta {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding-top: 0.25rem;
+}
+
+/* ── Table card ── */
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Column widths ── */
+.col-index      { width: 46px; }
+.col-name       { min-width: 180px; }
+.col-popularity { min-width: 150px; width: 170px; }
+.col-energy     { min-width: 150px; width: 170px; }
+.col-tracks     { min-width: 150px; width: 170px; }
+.col-artists    { width: 80px; }
+
+/* ── Genre cell ── */
+.genre-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.genre-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.genre-name {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  display: block;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .col-artists { display: none; }
+}
+
+@media (max-width: 580px) {
+  .col-energy { display: none; }
+}

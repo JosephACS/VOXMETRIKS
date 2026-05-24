@@ -1,0 +1,19 @@
+<div class="kpi-card" [ngClass]="colorClass">
+  <div class="kpi-header">
+    <span class="kpi-icon">{{ iconSymbol }}</span>
+    <h3 class="kpi-label">{{ label }}</h3>
+  </div>
+
+  <div class="kpi-value">
+    {{ value }}
+  </div>
+
+  @if (hasTrend) {
+    <div class="kpi-trend" [ngClass]="trendClass">
+      <span class="trend-value">{{ trend }}</span>
+      @if (trendLabel) {
+        <span class="trend-label">{{ trendLabel }}</span>
+      }
+    </div>
+  }
+</div>

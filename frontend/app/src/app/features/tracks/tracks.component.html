@@ -1,0 +1,233 @@
+<!-- ═══════════════════════════════════════════════════════════
+     VOXMETRIK — Tracks Analytics View
+     Tabla paginada + búsqueda + filtros + audio features
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="page-header-main">
+      <h1 class="page-title">Tracks</h1>
+      <p class="page-subtitle">Catálogo musical · dim_track + fact_audio_features</p>
+    </div>
+    @if (!isLoading() && !hasError()) {
+      <div class="page-header-meta font-mono">
+        {{ displayTotal() | number }} tracks
+      </div>
+    }
+  </div>
+
+  <!-- ── Search ── -->
+  <app-table-search
+    placeholder="Buscar track por nombre..."
+    [total]="displayTotal()"
+    entityLabel="tracks"
+    [initialValue]="searchVal()"
+    (searchChange)="onSearch($event)"
+  />
+
+  <!-- ── Filters ── -->
+  <app-table-filter
+    [configs]="filterConfigs"
+    [active]="activeFilters()"
+    (filterChange)="onFilter($event)"
+    (clearAll)="onClearFilters()"
+  />
+
+  <!-- ── Table ── -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-index">#</th>
+            <th class="col-name">
+              <app-sort-header
+                columnKey="nombre_track"
+                label="Track"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-duration">
+              <app-sort-header
+                columnKey="duration_ms"
+                label="Duración"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-energy">
+              <app-sort-header
+                columnKey="energy"
+                label="Energía"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-dance">
+              <app-sort-header
+                columnKey="danceability"
+                label="Danzabilidad"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-valence">
+              <app-sort-header
+                columnKey="valence"
+                label="Valencia"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-explicit">Exp</th>
+            <th class="col-spotify">Spotify</th>
+            <th class="col-id">ID</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @if (isLoading()) {
+            <app-table-skeleton
+              [rows]="12"
+              [columns]="9"
+              [widths]="['36px','40%','70px','110px','110px','110px','30px','40px','50px']"
+            />
+          } @else if (hasError()) {
+            <tr>
+              <td colspan="9" style="padding: 0">
+                <app-empty-state type="error" (retry)="onRetry()" />
+              </td>
+            </tr>
+          } @else if (tracks().length === 0) {
+            <tr>
+              <td colspan="9" style="padding: 0">
+                @if (searchVal() || activeFilters().length > 0) {
+                  <app-empty-state
+                    type="no-results"
+                    [searchTerm]="searchVal()"
+                    (clearSearch)="onSearch('')"
+                  />
+                } @else {
+                  <app-empty-state type="no-data" />
+                }
+              </td>
+            </tr>
+          } @else {
+            @for (track of tracks(); track track.id_track; let i = $index) {
+              <tr class="data-row">
+
+                <!-- # -->
+                <td class="col-index mono text-muted">
+                  {{ (page() - 1) * limit + i + 1 }}
+                </td>
+
+                <!-- Nombre -->
+                <td class="col-name">
+                  <div class="track-cell">
+                    <div class="track-icon" aria-hidden="true">♪</div>
+                    <div class="track-name-group">
+                      <span class="primary track-name" [title]="track.nombre_track">
+                        {{ track.nombre_track }}
+                      </span>
+                      @if (track.id_artista) {
+                        <span class="track-meta font-mono text-muted">
+                          Art. {{ track.id_artista }}
+                          @if (track.id_genero) {
+                            · Gén. {{ track.id_genero }}
+                          }
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Duración -->
+                <td class="col-duration mono text-secondary">
+                  {{ track.duration_ms | duration }}
+                </td>
+
+                <!-- Energía -->
+                <td class="col-energy">
+                  @if (track.energy != null) {
+                    <app-metric-bar
+                      [value]="energyPct(track.energy)"
+                      [max]="100"
+                      color="info"
+                      digitsInfo="1.0-0"
+                      suffix="%"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Danzabilidad -->
+                <td class="col-dance">
+                  @if (track.danceability != null) {
+                    <app-metric-bar
+                      [value]="dancePct(track.danceability)"
+                      [max]="100"
+                      color="success"
+                      digitsInfo="1.0-0"
+                      suffix="%"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Valencia / mood -->
+                <td class="col-valence">
+                  @if (track.valence != null) {
+                    <app-metric-bar
+                      [value]="valencePct(track.valence)"
+                      [max]="100"
+                      color="warning"
+                      digitsInfo="1.0-0"
+                      suffix="%"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Explicit -->
+                <td class="col-explicit">
+                  @if (track.explicit) {
+                    <span class="explicit-badge" title="Contenido explícito">E</span>
+                  }
+                </td>
+
+                <!-- Spotify ID -->
+                <td class="col-spotify">
+                  <app-spotify-link
+                    [spotifyId]="track.spotify_track_id"
+                    [showId]="true"
+                  />
+                </td>
+
+                <!-- ID -->
+                <td class="col-id mono text-muted">{{ track.id_track }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Pagination ── -->
+  @if (!isLoading() && !hasError() && activeFilters().length === 0) {
+    <app-table-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [total]="serverTotal()"
+      [limit]="limit"
+      entityLabel="tracks"
+      (pageChange)="goTo($event)"
+    />
+  }
+
+</div>

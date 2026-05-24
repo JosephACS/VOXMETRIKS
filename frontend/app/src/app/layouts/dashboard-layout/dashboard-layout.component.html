@@ -1,0 +1,80 @@
+<div class="dashboard-layout">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <!-- Logo -->
+      <div class="logo">
+        <span class="logo-icon">♪</span>
+        <span class="logo-text">VOXMETRIK</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <!-- User menu -->
+      <div class="user-menu">
+        <div class="user-avatar">{{ userName().charAt(0).toUpperCase() }}</div>
+        <div class="user-info">
+          <p class="user-name">{{ userName() }}</p>
+          <p class="user-role">Music Intelligence</p>
+        </div>
+      </div>
+
+      <!-- Logout button -->
+      <button class="btn-logout" (click)="logout()" title="Logout">
+        <span class="logout-icon">🚪</span>
+        <span class="logout-text">Logout</span>
+      </button>
+
+      <!-- Mobile menu toggle -->
+      <button 
+        class="btn-menu-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="!sidebarCollapsed()"
+        title="Toggle sidebar"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <div class="layout-container">
+    <!-- Sidebar -->
+    <nav class="sidebar" [class.collapsed]="sidebarCollapsed()">
+      <ul class="nav-list">
+        @for (item of navItems; track item.path) {
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              (click)="closeSidebarOnNav()"
+            >
+              <span class="nav-icon">{{ item.icon }}</span>
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+
+      <!-- Sidebar footer -->
+      <div class="sidebar-footer">
+        <p class="footer-text">VOXMETRIK v2.0</p>
+        <p class="footer-hint">Music Intelligence</p>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <!-- Global loading spinner -->
+      @if (loadingService.isLoading()) {
+        <app-loading-spinner [fullpage]="true" label="Loading..." />
+      }
+
+      <!-- Page content -->
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

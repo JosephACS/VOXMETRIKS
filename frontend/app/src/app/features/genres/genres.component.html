@@ -1,0 +1,224 @@
+<!-- ═══════════════════════════════════════════════════════════
+     VOXMETRIK — Genres Analytics View
+     Estadísticas por género con búsqueda + filtros + ordenamiento
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="page-header-main">
+      <h1 class="page-title">Géneros</h1>
+      <p class="page-subtitle">Estadísticas por género · agg_genero_popularidad</p>
+    </div>
+    @if (!isLoading() && !hasError()) {
+      <div class="page-header-meta font-mono">
+        {{ filteredGenres().length | number }} / {{ allGenres().length | number }} géneros
+      </div>
+    }
+  </div>
+
+  <!-- ── KPI Row ── -->
+  @if (!isLoading() && !hasError()) {
+    <div class="kpi-grid" style="margin-bottom: 1.5rem">
+      <app-kpi-card
+        label="Géneros"
+        icon="◉"
+        [value]="allGenres().length"
+        subtitle="en catálogo"
+        color="primary"
+      />
+      <app-kpi-card
+        label="Género Top"
+        icon="★"
+        [value]="topGenre()?.total_tracks ?? null"
+        [subtitle]="topGenre()?.nombre_genero ?? ''"
+        color="info"
+      />
+      <app-kpi-card
+        label="Pop. Promedio"
+        icon="◎"
+        [value]="avgPopularity()"
+        subtitle="popularidad media global"
+        color="warning"
+      />
+      <app-kpi-card
+        label="Energía Prom."
+        icon="⚡"
+        [value]="avgEnergy() != null ? +(((avgEnergy() ?? 0) * 100).toFixed(1)) : null"
+        subtitle="energía media global"
+        color="secondary"
+      />
+    </div>
+  }
+
+  <!-- ── Search ── -->
+  <app-table-search
+    placeholder="Buscar género..."
+    [total]="filteredGenres().length"
+    entityLabel="géneros"
+    [initialValue]="searchVal()"
+    (searchChange)="onSearch($event)"
+  />
+
+  <!-- ── Filters ── -->
+  <app-table-filter
+    [configs]="filterConfigs"
+    [active]="activeFilters()"
+    (filterChange)="onFilter($event)"
+    (clearAll)="onClearFilters()"
+  />
+
+  <!-- ── Table ── -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-index">#</th>
+            <th class="col-name">
+              <app-sort-header
+                columnKey="nombre_genero"
+                label="Género"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-popularity">
+              <app-sort-header
+                columnKey="popularidad_promedio"
+                label="Popularidad Prom."
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-energy">
+              <app-sort-header
+                columnKey="energia_promedio"
+                label="Energía Prom."
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-tracks">
+              <app-sort-header
+                columnKey="total_tracks"
+                label="Tracks"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+            <th class="col-artists">
+              <app-sort-header
+                columnKey="total_artistas"
+                label="Artistas"
+                [sort]="sort()"
+                (sortChange)="onSort($event)"
+              />
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @if (isLoading()) {
+            <app-table-skeleton
+              [rows]="10"
+              [columns]="6"
+              [widths]="['36px','30%','150px','150px','150px','80px']"
+            />
+          } @else if (hasError()) {
+            <tr>
+              <td colspan="6" style="padding: 0">
+                <app-empty-state type="error" (retry)="onRetry()" />
+              </td>
+            </tr>
+          } @else if (filteredGenres().length === 0) {
+            <tr>
+              <td colspan="6" style="padding: 0">
+                @if (searchVal() || activeFilters().length > 0) {
+                  <app-empty-state
+                    type="no-results"
+                    [searchTerm]="searchVal()"
+                    (clearSearch)="onSearch('')"
+                  />
+                } @else {
+                  <app-empty-state type="no-data" />
+                }
+              </td>
+            </tr>
+          } @else {
+            @for (genre of filteredGenres(); track genre.id_genero; let i = $index) {
+              <tr class="data-row">
+
+                <!-- # -->
+                <td class="col-index mono text-muted">{{ i + 1 }}</td>
+
+                <!-- Género -->
+                <td class="col-name">
+                  <div class="genre-cell">
+                    <div class="genre-dot" [style.background]="popularityColor(genre.popularidad_promedio)"></div>
+                    <span class="primary genre-name" [title]="genre.nombre_genero ?? ''">
+                      {{ genre.nombre_genero ?? '—' }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Popularidad -->
+                <td class="col-popularity">
+                  @if (genre.popularidad_promedio != null) {
+                    <app-metric-bar
+                      [value]="genre.popularidad_promedio"
+                      [max]="100"
+                      color="primary"
+                      digitsInfo="1.0-1"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Energía -->
+                <td class="col-energy">
+                  @if (genre.energia_promedio != null) {
+                    <app-metric-bar
+                      [value]="genre.energia_promedio * 100"
+                      [max]="100"
+                      color="info"
+                      digitsInfo="1.2-2"
+                    />
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Tracks -->
+                <td class="col-tracks">
+                  @if (genre.total_tracks != null) {
+                    <div class="metric-bar-wrap">
+                      <div class="metric-bar">
+                        <div
+                          class="metric-bar-fill"
+                          style="background: var(--color-warning)"
+                          [style.width]="barWidth(genre.total_tracks)"
+                        ></div>
+                      </div>
+                      <span class="metric-value font-mono">{{ genre.total_tracks | number }}</span>
+                    </div>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+
+                <!-- Artistas -->
+                <td class="col-artists mono text-secondary">
+                  {{ genre.total_artistas | number }}
+                </td>
+
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
