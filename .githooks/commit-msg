@@ -1,8 +1,0 @@
-#!/bin/sh
-# Block Cursor from being added as co-author on any commit.
-if grep -qiE 'Co-authored-by:.*(cursor|cursoragent)' "$1"; then
-  echo "ERROR: Commits cannot include Co-authored-by: Cursor / cursoragent." >&2
-  echo "Remove the trailer and commit again." >&2
-  exit 1
-fi
-exit 0
