@@ -1,25 +1,16 @@
-import { Component } from '@angular/core';
+import { Component }  from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
 
 /**
- * Auth Layout Component
- * 
- * Layout para páginas de autenticación (login, registro, etc.)
- * - Página centrada
- * - Sin sidebar ni topbar
- * - Fondo oscuro minimalista
- * - Branding VOXMETRIK
- * 
- * Uso: Contenedor raíz para rutas /login, /register, /forgot-password, etc.
+ * AuthLayoutComponent — Shell para rutas públicas (login).
+ * Sin sidebar ni topbar. Centra el contenido en pantalla completa.
+ * Sin lógica adicional — solo contenedor visual.
  */
 @Component({
   selector: 'app-auth-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [RouterOutlet],
   templateUrl: './auth-layout.component.html',
-  styleUrl: './auth-layout.component.css',
+  styleUrl:    './auth-layout.component.css',
 })
-export class AuthLayoutComponent {
-  // No hay lógica adicional — solo es un contenedor visual
-}
+export class AuthLayoutComponent {}

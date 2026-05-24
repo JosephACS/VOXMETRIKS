@@ -1,20 +1,18 @@
-/* ── Card contenedor ── */
+/* ═══════════════════════════════════════════════════════════
+   Login Component — Polished v2.1
+═══════════════════════════════════════════════════════════ */
+
 .login-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 2.5rem 2rem;
+  padding: 2.25rem 2rem;
   width: 100%;
   box-shadow:
-    0 0 0 1px rgba(34, 197, 94, 0.06),
-    0 24px 64px rgba(0, 0, 0, 0.5),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-  animation: card-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes card-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+    0 0 0 1px rgba(34, 197, 94, 0.05),
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 4px 16px rgba(0, 0, 0, 0.35);
+  animation: scaleIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 /* ── Branding ── */
@@ -22,29 +20,31 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .brand-icon {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: var(--color-primary-glow);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(34, 197, 94, 0.22);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.25;
+  gap: 0;
 }
 
 .brand-name {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.2em;
   color: var(--color-text);
@@ -52,21 +52,21 @@
 
 .brand-sub {
   font-size: 0.56rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--color-text-muted);
   text-transform: uppercase;
 }
 
-/* ── Badge premium ── */
+/* ── Premium badge ── */
 .premium-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   background: var(--color-primary-glow);
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 100px;
-  padding: 0.25rem 0.8rem;
-  font-size: 0.62rem;
+  padding: 0.22rem 0.75rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--color-primary);
@@ -75,31 +75,26 @@
 }
 
 .badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--color-primary);
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 2.2s ease-in-out infinite;
   flex-shrink: 0;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.35; }
 }
 
 /* ── Títulos ── */
 .login-title {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--color-text);
   letter-spacing: -0.025em;
   line-height: 1.2;
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.3rem;
 }
 
 .login-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   color: var(--color-text-secondary);
   margin-bottom: 1.75rem;
 }
@@ -114,7 +109,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.35rem;
 }
 
 .field-label {
@@ -132,23 +127,31 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 0 0.875rem;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.input-wrap:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-3);
 }
 
 .input-wrap:focus-within {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-glow);
+  background: var(--color-surface-2);
 }
 
 .input-wrap.invalid {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.1);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08);
 }
 
 .input-icon {
   color: var(--color-text-muted);
   font-size: 0.875rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .field-input {
@@ -158,7 +161,7 @@
   outline: none;
   color: var(--color-text);
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   padding: 0.7rem 0;
 }
 
@@ -168,27 +171,30 @@
   background: transparent;
   border: none;
   color: var(--color-text-muted);
-  font-size: 0.75rem;
   padding: 0.25rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  display: flex;
+  align-items: center;
   transition: color var(--transition-fast);
 }
 
 .toggle-pw:hover { color: var(--color-text-secondary); }
 
 .field-error {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--color-danger);
   padding-left: 0.25rem;
+  animation: fadeIn 0.15s ease;
 }
 
-/* ── Options ── */
+/* ── Options row ── */
 .form-options {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 0.8rem;
+  gap: 0.5rem;
 }
 
 .checkbox-label {
@@ -198,6 +204,7 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   user-select: none;
+  font-size: 0.8rem;
 }
 
 .checkbox-input { display: none; }
@@ -219,19 +226,16 @@
 }
 
 .checkbox-input:checked + .checkbox-custom::after {
-  content: '✓';
+  content: '';
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  color: #000;
-  font-weight: 800;
+  inset: 3px 2px;
+  border-left: 2px solid #000;
+  border-bottom: 2px solid #000;
+  transform: rotate(-45deg);
 }
 
 .forgot-link {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 0.78rem;
   transition: color var(--transition-fast);
 }
@@ -240,12 +244,16 @@
 
 /* ── Error banner ── */
 .error-banner {
-  background: rgba(248, 113, 113, 0.08);
+  background: rgba(248, 113, 113, 0.07);
   border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: var(--radius);
   padding: 0.625rem 0.875rem;
   font-size: 0.8rem;
   color: var(--color-danger);
+  animation: fadeIn 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ── Submit button ── */
@@ -255,17 +263,18 @@
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.875rem;
+  padding: 0.8rem;
   background: var(--color-primary);
   color: #000;
   border: none;
   border-radius: var(--radius);
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   transition: all var(--transition-fast);
   margin-top: 0.25rem;
+  letter-spacing: 0.01em;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -274,15 +283,20 @@
   box-shadow: 0 4px 20px var(--color-primary-glow-strong);
 }
 
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
 .submit-btn:disabled {
-  opacity: 0.7;
-  cursor: default;
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 /* Loading dots */
 .btn-dots {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
 }
 
@@ -291,7 +305,7 @@
   height: 5px;
   border-radius: 50%;
   background: currentColor;
-  animation: dot-blink 0.9s ease-in-out infinite;
+  animation: dot-blink 1s ease-in-out infinite;
 }
 
 .btn-dots span:nth-child(2) { animation-delay: 0.18s; }
@@ -307,9 +321,10 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   margin-top: 1.5rem;
   overflow: hidden;
+  background: var(--color-surface-2);
 }
 
 .stat-item {
@@ -317,16 +332,34 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   padding: 0.875rem 0.5rem;
+  transition: background var(--transition-fast);
 }
+
+.stat-item:hover { background: var(--color-surface-3); }
 
 .stat-value {
   font-family: var(--font-mono);
-  font-size: 1.2rem;
-  font-weight: 500;
+  font-size: 1.15rem;
+  font-weight: 400;
   color: var(--color-primary);
   letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.stat-value.loading {
+  width: 40px;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton-base) 25%,
+    var(--color-skeleton-shimmer) 50%,
+    var(--color-skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
 .stat-label {
@@ -346,11 +379,14 @@
 .login-footer {
   text-align: center;
   margin-top: 1.25rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
 }
 
 .contact-link {
   color: var(--color-primary);
   margin-left: 0.25rem;
+  transition: color var(--transition-fast);
 }
+
+.contact-link:hover { color: var(--color-primary-hover); }

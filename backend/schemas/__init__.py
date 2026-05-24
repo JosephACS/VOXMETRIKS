@@ -1,11 +1,27 @@
 from .models import (
-    Artista, Genero, Album, Track,
-    AudioFeatures, TopArtista, GeneroPopularidad, DistribucionEnergia,
-    PaginatedResponse, HealthResponse,
+    Artista, ArtistaCreate, ArtistaUpdate,
+    Genero, GeneroCreate, GeneroUpdate,
+    Album,
+    Track, TrackCreate, TrackUpdate,
+    AudioFeatures,
+    TopArtista,
+    GeneroPopularidad,
+    DistribucionEnergia,
+    PaginatedResponse,
+    DeleteResponse,
+    HealthResponse,
 )
 
 __all__ = [
-    "Artista", "Genero", "Album", "Track",
-    "AudioFeatures", "TopArtista", "GeneroPopularidad", "DistribucionEnergia",
-    "PaginatedResponse", "HealthResponse",
+    "Artista", "ArtistaCreate", "ArtistaUpdate",
+    "Genero", "GeneroCreate", "GeneroUpdate",
+    "Album",
+    "Track", "TrackCreate", "TrackUpdate",
+    "AudioFeatures",
+    "TopArtista",
+    "GeneroPopularidad",
+    "DistribucionEnergia",
+    "PaginatedResponse",
+    "DeleteResponse",
+    "HealthResponse",
 ]

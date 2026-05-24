@@ -4,8 +4,8 @@ backend/database.py
 DuckDB connection management for FastAPI.
 
 Key features:
-  - Thread-local read-only connections (safe for async FastAPI workers)
-  - Automatic corruption recovery (same logic as pipeline)
+  - Per-request connections (safe for reads and writes)
+  - Automatic DB validation on startup
   - Schema introspection: get_table_columns() returns REAL column names
   - Dependency injection: get_conn() for use in route dependencies
 """
@@ -13,10 +13,7 @@ Key features:
 from __future__ import annotations
 
 import logging
-import shutil
 import threading
-from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, Generator, List
 
@@ -26,57 +23,61 @@ from .config import get_settings
 
 logger = logging.getLogger("voxmetrik.database")
 
-# Thread-local storage for per-thread connections
-_local = threading.local()
+# Global write lock to serialize write operations
+_write_lock = threading.Lock()
 
 
-def _open_read_only(db_path: Path, *, recreate: bool = False) -> duckdb.DuckDBPyConnection:
+def get_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
-    Open a read-only DuckDB connection.
-    If the file is corrupt/version-mismatched, log an error and raise.
-    (Read-only mode cannot recreate; recreation is the pipeline's job.)
+    FastAPI dependency: yields a per-request DuckDB connection.
+    Opens a fresh connection for each request and closes it after.
     """
+    settings = get_settings()
+    db_path  = settings.db_path_resolved
+
     if not db_path.exists():
         raise FileNotFoundError(
             f"DuckDB database not found: {db_path}\n"
             "  → Run python elt_pipeline.py first to create the database."
         )
+
+    conn = duckdb.connect(str(db_path))
     try:
-        conn = duckdb.connect(str(db_path), read_only=True)
-        conn.execute("SELECT 1").fetchone()  # smoke test
-        return conn
-    except Exception as exc:
-        err_str = str(exc).lower()
-        if any(kw in err_str for kw in ("serial", "deserial", "incompatible", "version")):
-            raise RuntimeError(
-                f"DuckDB serialization/version error: {exc}\n"
-                "  → Run python elt_pipeline.py to recreate the database."
-            ) from exc
+        yield conn
+    except Exception:
         raise
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
-def get_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
+def get_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
-    FastAPI dependency: yields a thread-local read-only DuckDB connection.
-    Each thread keeps its own connection alive for the server lifetime.
+    FastAPI dependency: yields a per-request DuckDB connection for write operations.
+    Uses a write lock to prevent concurrent writes.
     """
     settings = get_settings()
     db_path  = settings.db_path_resolved
 
-    if not hasattr(_local, "conn") or _local.conn is None:
-        logger.debug(f"Opening DuckDB connection (thread {threading.get_ident()})")
-        _local.conn = _open_read_only(db_path)
+    if not db_path.exists():
+        raise FileNotFoundError(
+            f"DuckDB database not found: {db_path}\n"
+            "  → Run python elt_pipeline.py first to create the database."
+        )
 
-    try:
-        yield _local.conn
-    except Exception:
-        # On error, drop the connection so the next request gets a fresh one
+    with _write_lock:
+        conn = duckdb.connect(str(db_path))
         try:
-            _local.conn.close()
+            yield conn
         except Exception:
-            pass
-        _local.conn = None
-        raise
+            raise
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 # ── Schema introspection ──────────────────────────────────────────────────────
@@ -118,18 +119,6 @@ def safe_query(
     """
     Execute a parameterized SELECT against *table*, automatically filtering
     *select_cols* to only those that actually exist in the table schema.
-
-    Args:
-        conn:        DuckDB connection.
-        table:       Table name.
-        select_cols: Desired columns.  '*' is accepted to select all.
-        where:       Optional WHERE clause (without the 'WHERE' keyword).
-        order_by:    Optional ORDER BY clause.
-        limit:       Optional LIMIT (0 = no limit).
-        params:      Positional parameters for the WHERE clause.
-
-    Returns:
-        List of dicts (column → value).
     """
     real_cols = get_table_columns(conn, table)
 

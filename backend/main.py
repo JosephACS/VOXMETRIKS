@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
     else:
         try:
-            conn = duckdb.connect(str(db_path), read_only=True)
+            conn = duckdb.connect(str(db_path))
             tables = list_tables(conn)
             conn.close()
             logger.info(f"Database OK — {len(tables)} tables: {tables}")
@@ -83,11 +83,11 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS — allow all origins in dev; restrict in production via env
+# CORS — allow all origins and methods for full CRUD support
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -147,7 +147,7 @@ def health():
             version="2.0.0",
         )
     try:
-        conn   = duckdb.connect(str(db_path), read_only=True)
+        conn   = duckdb.connect(str(db_path))
         tables = list_tables(conn)
         ver    = conn.execute("SELECT version()").fetchone()[0]
         conn.close()

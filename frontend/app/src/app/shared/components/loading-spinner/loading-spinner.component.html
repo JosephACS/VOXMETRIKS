@@ -1,33 +1,22 @@
-<div class="spinner-container" [ngClass]="[fullpageClass, sizeClass]">
-  <!-- Overlay (solo si fullpage) -->
-  @if (fullpage) {
-    <div class="spinner-overlay"></div>
-  }
-
-  <!-- Spinner content -->
+<div [class]="containerClass" role="status" [attr.aria-label]="label ?? 'Cargando...'">
   <div class="spinner-content">
-    <!-- SVG spinner animado -->
-    <svg class="spinner-svg" viewBox="0 0 50 50">
-      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="2" opacity="0.2"/>
+    <svg class="spinner-svg" viewBox="0 0 50 50" aria-hidden="true">
+      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="2" opacity="0.15"/>
       <circle
-        cx="25"
-        cy="25"
-        r="20"
+        cx="25" cy="25" r="20"
         fill="none"
-        stroke="url(#gradient)"
+        stroke="url(#spin-gradient)"
         stroke-width="2"
         stroke-linecap="round"
         class="spinner-circle"
       />
       <defs>
-        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="var(--color-primary)" />
-          <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0.3" />
+        <linearGradient id="spin-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="var(--color-primary)" />
+          <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0.2" />
         </linearGradient>
       </defs>
     </svg>
-
-    <!-- Label opcional -->
     @if (label) {
       <p class="spinner-label">{{ label }}</p>
     }

@@ -14,12 +14,11 @@ import {
   Input,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 
 @Component({
   selector: 'app-metric-bar',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="metric-bar-wrap">

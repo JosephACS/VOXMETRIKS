@@ -1,0 +1,92 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </h1>
+      <p class="page-subtitle">Análisis detallado · audio features & géneros</p>
+    </div>
+  </div>
+
+  @if (!isLoading()) {
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-icon kpi-orange">♫</div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Tracks Analizados</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-purple">☆</div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">Popularidad Media</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-blue">⚡</div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">Energía Media</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-green">◉</div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">Géneros</span></div></div>
+    </div>
+  }
+
+  <div class="analytics-grid">
+    <div class="chart-card chart-wide">
+      <h3 class="chart-title">Distribución de Energía</h3>
+      @if (isLoading()) { <div class="skel-chart"></div> }
+      @else if (energyDist().length === 0) { <div class="empty">Sin datos</div> }
+      @else {
+        <div class="energy-chart">
+          @for (e of energyDist(); track e.rango_energia) {
+            <div class="e-col">
+              <div class="e-bar-wrap">
+                <div class="e-bar" [style.height.%]="energyBarH(e.cantidad_tracks ?? 0)">
+                  <span class="e-val">{{ e.cantidad_tracks ?? 0 | number }}</span>
+                </div>
+              </div>
+              <span class="e-label">{{ e.rango_energia }}</span>
+              <div class="e-stats">
+                <span class="e-stat">pop {{ (e.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="chart-card">
+      <h3 class="chart-title">Top Géneros por Tracks</h3>
+      @if (isLoading()) { <div class="skel-chart"></div> }
+      @else if (topGenres().length === 0) { <div class="empty">Sin datos</div> }
+      @else {
+        <div class="genre-bars">
+          @for (g of topGenres(); track g.id_genero; let i = $index) {
+            <div class="genre-row">
+              <div class="genre-dot" [style.background]="genreColor(i)"></div>
+              <span class="genre-name">{{ g.nombre_genero ?? '—' }}</span>
+              <div class="genre-bar-outer"><div class="genre-bar-fill" [style.width.%]="trackBarW(g.total_tracks ?? 0)" [style.background]="genreColor(i)"></div></div>
+              <span class="genre-count mono">{{ (g.total_tracks ?? 0) | number }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="chart-card">
+      <h3 class="chart-title">Popularidad vs Energía por Género</h3>
+      @if (isLoading()) { <div class="skel-chart"></div> }
+      @else if (topGenres().length === 0) { <div class="empty">Sin datos</div> }
+      @else {
+        <div class="bubble-chart">
+          @for (g of topGenres().slice(0,10); track g.id_genero; let i = $index) {
+            <div class="bubble-item">
+              <div class="bubble-row">
+                <span class="bubble-label">{{ g.nombre_genero ?? '—' }}</span>
+                <div class="bubble-bars">
+                  <div class="bubble-bar-wrap">
+                    <span class="bubble-bar-label">Pop</span>
+                    <div class="bubble-bar"><div class="b-fill b-pop" [style.width.%]="g.popularidad_promedio ?? 0"></div></div>
+                    <span class="bubble-bar-val mono">{{ (g.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+                  </div>
+                  <div class="bubble-bar-wrap">
+                    <span class="bubble-bar-label">Ener</span>
+                    <div class="bubble-bar"><div class="b-fill b-energy" [style.width.%]="(g.energia_promedio ?? 0) * 100"></div></div>
+                    <span class="bubble-bar-val mono">{{ ((g.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

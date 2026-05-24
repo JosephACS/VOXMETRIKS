@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   Auth Layout — Página de autenticación
+   Auth Layout — Polished v2.1
+   Fondo negro puro con partículas sutiles verdes
 ═══════════════════════════════════════════════════════════ */
 
 .auth-layout {
@@ -8,44 +9,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg);
+  /* IMPORTANTE: background sólido oscuro, NO verde */
+  background: #090c09;
   overflow: hidden;
+  padding: 1.5rem;
 }
 
-/* ── Background elements ── */
+/* ── Background: gradiente radial sutil ── */
 .auth-bg-gradient {
   position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(
-    circle at 30% 60%,
-    rgba(34, 197, 94, 0.08) 0%,
-    transparent 50%
-  );
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 20%, rgba(34, 197, 94, 0.04) 0%, transparent 40%);
   pointer-events: none;
 }
 
+/* ── Background grid — muy sutil ── */
 .auth-bg-grid {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-image:
-    linear-gradient(
-      90deg,
-      rgba(34, 197, 94, 0.03) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      0deg,
-      rgba(34, 197, 94, 0.03) 1px,
-      transparent 1px
-    );
-  background-size: 40px 40px;
+    linear-gradient(90deg, rgba(34, 197, 94, 0.025) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(34, 197, 94, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
   pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
 }
 
 /* ── Container ── */
@@ -53,124 +42,77 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 400px;
-  padding: var(--spacing-lg);
+  max-width: 420px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
+  gap: 1.5rem;
+  animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 /* ── Brand ── */
 .auth-brand {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-sm);
+  justify-content: center;
+  gap: 0.75rem;
   text-align: center;
-  margin-bottom: var(--spacing-md);
 }
 
-.brand-icon {
-  font-size: 3rem;
-  line-height: 1;
-  opacity: 0.9;
-  animation: float 3s ease-in-out infinite;
+.brand-icon-wrap {
+  width: 42px;
+  height: 42px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 4s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
-.brand-text {
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: var(--color-text);
-  margin: 0;
-  text-transform: uppercase;
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+
+.brand-name {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-text) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-/* ── Form wrapper (router-outlet) ── */
-router-outlet {
-  display: contents;
-}
-
 /* ── Footer ── */
 .auth-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: var(--spacing-md);
+  text-align: center;
 }
 
 .footer-text {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
   margin: 0;
-  text-align: center;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .footer-dot {
   margin: 0 0.5rem;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
-.footer-year {
-  opacity: 0.7;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   Responsive
-═══════════════════════════════════════════════════════════ */
-
-@media (max-width: 768px) {
-  .auth-container {
-    max-width: 100%;
-    padding: var(--spacing-md);
-    gap: var(--spacing-lg);
-  }
-
-  .brand-text {
-    font-size: 1.25rem;
-    letter-spacing: 1.5px;
-  }
-
-  .brand-icon {
-    font-size: 2.5rem;
-  }
-
-  .auth-bg-grid {
-    background-size: 30px 30px;
-  }
-}
-
+/* ── Responsive ── */
 @media (max-width: 480px) {
   .auth-layout {
-    min-height: auto;
-    padding: var(--spacing-lg) var(--spacing-md);
+    padding: 1rem 0.875rem;
+    align-items: flex-start;
+    padding-top: 3rem;
   }
 
   .auth-container {
     max-width: 100%;
-    padding: var(--spacing-md);
-  }
-
-  .brand-text {
-    font-size: 1.125rem;
-    letter-spacing: 1px;
-  }
-
-  .footer-text {
-    font-size: 0.7rem;
   }
 }

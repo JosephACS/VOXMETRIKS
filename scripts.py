@@ -1,41 +1,25 @@
-import duckdb
+import os
+import sys
 
-# Conexión a DuckDB
-conn = duckdb.connect("duckdb/voxmetrik.duckdb")
+def tree(directory, prefix="", exclude=None, show_files=True):
+    if exclude is None:
+        exclude = {'.git', '__pycache__', 'node_modules', '.venv', 'venv', '.idea', '.vscode', '.DS_Store'}
+    try:
+        items = sorted(os.listdir(directory))
+    except PermissionError:
+        return
+    for i, item in enumerate(items):
+        path = os.path.join(directory, item)
+        # Excluir directorios/archivos no deseados
+        if item in exclude or (os.path.isdir(path) and item.startswith('.')):
+            continue
+        connector = "├── " if i < len(items)-1 else "└── "
+        print(prefix + connector + item)
+        if os.path.isdir(path):
+            extension = "│   " if i < len(items)-1 else "    "
+            tree(path, prefix + extension, exclude, show_files)
 
-# Obtener tablas
-tables = conn.execute("SHOW TABLES").fetchall()
-
-schema_output = []
-
-for table in tables:
-    table_name = table[0]
-
-    schema_output.append(f"\n-- TABLE: {table_name}\n")
-
-    describe = conn.execute(f"DESCRIBE {table_name}").fetchall()
-
-    schema_output.append(f"CREATE TABLE {table_name} (\n")
-
-    columns = []
-
-    for col in describe:
-        col_name = col[0]
-        col_type = col[1]
-        nullable = col[2]
-
-        line = f"    {col_name} {col_type}"
-
-        if nullable == "NO":
-            line += " NOT NULL"
-
-        columns.append(line)
-
-    schema_output.append(",\n".join(columns))
-    schema_output.append("\n);\n")
-
-# Guardar schema.sql
-with open("schema.sql", "w", encoding="utf-8") as f:
-    f.write("".join(schema_output))
-
-print("✅ schema.sql generado correctamente")
+if __name__ == "__main__":
+    root = sys.argv[1] if len(sys.argv) > 1 else "."
+    print(os.path.basename(os.path.abspath(root)) + "/")
+    tree(root)

@@ -1,80 +1,62 @@
-<div class="dashboard-layout">
-  <!-- Topbar -->
-  <header class="topbar">
-    <div class="topbar-left">
-      <!-- Logo -->
-      <div class="logo">
-        <span class="logo-icon">♪</span>
-        <span class="logo-text">VOXMETRIK</span>
+<div class="app-shell" [class.sidebar-open]="sidebarOpen()">
+
+  <aside class="sidebar" [class.open]="sidebarOpen()">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff8c42" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       </div>
-    </div>
-
-    <div class="topbar-right">
-      <!-- User menu -->
-      <div class="user-menu">
-        <div class="user-avatar">{{ userName().charAt(0).toUpperCase() }}</div>
-        <div class="user-info">
-          <p class="user-name">{{ userName() }}</p>
-          <p class="user-role">Music Intelligence</p>
-        </div>
+      <div class="brand-text">
+        <span class="brand-name">VOXMETRIK</span>
+        <span class="brand-version">v2.0</span>
       </div>
-
-      <!-- Logout button -->
-      <button class="btn-logout" (click)="logout()" title="Logout">
-        <span class="logout-icon">🚪</span>
-        <span class="logout-text">Logout</span>
-      </button>
-
-      <!-- Mobile menu toggle -->
-      <button 
-        class="btn-menu-toggle"
-        (click)="toggleSidebar()"
-        [attr.aria-expanded]="!sidebarCollapsed()"
-        title="Toggle sidebar"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
+      <button class="sidebar-close-btn" (click)="closeSidebar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-  </header>
 
-  <!-- Main layout -->
-  <div class="layout-container">
-    <!-- Sidebar -->
-    <nav class="sidebar" [class.collapsed]="sidebarCollapsed()">
-      <ul class="nav-list">
-        @for (item of navItems; track item.path) {
-          <li class="nav-item">
-            <a
-              class="nav-link"
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              (click)="closeSidebarOnNav()"
-            >
-              <span class="nav-icon">{{ item.icon }}</span>
-              <span class="nav-label">{{ item.label }}</span>
-            </a>
-          </li>
-        }
-      </ul>
-
-      <!-- Sidebar footer -->
-      <div class="sidebar-footer">
-        <p class="footer-text">VOXMETRIK v2.0</p>
-        <p class="footer-hint">Music Intelligence</p>
-      </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">MENÚ</span>
+      @for (item of navItems; track item.path) {
+        <a class="nav-item" [routerLink]="item.path" routerLinkActive="active" (click)="closeSidebar()">
+          <span class="nav-icon" [innerHTML]="item.icon"></span>
+          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-indicator"></span>
+        </a>
+      }
     </nav>
 
-    <!-- Main content -->
-    <main class="main-content">
-      <!-- Global loading spinner -->
-      @if (loadingService.isLoading()) {
-        <app-loading-spinner [fullpage]="true" label="Loading..." />
-      }
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar">{{ userInitial() }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ userName() }}</span>
+          <span class="user-role">Administrator</span>
+        </div>
+      </div>
+    </div>
+  </aside>
 
-      <!-- Page content -->
-      <router-outlet></router-outlet>
+  @if (sidebarOpen()) {
+    <div class="sidebar-overlay" (click)="closeSidebar()"></div>
+  }
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="menu-btn" (click)="toggleSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-right">
+        <div class="status-dot" title="Backend conectado"></div>
+        <span class="status-label">API Live</span>
+        <div class="topbar-user">{{ userInitial() }}</div>
+      </div>
+    </header>
+
+    <main class="page-content">
+      @if (loading.isLoading()) {
+        <div class="global-loader"><div class="loader-bar"></div></div>
+      }
+      <router-outlet />
     </main>
   </div>
 </div>

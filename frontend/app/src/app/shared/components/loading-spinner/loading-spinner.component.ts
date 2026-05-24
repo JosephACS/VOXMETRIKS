@@ -1,51 +1,98 @@
-import { Component, Input } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LoadingService } from '../../services/loading.service';
+import { Observable } from 'rxjs';
 
-/**
- * Loading Spinner Component
- * 
- * Indicador de carga reutilizable.
- * Puede usarse como spinner pequeño inline o como overlay fullpage.
- * 
- * Uso:
- * <app-loading-spinner />
- * <app-loading-spinner [fullpage]="true" label="Cargando..." />
- */
 @Component({
   selector: 'app-loading-spinner',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './loading-spinner.component.html',
-  styleUrl: './loading-spinner.component.css',
+  template: `
+    <div class="loader" *ngIf="(isLoading$ | async)" [@fadeInOut]>
+      <div class="loader-container">
+        <div class="loader-circle"></div>
+        <div class="loader-text">VOXMETRIK</div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 14, 39, 0.95);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: fadeIn 300ms ease-out;
+    }
+
+    .loader-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+    }
+
+    .loader-circle {
+      width: 80px;
+      height: 80px;
+      border: 3px solid var(--vox-border);
+      border-top-color: var(--vox-orange);
+      border-right-color: var(--vox-purple);
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite;
+      box-shadow: 0 0 20px rgba(255, 140, 66, 0.2), 0 0 40px rgba(124, 58, 237, 0.1);
+    }
+
+    .loader-text {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--vox-orange) 0%, var(--vox-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.6;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  `],
 })
 export class LoadingSpinnerComponent {
-  /**
-   * Si es true, ocupa toda la pantalla con overlay semi-transparente
-   * Si es false (default), es un spinner pequeño inline
-   */
-  @Input() fullpage: boolean = false;
+  isLoading$: Observable<boolean>;
 
-  /**
-   * Texto opcional a mostrar debajo del spinner
-   */
-  @Input() label: string | null = null;
-
-  /**
-   * Tamaño: 'sm' (24px), 'md' (40px), 'lg' (60px)
-   */
-  @Input() size: 'sm' | 'md' | 'lg' = 'md';
-
-  /**
-   * Clase CSS dinámica para tamaño
-   */
-  get sizeClass(): string {
-    return `spinner-${this.size}`;
-  }
-
-  /**
-   * Clase CSS dinámica para fullpage
-   */
-  get fullpageClass(): string {
-    return this.fullpage ? 'spinner-fullpage' : 'spinner-inline';
+  constructor(private loadingService: LoadingService) {
+    this.isLoading$ = this.loadingService.isLoading$;
   }
 }

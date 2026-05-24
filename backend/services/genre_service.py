@@ -58,3 +58,38 @@ def get_genre_stats(
         limit=limit,
     )
     return rows
+
+
+def create_genre(
+    conn: duckdb.DuckDBPyConnection, nombre_genero: str
+) -> Dict[str, Any]:
+    row = conn.execute("SELECT COALESCE(MAX(id_genero), 0) + 1 FROM dim_genero").fetchone()
+    new_id = row[0]
+    conn.execute(
+        "INSERT INTO dim_genero (id_genero, nombre_genero) VALUES (?, ?)",
+        [new_id, nombre_genero.strip()]
+    )
+    return {"id_genero": new_id, "nombre_genero": nombre_genero.strip()}
+
+
+def update_genre(
+    conn: duckdb.DuckDBPyConnection, genre_id: int, nombre_genero: str
+) -> Optional[Dict[str, Any]]:
+    existing = get_genre_by_id(conn, genre_id)
+    if not existing:
+        return None
+    conn.execute(
+        "UPDATE dim_genero SET nombre_genero = ? WHERE id_genero = ?",
+        [nombre_genero.strip(), genre_id]
+    )
+    return {"id_genero": genre_id, "nombre_genero": nombre_genero.strip()}
+
+
+def delete_genre(
+    conn: duckdb.DuckDBPyConnection, genre_id: int
+) -> bool:
+    existing = get_genre_by_id(conn, genre_id)
+    if not existing:
+        return False
+    conn.execute("DELETE FROM dim_genero WHERE id_genero = ?", [genre_id])
+    return True

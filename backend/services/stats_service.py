@@ -10,14 +10,41 @@ from .base_service import count_rows, fetch_rows
 
 
 def get_summary(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
-    """High-level counts across all warehouse tables."""
-    return {
-        "total_tracks":          count_rows(conn, "dim_track"),
-        "total_artistas":        count_rows(conn, "dim_artista"),
-        "total_generos":         count_rows(conn, "dim_genero"),
-        "total_albums":          count_rows(conn, "dim_album"),
-        "total_audio_features":  count_rows(conn, "fact_audio_features"),
+    """High-level counts + averages across all warehouse tables."""
+    result: Dict[str, Any] = {
+        "total_tracks":         count_rows(conn, "dim_track"),
+        "total_artistas":       count_rows(conn, "dim_artista"),
+        "total_generos":        count_rows(conn, "dim_genero"),
+        "total_albumes":        count_rows(conn, "dim_album"),
+        "total_audio_features": count_rows(conn, "fact_audio_features"),
     }
+
+    # Compute averages from fact table
+    try:
+        row = conn.execute("""
+            SELECT
+                AVG(popularity)    AS promedio_popularidad,
+                AVG(energy)        AS promedio_energy,
+                AVG(danceability)  AS promedio_danceability,
+                AVG(valence)       AS promedio_valence,
+                AVG(tempo)         AS promedio_tempo
+            FROM fact_audio_features
+            WHERE popularity IS NOT NULL
+        """).fetchone()
+        if row:
+            result["promedio_popularidad"]  = round(float(row[0] or 0), 1)
+            result["promedio_energy"]       = round(float(row[1] or 0), 4)
+            result["promedio_danceability"] = round(float(row[2] or 0), 4)
+            result["promedio_valence"]      = round(float(row[3] or 0), 4)
+            result["promedio_tempo"]        = round(float(row[4] or 0), 1)
+    except Exception:
+        result["promedio_popularidad"]  = 0.0
+        result["promedio_energy"]       = 0.0
+        result["promedio_danceability"] = 0.0
+        result["promedio_valence"]      = 0.0
+        result["promedio_tempo"]        = 0.0
+
+    return result
 
 
 def get_energia_distribution(conn: duckdb.DuckDBPyConnection) -> List[Dict[str, Any]]:
@@ -36,13 +63,14 @@ def get_top_tracks_by_popularity(
     conn: duckdb.DuckDBPyConnection, limit: int = 10
 ) -> List[Dict[str, Any]]:
     """
-    Join fact_audio_features with dim_track to return top tracks by popularity.
-    Only columns that exist in both tables are used.
+    Join fact_audio_features with dim_track + dim_artista to return
+    top tracks with artist name.
     """
     rows = conn.execute(f"""
         SELECT
             dt.id_track,
             dt.nombre_track,
+            COALESCE(da.nombre_artista, '—') AS nombre_artista,
             dt.id_artista,
             dt.id_genero,
             faf.popularity,
@@ -51,12 +79,13 @@ def get_top_tracks_by_popularity(
             faf.valence
         FROM fact_audio_features faf
         INNER JOIN dim_track dt ON dt.id_track = faf.id_track
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
         WHERE faf.popularity IS NOT NULL
         ORDER BY faf.popularity DESC
         LIMIT {int(limit)}
     """).fetchall()
 
-    cols = ["id_track", "nombre_track", "id_artista", "id_genero",
+    cols = ["id_track", "nombre_track", "nombre_artista", "id_artista", "id_genero",
             "popularity", "energy", "danceability", "valence"]
     return [dict(zip(cols, row)) for row in rows]
 
@@ -70,4 +99,15 @@ def get_last_loads(
         order_by="id_carga DESC",
         limit=limit,
     )
-    return rows
+    # Map to frontend-friendly keys
+    result = []
+    for r in rows:
+        result.append({
+            "id_carga":         r.get("id_carga"),
+            "fecha_carga":      str(r["fecha_carga"]) if r.get("fecha_carga") else None,
+            "modo":             r.get("modo", "—"),
+            "registros_nuevos": r.get("registros_nuevos", 0),
+            "total_raw":        r.get("total_raw", 0),
+            "estado":           r.get("estado", "—"),
+        })
+    return result

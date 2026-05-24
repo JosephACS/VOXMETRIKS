@@ -1,233 +1,152 @@
-<!-- ═══════════════════════════════════════════════════════════
-     VOXMETRIK — Tracks Analytics View
-     Tabla paginada + búsqueda + filtros + audio features
-════════════════════════════════════════════════════════════ -->
 <div class="page">
-
-  <!-- ── Page Header ── -->
   <div class="page-header">
     <div class="page-header-main">
-      <h1 class="page-title">Tracks</h1>
-      <p class="page-subtitle">Catálogo musical · dim_track + fact_audio_features</p>
+      <h1 class="page-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        Tracks
+      </h1>
+      <p class="page-subtitle">Catálogo musical · dim_track</p>
     </div>
-    @if (!isLoading() && !hasError()) {
-      <div class="page-header-meta font-mono">
-        {{ displayTotal() | number }} tracks
-      </div>
-    }
-  </div>
-
-  <!-- ── Search ── -->
-  <app-table-search
-    placeholder="Buscar track por nombre..."
-    [total]="displayTotal()"
-    entityLabel="tracks"
-    [initialValue]="searchVal()"
-    (searchChange)="onSearch($event)"
-  />
-
-  <!-- ── Filters ── -->
-  <app-table-filter
-    [configs]="filterConfigs"
-    [active]="activeFilters()"
-    (filterChange)="onFilter($event)"
-    (clearAll)="onClearFilters()"
-  />
-
-  <!-- ── Table ── -->
-  <div class="card table-card">
-    <div class="table-scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th class="col-index">#</th>
-            <th class="col-name">
-              <app-sort-header
-                columnKey="nombre_track"
-                label="Track"
-                [sort]="sort()"
-                (sortChange)="onSort($event)"
-              />
-            </th>
-            <th class="col-duration">
-              <app-sort-header
-                columnKey="duration_ms"
-                label="Duración"
-                [sort]="sort()"
-                (sortChange)="onSort($event)"
-              />
-            </th>
-            <th class="col-energy">
-              <app-sort-header
-                columnKey="energy"
-                label="Energía"
-                [sort]="sort()"
-                (sortChange)="onSort($event)"
-              />
-            </th>
-            <th class="col-dance">
-              <app-sort-header
-                columnKey="danceability"
-                label="Danzabilidad"
-                [sort]="sort()"
-                (sortChange)="onSort($event)"
-              />
-            </th>
-            <th class="col-valence">
-              <app-sort-header
-                columnKey="valence"
-                label="Valencia"
-                [sort]="sort()"
-                (sortChange)="onSort($event)"
-              />
-            </th>
-            <th class="col-explicit">Exp</th>
-            <th class="col-spotify">Spotify</th>
-            <th class="col-id">ID</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          @if (isLoading()) {
-            <app-table-skeleton
-              [rows]="12"
-              [columns]="9"
-              [widths]="['36px','40%','70px','110px','110px','110px','30px','40px','50px']"
-            />
-          } @else if (hasError()) {
-            <tr>
-              <td colspan="9" style="padding: 0">
-                <app-empty-state type="error" (retry)="onRetry()" />
-              </td>
-            </tr>
-          } @else if (tracks().length === 0) {
-            <tr>
-              <td colspan="9" style="padding: 0">
-                @if (searchVal() || activeFilters().length > 0) {
-                  <app-empty-state
-                    type="no-results"
-                    [searchTerm]="searchVal()"
-                    (clearSearch)="onSearch('')"
-                  />
-                } @else {
-                  <app-empty-state type="no-data" />
-                }
-              </td>
-            </tr>
-          } @else {
-            @for (track of tracks(); track track.id_track; let i = $index) {
-              <tr class="data-row">
-
-                <!-- # -->
-                <td class="col-index mono text-muted">
-                  {{ (page() - 1) * limit + i + 1 }}
-                </td>
-
-                <!-- Nombre -->
-                <td class="col-name">
-                  <div class="track-cell">
-                    <div class="track-icon" aria-hidden="true">♪</div>
-                    <div class="track-name-group">
-                      <span class="primary track-name" [title]="track.nombre_track">
-                        {{ track.nombre_track }}
-                      </span>
-                      @if (track.id_artista) {
-                        <span class="track-meta font-mono text-muted">
-                          Art. {{ track.id_artista }}
-                          @if (track.id_genero) {
-                            · Gén. {{ track.id_genero }}
-                          }
-                        </span>
-                      }
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Duración -->
-                <td class="col-duration mono text-secondary">
-                  {{ track.duration_ms | duration }}
-                </td>
-
-                <!-- Energía -->
-                <td class="col-energy">
-                  @if (track.energy != null) {
-                    <app-metric-bar
-                      [value]="energyPct(track.energy)"
-                      [max]="100"
-                      color="info"
-                      digitsInfo="1.0-0"
-                      suffix="%"
-                    />
-                  } @else {
-                    <span class="text-muted">—</span>
-                  }
-                </td>
-
-                <!-- Danzabilidad -->
-                <td class="col-dance">
-                  @if (track.danceability != null) {
-                    <app-metric-bar
-                      [value]="dancePct(track.danceability)"
-                      [max]="100"
-                      color="success"
-                      digitsInfo="1.0-0"
-                      suffix="%"
-                    />
-                  } @else {
-                    <span class="text-muted">—</span>
-                  }
-                </td>
-
-                <!-- Valencia / mood -->
-                <td class="col-valence">
-                  @if (track.valence != null) {
-                    <app-metric-bar
-                      [value]="valencePct(track.valence)"
-                      [max]="100"
-                      color="warning"
-                      digitsInfo="1.0-0"
-                      suffix="%"
-                    />
-                  } @else {
-                    <span class="text-muted">—</span>
-                  }
-                </td>
-
-                <!-- Explicit -->
-                <td class="col-explicit">
-                  @if (track.explicit) {
-                    <span class="explicit-badge" title="Contenido explícito">E</span>
-                  }
-                </td>
-
-                <!-- Spotify ID -->
-                <td class="col-spotify">
-                  <app-spotify-link
-                    [spotifyId]="track.spotify_track_id"
-                    [showId]="true"
-                  />
-                </td>
-
-                <!-- ID -->
-                <td class="col-id mono text-muted">{{ track.id_track }}</td>
-              </tr>
-            }
-          }
-        </tbody>
-      </table>
+    <div class="page-header-actions">
+      @if (!isLoading() && !hasError()) { <div class="page-meta">{{ displayTotal() | number }} tracks</div> }
+      <button class="btn-primary" (click)="openCreate()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo Track
+      </button>
     </div>
   </div>
 
-  <!-- ── Pagination ── -->
-  @if (!isLoading() && !hasError() && activeFilters().length === 0) {
-    <app-table-pagination
-      [page]="page()"
-      [totalPages]="totalPages()"
-      [total]="serverTotal()"
-      [limit]="limit"
-      entityLabel="tracks"
-      (pageChange)="goTo($event)"
-    />
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" type="text" placeholder="Buscar track..." [value]="searchVal()" (input)="onSearch($any($event.target).value)"/>
+      @if (searchVal()) { <button class="search-clear" (click)="clearSearch()">✕</button> }
+    </div>
+    @if (!isLoading() && !hasError()) { <span class="search-count">{{ displayTotal() | number }} tracks</span> }
+  </div>
+
+  @if (hasError()) {
+    <div class="error-card">
+      <div class="error-icon">⚠</div>
+      <div><strong>Error de conexión</strong><p>{{ errorMsg() }}</p></div>
+      <button class="btn-retry" (click)="loadTracks()">Reintentar</button>
+    </div>
   }
 
+  @if (!hasError()) {
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr>
+            <th class="col-idx">#</th><th class="col-id">ID</th>
+            <th class="col-name">Track</th><th class="col-artist">Artista</th>
+            <th class="col-genre">Género</th><th class="col-duration">Dur.</th>
+            <th class="col-explicit">Exp.</th><th class="col-actions">Acciones</th>
+          </tr></thead>
+          <tbody>
+            @if (isLoading()) {
+              @for (s of skeletonRows; track $index) {
+                <tr class="skeleton-row"><td><div class="skel skel-xs"></div></td><td><div class="skel skel-sm"></div></td><td><div class="skel skel-xl"></div></td><td><div class="skel skel-md"></div></td><td><div class="skel skel-md"></div></td><td><div class="skel skel-sm"></div></td><td><div class="skel skel-xs"></div></td><td></td></tr>
+              }
+            } @else if (tracks().length === 0) {
+              <tr><td colspan="8" class="empty-cell"><div class="empty-state"><div class="empty-icon">♪</div><p>No se encontraron tracks{{ searchVal() ? ' para "' + searchVal() + '"' : '' }}</p></div></td></tr>
+            } @else {
+              @for (track of tracks(); track track.id_track; let i = $index) {
+                <tr class="data-row">
+                  <td class="col-idx text-muted mono">{{ rowIndex(i) }}</td>
+                  <td class="col-id mono text-muted">{{ track.id_track }}</td>
+                  <td class="col-name"><div class="track-cell"><div class="track-icon">♪</div><span class="track-name">{{ track.nombre_track }}</span></div></td>
+                  <td class="col-artist text-secondary">{{ getArtistName(track.id_artista) }}</td>
+                  <td class="col-genre"><span class="genre-chip">{{ getGenreName(track.id_genero) }}</span></td>
+                  <td class="col-duration mono text-secondary">{{ formatDuration(track.duration_ms) }}</td>
+                  <td class="col-explicit">@if (track.explicit) { <span class="badge-explicit">E</span> } @else { <span class="text-muted">—</span> }</td>
+                  <td class="col-actions"><div class="action-btns">
+                    <button class="btn-icon btn-edit" (click)="openEdit(track)" title="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button class="btn-icon btn-delete" (click)="openDelete(track)" title="Eliminar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+                  </div></td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    @if (!isLoading() && totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="page() <= 1" (click)="goTo(page() - 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+        @if (page() > 3) { <button class="page-btn" (click)="goTo(1)">1</button> @if (page() > 4) { <span class="page-ellipsis">…</span> } }
+        @for (p of pageNumbers; track p) { <button class="page-btn" [class.active]="p === page()" (click)="goTo(p)">{{ p }}</button> }
+        @if (page() < totalPages() - 2) { @if (page() < totalPages() - 3) { <span class="page-ellipsis">…</span> } <button class="page-btn" (click)="goTo(totalPages())">{{ totalPages() }}</button> }
+        <button class="page-btn" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <span class="page-info">Pág. {{ page() }} / {{ totalPages() }}</span>
+      </div>
+    }
+  }
 </div>
+
+@if (modalMode() !== null) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      @if (modalMode() === 'create' || modalMode() === 'edit') {
+        <div class="modal-header">
+          <h3 class="modal-title">{{ modalMode() === 'create' ? 'Nuevo Track' : 'Editar Track' }}</h3>
+          <button class="modal-close" (click)="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label class="form-label">Nombre del Track *</label>
+              <input class="form-input" type="text" placeholder="Ej: Bohemian Rhapsody" [value]="formName()" (input)="formName.set($any($event.target).value)"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Artista</label>
+              <select class="form-select" [value]="formArtist() ?? ''" (change)="formArtist.set($any($event.target).value ? +$any($event.target).value : null)">
+                <option value="">Sin artista</option>
+                @for (a of artists(); track a.id_artista) { <option [value]="a.id_artista">{{ a.nombre_artista }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Género</label>
+              <select class="form-select" [value]="formGenre() ?? ''" (change)="formGenre.set($any($event.target).value ? +$any($event.target).value : null)">
+                <option value="">Sin género</option>
+                @for (g of genres(); track g.id_genero) { <option [value]="g.id_genero">{{ g.nombre_genero }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Duración (ms)</label>
+              <input class="form-input" type="number" placeholder="Ej: 214000" [value]="formDuration() ?? ''" (input)="formDuration.set($any($event.target).value ? +$any($event.target).value : null)"/>
+            </div>
+            <div class="form-group form-check-group">
+              <label class="form-check">
+                <input type="checkbox" [checked]="formExplicit()" (change)="formExplicit.set($any($event.target).checked)"/>
+                <span>Contenido explícito</span>
+              </label>
+            </div>
+          </div>
+          @if (formError()) { <div class="form-error">{{ formError() }}</div> }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button class="btn-primary" [disabled]="formSaving()" (click)="modalMode() === 'create' ? saveCreate() : saveEdit()">
+            @if (formSaving()) { <span class="spinner"></span> } {{ modalMode() === 'create' ? 'Crear' : 'Guardar' }}
+          </button>
+        </div>
+      }
+      @if (modalMode() === 'delete') {
+        <div class="modal-header">
+          <h3 class="modal-title modal-title-danger">Eliminar Track</h3>
+          <button class="modal-close" (click)="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-confirm-text">¿Eliminar <strong>{{ modalTrack()?.nombre_track }}</strong>?<br><span class="delete-warn">Esta acción no se puede deshacer.</span></p>
+          @if (formError()) { <div class="form-error">{{ formError() }}</div> }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">@if (formSaving()) { <span class="spinner"></span> } Eliminar</button>
+        </div>
+      }
+    </div>
+  </div>
+}

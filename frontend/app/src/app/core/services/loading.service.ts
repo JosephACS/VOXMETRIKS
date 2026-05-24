@@ -1,33 +1,31 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+/**
+ * LoadingService — estado global de carga HTTP.
+ *
+ * Usa un contador de requests activos en lugar de un booleano simple,
+ * para manejar correctamente múltiples requests paralelos (forkJoin).
+ *
+ * Consumido por:
+ * - loadingInterceptor: llama startLoading/stopLoading por cada request
+ * - DashboardLayoutComponent: muestra global loading bar
+ */
+@Injectable({ providedIn: 'root' })
 export class LoadingService {
-  // Signal que controla el estado global de carga
-  private loadingCount = signal(0);
+  private readonly _count = signal(0);
 
-  // Signal reactivo público
-  isLoading = () => this.loadingCount() > 0;
+  /** true si hay al menos un request activo */
+  readonly isLoading = computed(() => this._count() > 0);
 
-  /**
-   * Incrementar contador de requests en progreso
-   */
   startLoading(): void {
-    this.loadingCount.update((count) => count + 1);
+    this._count.update(n => n + 1);
   }
 
-  /**
-   * Decrementar contador de requests en progreso
-   */
   stopLoading(): void {
-    this.loadingCount.update((count) => Math.max(0, count - 1));
+    this._count.update(n => Math.max(0, n - 1));
   }
 
-  /**
-   * Resetear contador (para casos excepcionales)
-   */
   reset(): void {
-    this.loadingCount.set(0);
+    this._count.set(0);
   }
 }

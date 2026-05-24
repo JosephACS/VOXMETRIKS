@@ -1,5 +1,4 @@
-// Production environment — Docker/deployment
 export const environment = {
   production: true,
-  apiUrl: '/api/v1',
+  apiUrl: 'http://localhost:8000/api/v1'
 };

@@ -1,251 +1,124 @@
-/**
- * TracksComponent
- * ===============
- * Vista completa de tracks con:
- * - Búsqueda server-side con debounce
- * - Filtros client-side: explicit, duración mínima
- * - Ordenamiento client-side por columna
- * - Paginación server-side
- * - Muestra audio features (energy, danceability, valence) cuando están disponibles
- * - Estados: skeleton, vacío, error, datos
- *
- * Endpoints: GET /api/v1/tracks
- */
+import { Component, OnInit, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TracksService } from '../../services/tracks.service';
+import { GenresService } from '../../services/genres.service';
+import { ArtistsService } from '../../services/artists.service';
+import { Track, PaginatedResponse, Genero, Artista } from '../../shared/models/api.models';
 
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
-import { FormsModule }  from '@angular/forms';
-import { DecimalPipe }  from '@angular/common';
-import {
-  Subject,
-  debounceTime,
-  distinctUntilChanged,
-  switchMap,
-  startWith,
-  takeUntil,
-} from 'rxjs';
-
-import { TracksService }             from '../../services/tracks.service';
-import { LoadingSpinnerComponent }   from '../../shared/components/loading-spinner/loading-spinner.component';
-import { DurationPipe }              from '../../shared/pipes/duration.pipe';
-import { TableSearchComponent }      from '../../shared/components/table-search/table-search.component';
-import { TablePaginationComponent }  from '../../shared/components/table-pagination/table-pagination.component';
-import { TableFilterComponent }      from '../../shared/components/table-filter/table-filter.component';
-import { SortHeaderComponent }       from '../../shared/components/sort-header/sort-header.component';
-import { EmptyStateComponent }       from '../../shared/components/empty-state/empty-state.component';
-import { MetricBarComponent }        from '../../shared/components/metric-bar/metric-bar.component';
-import { SpotifyLinkComponent }      from '../../shared/components/spotify-link/spotify-link.component';
-import { TableSkeletonComponent }    from '../../shared/components/table-skeleton/table-skeleton.component';
-import {
-  Track,
-  PaginatedResponse,
-} from '../../shared/models/api.models';
-import {
-  SortState,
-  ActiveFilter,
-  FilterConfig,
-} from '../../shared/models/table.models';
+type ModalMode = 'create' | 'edit' | 'delete' | null;
 
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [
-    FormsModule,
-    DecimalPipe,
-    DurationPipe,
-    LoadingSpinnerComponent,
-    TableSearchComponent,
-    TablePaginationComponent,
-    TableFilterComponent,
-    SortHeaderComponent,
-    EmptyStateComponent,
-    MetricBarComponent,
-    SpotifyLinkComponent,
-    TableSkeletonComponent,
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './tracks.component.html',
-  styleUrl: './tracks.component.css',
+  styleUrls: ['./tracks.component.css'],
 })
-export class TracksComponent implements OnInit, OnDestroy {
-  private readonly service  = inject(TracksService);
-  private readonly destroy$ = new Subject<void>();
+export class TracksComponent implements OnInit {
+  tracks      = signal<Track[]>([]);
+  genres      = signal<Genero[]>([]);
+  artists     = signal<Artista[]>([]);
+  isLoading   = signal(true);
+  hasError    = signal(false);
+  errorMsg    = signal('');
+  page        = signal(1);
+  limit       = 50;
+  serverTotal = signal(0);
+  searchVal   = signal('');
+  private searchTimer: any;
 
-  // ── State signals ────────────────────────────────────────────────────────
-  protected readonly isLoading   = signal(true);
-  protected readonly hasError    = signal(false);
-  protected readonly page        = signal(1);
-  protected readonly limit       = 50;
-  protected readonly searchVal   = signal('');
-  protected readonly sort        = signal<SortState>({ column: 'nombre_track', direction: 'asc' });
-  protected readonly activeFilters = signal<ActiveFilter[]>([]);
+  totalPages   = computed(() => Math.max(1, Math.ceil(this.serverTotal() / this.limit)));
+  displayTotal = computed(() => this.serverTotal());
 
-  protected readonly response = signal<PaginatedResponse<Track> | null>(null);
+  modalMode   = signal<ModalMode>(null);
+  modalTrack  = signal<Track | null>(null);
+  formName    = signal('');
+  formArtist  = signal<number | null>(null);
+  formGenre   = signal<number | null>(null);
+  formExplicit = signal(false);
+  formDuration = signal<number | null>(null);
+  formError   = signal('');
+  formSaving  = signal(false);
 
-  private readonly search$ = new Subject<string>();
+  constructor(private svc: TracksService, private genresSvc: GenresService, private artistsSvc: ArtistsService) {}
 
-  // ── Filter configs ───────────────────────────────────────────────────────
-  protected readonly filterConfigs: FilterConfig[] = [
-    {
-      key: 'explicit',
-      label: 'Solo explicit',
-      type: 'toggle',
-    },
-    {
-      key: 'has_features',
-      label: 'Con audio features',
-      type: 'toggle',
-    },
-    {
-      key: 'min_duration',
-      label: 'Duración mínima (min)',
-      type: 'range',
-      min: 0,
-      max: 10,
-      step: 1,
-      suffix: ' min',
-    },
-    {
-      key: 'min_energy',
-      label: 'Energía mínima',
-      type: 'range',
-      min: 0,
-      max: 100,
-      step: 5,
-      suffix: '%',
-    },
-  ];
+  ngOnInit() {
+    this.loadTracks();
+    this.genresSvc.getGenres({ limit: 200 }).subscribe({ next: r => this.genres.set(r.items ?? []), error: () => {} });
+    this.artistsSvc.listArtists(1, 200).subscribe({ next: r => this.artists.set(r.items ?? []), error: () => {} });
+  }
 
-  // ── Computed ─────────────────────────────────────────────────────────────
-  protected readonly rawTracks   = computed(() => this.response()?.items ?? []);
-  protected readonly serverTotal = computed(() => this.response()?.total ?? 0);
-  protected readonly totalPages  = computed(() =>
-    Math.ceil(this.serverTotal() / this.limit)
-  );
-
-  protected readonly filteredTracks = computed(() => {
-    let data = [...this.rawTracks()];
-    const filters = this.activeFilters();
-
-    for (const f of filters) {
-      if (f.key === 'explicit' && f.value === true) {
-        data = data.filter(t => t.explicit === true);
-      }
-      if (f.key === 'has_features' && f.value === true) {
-        data = data.filter(t => t.energy != null || t.danceability != null);
-      }
-      if (f.key === 'min_duration') {
-        const minMs = Number(f.value) * 60_000;
-        data = data.filter(t => (t.duration_ms ?? 0) >= minMs);
-      }
-      if (f.key === 'min_energy') {
-        const minE = Number(f.value) / 100;
-        data = data.filter(t => (t.energy ?? 0) >= minE);
-      }
-    }
-
-    // Sort
-    const s = this.sort();
-    if (s.column && s.direction) {
-      data.sort((a, b) => {
-        const va = (a as any)[s.column] ?? '';
-        const vb = (b as any)[s.column] ?? '';
-        const cmp = typeof va === 'number'
-          ? va - vb
-          : String(va).localeCompare(String(vb));
-        return s.direction === 'asc' ? cmp : -cmp;
-      });
-    }
-
-    return data;
-  });
-
-  protected readonly tracks = computed(() => this.filteredTracks());
-
-  protected readonly displayTotal = computed(() =>
-    this.activeFilters().length > 0
-      ? this.filteredTracks().length
-      : this.serverTotal()
-  );
-
-  // ── Lifecycle ────────────────────────────────────────────────────────────
-  ngOnInit(): void {
-    this.search$.pipe(
-      startWith(''),
-      debounceTime(350),
-      distinctUntilChanged(),
-      switchMap(term => {
-        this.isLoading.set(true);
-        this.hasError.set(false);
-        return this.service.listTracks(this.page(), this.limit, term || undefined);
-      }),
-      takeUntil(this.destroy$),
-    ).subscribe({
-      next: res => {
-        this.response.set(res);
+  loadTracks() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.svc.listTracks(this.page(), this.limit, this.searchVal() || undefined).subscribe({
+      next: (res: PaginatedResponse<Track>) => {
+        this.tracks.set(res.items ?? []);
+        this.serverTotal.set(res.total ?? 0);
         this.isLoading.set(false);
       },
       error: () => {
         this.hasError.set(true);
+        this.errorMsg.set('Error al conectar con el backend. Verifica que FastAPI esté corriendo en http://localhost:8000');
         this.isLoading.set(false);
       },
     });
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+  onSearch(val: string) {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.searchVal.set(val); this.page.set(1); this.loadTracks(); }, 350);
+  }
+  clearSearch() { this.searchVal.set(''); this.page.set(1); this.loadTracks(); }
+  goTo(p: number) { if (p < 1 || p > this.totalPages()) return; this.page.set(p); this.loadTracks(); }
+  get pageNumbers(): number[] {
+    const total = this.totalPages(), current = this.page(), delta = 2, range: number[] = [];
+    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) range.push(i);
+    return range;
+  }
+  rowIndex(i: number): number { return (this.page() - 1) * this.limit + i + 1; }
+  formatDuration(ms?: number): string {
+    if (!ms) return '—';
+    const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+  getArtistName(id?: number): string { return this.artists().find(a => a.id_artista === id)?.nombre_artista ?? (id ? `#${id}` : '—'); }
+  getGenreName(id?: number): string { return this.genres().find(g => g.id_genero === id)?.nombre_genero ?? (id ? `#${id}` : '—'); }
+  skeletonRows = Array(12).fill(0);
+
+  openCreate() { this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }
+  openEdit(t: Track) { this.modalTrack.set(t); this.formName.set(t.nombre_track); this.formArtist.set(t.id_artista ?? null); this.formGenre.set(t.id_genero ?? null); this.formExplicit.set(t.explicit ?? false); this.formDuration.set(t.duration_ms ?? null); this.formError.set(''); this.modalMode.set('edit'); }
+  openDelete(t: Track) { this.modalTrack.set(t); this.formError.set(''); this.modalMode.set('delete'); }
+  closeModal() { this.modalMode.set(null); this.formSaving.set(false); }
+
+  saveCreate() {
+    const name = this.formName().trim();
+    if (!name) { this.formError.set('El nombre no puede estar vacío'); return; }
+    this.formSaving.set(true); this.formError.set('');
+    this.svc.createTrack({ nombre_track: name, id_artista: this.formArtist() ?? undefined, id_genero: this.formGenre() ?? undefined, explicit: this.formExplicit(), duration_ms: this.formDuration() ?? undefined }).subscribe({
+      next: () => { this.closeModal(); this.loadTracks(); },
+      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al crear track'); this.formSaving.set(false); },
+    });
   }
 
-  // ── Event handlers ───────────────────────────────────────────────────────
-  protected onSearch(term: string): void {
-    this.searchVal.set(term);
-    this.page.set(1);
-    this.search$.next(term);
+  saveEdit() {
+    const name = this.formName().trim();
+    const track = this.modalTrack();
+    if (!name || !track) { this.formError.set('El nombre no puede estar vacío'); return; }
+    this.formSaving.set(true); this.formError.set('');
+    this.svc.updateTrack(track.id_track, { nombre_track: name, id_artista: this.formArtist() ?? undefined, id_genero: this.formGenre() ?? undefined, explicit: this.formExplicit(), duration_ms: this.formDuration() ?? undefined }).subscribe({
+      next: () => { this.closeModal(); this.loadTracks(); },
+      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al actualizar'); this.formSaving.set(false); },
+    });
   }
 
-  protected goTo(p: number): void {
-    if (p < 1 || p > this.totalPages()) return;
-    this.page.set(p);
-    this.search$.next(this.searchVal());
-  }
-
-  protected onSort(s: SortState): void {
-    this.sort.set(s);
-  }
-
-  protected onFilter(filters: ActiveFilter[]): void {
-    this.activeFilters.set(filters);
-  }
-
-  protected onClearFilters(): void {
-    this.activeFilters.set([]);
-  }
-
-  protected onRetry(): void {
-    this.hasError.set(false);
-    this.search$.next(this.searchVal());
-  }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  protected energyPct(energy?: number | null): number {
-    return Math.round((energy ?? 0) * 100);
-  }
-
-  protected dancePct(dance?: number | null): number {
-    return Math.round((dance ?? 0) * 100);
-  }
-
-  protected valencePct(valence?: number | null): number {
-    return Math.round((valence ?? 0) * 100);
-  }
-
-  protected hasAnyFeature(track: Track): boolean {
-    return track.energy != null || track.danceability != null || track.valence != null;
+  confirmDelete() {
+    const track = this.modalTrack(); if (!track) return;
+    this.formSaving.set(true); this.formError.set('');
+    this.svc.deleteTrack(track.id_track).subscribe({
+      next: () => { this.closeModal(); this.loadTracks(); },
+      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar'); this.formSaving.set(false); },
+    });
   }
 }

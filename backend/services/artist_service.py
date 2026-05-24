@@ -66,3 +66,39 @@ def get_top_artists(
         limit=limit,
     )
     return rows
+
+
+def create_artist(
+    conn: duckdb.DuckDBPyConnection, nombre_artista: str
+) -> Dict[str, Any]:
+    # Get next ID
+    row = conn.execute("SELECT COALESCE(MAX(id_artista), 0) + 1 FROM dim_artista").fetchone()
+    new_id = row[0]
+    conn.execute(
+        "INSERT INTO dim_artista (id_artista, nombre_artista) VALUES (?, ?)",
+        [new_id, nombre_artista.strip()]
+    )
+    return {"id_artista": new_id, "nombre_artista": nombre_artista.strip()}
+
+
+def update_artist(
+    conn: duckdb.DuckDBPyConnection, artist_id: int, nombre_artista: str
+) -> Optional[Dict[str, Any]]:
+    existing = get_artist_by_id(conn, artist_id)
+    if not existing:
+        return None
+    conn.execute(
+        "UPDATE dim_artista SET nombre_artista = ? WHERE id_artista = ?",
+        [nombre_artista.strip(), artist_id]
+    )
+    return {"id_artista": artist_id, "nombre_artista": nombre_artista.strip()}
+
+
+def delete_artist(
+    conn: duckdb.DuckDBPyConnection, artist_id: int
+) -> bool:
+    existing = get_artist_by_id(conn, artist_id)
+    if not existing:
+        return False
+    conn.execute("DELETE FROM dim_artista WHERE id_artista = ?", [artist_id])
+    return True

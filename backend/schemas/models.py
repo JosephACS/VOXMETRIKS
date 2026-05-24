@@ -1,8 +1,8 @@
 """
 backend/schemas/models.py
 =========================
-Pydantic v2 response models.
-All fields match the DuckDB warehouse schema exactly — no invented columns.
+Pydantic v2 response models + Create/Update models for CRUD.
+All fields match the DuckDB warehouse schema exactly.
 """
 
 from __future__ import annotations
@@ -21,9 +21,21 @@ class Artista(BaseModel):
     id_artista:     int
     nombre_artista: str
 
+class ArtistaCreate(BaseModel):
+    nombre_artista: str
+
+class ArtistaUpdate(BaseModel):
+    nombre_artista: str
+
 
 class Genero(BaseModel):
     id_genero:     int
+    nombre_genero: str
+
+class GeneroCreate(BaseModel):
+    nombre_genero: str
+
+class GeneroUpdate(BaseModel):
     nombre_genero: str
 
 
@@ -37,6 +49,24 @@ class Track(BaseModel):
     id_track:         int
     spotify_track_id: Optional[str] = None
     nombre_track:     str
+    id_artista:       Optional[int] = None
+    id_album:         Optional[int] = None
+    id_genero:        Optional[int] = None
+    explicit:         Optional[bool] = None
+    duration_ms:      Optional[int] = None
+
+class TrackCreate(BaseModel):
+    nombre_track:     str
+    spotify_track_id: Optional[str] = None
+    id_artista:       Optional[int] = None
+    id_album:         Optional[int] = None
+    id_genero:        Optional[int] = None
+    explicit:         Optional[bool] = None
+    duration_ms:      Optional[int] = None
+
+class TrackUpdate(BaseModel):
+    nombre_track:     Optional[str] = None
+    spotify_track_id: Optional[str] = None
     id_artista:       Optional[int] = None
     id_album:         Optional[int] = None
     id_genero:        Optional[int] = None
@@ -96,6 +126,13 @@ class PaginatedResponse(BaseModel):
     page:   int
     limit:  int
     items:  list
+
+
+# ── Delete response ───────────────────────────────────────────────────────────
+
+class DeleteResponse(BaseModel):
+    deleted: bool
+    id:      int
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

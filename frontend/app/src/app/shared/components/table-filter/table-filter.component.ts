@@ -66,7 +66,7 @@ import { ActiveFilter, FilterConfig, FilterOption } from '../../models/table.mod
         }
 
         @if (activeCount() > 0) {
-          <button class="clear-all-btn" type="button" (click)="clearAll()">
+          <button class="clear-all-btn" type="button" (click)="onClearAll()">
             Limpiar todo
           </button>
         }
@@ -457,7 +457,7 @@ export class TableFilterComponent implements OnChanges {
     this.filterChange.emit(updated);
   }
 
-  protected clearAll(): void {
+  protected onClearAll(): void {
     this.internalFilters.set([]);
     this.clearAll.emit();
     this.filterChange.emit([]);
