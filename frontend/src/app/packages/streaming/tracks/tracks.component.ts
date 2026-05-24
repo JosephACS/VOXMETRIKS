@@ -1,6 +1,10 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
 import { TracksService } from '../services/tracks.service';
 import { GenresService } from '../services/genres.service';
 import { ArtistsService } from '../services/artists.service';
@@ -11,11 +15,13 @@ type ModalMode = 'create' | 'edit' | 'delete' | null;
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule, FavoriteBtnComponent],
   templateUrl: './tracks.component.html',
   styleUrls: ['./tracks.component.css'],
 })
 export class TracksComponent implements OnInit {
+  private iconRender = inject(IconRenderService);
+
   tracks      = signal<Track[]>([]);
   genres      = signal<Genero[]>([]);
   artists     = signal<Artista[]>([]);
@@ -120,5 +126,9 @@ export class TracksComponent implements OnInit {
       next: () => { this.closeModal(); this.loadTracks(); },
       error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar'); this.formSaving.set(false); },
     });
+  }
+
+  icon(key: string, size = 18): SafeHtml {
+    return this.iconRender.render(key, size);
   }
 }

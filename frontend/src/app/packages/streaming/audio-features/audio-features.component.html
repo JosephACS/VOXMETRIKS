@@ -1,0 +1,152 @@
+<div class="af-page">
+  <header class="page-header">
+    <div>
+      <h1>Audio Features</h1>
+      <p class="page-subtitle">Análisis de características acústicas del catálogo musical</p>
+    </div>
+    <span class="mock-badge">Datos de demostración</span>
+  </header>
+
+  <!-- KPIs -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <span class="kpi-label">Tracks analizados</span>
+      <span class="kpi-value">{{ tracks().length }}</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">Energy promedio</span>
+      <span class="kpi-value kpi-purple">{{ avgEnergy() }}</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">Danceability promedio</span>
+      <span class="kpi-value">{{ avgDanceability() }}</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">Valence promedio</span>
+      <span class="kpi-value kpi-green">{{ avgValence() }}</span>
+    </div>
+  </section>
+
+  <div class="content-grid">
+    <!-- Tabla -->
+    <section class="panel table-panel">
+      <div class="panel-header">
+        <h2>Catálogo con features</h2>
+        <span class="panel-meta">Selecciona un track para el radar</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Track</th>
+              <th>Artista</th>
+              <th>Pop.</th>
+              <th>Energy</th>
+              <th>Dance</th>
+              <th>Valence</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (track of tracks(); track track.id) {
+              <tr
+                [class.selected]="selectedId() === track.id"
+                (click)="selectTrack(track.id)"
+              >
+                <td class="track-name">{{ track.nombre }}</td>
+                <td class="track-artist">{{ track.artista }}</td>
+                <td>
+                  <app-metric-bar [value]="track.popularity" [max]="100" color="primary" suffix="" digitsInfo="1.0-0" />
+                </td>
+                <td>
+                  <app-metric-bar [value]="track.energy" [max]="1" color="info" suffix="" digitsInfo="1.2-2" />
+                </td>
+                <td>
+                  <app-metric-bar [value]="track.danceability" [max]="1" color="warning" suffix="" digitsInfo="1.2-2" />
+                </td>
+                <td>
+                  <app-metric-bar [value]="track.valence" [max]="1" color="success" suffix="" digitsInfo="1.2-2" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Radar -->
+    <section class="panel radar-panel">
+      <div class="panel-header">
+        <h2>Perfil acústico</h2>
+        <span class="panel-meta">{{ selectedTrack().nombre }}</span>
+      </div>
+
+      <div class="radar-wrap">
+        <svg viewBox="0 0 200 200" class="radar-chart">
+          <!-- Grid rings -->
+          @for (ring of gridRings; track ring) {
+            <polygon
+              [attr.points]="radarPoints({
+                id: 0, nombre: '', artista: '', popularity: 0,
+                danceability: ring, energy: ring, valence: ring,
+                acousticness: ring, speechiness: ring, instrumentalness: ring, liveness: ring
+              })"
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              stroke-width="1"
+            />
+          }
+
+          <!-- Axes -->
+          @for (axis of radarAxisPoints(); track axis.label) {
+            <line x1="100" y1="100" [attr.x2]="axis.x" [attr.y2]="axis.y" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+            <text
+              [attr.x]="axis.lx"
+              [attr.y]="axis.ly"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              class="axis-label"
+            >{{ axis.label }}</text>
+          }
+
+          <!-- Data polygon -->
+          <polygon
+            [attr.points]="radarPoints(selectedTrack())"
+            fill="rgba(255, 140, 66, 0.2)"
+            stroke="#ff8c42"
+            stroke-width="2"
+          />
+
+          <!-- Data points -->
+          @for (f of featureDefs; track f.key; let i = $index) {
+            <circle
+              [attr.cx]="radarPoint(selectedTrack(), i).x"
+              [attr.cy]="radarPoint(selectedTrack(), i).y"
+              r="3.5"
+              [attr.fill]="f.color"
+            />
+          }
+        </svg>
+      </div>
+
+      <div class="feature-bars">
+        @for (f of featureDefs; track f.key) {
+          <div class="feature-row">
+            <span class="feature-label">
+              <span class="feature-dot" [style.background]="f.color"></span>
+              {{ f.label }}
+            </span>
+            <div class="feature-bar-track">
+              <div
+                class="feature-bar-fill"
+                [style.width.%]="featureValue(selectedTrack(), f.key) * 100"
+                [style.background]="f.color"
+              ></div>
+            </div>
+            <span class="feature-val">{{ featureValue(selectedTrack(), f.key) | number:'1.2-2' }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</div>

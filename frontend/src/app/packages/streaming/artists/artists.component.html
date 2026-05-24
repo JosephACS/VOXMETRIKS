@@ -33,8 +33,8 @@
           <div class="top-artist-info">
             <span class="top-artist-name" [title]="a.nombre_artista ?? ''">{{ a.nombre_artista ?? '—' }}</span>
             <div class="top-artist-meta">
-              <span class="stat-pill popularity">◎ {{ (a.promedio_popularidad ?? 0) | number:'1.0-1' }}</span>
-              <span class="stat-pill tracks">♪ {{ (a.total_tracks ?? 0) | number }}</span>
+              <span class="stat-pill popularity"><span class="pill-icon" [innerHTML]="icon('star', 12)"></span> {{ (a.promedio_popularidad ?? 0) | number:'1.0-1' }}</span>
+              <span class="stat-pill tracks"><span class="pill-icon" [innerHTML]="icon('music', 12)"></span> {{ (a.total_tracks ?? 0) | number }}</span>
             </div>
           </div>
         </div>
@@ -59,7 +59,7 @@
 
   @if (hasError()) {
     <div class="error-card">
-      <div class="error-icon">⚠</div>
+      <div class="error-icon" [innerHTML]="icon('alert', 20)"></div>
       <div><strong>Error de conexión</strong><p>{{ errorMsg() }}</p></div>
       <button class="btn-retry" (click)="loadArtists()">Reintentar</button>
     </div>
@@ -90,7 +90,7 @@
             } @else if (artists().length === 0) {
               <tr><td colspan="4" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">♪</div>
+                  <div class="empty-icon" [innerHTML]="icon('music', 24)"></div>
                   <p>No se encontraron artistas{{ searchVal() ? ' para "' + searchVal() + '"' : '' }}</p>
                 </div>
               </td></tr>

@@ -12,8 +12,11 @@
  *   />
  */
 
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../services/icon-render.service';
 import {
   Component,
+  inject,
   Input,
   Output,
   EventEmitter,
@@ -28,7 +31,7 @@ export type EmptyStateType = 'no-data' | 'no-results' | 'error' | 'loading';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="empty-state" [class]="'empty-type-' + type">
-      <div class="empty-icon" aria-hidden="true">{{ icon }}</div>
+      <div class="empty-icon" aria-hidden="true" [innerHTML]="iconSvg"></div>
       <div class="empty-title">{{ title }}</div>
       @if (description) {
         <p class="empty-description">{{ description }}</p>
@@ -58,11 +61,17 @@ export type EmptyStateType = 'no-data' | 'no-results' | 'error' | 'loading';
     }
 
     .empty-icon {
-      font-size: 2.5rem;
-      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
       margin-bottom: 0.25rem;
-      opacity: 0.5;
+      opacity: 0.55;
+      color: var(--color-text-muted);
     }
+
+    .empty-icon :deep(svg) { width: 32px; height: 32px; }
 
     .empty-title {
       font-size: 0.9rem;
@@ -108,6 +117,8 @@ export type EmptyStateType = 'no-data' | 'no-results' | 'error' | 'loading';
   `],
 })
 export class EmptyStateComponent {
+  private iconRender = inject(IconRenderService);
+
   @Input() type: EmptyStateType = 'no-data';
   @Input() searchTerm = '';
   @Input() customTitle?: string;
@@ -116,12 +127,17 @@ export class EmptyStateComponent {
   @Output() clearSearch = new EventEmitter<void>();
   @Output() retry = new EventEmitter<void>();
 
-  get icon(): string {
+  get iconSvg(): SafeHtml {
+    const key = this.iconKey;
+    return this.iconRender.render(key, 32);
+  }
+
+  get iconKey(): string {
     switch (this.type) {
-      case 'no-results': return '⌕';
-      case 'error':      return '⚠';
-      case 'loading':    return '◌';
-      default:           return '◈';
+      case 'no-results': return 'search';
+      case 'error':      return 'alert';
+      case 'loading':    return 'loader';
+      default:           return 'inbox';
     }
   }
 

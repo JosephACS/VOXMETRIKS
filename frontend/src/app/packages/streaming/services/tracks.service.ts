@@ -6,6 +6,7 @@ import {
   Track, TrackCreate, TrackUpdate,
   AudioFeatures, PaginatedResponse,
   TrackSearchParams, DeleteResponse,
+  TrackSearchResult, TrackDetail,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -47,5 +48,14 @@ export class TracksService {
 
   deleteTrack(id: number): Observable<DeleteResponse> {
     return this.http.delete<DeleteResponse>(`${this.API_URL}/${id}`);
+  }
+
+  searchTracks(q: string, limit = 50): Observable<TrackSearchResult[]> {
+    const params = new HttpParams().set('q', q).set('limit', limit);
+    return this.http.get<TrackSearchResult[]>(`${this.API_URL}/search`, { params });
+  }
+
+  getTrackDetail(id: number): Observable<TrackDetail> {
+    return this.http.get<TrackDetail>(`${this.API_URL}/${id}/detail`);
   }
 }

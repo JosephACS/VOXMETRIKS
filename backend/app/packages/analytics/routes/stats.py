@@ -3,21 +3,38 @@
 from __future__ import annotations
 
 import duckdb
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.core.database import get_conn
 from app.shared.schemas.models import DistribucionEnergia
 from app.packages.analytics.services.stats_service import (
     get_summary, get_energia_distribution,
     get_top_tracks_by_popularity, get_last_loads,
+    generate_synthetic_tracks,
 )
 
 router = APIRouter(prefix="/stats", tags=["Statistics"])
 
 
+class SyntheticRequest(BaseModel):
+    multiplier: int = Field(2, ge=1, le=4, description="Target volume factor (2 = double tracks)")
+
+
 @router.get("/summary", summary="High-level warehouse counts")
 def summary(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
     return get_summary(conn)
+
+
+@router.post("/synthetic", summary="Generate synthetic tracks from existing warehouse data")
+def synthetic(
+    body: SyntheticRequest,
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    try:
+        return generate_synthetic_tracks(conn, body.multiplier)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/energia", response_model=list[DistribucionEnergia], summary="Energy distribution")

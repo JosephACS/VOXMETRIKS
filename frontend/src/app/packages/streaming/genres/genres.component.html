@@ -18,10 +18,10 @@
 
   @if (!isLoading() && !hasError() && allGenres().length > 0) {
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon kpi-primary">◉</div><div class="kpi-body"><span class="kpi-value">{{ allGenres().length | number }}</span><span class="kpi-label">Géneros</span><span class="kpi-sub">en catálogo</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-info">★</div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">Tracks — Top Género</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-warning">◎</div><div class="kpi-body"><span class="kpi-value">{{ avgPopularity() ?? '—' }}</span><span class="kpi-label">Pop. Promedio Global</span><span class="kpi-sub">popularidad media</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-secondary">⚡</div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() != null ? ((avgEnergy()! * 100) | number:'1.0-1') + '%' : '—' }}</span><span class="kpi-label">Energía Promedio</span><span class="kpi-sub">energía media global</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-primary" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ allGenres().length | number }}</span><span class="kpi-label">Géneros</span><span class="kpi-sub">en catálogo</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-info" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">Tracks — Top Género</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-warning" [innerHTML]="icon('target', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPopularity() ?? '—' }}</span><span class="kpi-label">Pop. Promedio Global</span><span class="kpi-sub">popularidad media</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-secondary" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() != null ? ((avgEnergy()! * 100) | number:'1.0-1') + '%' : '—' }}</span><span class="kpi-label">Energía Promedio</span><span class="kpi-sub">energía media global</span></div></div>
     </div>
   }
 
@@ -35,7 +35,7 @@
   </div>
 
   @if (hasError()) {
-    <div class="error-card"><div class="error-icon">⚠</div><div><strong>Error de conexión</strong><p>{{ errorMsg() }}</p></div><button class="btn-retry" (click)="loadGenres()">Reintentar</button></div>
+    <div class="error-card"><div class="error-icon" [innerHTML]="icon('alert', 20)"></div><div><strong>Error de conexión</strong><p>{{ errorMsg() }}</p></div><button class="btn-retry" (click)="loadGenres()">Reintentar</button></div>
   }
 
   @if (!hasError()) {
@@ -64,7 +64,7 @@
                 </tr>
               }
             } @else if (filteredGenres().length === 0) {
-              <tr><td colspan="8" class="empty-cell"><div class="empty-state"><div class="empty-icon">🎵</div><p>No se encontraron géneros</p></div></td></tr>
+              <tr><td colspan="8" class="empty-cell"><div class="empty-state"><div class="empty-icon" [innerHTML]="icon('music', 24)"></div><p>No se encontraron géneros</p></div></td></tr>
             } @else {
               @for (genre of filteredGenres(); track genre.id_genero; let i = $index) {
                 <tr class="data-row">

@@ -11,10 +11,10 @@
 
   @if (!isLoading()) {
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon kpi-orange">♫</div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Tracks Analizados</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-purple">☆</div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">Popularidad Media</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-blue">⚡</div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">Energía Media</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-green">◉</div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">Géneros</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Tracks Analizados</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">Popularidad Media</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">Energía Media</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">Géneros</span></div></div>
     </div>
   }
 

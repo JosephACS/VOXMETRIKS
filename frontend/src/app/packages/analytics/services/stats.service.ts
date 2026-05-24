@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-  StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad
+  StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad, SyntheticResult
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -32,5 +32,9 @@ export class StatsService {
   getGenreStats(limit = 20): Observable<GeneroPopularidad[]> {
     const params = new HttpParams().set('limit', limit);
     return this.http.get<GeneroPopularidad[]>(`${environment.apiUrl}/genres/stats`, { params });
+  }
+
+  generateSynthetic(multiplier: number): Observable<SyntheticResult> {
+    return this.http.post<SyntheticResult>(`${this.BASE}/synthetic`, { multiplier });
   }
 }

@@ -1,4 +1,4 @@
-.page { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+.page { width: 100%; min-height: 100%; }
 
 /* Header */
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }

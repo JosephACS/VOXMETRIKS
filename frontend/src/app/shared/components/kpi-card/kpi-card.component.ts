@@ -3,7 +3,9 @@
  * Tarjeta de métrica con skeleton loader, hover microinteraction, y accesibilidad.
  */
 
-import { Component, Input } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../services/icon-render.service';
+import { Component, inject, Input } from '@angular/core';
 import { DecimalPipe }      from '@angular/common';
 
 @Component({
@@ -22,7 +24,7 @@ import { DecimalPipe }      from '@angular/common';
 
       <!-- Header -->
       <div class="kpi-header">
-        <span class="kpi-icon" aria-hidden="true">{{ icon }}</span>
+        <span class="kpi-icon icon-wrap-md" [innerHTML]="iconSvg" aria-hidden="true"></span>
         <span class="kpi-label">{{ label }}</span>
       </div>
 
@@ -56,19 +58,23 @@ import { DecimalPipe }      from '@angular/common';
       position: relative;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      padding: 1.25rem;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
+      gap: 0.35rem;
+      padding: 0.875rem 1rem;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
       overflow: hidden;
       transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
       cursor: default;
+      box-shadow: var(--shadow-sm);
     }
 
     .kpi-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+      border-color: var(--color-border-hover);
     }
 
     /* ── Accent line ── */
@@ -137,11 +143,17 @@ import { DecimalPipe }      from '@angular/common';
     }
 
     .kpi-icon {
-      font-size: 0.9rem;
-      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
       color: var(--color-text-muted);
       flex-shrink: 0;
+      opacity: 0.85;
     }
+
+    .kpi-icon :deep(svg) { width: 16px; height: 16px; }
 
     .kpi-label {
       font-size: 0.68rem;
@@ -154,11 +166,11 @@ import { DecimalPipe }      from '@angular/common';
     /* ── Value ── */
     .kpi-value {
       font-family: var(--font-mono);
-      font-size: 2rem;
-      font-weight: 400;
+      font-size: 1.625rem;
+      font-weight: 600;
       line-height: 1;
       letter-spacing: -0.02em;
-      min-height: 2rem;
+      min-height: 1.625rem;
     }
 
     .kpi-value-num {
@@ -221,14 +233,20 @@ import { DecimalPipe }      from '@angular/common';
   `],
 })
 export class KpiCardComponent {
+  private iconRender = inject(IconRenderService);
+
   @Input() label = '';
   @Input() value: number | null = null;
-  @Input() icon = '◈';
+  @Input() iconKey = 'chart';
   @Input() subtitle = '';
   @Input() color: 'primary' | 'secondary' | 'info' | 'warning' = 'primary';
   @Input() trend: string | null = null;
   @Input() trendLabel: string | null = null;
   @Input() trendPositive: boolean | null = null;
+
+  get iconSvg(): SafeHtml {
+    return this.iconRender.render(this.iconKey, 16);
+  }
 
   get trendClass(): string {
     if (this.trendPositive === true)  return 'kpi-trend trend-positive';

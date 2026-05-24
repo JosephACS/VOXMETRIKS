@@ -184,3 +184,66 @@ def delete_track(
         return False
     conn.execute("DELETE FROM dim_track WHERE id_track = ?", [track_id])
     return True
+
+
+def search_tracks(
+    conn: duckdb.DuckDBPyConnection,
+    q: str,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    """Search tracks by track name, artist name, or genre name."""
+    pattern = f"%{q.strip()}%"
+    rows = conn.execute("""
+        SELECT
+            dt.id_track, dt.spotify_track_id, dt.nombre_track,
+            dt.id_artista, dt.id_album, dt.id_genero,
+            dt.explicit, dt.duration_ms, dt.popularity,
+            da.nombre_artista, dg.nombre_genero
+        FROM dim_track dt
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
+        LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
+        WHERE LOWER(dt.nombre_track) LIKE LOWER(?)
+           OR LOWER(da.nombre_artista) LIKE LOWER(?)
+           OR LOWER(dg.nombre_genero) LIKE LOWER(?)
+        ORDER BY dt.popularity DESC NULLS LAST, dt.nombre_track
+        LIMIT ?
+    """, [pattern, pattern, pattern, limit]).fetchall()
+    cols = [
+        "id_track", "spotify_track_id", "nombre_track",
+        "id_artista", "id_album", "id_genero",
+        "explicit", "duration_ms", "popularity",
+        "nombre_artista", "nombre_genero",
+    ]
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def get_track_detail(
+    conn: duckdb.DuckDBPyConnection, track_id: int
+) -> Optional[Dict[str, Any]]:
+    """Full track row with artist, genre, and audio features."""
+    rows = conn.execute("""
+        SELECT
+            dt.id_track, dt.spotify_track_id, dt.nombre_track,
+            dt.id_artista, dt.id_album, dt.id_genero,
+            dt.explicit, dt.duration_ms,
+            dt.popularity, dt.danceability, dt.energy, dt.loudness,
+            dt.speechiness, dt.acousticness, dt.instrumentalness,
+            dt.liveness, dt.valence, dt.tempo,
+            da.nombre_artista, dg.nombre_genero
+        FROM dim_track dt
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
+        LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
+        WHERE dt.id_track = ?
+    """, [track_id]).fetchall()
+    if not rows:
+        return None
+    cols = [
+        "id_track", "spotify_track_id", "nombre_track",
+        "id_artista", "id_album", "id_genero",
+        "explicit", "duration_ms",
+        "popularity", "danceability", "energy", "loudness",
+        "speechiness", "acousticness", "instrumentalness",
+        "liveness", "valence", "tempo",
+        "nombre_artista", "nombre_genero",
+    ]
+    return dict(zip(cols, rows[0]))

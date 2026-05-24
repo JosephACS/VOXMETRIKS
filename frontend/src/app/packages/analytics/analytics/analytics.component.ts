@@ -1,4 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatsService } from '../services/stats.service';
 import { GenresService } from '../../streaming/services/genres.service';
@@ -12,6 +14,8 @@ import { DistribucionEnergia, GeneroPopularidad } from '../../../shared/models/a
   styleUrls: ['./analytics.component.css'],
 })
 export class AnalyticsComponent implements OnInit {
+  private iconRender = inject(IconRenderService);
+
   isLoading    = signal(true);
   energyDist   = signal<DistribucionEnergia[]>([]);
   genreStats   = signal<GeneroPopularidad[]>([]);
@@ -40,4 +44,8 @@ export class AnalyticsComponent implements OnInit {
   trackBarW(tracks: number): number { return Math.round((tracks / this.maxTracks()) * 100); }
   genreColor(i: number): string { return `hsl(${(i * 37) % 360},65%,55%)`; }
   skeletonRows = Array(8).fill(0);
+
+  icon(key: string, size = 18): SafeHtml {
+    return this.iconRender.render(key, size);
+  }
 }

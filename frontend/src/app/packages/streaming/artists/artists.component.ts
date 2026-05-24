@@ -1,4 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ArtistsService } from '../services/artists.service';
@@ -14,6 +16,8 @@ type ModalMode = 'create' | 'edit' | 'delete' | null;
   styleUrls: ['./artists.component.css'],
 })
 export class ArtistsComponent implements OnInit {
+  private iconRender = inject(IconRenderService);
+
   artists     = signal<Artista[]>([]);
   topArtists  = signal<TopArtista[]>([]);
   isLoading   = signal(true);
@@ -149,5 +153,9 @@ export class ArtistsComponent implements OnInit {
       next: () => { this.closeModal(); this.loadArtists(); this.loadTopArtists(); },
       error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar artista'); this.formSaving.set(false); },
     });
+  }
+
+  icon(key: string, size = 18): SafeHtml {
+    return this.iconRender.render(key, size);
   }
 }

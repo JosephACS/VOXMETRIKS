@@ -1,0 +1,77 @@
+<div class="td-page">
+  @if (isLoading()) {
+    <div class="td-skel glass-panel"></div>
+  } @else if (hasError() || !track()) {
+    <div class="error glass-panel">
+      <span [innerHTML]="icon('alert', 24)"></span>
+      <p>Track no encontrado</p>
+      <a routerLink="/tracks" class="back-link">← Volver a tracks</a>
+    </div>
+  } @else {
+    @if (track(); as t) {
+      <section class="td-hero glass-panel">
+        <div class="td-cover" [style.background]="coverGradient()">
+          <span class="cover-letter">{{ (t.nombre_track ?? '?').charAt(0) }}</span>
+        </div>
+        <div class="td-info">
+          <span class="td-type">Track</span>
+          <h1>{{ t.nombre_track }}</h1>
+          <p class="td-artist">{{ t.nombre_artista ?? '—' }}</p>
+          <div class="td-chips">
+            @if (t.nombre_genero) { <span class="chip">{{ t.nombre_genero }}</span> }
+            <span class="chip">Pop {{ t.popularity ?? '—' }}</span>
+            <span class="chip mono">{{ formatDuration(t.duration_ms) }}</span>
+          </div>
+          <div class="td-actions">
+            <app-favorite-btn [trackId]="t.id_track" />
+            <button type="button" class="btn-pl" (click)="togglePlaylistPicker()">
+              <span [innerHTML]="icon('playlist', 14)"></span> Agregar a playlist
+            </button>
+          </div>
+          @if (showPlaylistPicker()) {
+            <div class="pl-picker">
+              @for (pl of playlists(); track pl.id) {
+                <button type="button" class="pl-opt" (click)="addToPlaylist(pl.id)">{{ pl.name }}</button>
+              }
+              @if (!playlists().length) {
+                <a routerLink="/playlists" class="pl-opt">Crear playlist primero →</a>
+              }
+              @if (addMsg()) { <span class="add-msg">{{ addMsg() }}</span> }
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="td-grid">
+        <section class="glass-panel td-panel">
+          <h2>Audio Features</h2>
+          <div class="feat-bars">
+            @for (f of featureBars(); track f.label) {
+              <div class="feat-row">
+                <span class="feat-lbl">{{ f.label }}</span>
+                <div class="feat-track"><div class="feat-fill" [style.width.%]="f.value" [style.background]="f.color"></div></div>
+                <span class="feat-val mono">{{ f.value | number:'1.0-0' }}%</span>
+              </div>
+            }
+          </div>
+          <svg viewBox="0 0 280 100" class="mini-chart" aria-hidden="true">
+            <polyline [attr.points]="sparkPoints()" fill="none" stroke="#ff8c42" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </section>
+
+        <section class="glass-panel td-panel">
+          <h2>Métricas</h2>
+          <div class="metrics">
+            <div class="metric"><span class="m-lbl">Tempo</span><span class="m-val mono">{{ t.tempo ?? '—' }} BPM</span></div>
+            <div class="metric"><span class="m-lbl">Loudness</span><span class="m-val mono">{{ t.loudness ?? '—' }} dB</span></div>
+            <div class="metric"><span class="m-lbl">Speechiness</span><span class="m-val mono">{{ ((t.speechiness ?? 0) * 100) | number:'1.0-0' }}%</span></div>
+            <div class="metric"><span class="m-lbl">Instrumentalness</span><span class="m-val mono">{{ ((t.instrumentalness ?? 0) * 100) | number:'1.0-0' }}%</span></div>
+            <div class="metric"><span class="m-lbl">Liveness</span><span class="m-val mono">{{ ((t.liveness ?? 0) * 100) | number:'1.0-0' }}%</span></div>
+          </div>
+        </section>
+      </div>
+
+      <a routerLink="/tracks" class="back-link">← Volver al catálogo</a>
+    }
+  }
+</div>

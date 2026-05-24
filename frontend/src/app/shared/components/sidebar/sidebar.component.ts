@@ -1,6 +1,8 @@
-import { Component, Output, EventEmitter, Input } from '@angular/core';
+import { Component, Output, EventEmitter, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterLinkActive } from '@angular/router';
+import { IconRenderService } from '../../services/icon-render.service';
+import { SafeHtml } from '@angular/platform-browser';
 
 interface MenuItem {
   label: string;
@@ -17,7 +19,7 @@ interface MenuItem {
     <aside class="sidebar" [class.collapsed]="!isOpen">
       <div class="sidebar-header">
         <div class="logo-container">
-          <img src="assets/images/voxmetrik-icon.png" alt="VOXMETRIK" class="logo-image" />
+          <img src="/assets/images/voxmetrik-icon.webp" alt="VOXMETRIK" class="logo-image" />
           <span class="logo-text" *ngIf="isOpen">VOXMETRIK</span>
         </div>
       </div>
@@ -33,7 +35,7 @@ interface MenuItem {
             class="nav-item"
             [title]="item.label"
           >
-            <span class="nav-icon" [innerHTML]="item.iconSvg"></span>
+            <span class="nav-icon" [innerHTML]="safeSvg(item.iconSvg)"></span>
             <span class="nav-label" *ngIf="isOpen">{{ item.label }}</span>
             <span class="nav-badge" *ngIf="item.badge && isOpen">{{ item.badge }}</span>
           </a>
@@ -48,7 +50,7 @@ interface MenuItem {
             class="nav-item"
             [title]="item.label"
           >
-            <span class="nav-icon" [innerHTML]="item.iconSvg"></span>
+            <span class="nav-icon" [innerHTML]="safeSvg(item.iconSvg)"></span>
             <span class="nav-label" *ngIf="isOpen">{{ item.label }}</span>
             <span class="nav-badge" *ngIf="item.badge && isOpen">{{ item.badge }}</span>
           </a>
@@ -63,7 +65,7 @@ interface MenuItem {
             class="nav-item"
             [title]="item.label"
           >
-            <span class="nav-icon" [innerHTML]="item.iconSvg"></span>
+            <span class="nav-icon" [innerHTML]="safeSvg(item.iconSvg)"></span>
             <span class="nav-label" *ngIf="isOpen">{{ item.label }}</span>
             <span class="nav-badge" *ngIf="item.badge && isOpen">{{ item.badge }}</span>
           </a>
@@ -258,8 +260,14 @@ interface MenuItem {
   `],
 })
 export class SidebarComponent {
+  private iconRender = inject(IconRenderService);
+
   @Input() isOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
+
+  safeSvg(svg: string): SafeHtml {
+    return this.iconRender.renderSvg(svg);
+  }
 
   private svg(path: string) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -306,7 +314,7 @@ export class SidebarComponent {
 
   systemMenu: MenuItem[] = [
     {
-      label: 'ETL Pipeline', route: '/etl-pipeline',
+      label: 'Pipeline ELT', route: '/elt-pipeline',
       iconSvg: this.svg('<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>'),
     },
     {

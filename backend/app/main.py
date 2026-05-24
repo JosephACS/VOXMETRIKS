@@ -30,8 +30,12 @@ if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
 from app.core import get_settings, get_conn, list_tables
-from app.packages.streaming.routes import artists_router, genres_router, tracks_router
+from app.packages.streaming.routes import (
+    artists_router, genres_router, tracks_router,
+    playlists_router, favorites_router,
+)
 from app.packages.analytics.routes import stats_router
+from app.packages.users.routes import users_router
 from app.shared.schemas.models import HealthResponse
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -95,7 +99,10 @@ app.add_middleware(
 app.include_router(artists_router, prefix="/api/v1")
 app.include_router(genres_router,  prefix="/api/v1")
 app.include_router(tracks_router,  prefix="/api/v1")
+app.include_router(playlists_router, prefix="/api/v1")
+app.include_router(favorites_router, prefix="/api/v1")
 app.include_router(stats_router,   prefix="/api/v1")
+app.include_router(users_router,   prefix="/api/v1")
 
 
 # ── Global exception handlers ─────────────────────────────────────────────────

@@ -1,0 +1,42 @@
+<div class="liked-page">
+  <section class="liked-hero glass-panel">
+    <div class="hero-cover" [style.background]="heroCover">
+      <span [innerHTML]="icon('heart', 48)"></span>
+    </div>
+    <div class="hero-text">
+      <span class="hero-label">Playlist</span>
+      <h1>Liked Songs</h1>
+      <p>{{ tracks().length }} canciones favoritas</p>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <div class="track-list glass-panel">
+      @for (s of [1,2,3,4,5]; track s) { <div class="track-row skel"></div> }
+    </div>
+  } @else if (!tracks().length) {
+    <div class="empty glass-panel">
+      <span [innerHTML]="icon('heart', 32)"></span>
+      <p>Aún no tienes favoritos. Usa el corazón en cualquier track.</p>
+      <a routerLink="/tracks" class="link-btn">Explorar tracks</a>
+    </div>
+  } @else {
+    <div class="track-list glass-panel">
+      @for (t of tracks(); track t.id_track; let i = $index) {
+        <a class="track-row" [routerLink]="['/tracks', t.id_track]">
+          <span class="rank">{{ i + 1 }}</span>
+          <div class="cover-sm" [style.background]="'linear-gradient(135deg, #ff8c42, #7c3aed)'">
+            {{ (t.nombre_track ?? '?').charAt(0) }}
+          </div>
+          <div class="t-info">
+            <span class="t-name">{{ t.nombre_track }}</span>
+            <span class="t-artist">{{ t.nombre_artista ?? '—' }}</span>
+          </div>
+          <span class="t-genre">{{ t.nombre_genero ?? '—' }}</span>
+          <span class="t-dur mono">{{ formatDuration(t.duration_ms) }}</span>
+          <app-favorite-btn [trackId]="t.id_track" size="sm" (click)="$event.preventDefault(); $event.stopPropagation()" />
+        </a>
+      }
+    </div>
+  }
+</div>

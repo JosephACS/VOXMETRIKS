@@ -1,58 +1,142 @@
-import { Component } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MetricBarComponent } from '../../../shared/components/metric-bar/metric-bar.component';
+
+interface AudioFeatureTrack {
+  id: number;
+  nombre: string;
+  artista: string;
+  popularity: number;
+  danceability: number;
+  energy: number;
+  valence: number;
+  acousticness: number;
+  speechiness: number;
+  instrumentalness: number;
+  liveness: number;
+}
+
+interface FeatureDef {
+  key: keyof AudioFeatureTrack;
+  label: string;
+  color: string;
+}
 
 @Component({
   selector: 'app-audio-features',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="page-header">
-      <h1>Audio Features</h1>
-      <p class="page-subtitle">Análisis de características acústicas</p>
-    </div>
-
-    <div class="features-info">
-      <div class="feature-legend">
-        <div *ngFor="let f of featureKeys" class="legend-item">
-          <div class="legend-dot" [style.background]="featureColor(f)"></div>
-          <span>{{ f }}</span>
-        </div>
-      </div>
-      <p class="info-text">
-        Características acústicas disponibles para cada track del catálogo:
-        danceability, energy, valence, acousticness, speechiness, instrumentalness y liveness.
-      </p>
-    </div>
-
-    <div class="features-placeholder">
-      <div class="placeholder-icon">⚡</div>
-      <h3>Audio Features Explorer</h3>
-      <p>Navega a la sección de <strong>Tracks</strong> y selecciona un track para ver su análisis acústico detallado.</p>
-    </div>
-  `,
-  styles: [`
-    .page-header { margin-bottom: 2rem; }
-    .page-subtitle { color: rgba(255,255,255,0.5); margin-top: 0.25rem; }
-    .features-info { background: var(--vox-surface); border: 1px solid var(--vox-border); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem; }
-    .feature-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
-    .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .info-text { color: rgba(255,255,255,0.5); font-size: 0.875rem; margin: 0; }
-    .features-placeholder { text-align: center; padding: 4rem 2rem; background: var(--vox-surface); border: 1px dashed var(--vox-border); border-radius: 0.75rem; }
-    .placeholder-icon { font-size: 3rem; margin-bottom: 1rem; }
-    .features-placeholder h3 { margin: 0 0 0.5rem; }
-    .features-placeholder p { color: rgba(255,255,255,0.4); margin: 0; }
-    strong { color: var(--vox-orange, #ff8c42); }
-  `],
+  imports: [CommonModule, MetricBarComponent],
+  templateUrl: './audio-features.component.html',
+  styleUrls: ['./audio-features.component.css'],
 })
 export class AudioFeaturesComponent {
-  featureKeys = ['danceability', 'energy', 'valence', 'acousticness', 'speechiness', 'instrumentalness', 'liveness'];
+  featureDefs: FeatureDef[] = [
+    { key: 'danceability', label: 'Danceability', color: '#ff8c42' },
+    { key: 'energy', label: 'Energy', color: '#7c3aed' },
+    { key: 'valence', label: 'Valence', color: '#10b981' },
+    { key: 'acousticness', label: 'Acousticness', color: '#3b82f6' },
+    { key: 'speechiness', label: 'Speechiness', color: '#f59e0b' },
+    { key: 'instrumentalness', label: 'Instrumentalness', color: '#ec4899' },
+    { key: 'liveness', label: 'Liveness', color: '#6366f1' },
+  ];
 
-  featureColor(key: string): string {
-    const colors: Record<string, string> = {
-      danceability: '#ff8c42', energy: '#7c3aed', valence: '#10b981',
-      acousticness: '#3b82f6', speechiness: '#f59e0b', instrumentalness: '#ec4899', liveness: '#6366f1',
-    };
-    return colors[key] ?? '#888';
+  tracks = signal<AudioFeatureTrack[]>([
+    {
+      id: 1, nombre: 'Blinding Lights', artista: 'The Weeknd',
+      popularity: 89, danceability: 0.73, energy: 0.84, valence: 0.56,
+      acousticness: 0.001, speechiness: 0.05, instrumentalness: 0.0, liveness: 0.09,
+    },
+    {
+      id: 2, nombre: 'Levitating', artista: 'Dua Lipa',
+      popularity: 85, danceability: 0.83, energy: 0.83, valence: 0.84,
+      acousticness: 0.002, speechiness: 0.06, instrumentalness: 0.0, liveness: 0.09,
+    },
+    {
+      id: 3, nombre: 'Shape of You', artista: 'Ed Sheeran',
+      popularity: 82, danceability: 0.76, energy: 0.65, valence: 0.93,
+      acousticness: 0.58, speechiness: 0.09, instrumentalness: 0.0, liveness: 0.09,
+    },
+    {
+      id: 4, nombre: 'Starboy', artista: 'The Weeknd',
+      popularity: 78, danceability: 0.68, energy: 0.59, valence: 0.48,
+      acousticness: 0.14, speechiness: 0.05, instrumentalness: 0.0, liveness: 0.14,
+    },
+    {
+      id: 5, nombre: 'Bad Guy', artista: 'Billie Eilish',
+      popularity: 76, danceability: 0.70, energy: 0.43, valence: 0.56,
+      acousticness: 0.10, speechiness: 0.38, instrumentalness: 0.13, liveness: 0.10,
+    },
+  ]);
+
+  selectedId = signal(1);
+
+  selectedTrack = computed(() =>
+    this.tracks().find((t) => t.id === this.selectedId()) ?? this.tracks()[0]
+  );
+
+  avgEnergy = computed(() => {
+    const t = this.tracks();
+    return +(t.reduce((s, x) => s + x.energy, 0) / t.length).toFixed(2);
+  });
+
+  avgDanceability = computed(() => {
+    const t = this.tracks();
+    return +(t.reduce((s, x) => s + x.danceability, 0) / t.length).toFixed(2);
+  });
+
+  avgValence = computed(() => {
+    const t = this.tracks();
+    return +(t.reduce((s, x) => s + x.valence, 0) / t.length).toFixed(2);
+  });
+
+  selectTrack(id: number) {
+    this.selectedId.set(id);
   }
+
+  featureValue(track: AudioFeatureTrack, key: keyof AudioFeatureTrack): number {
+    const v = track[key];
+    return typeof v === 'number' ? v : 0;
+  }
+
+  /** Punto individual del radar por índice de eje */
+  radarPoint(track: AudioFeatureTrack, index: number): { x: number; y: number } {
+    const cx = 100;
+    const cy = 100;
+    const maxR = 72;
+    const key = this.featureDefs[index]?.key;
+    if (!key) return { x: cx, y: cy };
+    const n = this.featureDefs.length;
+    const angle = (Math.PI * 2 * index) / n - Math.PI / 2;
+    const val = this.featureValue(track, key);
+    const r = val * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  }
+
+  /** Puntos SVG para radar chart (7 ejes, valor 0-1) */
+  radarPoints(track: AudioFeatureTrack): string {
+    return this.featureDefs
+      .map((_, i) => {
+        const p = this.radarPoint(track, i);
+        return `${p.x},${p.y}`;
+      })
+      .join(' ');
+  }
+
+  radarAxisPoints(): { x: number; y: number; label: string; lx: number; ly: number }[] {
+    const cx = 100;
+    const cy = 100;
+    const maxR = 72;
+    const n = this.featureDefs.length;
+
+    return this.featureDefs.map((f, i) => {
+      const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+      const x = cx + maxR * Math.cos(angle);
+      const y = cy + maxR * Math.sin(angle);
+      const lx = cx + (maxR + 18) * Math.cos(angle);
+      const ly = cy + (maxR + 18) * Math.sin(angle);
+      return { x, y, label: f.label, lx, ly };
+    });
+  }
+
+  gridRings = [0.25, 0.5, 0.75, 1];
 }

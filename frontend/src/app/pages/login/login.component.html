@@ -1,177 +1,108 @@
-<div class="login-card" role="main">
-
-  <!-- Branding -->
-  <div class="login-brand">
-    <div class="brand-icon" aria-hidden="true">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M9 19V6l12-3v13M9 19c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm12 0c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z"
-              stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div class="brand-text">
-      <span class="brand-name">VOXMETRIK</span>
-      <span class="brand-sub">Music Intelligence Platform</span>
-    </div>
-  </div>
-
-  <!-- Badge -->
-  <div class="premium-badge" aria-label="Plataforma premium">
-    <span class="badge-dot" aria-hidden="true"></span>
-    PLATAFORMA PREMIUM
-  </div>
-
-  <h1 class="login-title">Bienvenido de vuelta</h1>
-  <p class="login-subtitle">Accede al panel de analíticas musicales</p>
-
-  <!-- Form -->
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form" novalidate aria-label="Formulario de acceso">
-
-    <!-- Email -->
-    <div class="field">
-      <label class="field-label" for="email" id="email-label">EMAIL</label>
-      <div class="input-wrap" [class.invalid]="emailCtrl.invalid && emailCtrl.touched">
-        <span class="input-icon" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-          </svg>
-        </span>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          placeholder="you@voxmetrik.io"
-          autocomplete="username"
-          class="field-input"
-          aria-labelledby="email-label"
-          [attr.aria-invalid]="emailCtrl.invalid && emailCtrl.touched"
-          aria-describedby="email-error"
-        />
+<div class="login-shell">
+  <aside class="login-cover" aria-hidden="true">
+    <div class="cover-glow"></div>
+    <div class="cover-content">
+      <h2>Music Intelligence<br/>Platform</h2>
+      <p>Analytics · Streaming · Recommendations</p>
+      <div class="cover-stats">
+        @if (summary()?.total_tracks != null) {
+          <span>{{ formatStat(summary()?.total_tracks) }} tracks</span>
+        }
+        @if (summary()?.total_artistas != null) {
+          <span>{{ formatStat(summary()?.total_artistas) }} artistas</span>
+        }
       </div>
-      @if (emailCtrl.invalid && emailCtrl.touched) {
-        <span class="field-error" id="email-error" role="alert">Email inválido</span>
-      }
+    </div>
+  </aside>
+
+  <div class="login-card glass" role="main">
+    <div class="login-brand">
+      <picture class="login-brand-logo-wrap" aria-hidden="true">
+        <source srcset="/assets/images/voxmetrik-logo.png" type="image/png" />
+        <img src="/assets/images/voxmetrik-logo.webp" alt="VOXMETRIK" class="login-brand-logo" />
+      </picture>
     </div>
 
-    <!-- Password -->
-    <div class="field">
-      <label class="field-label" for="password" id="pw-label">CONTRASEÑA</label>
-      <div class="input-wrap" [class.invalid]="passwordCtrl.invalid && passwordCtrl.touched">
-        <span class="input-icon" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        </span>
-        <input
-          id="password"
-          [type]="showPassword() ? 'text' : 'password'"
-          formControlName="password"
-          placeholder="••••••••"
-          autocomplete="current-password"
-          class="field-input"
-          aria-labelledby="pw-label"
-          [attr.aria-invalid]="passwordCtrl.invalid && passwordCtrl.touched"
-          aria-describedby="pw-error"
-        />
-        <button
-          type="button"
-          class="toggle-pw"
-          (click)="togglePassword()"
-          [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-          [attr.aria-pressed]="showPassword()"
-        >
-          @if (showPassword()) {
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-          } @else {
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          }
+    <div class="auth-tabs">
+      <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">Iniciar sesión</button>
+      <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">Registrarse</button>
+    </div>
+
+    @if (mode() === 'login') {
+      <h1 class="login-title">Bienvenido de vuelta</h1>
+      <p class="login-subtitle">Accede a tu catálogo y playlists</p>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="email">EMAIL</label>
+          <div class="input-wrap" [class.invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched">
+            <input id="email" type="email" formControlName="email" placeholder="demo@voxmetrik.io" class="field-input" autocomplete="username" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="password">CONTRASEÑA</label>
+          <div class="input-wrap">
+            <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="••••••••" class="field-input" autocomplete="current-password" />
+            <button type="button" class="toggle-pw" (click)="togglePassword()" aria-label="Mostrar contraseña">
+              @if (showPassword()) {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              } @else {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </button>
+          </div>
+        </div>
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="remember" />
+            Recordarme
+          </label>
+        </div>
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+        }
+        <button type="submit" class="submit-btn" [disabled]="isLoading()" [class.loading]="isLoading()">
+          @if (isLoading()) { Autenticando... } @else { Entrar al panel → }
         </button>
-      </div>
-      @if (passwordCtrl.invalid && passwordCtrl.touched) {
-        <span class="field-error" id="pw-error" role="alert">Mínimo 4 caracteres</span>
-      }
-    </div>
+      </form>
+    } @else {
+      <h1 class="login-title">Crea tu cuenta</h1>
+      <p class="login-subtitle">Únete a VOXMETRIK en segundos</p>
 
-    <!-- Options -->
-    <div class="form-options">
-      <label class="checkbox-label">
-        <input type="checkbox" formControlName="remember" class="checkbox-input" aria-label="Recordarme"/>
-        <span class="checkbox-custom" aria-hidden="true"></span>
-        Recordarme
-      </label>
-      <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
-    </div>
-
-    <!-- Error banner -->
-    @if (errorMessage()) {
-      <div class="error-banner" role="alert" aria-live="assertive">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        {{ errorMessage() }}
-      </div>
+      <form [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="username">USUARIO</label>
+          <div class="input-wrap">
+            <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-email">EMAIL</label>
+          <div class="input-wrap">
+            <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-password">CONTRASEÑA</label>
+          <div class="input-wrap">
+            <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="genre">GÉNERO FAVORITO</label>
+          <div class="input-wrap">
+            <input id="genre" type="text" formControlName="favoriteGenre" placeholder="Pop, Rock, Latin..." class="field-input" />
+          </div>
+        </div>
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+        }
+        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
+          @if (isLoading()) { Creando cuenta... } @else { Crear cuenta → }
+        </button>
+      </form>
     }
 
-    <!-- Submit -->
-    <button
-      type="submit"
-      class="submit-btn"
-      [disabled]="isLoading()"
-      [class.loading]="isLoading()"
-      [attr.aria-busy]="isLoading()"
-    >
-      @if (isLoading()) {
-        <span class="btn-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-        Autenticando...
-      } @else {
-        Entrar al panel
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-        </svg>
-      }
-    </button>
-
-  </form>
-
-  <!-- Stats row -->
-  <div class="stats-row" aria-label="Estadísticas de la plataforma">
-    <div class="stat-item">
-      @if (summary()?.total_tracks != null) {
-        <span class="stat-value">{{ formatStat(summary()?.total_tracks) }}</span>
-      } @else {
-        <span class="stat-value loading" aria-hidden="true"></span>
-      }
-      <span class="stat-label">TRACKS</span>
-    </div>
-    <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat-item">
-      @if (summary()?.total_artistas != null) {
-        <span class="stat-value">{{ formatStat(summary()?.total_artistas) }}</span>
-      } @else {
-        <span class="stat-value loading" aria-hidden="true"></span>
-      }
-      <span class="stat-label">ARTISTAS</span>
-    </div>
-    <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat-item">
-      @if (summary()?.total_generos != null) {
-        <span class="stat-value">{{ formatStat(summary()?.total_generos) }}</span>
-      } @else {
-        <span class="stat-value loading" aria-hidden="true"></span>
-      }
-      <span class="stat-label">GÉNEROS</span>
-    </div>
+    <p class="login-hint">Demo: <code>demo@voxmetrik.io</code> / <code>demo123</code></p>
   </div>
-
-  <p class="login-footer">
-    ¿Sin cuenta?
-    <a href="mailto:sales@voxmetrik.io" class="contact-link">Contactar ventas</a>
-  </p>
 </div>

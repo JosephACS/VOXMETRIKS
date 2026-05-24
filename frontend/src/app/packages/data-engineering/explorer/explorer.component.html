@@ -1,0 +1,163 @@
+<div class="explorer-page">
+  <header class="page-header">
+    <div>
+      <h1>Data Explorer</h1>
+      <p class="page-subtitle">Explorador visual del Data Warehouse — capa Gold & DuckDB</p>
+    </div>
+    <span class="badge-demo">Preview simulado — no ejecuta SQL real</span>
+  </header>
+
+  <!-- KPIs -->
+  <section class="kpi-grid">
+    <app-kpi-card label="Total tablas" [value]="12" iconKey="grid" color="primary" subtitle="Gold + aggs" />
+    <app-kpi-card label="Dimensiones" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
+    <app-kpi-card label="Facts" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
+    <app-kpi-card label="Agregaciones" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
+  </section>
+
+  <div class="explorer-layout">
+    <!-- Table selector -->
+    <aside class="table-sidebar panel">
+      <div class="sidebar-header">
+        <h2>Tablas</h2>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Filtrar tablas..."
+          [ngModel]="searchFilter()"
+          (ngModelChange)="onFilterChange($event)"
+        />
+      </div>
+      <nav class="table-list">
+        @for (t of filteredTables(); track t.name) {
+          <button
+            type="button"
+            class="table-item"
+            [class.active]="selectedTable() === t.name"
+            (click)="selectTable(t.name)"
+          >
+            <span class="table-name">{{ t.name }}</span>
+            <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
+            <span class="table-rows">{{ fmt(t.rowCount) }} rows</span>
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <!-- Main preview -->
+    <main class="preview-main">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>{{ activeTable().name }}</h2>
+            <div class="table-meta">
+              <span class="kind-badge lg" [class]="kindClass(activeTable().kind)">{{ kindLabel(activeTable().kind) }}</span>
+              <span class="meta-item">{{ fmt(activeTable().rowCount) }} registros</span>
+              <span class="meta-item">Actualizado: {{ activeTable().lastUpdated }}</span>
+              <span class="meta-item">Capa: {{ activeTable().layer }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SQL preview -->
+        <div class="sql-client">
+          <div class="sql-bar">
+            <span class="sql-dot"></span>
+            <span>SQL Client — preview</span>
+          </div>
+          <pre class="sql-code">{{ mockQuery() }}</pre>
+        </div>
+
+        <!-- Schema -->
+        <h3 class="section-label">Esquema</h3>
+        <div class="schema-grid">
+          @for (col of activeTable().columns; track col.name) {
+            <div class="schema-col">
+              <span class="col-name">{{ col.name }}</span>
+              <span class="col-type">{{ col.type }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Data preview -->
+        <h3 class="section-label">Preview de datos</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                @for (col of previewColumns(); track col) {
+                  <th>{{ col }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of pagedRows(); track $index) {
+                <tr>
+                  @for (col of previewColumns(); track col) {
+                    <td>{{ cellValue(row, col) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">← Anterior</button>
+          <span class="page-info">Página {{ page() }} de {{ totalPages() }}</span>
+          <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">Siguiente →</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Load history (real data if available) -->
+  <section class="panel loads-panel">
+    <div class="panel-header">
+      <h2>Historial de cargas ELT</h2>
+      <span class="panel-meta">Datos reales vía /stats/loads</span>
+    </div>
+
+    @if (isLoadingLoads()) {
+      <div class="skeleton-rows">
+        @for (s of [1,2,3,4]; track s) {
+          <div class="skeleton-row"></div>
+        }
+      </div>
+    } @else if (loads().length) {
+      <div class="table-wrap">
+        <table class="data-table loads-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha</th>
+              <th>Modo</th>
+              <th>Registros nuevos</th>
+              <th>Total raw</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of loads(); track l.id_carga ?? $index) {
+              <tr>
+                <td class="mono">{{ l.id_carga ?? '—' }}</td>
+                <td>{{ l.fecha_carga ? (l.fecha_carga | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+                <td><span class="mode-badge">{{ l.modo ?? '—' }}</span></td>
+                <td class="mono">{{ l.registros_nuevos ?? '—' }}</td>
+                <td class="mono">{{ l.total_raw ?? '—' }}</td>
+                <td>
+                  <span class="status-ok" [class.status-err]="l.estado !== 'ok'">{{ l.estado ?? '—' }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (hasError()) {
+      <p class="error-msg">No se pudo conectar con el backend. El explorador de tablas sigue disponible con datos mock.</p>
+    } @else {
+      <p class="empty-msg">No hay registros de carga en el warehouse.</p>
+    }
+  </section>
+</div>

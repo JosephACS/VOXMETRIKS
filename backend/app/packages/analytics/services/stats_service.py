@@ -111,3 +111,98 @@ def get_last_loads(
             "estado":           r.get("estado", "—"),
         })
     return result
+
+
+def generate_synthetic_tracks(
+    conn: duckdb.DuckDBPyConnection,
+    multiplier: int = 2,
+) -> Dict[str, Any]:
+    """
+    Expand dim_track by duplicating existing rows (synthetic copies).
+    multiplier=2 doubles the catalog; multiplier=4 quadruples it.
+    Only source rows (non-synthetic) are used as templates.
+    """
+    if multiplier < 1 or multiplier > 4:
+        raise ValueError("multiplier must be between 1 and 4")
+
+    before = count_rows(conn, "dim_track")
+    if before == 0:
+        return {
+            "before": 0,
+            "after": 0,
+            "created": 0,
+            "source_rows": 0,
+            "multiplier": multiplier,
+        }
+
+    copies = multiplier - 1
+    if copies <= 0:
+        return {
+            "before": before,
+            "after": before,
+            "created": 0,
+            "source_rows": before,
+            "multiplier": multiplier,
+        }
+
+    max_id = conn.execute("SELECT COALESCE(MAX(id_track), 0) FROM dim_track").fetchone()[0]
+
+    conn.execute(f"""
+        INSERT INTO dim_track (
+            id_track, spotify_track_id, nombre_track,
+            id_artista, id_album, id_genero, explicit, duration_ms,
+            danceability, energy, loudness, speechiness, acousticness,
+            instrumentalness, liveness, valence, tempo, popularity
+        )
+        SELECT
+            {max_id} + ROW_NUMBER() OVER (ORDER BY dt.id_track, copy.n) AS id_track,
+            COALESCE(
+                'syn_' || dt.spotify_track_id || '_' || copy.n,
+                'syn_' || CAST(dt.id_track AS VARCHAR) || '_' || copy.n
+            ) AS spotify_track_id,
+            dt.nombre_track || ' [syn-' || copy.n || ']' AS nombre_track,
+            dt.id_artista,
+            dt.id_album,
+            dt.id_genero,
+            dt.explicit,
+            dt.duration_ms,
+            dt.danceability,
+            LEAST(1.0, GREATEST(0.0, COALESCE(dt.energy, 0.5) + (copy.n * 0.01 - 0.015))),
+            dt.loudness,
+            dt.speechiness,
+            dt.acousticness,
+            dt.instrumentalness,
+            dt.liveness,
+            dt.valence,
+            dt.tempo,
+            GREATEST(0, LEAST(100, COALESCE(dt.popularity, 0) + (copy.n * 2 - 3)))
+        FROM dim_track dt
+        CROSS JOIN (SELECT unnest(range(1, {copies + 1})) AS n) AS copy(n)
+        WHERE dt.nombre_track NOT LIKE '%[syn-%'
+    """)
+
+    after = count_rows(conn, "dim_track")
+    created = after - before
+
+    try:
+        id_carga = conn.execute(
+            "SELECT COALESCE(MAX(id_carga), 0) + 1 FROM ctl_carga_dataset"
+        ).fetchone()[0]
+        conn.execute(
+            """
+            INSERT INTO ctl_carga_dataset
+                (id_carga, fecha_carga, modo, registros_nuevos, total_raw, estado)
+            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, 'OK')
+            """,
+            [id_carga, f"synthetic_{multiplier}x", created, after],
+        )
+    except Exception:
+        pass
+
+    return {
+        "before": before,
+        "after": after,
+        "created": created,
+        "source_rows": before,
+        "multiplier": multiplier,
+    }

@@ -1,0 +1,80 @@
+<div class="pl-page">
+  <section class="pl-hero glass-panel">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div>
+        <h1>Playlists</h1>
+        <p class="sub">Tus colecciones musicales</p>
+      </div>
+      <button type="button" class="btn-create" (click)="openCreate()">
+        <span [innerHTML]="icon('playlist', 16)"></span> Nueva playlist
+      </button>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <div class="pl-grid">
+      @for (s of [1,2,3,4,5,6]; track s) { <div class="pl-card skel"></div> }
+    </div>
+  } @else if (!playlists().length) {
+    <div class="empty glass-panel">
+      <span [innerHTML]="icon('playlist', 32)"></span>
+      <p>No hay playlists. Crea la primera.</p>
+      <button type="button" class="btn-create" (click)="openCreate()">Crear playlist</button>
+    </div>
+  } @else {
+    <div class="pl-grid">
+      @for (pl of playlists(); track pl.id; let i = $index) {
+        <article class="pl-card glass-panel" (click)="openDetail(pl)">
+          <div class="pl-cover" [style.background]="cover(i)">
+            <span [innerHTML]="icon('music', 28)"></span>
+          </div>
+          <div class="pl-info">
+            <h3>{{ pl.name }}</h3>
+            <p class="pl-meta">{{ pl.total_tracks }} tracks · {{ mockDuration(pl.total_tracks) }}</p>
+            @if (pl.description) { <p class="pl-desc">{{ pl.description }}</p> }
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if (showCreate()) {
+    <div class="overlay" (click)="closeCreate()"></div>
+    <div class="modal glass-panel">
+      <h2>Nueva playlist</h2>
+      <label>Nombre<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" placeholder="Mi playlist" /></label>
+      <label>Descripción<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2" placeholder="Opcional"></textarea></label>
+      @if (formError()) { <p class="err">{{ formError() }}</p> }
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" (click)="closeCreate()">Cancelar</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveCreate()">Crear</button>
+      </div>
+    </div>
+  }
+
+  @if (showDetail() && selected(); as det) {
+    <div class="overlay" (click)="closeDetail()"></div>
+    <aside class="detail-panel glass-panel">
+      <button type="button" class="close-btn" (click)="closeDetail()">×</button>
+      <h2>{{ det.name }}</h2>
+      <p class="det-meta">{{ det.total_tracks }} tracks</p>
+      @if (det.description) { <p class="det-desc">{{ det.description }}</p> }
+      <div class="track-list">
+        @for (t of det.tracks; track t.id_track; let i = $index) {
+          <a class="track-row" [routerLink]="['/tracks', t.id_track]" (click)="closeDetail()">
+            <span class="tr-rank">{{ i + 1 }}</span>
+            <div class="tr-info">
+              <span class="tr-name">{{ t.nombre_track }}</span>
+              <span class="tr-artist">{{ t.nombre_artista ?? '—' }}</span>
+            </div>
+            <app-favorite-btn [trackId]="t.id_track" size="sm" />
+          </a>
+        }
+        @if (!det.tracks.length) {
+          <p class="empty-tracks">Sin tracks — agrégalos desde el detalle de una canción.</p>
+        }
+      </div>
+    </aside>
+  }
+</div>

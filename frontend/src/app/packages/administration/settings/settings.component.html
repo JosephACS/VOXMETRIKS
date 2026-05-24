@@ -1,0 +1,206 @@
+<div class="settings-page">
+  <header class="page-header">
+    <div>
+      <h1>Configuración</h1>
+      <p class="page-subtitle">Preferencias de la plataforma VOXMETRIK</p>
+    </div>
+  </header>
+
+  <div class="settings-layout">
+    <nav class="settings-nav">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          class="nav-tab"
+          [class.active]="activeTab() === tab.id"
+          (click)="selectTab(tab.id)"
+        >
+          <span class="tab-icon" [innerHTML]="icon(tab.iconKey, 16)"></span>
+          <span class="tab-label">{{ tab.label }}</span>
+        </button>
+      }
+    </nav>
+
+    <div class="settings-content">
+      @switch (activeTab()) {
+
+        @case ('general') {
+          <section class="settings-section">
+            <h2>Preferencias generales</h2>
+            <p class="section-desc">Ajustes visuales de la interfaz (simulación — sin persistencia)</p>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="theme">Tema</label>
+                <span class="setting-hint">Apariencia de la aplicación</span>
+              </div>
+              <select id="theme" class="setting-control" [ngModel]="theme()" (ngModelChange)="theme.set($event)">
+                <option value="dark">Modo oscuro</option>
+                <option value="light">Modo claro</option>
+                <option value="system">Sistema</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="language">Idioma</label>
+                <span class="setting-hint">Idioma de la interfaz</span>
+              </div>
+              <select id="language" class="setting-control" [ngModel]="language()" (ngModelChange)="language.set($event)">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">Modo compacto</span>
+                <span class="setting-hint">Reduce espaciado en tablas y cards</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" [ngModel]="compactMode()" (ngModelChange)="compactMode.set($event)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">Mostrar KPIs en dashboard</span>
+                <span class="setting-hint">Tarjetas de métricas principales</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" [ngModel]="showKpis()" (ngModelChange)="showKpis.set($event)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </section>
+        }
+
+        @case ('api') {
+          <section class="settings-section">
+            <h2>Conexión API</h2>
+            <p class="section-desc">Backend FastAPI — solo lectura</p>
+
+            <div class="info-card">
+              <div class="info-row">
+                <span class="info-label">URL del backend</span>
+                <code class="info-value">{{ apiUrl }}</code>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Versión API</span>
+                <span class="info-value">v1</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Documentación</span>
+                <code class="info-value">http://localhost:8000/docs</code>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Health check</span>
+                <code class="info-value">http://localhost:8000/health</code>
+              </div>
+            </div>
+
+            <div class="status-banner status-ok">
+              <span class="status-dot"></span>
+              Configuración de API en modo desarrollo local
+            </div>
+          </section>
+        }
+
+        @case ('warehouse') {
+          <section class="settings-section">
+            <h2>Data Warehouse</h2>
+            <p class="section-desc">DuckDB — capa Gold y agregaciones</p>
+
+            <div class="info-card">
+              <div class="info-row">
+                <span class="info-label">Motor</span>
+                <span class="info-value">DuckDB</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Archivo</span>
+                <code class="info-value">{{ warehousePath }}</code>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Formato capas</span>
+                <span class="info-value">Parquet (Bronze / Silver / Gold)</span>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Dimensiones</h3>
+            <div class="chip-grid">
+              @for (table of goldTables; track table) {
+                <span class="chip chip-dim">{{ table }}</span>
+              }
+            </div>
+
+            <h3 class="subsection-title">Agregaciones</h3>
+            <div class="chip-grid">
+              @for (agg of aggregations; track agg) {
+                <span class="chip chip-agg">{{ agg }}</span>
+              }
+            </div>
+          </section>
+        }
+
+        @case ('pipeline') {
+          <section class="settings-section">
+            <h2>Pipeline ELT</h2>
+            <p class="section-desc">Preferencias de carga de datos (simulación visual)</p>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="defaultRecords">Registros por defecto</label>
+                <span class="setting-hint">Volumen al generar datasets</span>
+              </div>
+              <select
+                id="defaultRecords"
+                class="setting-control"
+                [ngModel]="defaultRecords()"
+                (ngModelChange)="defaultRecords.set($event)"
+              >
+                @for (opt of recordOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="loadMode">Modo de carga</label>
+                <span class="setting-hint">Estrategia de ingesta</span>
+              </div>
+              <select id="loadMode" class="setting-control" [ngModel]="loadMode()" (ngModelChange)="loadMode.set($event)">
+                <option value="incremental">Incremental</option>
+                <option value="full">Completa</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">Auto-refresh warehouse</span>
+                <span class="setting-hint">Actualizar métricas tras cada ejecución</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" [ngModel]="autoRefresh()" (ngModelChange)="autoRefresh.set($event)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="flow-summary">
+              <span class="flow-step">Extract</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">Bronze</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">Silver</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">Gold</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">DuckDB</span>
+            </div>
+          </section>
+        }
+      }
+    </div>
+  </div>
+</div>

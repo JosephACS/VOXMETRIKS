@@ -1,4 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GenresService } from '../services/genres.service';
@@ -14,6 +16,8 @@ type ModalMode = 'create' | 'edit' | 'delete' | null;
   styleUrls: ['./genres.component.css'],
 })
 export class GenresComponent implements OnInit {
+  private iconRender = inject(IconRenderService);
+
   allGenres  = signal<GeneroPopularidad[]>([]);
   isLoading  = signal(true);
   hasError   = signal(false);
@@ -84,5 +88,9 @@ export class GenresComponent implements OnInit {
       next: () => { this.closeModal(); this.loadGenres(); },
       error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar género'); this.formSaving.set(false); },
     });
+  }
+
+  icon(key: string, size = 18): SafeHtml {
+    return this.iconRender.render(key, size);
   }
 }

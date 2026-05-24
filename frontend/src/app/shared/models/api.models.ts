@@ -103,12 +103,21 @@ export interface StatsSummary {
   total_artistas: number;
   total_generos: number;
   total_albumes: number;
+  total_streams?: number;
   total_audio_features?: number;
   promedio_popularidad?: number;
   promedio_danceability?: number;
   promedio_energy?: number;
   promedio_valence?: number;
   promedio_tempo?: number;
+}
+
+export interface SyntheticResult {
+  before: number;
+  after: number;
+  created: number;
+  source_rows: number;
+  multiplier: number;
 }
 export type SummaryStats = StatsSummary;
 
@@ -181,4 +190,116 @@ export interface TrackUpdate {
 export interface DeleteResponse {
   deleted: boolean;
   id: number;
+}
+
+// ── Streaming app: playlists & favorites ─────────────────────────────────────
+
+export interface PlaylistSummary {
+  id: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  total_tracks: number;
+}
+
+export interface PlaylistTrackItem {
+  id_track: number;
+  nombre_track?: string;
+  id_artista?: number;
+  id_genero?: number;
+  duration_ms?: number;
+  popularity?: number;
+  nombre_artista?: string;
+  nombre_genero?: string;
+}
+
+export interface PlaylistDetail extends PlaylistSummary {
+  tracks: PlaylistTrackItem[];
+}
+
+export interface PlaylistCreate {
+  name: string;
+  description?: string;
+}
+
+export interface FavoriteTrack extends PlaylistTrackItem {
+  added_at?: string;
+}
+
+export interface TrackSearchResult extends PlaylistTrackItem {
+  spotify_track_id?: string;
+}
+
+export interface TrackDetail {
+  id_track: number;
+  spotify_track_id?: string;
+  nombre_track?: string;
+  id_artista?: number;
+  id_album?: number;
+  id_genero?: number;
+  explicit?: boolean;
+  duration_ms?: number;
+  popularity?: number;
+  danceability?: number;
+  energy?: number;
+  loudness?: number;
+  speechiness?: number;
+  acousticness?: number;
+  instrumentalness?: number;
+  liveness?: number;
+  valence?: number;
+  tempo?: number;
+  nombre_artista?: string;
+  nombre_genero?: string;
+}
+
+export interface HistoryEntry {
+  id_track: number;
+  nombre_track: string;
+  nombre_artista?: string;
+  viewed_at: string;
+}
+
+// ── Users (Package 2) ────────────────────────────────────────────────────────
+
+export interface UserPreferences {
+  dark_mode: boolean;
+  audio_quality: string;
+  recommendations_enabled: boolean;
+  privacy_public: boolean;
+}
+
+export interface AppUser {
+  id: number;
+  username: string;
+  email: string;
+  plan: string;
+  favorite_genre?: string;
+  created_at?: string;
+  preferences?: UserPreferences;
+}
+
+export type UserPublic = AppUser;
+
+export interface UserStats {
+  favorites_count: number;
+  playlists_count: number;
+}
+
+export interface UserProfile extends AppUser {
+  stats: UserStats;
+  playlists: PlaylistSummary[];
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AppUser;
+}
+
+export interface UserPreferencesUpdate {
+  dark_mode?: boolean;
+  audio_quality?: string;
+  recommendations_enabled?: boolean;
+  privacy_public?: boolean;
+  favorite_genre?: string;
 }

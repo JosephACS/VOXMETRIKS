@@ -1,0 +1,51 @@
+<div class="search-page">
+  <header class="search-header glass-panel">
+    <h1>Buscar</h1>
+    <div class="search-box">
+      <span [innerHTML]="icon('search', 18)"></span>
+      <input
+        type="search"
+        placeholder="Track, artista o género..."
+        [ngModel]="query()"
+        (ngModelChange)="onInput($event)"
+        autofocus
+      />
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <div class="results-grid">
+      @for (s of [1,2,3,4,5,6]; track s) { <div class="result-card skel"></div> }
+    </div>
+  } @else if (searched() && !results().length) {
+    <div class="empty glass-panel">
+      <span [innerHTML]="icon('music', 32)"></span>
+      <p>Sin resultados para "{{ query() }}"</p>
+    </div>
+  } @else if (results().length) {
+    <p class="result-count">{{ results().length }} resultados</p>
+    <div class="results-grid">
+      @for (r of results(); track r.id_track; let i = $index) {
+        <a class="result-card glass-panel card-hover" [routerLink]="['/tracks', r.id_track]">
+          <div class="r-cover" [style.background]="cover(i)">
+            {{ (r.nombre_track ?? '?').charAt(0) }}
+          </div>
+          <div class="r-body">
+            <span class="r-track">{{ r.nombre_track }}</span>
+            <span class="r-artist">{{ r.nombre_artista ?? '—' }}</span>
+            <span class="r-genre">{{ r.nombre_genero ?? '—' }}</span>
+            <div class="r-pop">
+              <div class="pop-bar"><div class="pop-fill" [style.width.%]="r.popularity ?? 0"></div></div>
+              <span class="mono">{{ r.popularity ?? '—' }}</span>
+            </div>
+          </div>
+          <app-favorite-btn [trackId]="r.id_track" size="sm" (click)="$event.preventDefault(); $event.stopPropagation()" />
+        </a>
+      }
+    </div>
+  } @else {
+    <div class="hint glass-panel">
+      <p>Escribe para buscar en el catálogo completo.</p>
+    </div>
+  }
+</div>

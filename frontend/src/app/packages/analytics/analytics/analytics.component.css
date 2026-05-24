@@ -1,11 +1,12 @@
-.page { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+.page { width: 100%; min-height: 100%; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
 .page-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.75rem; font-weight: 700; color: #fff; margin: 0 0 0.25rem; }
 .title-icon { color: #ff8c42; }
 .page-subtitle { font-size: 0.813rem; color: rgba(255,255,255,0.45); margin: 0; font-family: 'JetBrains Mono', monospace; }
 .kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .kpi-card { background: #16192b; border: 1px solid #2a2f4a; border-radius: 0.75rem; padding: 1.125rem; display: flex; align-items: center; gap: 0.875rem; }
-.kpi-icon { font-size: 1.5rem; width: 38px; text-align: center; flex-shrink: 0; }
+.kpi-icon { display: flex; align-items: center; justify-content: center; width: 38px; flex-shrink: 0; opacity: 0.85; }
+.kpi-icon :deep(svg) { width: 18px; height: 18px; }
 .kpi-orange { color: #ff8c42; } .kpi-purple { color: #a78bfa; } .kpi-blue { color: #60a5fa; } .kpi-green { color: #34d399; }
 .kpi-body { display: flex; flex-direction: column; gap: 0.15rem; }
 .kpi-value { font-size: 1.5rem; font-weight: 700; color: #fff; line-height: 1.2; }

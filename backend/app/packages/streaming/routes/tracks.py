@@ -11,10 +11,12 @@ from app.core.database import get_conn, get_write_conn
 from app.shared.schemas.models import (
     AudioFeatures, PaginatedResponse, Track,
     TrackCreate, TrackUpdate, DeleteResponse,
+    TrackSearchResult, TrackDetail,
 )
 from app.packages.streaming.services.track_service import (
     get_tracks, get_track_by_id, get_track_features,
     create_track, update_track, delete_track,
+    search_tracks, get_track_detail,
 )
 
 router = APIRouter(prefix="/tracks", tags=["Tracks"])
@@ -36,6 +38,15 @@ def list_tracks(
     return PaginatedResponse(total=total, page=page, limit=limit, items=rows)
 
 
+@router.get("/search", response_model=list[TrackSearchResult], summary="Search tracks")
+def search_tracks_route(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(50, ge=1, le=200),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    return search_tracks(conn, q, limit=limit)
+
+
 @router.post("", response_model=Track, status_code=201, summary="Create track")
 def create_track_route(
     body: TrackCreate,
@@ -53,6 +64,17 @@ def create_track_route(
         explicit=body.explicit,
         duration_ms=body.duration_ms,
     )
+
+
+@router.get("/{track_id}/detail", response_model=TrackDetail, summary="Track detail with features")
+def track_detail(
+    track_id: int,
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    row = get_track_detail(conn, track_id)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return row
 
 
 @router.get("/{track_id}", response_model=Track, summary="Get track by ID")

@@ -1,0 +1,324 @@
+import { SafeHtml } from '@angular/platform-browser';
+import { IconRenderService } from '../../shared/services/icon-render.service';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
+import { UserService } from './services/user.service';
+import { HistoryService } from '../streaming/services/history.service';
+import { UserProfile, HistoryEntry } from '../../shared/models/api.models';
+
+interface ListenRecord {
+  id: number;
+  track: string;
+  artist: string;
+  genre: string;
+  duration: string;
+  playedAt: string;
+}
+
+interface TopItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface ActivityItem {
+  id: number;
+  type: string;
+  title: string;
+  detail: string;
+  time: string;
+  iconKey: string;
+}
+
+interface PlaylistCard {
+  id: number;
+  name: string;
+  tracks: number;
+  gradient: string;
+}
+
+interface RecentItem extends ListenRecord {
+  coverGradient: string;
+}
+
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #ff8c42 0%, #7c3aed 100%)',
+  'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
+  'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+  'linear-gradient(135deg, #ec4899 0%, #9d174d 100%)',
+  'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+  'linear-gradient(135deg, #6366f1 0%, #312e81 100%)',
+  'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)',
+  'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+];
+
+const AUDIO_LABELS: Record<string, string> = {
+  high: 'Alta (320 kbps)',
+  normal: 'Normal (160 kbps)',
+  low: 'Baja (96 kbps)',
+};
+
+@Component({
+  selector: 'app-users',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, KpiCardComponent],
+  templateUrl: './users.component.html',
+  styleUrls: ['./users.component.css'],
+})
+export class UsersComponent implements OnInit {
+  private iconRender = inject(IconRenderService);
+
+  private userSvc = inject(UserService);
+  private historySvc = inject(HistoryService);
+
+  isLoading = signal(true);
+  searchQuery = signal('');
+  historyPage = signal(1);
+  pageSize = 8;
+
+  profile = signal<UserProfile | null>(null);
+  listenHistory = signal<ListenRecord[]>([]);
+
+  weekLabels = [
+    { x: 10, label: 'Lun' }, { x: 60, label: 'Mar' }, { x: 110, label: 'Mié' },
+    { x: 160, label: 'Jue' }, { x: 210, label: 'Vie' }, { x: 260, label: 'Sáb' }, { x: 310, label: 'Dom' },
+  ];
+
+  private activityData = [32, 48, 41, 65, 58, 78, 72];
+
+  displayProfile = computed(() => {
+    const p = this.profile();
+    if (!p) {
+      return {
+        name: 'Usuario',
+        username: '@user',
+        plan: 'Free',
+        initial: 'U',
+        avatarGradient: COVER_GRADIENTS[0],
+        badges: ['Listener'],
+        lastActive: '—',
+        registered: '—',
+      };
+    }
+    return {
+      name: p.username,
+      username: `@${p.username}`,
+      plan: p.plan,
+      initial: p.username.charAt(0).toUpperCase(),
+      avatarGradient: COVER_GRADIENTS[p.id % COVER_GRADIENTS.length],
+      badges: [p.plan, p.favorite_genre ?? 'Multi-genre'].filter(Boolean),
+      lastActive: 'Activo ahora',
+      registered: p.created_at ? new Date(p.created_at).toLocaleDateString('es') : '—',
+    };
+  });
+
+  preferences = computed(() => {
+    const p = this.profile();
+    const prefs = p?.preferences;
+    return {
+      favoriteGenre: p?.favorite_genre ?? '—',
+      audioQuality: AUDIO_LABELS[prefs?.audio_quality ?? 'high'] ?? 'Alta',
+      personalizedRecs: prefs?.recommendations_enabled ?? true,
+      darkMode: prefs?.dark_mode ?? true,
+      privacyPublic: prefs?.privacy_public ?? false,
+    };
+  });
+
+  prefToggles = [
+    { key: 'personalizedRecs' as const, label: 'Recomendaciones IA', hint: 'Motor simulado' },
+    { key: 'darkMode' as const, label: 'Modo oscuro', hint: '' },
+    { key: 'privacyPublic' as const, label: 'Perfil público', hint: 'Privacidad' },
+  ];
+
+  favoritePlaylists = computed((): PlaylistCard[] => {
+    const pls = this.profile()?.playlists ?? [];
+    return pls.map((pl, i) => ({
+      id: pl.id,
+      name: pl.name,
+      tracks: pl.total_tracks,
+      gradient: COVER_GRADIENTS[i % COVER_GRADIENTS.length],
+    }));
+  });
+
+  stats = computed(() => ({
+    favorites: this.profile()?.stats?.favorites_count ?? 0,
+    playlists: this.profile()?.stats?.playlists_count ?? 0,
+  }));
+
+  topArtists = computed((): TopItem[] => {
+    const counts = new Map<string, number>();
+    for (const h of this.listenHistory()) {
+      if (h.artist && h.artist !== '—') {
+        counts.set(h.artist, (counts.get(h.artist) ?? 0) + 1);
+      }
+    }
+    const colors = ['#ff8c42', '#7c3aed', '#10b981', '#3b82f6', '#ec4899'];
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }));
+  });
+
+  topGenres = computed((): TopItem[] => {
+    const genre = this.profile()?.favorite_genre;
+    if (!genre) return [{ name: 'Sin datos', value: 0, color: '#ff8c42' }];
+    return [{ name: genre, value: 100, color: '#ff8c42' }];
+  });
+
+  activities = computed((): ActivityItem[] => {
+    const items: ActivityItem[] = [];
+    const hist = this.historySvc.getRecent(3);
+    hist.forEach((h, i) => {
+      items.push({
+        id: i + 1,
+        type: 'play',
+        title: 'Escuchado',
+        detail: h.nombre_track,
+        time: this.formatRelative(h.viewed_at),
+        iconKey: 'play',
+      });
+    });
+    const fav = this.stats().favorites;
+    if (fav > 0) {
+      items.push({
+        id: 99,
+        type: 'favorite',
+        title: 'Favoritos',
+        detail: `${fav} tracks guardados`,
+        time: 'Reciente',
+        iconKey: 'heart',
+      });
+    }
+    return items.length ? items : [{
+      id: 1, type: 'session', title: 'Sesión', detail: 'Web Player', time: 'Hoy', iconKey: 'globe',
+    }];
+  });
+
+  devices = [
+    { id: 'desktop', name: 'Desktop', platform: 'Web · VOXMETRIK', lastAccess: 'Ahora', online: true, iconKey: 'monitor' },
+    { id: 'mobile', name: 'Mobile', platform: 'PWA', lastAccess: '—', online: false, iconKey: 'smartphone' },
+  ];
+
+  recentCarousel = computed((): RecentItem[] =>
+    this.listenHistory().slice(0, 8).map((r, i) => ({
+      ...r,
+      coverGradient: COVER_GRADIENTS[i % COVER_GRADIENTS.length],
+    }))
+  );
+
+  filteredHistory = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return this.listenHistory();
+    return this.listenHistory().filter(
+      (r) => r.track.toLowerCase().includes(q) || r.artist.toLowerCase().includes(q)
+    );
+  });
+
+  totalHistoryPages = computed(() => Math.max(1, Math.ceil(this.filteredHistory().length / this.pageSize)));
+
+  pagedHistory = computed(() => {
+    const start = (this.historyPage() - 1) * this.pageSize;
+    return this.filteredHistory().slice(start, start + this.pageSize);
+  });
+
+  maxTopValue = computed(() =>
+    Math.max(...this.topArtists().map((x) => x.value), ...this.topGenres().map((x) => x.value), 1)
+  );
+
+  activityPoints = computed(() =>
+    this.activityData.map((v, i) => ({ x: 10 + i * 50, y: 88 - v * 0.75 }))
+  );
+
+  ngOnInit() {
+    this.historySvc.reload();
+    this.loadHistoryFromStorage();
+    this.userSvc.getMe().subscribe({
+      next: (p) => { this.profile.set(p); this.isLoading.set(false); },
+      error: () => this.isLoading.set(false),
+    });
+  }
+
+  private loadHistoryFromStorage() {
+    const entries = this.historySvc.getRecent(20);
+    this.listenHistory.set(entries.map((e, i) => this.historyToRecord(e, i)));
+  }
+
+  private historyToRecord(e: HistoryEntry, i: number): ListenRecord {
+    const d = new Date(e.viewed_at);
+    return {
+      id: e.id_track || i + 1,
+      track: e.nombre_track,
+      artist: e.nombre_artista ?? '—',
+      genre: '—',
+      duration: '—',
+      playedAt: d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
+    };
+  }
+
+  private formatRelative(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `Hace ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `Hace ${hrs}h`;
+    return 'Ayer';
+  }
+
+  onSearchChange(value: string) {
+    this.searchQuery.set(value);
+    this.historyPage.set(1);
+  }
+
+  goHistoryPage(p: number) {
+    if (p < 1 || p > this.totalHistoryPages()) return;
+    this.historyPage.set(p);
+  }
+
+  barWidth(value: number): number {
+    return Math.round((value / this.maxTopValue()) * 100);
+  }
+
+  togglePref(key: 'personalizedRecs' | 'darkMode' | 'privacyPublic') {
+    const p = this.profile();
+    if (!p) return;
+    const map = {
+      personalizedRecs: 'recommendations_enabled',
+      darkMode: 'dark_mode',
+      privacyPublic: 'privacy_public',
+    } as const;
+    const apiKey = map[key];
+    const current = p.preferences?.[apiKey] ?? false;
+    this.userSvc.updatePreferences({ [apiKey]: !current }).subscribe({
+      next: (u) => {
+        const cur = this.profile();
+        if (cur) this.profile.set({ ...cur, preferences: u.preferences, favorite_genre: u.favorite_genre });
+      },
+    });
+  }
+
+  coverGradient(id: number): string {
+    return COVER_GRADIENTS[(id - 1) % COVER_GRADIENTS.length];
+  }
+
+  trackInitial(name: string): string {
+    return name.charAt(0).toUpperCase();
+  }
+
+  activityLine(): string {
+    return this.activityPoints().map((p) => `${p.x},${p.y}`).join(' ');
+  }
+
+  activityArea(): string {
+    const pts = this.activityPoints();
+    if (!pts.length) return '';
+    const line = pts.map((p) => `${p.x},${p.y}`).join(' ');
+    return `${pts[0].x},88 ${line} ${pts[pts.length - 1].x},88`;
+  }
+
+  icon(key: string, size = 18): SafeHtml {
+    return this.iconRender.render(key, size);
+  }
+}

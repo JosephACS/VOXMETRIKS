@@ -1,4 +1,4 @@
-.page { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+.page { width: 100%; min-height: 100%; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
 .page-header-main { display: flex; flex-direction: column; gap: 0.25rem; }
 .page-header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
@@ -17,7 +17,16 @@
 .kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .kpi-card { background: #16192b; border: 1px solid #2a2f4a; border-radius: 0.75rem; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: border-color 200ms; }
 .kpi-card:hover { border-color: rgba(255,140,66,0.3); }
-.kpi-icon { font-size: 1.5rem; width: 40px; text-align: center; flex-shrink: 0; }
+.kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+.kpi-icon :deep(svg) { width: 18px; height: 18px; }
 .kpi-primary { color: #ff8c42; } .kpi-info { color: #60a5fa; } .kpi-warning { color: #f59e0b; } .kpi-secondary { color: #a78bfa; }
 .kpi-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .kpi-value { font-size: 1.5rem; font-weight: 700; color: #fff; line-height: 1.2; }

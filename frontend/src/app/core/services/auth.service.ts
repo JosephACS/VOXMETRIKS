@@ -1,111 +1,123 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { AppUser, AuthResponse } from '../../shared/models/api.models';
 
 export interface AuthState {
   isAuthenticated: boolean;
-  user: { username: string } | null;
+  user: AppUser | null;
   token: string | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly API = `${environment.apiUrl}/users`;
   private readonly AUTH_KEY = 'voxmetrik_auth_token';
   private readonly USER_KEY = 'voxmetrik_user';
 
-  // Signals para estado reactivo
-  protected authState = signal<AuthState>({
+  private authState = signal<AuthState>({
     isAuthenticated: this.hasToken(),
     user: this.getStoredUser(),
     token: this.getStoredToken(),
   });
 
-  // Getters públicos como signals
+  readonly state = this.authState.asReadonly();
   isAuthenticated = () => this.authState().isAuthenticated;
   getToken = () => this.authState().token;
   getUser = () => this.authState().user;
+  userId = computed(() => this.authState().user?.id ?? null);
 
   constructor() {
-    // Sincronizar con localStorage al iniciar
     this.syncFromStorage();
   }
 
-  /**
-   * Login simulado — reemplazar con PocketBase en el futuro
-   */
-  login(username: string, password: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      // Simulación: cualquier credencial funciona
-      const mockToken = `mock-token-${Date.now()}`;
-      const user = { username };
-
-      localStorage.setItem(this.AUTH_KEY, mockToken);
-      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-
-      this.authState.set({
-        isAuthenticated: true,
-        user,
-        token: mockToken,
-      });
-
-      resolve(true);
-    });
-  }
-
-  /**
-   * Logout — limpia estado y storage
-   */
-  logout(): void {
-    localStorage.removeItem(this.AUTH_KEY);
-    localStorage.removeItem(this.USER_KEY);
-
-    this.authState.set({
-      isAuthenticated: false,
-      user: null,
-      token: null,
-    });
-  }
-
-  /**
-   * Sincronizar estado con localStorage al iniciar
-   */
-  private syncFromStorage(): void {
-    const token = this.getStoredToken();
-    const user = this.getStoredUser();
-
-    if (token) {
-      this.authState.set({
-        isAuthenticated: true,
-        user,
-        token,
-      });
+  async login(email: string, password: string, remember = true): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<AuthResponse>(`${this.API}/login`, {
+          login: email,
+          password,
+          remember,
+        })
+      );
+      this.persistSession(res, remember);
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  /**
-   * Obtener token de localStorage
-   */
-  private getStoredToken(): string | null {
-    return localStorage.getItem(this.AUTH_KEY);
+  async register(
+    username: string,
+    email: string,
+    password: string,
+    favoriteGenre?: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<AuthResponse>(`${this.API}/register`, {
+          username,
+          email,
+          password,
+          favorite_genre: favoriteGenre,
+        })
+      );
+      this.persistSession(res, true);
+      return { ok: true };
+    } catch (e: unknown) {
+      const err = e as { error?: { detail?: string } };
+      return { ok: false, error: err?.error?.detail ?? 'Error al registrar' };
+    }
   }
 
-  /**
-   * Obtener usuario de localStorage
-   */
-  private getStoredUser(): { username: string } | null {
-    const stored = localStorage.getItem(this.USER_KEY);
-    if (!stored) return null;
+  logout(): void {
+    localStorage.removeItem(this.AUTH_KEY);
+    localStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem(this.AUTH_KEY);
+    sessionStorage.removeItem(this.USER_KEY);
+    this.authState.set({ isAuthenticated: false, user: null, token: null });
+  }
+
+  private persistSession(res: AuthResponse, remember: boolean): void {
+    const store = remember ? localStorage : sessionStorage;
+    const other = remember ? sessionStorage : localStorage;
+    other.removeItem(this.AUTH_KEY);
+    other.removeItem(this.USER_KEY);
+    store.setItem(this.AUTH_KEY, res.token);
+    store.setItem(this.USER_KEY, JSON.stringify(res.user));
+    this.authState.set({
+      isAuthenticated: true,
+      user: res.user,
+      token: res.token,
+    });
+  }
+
+  private syncFromStorage(): void {
+    const token = this.getStoredToken();
+    const user = this.getStoredUser();
+    if (token && user) {
+      this.authState.set({ isAuthenticated: true, user, token });
+    }
+  }
+
+  getStoredToken(): string | null {
+    return localStorage.getItem(this.AUTH_KEY) ?? sessionStorage.getItem(this.AUTH_KEY);
+  }
+
+  private getStoredUser(): AppUser | null {
+    const raw =
+      localStorage.getItem(this.USER_KEY) ?? sessionStorage.getItem(this.USER_KEY);
+    if (!raw) return null;
     try {
-      return JSON.parse(stored);
+      return JSON.parse(raw) as AppUser;
     } catch {
       return null;
     }
   }
 
-  /**
-   * Verificar si hay token válido
-   */
   private hasToken(): boolean {
-    return !!localStorage.getItem(this.AUTH_KEY);
+    return !!this.getStoredToken();
   }
 }

@@ -135,6 +135,80 @@ class DeleteResponse(BaseModel):
     id:      int
 
 
+# ── Streaming app (playlists / favorites) ─────────────────────────────────────
+
+class PlaylistCreate(BaseModel):
+    name:        str
+    description: Optional[str] = None
+
+class PlaylistTrackAdd(BaseModel):
+    track_id: int
+
+class PlaylistSummary(BaseModel):
+    id:           int
+    name:         str
+    description:  Optional[str] = None
+    created_at:   Optional[str] = None
+    total_tracks: int = 0
+
+class PlaylistTrackItem(BaseModel):
+    id_track:       int
+    nombre_track:   Optional[str] = None
+    id_artista:     Optional[int] = None
+    id_genero:      Optional[int] = None
+    duration_ms:    Optional[int] = None
+    popularity:     Optional[int] = None
+    nombre_artista: Optional[str] = None
+    nombre_genero:  Optional[str] = None
+
+class PlaylistDetail(PlaylistSummary):
+    tracks: List[PlaylistTrackItem] = []
+
+class FavoriteTrack(BaseModel):
+    id_track:       int
+    nombre_track:   Optional[str] = None
+    id_artista:     Optional[int] = None
+    id_genero:      Optional[int] = None
+    duration_ms:    Optional[int] = None
+    popularity:     Optional[int] = None
+    nombre_artista: Optional[str] = None
+    nombre_genero:  Optional[str] = None
+    added_at:       Optional[str] = None
+
+class TrackSearchResult(BaseModel):
+    id_track:       int
+    spotify_track_id: Optional[str] = None
+    nombre_track:   Optional[str] = None
+    id_artista:     Optional[int] = None
+    id_genero:      Optional[int] = None
+    duration_ms:    Optional[int] = None
+    popularity:     Optional[int] = None
+    nombre_artista: Optional[str] = None
+    nombre_genero:  Optional[str] = None
+
+class TrackDetail(BaseModel):
+    id_track:       int
+    spotify_track_id: Optional[str] = None
+    nombre_track:   Optional[str] = None
+    id_artista:     Optional[int] = None
+    id_album:       Optional[int] = None
+    id_genero:      Optional[int] = None
+    explicit:       Optional[bool] = None
+    duration_ms:    Optional[int] = None
+    popularity:     Optional[int] = None
+    danceability:   Optional[float] = None
+    energy:         Optional[float] = None
+    loudness:       Optional[float] = None
+    speechiness:    Optional[float] = None
+    acousticness:   Optional[float] = None
+    instrumentalness: Optional[float] = None
+    liveness:       Optional[float] = None
+    valence:        Optional[float] = None
+    tempo:          Optional[float] = None
+    nombre_artista: Optional[str] = None
+    nombre_genero:  Optional[str] = None
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
@@ -142,3 +216,53 @@ class HealthResponse(BaseModel):
     database: str
     tables:   List[str]
     version:  str
+
+
+# ── Users (Package 2) ─────────────────────────────────────────────────────────
+
+class UserPreferences(BaseModel):
+    dark_mode: bool = True
+    audio_quality: str = "high"
+    recommendations_enabled: bool = True
+    privacy_public: bool = False
+
+
+class UserPublic(BaseModel):
+    id: int
+    username: str
+    email: str
+    plan: str
+    favorite_genre: Optional[str] = None
+    created_at: Optional[str] = None
+    preferences: UserPreferences = UserPreferences()
+
+
+class UserLogin(BaseModel):
+    login: str
+    password: str
+    remember: bool = True
+
+
+class UserRegister(BaseModel):
+    username: str
+    email: str
+    password: str
+    favorite_genre: Optional[str] = None
+
+
+class UserStats(BaseModel):
+    favorites_count: int = 0
+    playlists_count: int = 0
+
+
+class UserProfile(UserPublic):
+    stats: UserStats = UserStats()
+    playlists: List[PlaylistSummary] = []
+
+
+class UserPreferencesUpdate(BaseModel):
+    dark_mode: Optional[bool] = None
+    audio_quality: Optional[str] = None
+    recommendations_enabled: Optional[bool] = None
+    privacy_public: Optional[bool] = None
+    favorite_genre: Optional[str] = None

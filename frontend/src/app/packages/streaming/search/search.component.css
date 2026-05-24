@@ -1,0 +1,64 @@
+.search-page { width: 100%; display: flex; flex-direction: column; gap: var(--section-gap); }
+
+.search-header { padding: 1rem 1.125rem; }
+.search-header h1 { font-size: 1.25rem; margin: 0 0 0.75rem; font-weight: 700; }
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 2rem;
+  color: var(--text-muted);
+}
+
+.search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+
+.result-count { font-size: 0.75rem; color: var(--text-muted); margin: 0; font-family: var(--font-mono); }
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.5rem;
+}
+
+.result-card {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem;
+  text-decoration: none;
+  color: inherit;
+}
+.result-card.skel { height: 72px; animation: pulse 1.5s infinite; }
+
+.r-cover {
+  width: 48px; height: 48px; border-radius: 0.375rem;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+.r-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.r-track { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-artist, .r-genre { font-size: 0.68rem; color: var(--text-muted); }
+
+.r-pop { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem; }
+.pop-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; max-width: 80px; }
+.pop-fill { height: 100%; background: linear-gradient(90deg, #ff8c42, #7c3aed); border-radius: 2px; }
+.mono { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
+
+.empty, .hint {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.75rem; padding: 2rem; text-align: center; color: var(--text-muted);
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }

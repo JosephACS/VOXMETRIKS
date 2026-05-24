@@ -1,0 +1,261 @@
+<div class="users-page">
+  <!-- Hero / Banner -->
+  <section class="profile-hero glass-panel">
+    <div class="hero-banner">
+      <div class="hero-glow"></div>
+      <div class="hero-mesh"></div>
+    </div>
+    <div class="hero-body">
+      <div class="hero-avatar-wrap">
+        <div class="hero-avatar" [style.background]="displayProfile().avatarGradient">{{ displayProfile().initial }}</div>
+        <span class="premium-ring"></span>
+      </div>
+      <div class="hero-info">
+        <div class="hero-top">
+          <div>
+            <h1>{{ displayProfile().name }}</h1>
+            <span class="username">{{ displayProfile().username }}</span>
+          </div>
+          <span class="badge-demo">{{ profile()?.plan ?? 'Free' }}</span>
+        </div>
+        <div class="hero-badges">
+          @for (b of displayProfile().badges; track b) {
+            <span class="profile-badge" [class.badge-premium]="b === 'Premium'">{{ b }}</span>
+          }
+        </div>
+        <div class="hero-meta">
+          <span><span [innerHTML]="icon('globe', 12)"></span> {{ profile()?.email ?? '—' }}</span>
+          <span class="meta-dot"></span>
+          <span class="plan-premium">{{ displayProfile().plan }}</span>
+          <span class="meta-dot"></span>
+          <span class="activity">{{ displayProfile().lastActive }}</span>
+        </div>
+      </div>
+      <div class="hero-quick-stats">
+        <div class="quick-stat">
+          <span class="qs-value">{{ listenHistory().length }}</span>
+          <span class="qs-label">Recientes</span>
+        </div>
+        <div class="quick-stat">
+          <span class="qs-value">{{ stats().favorites }}</span>
+          <span class="qs-label">Favoritos</span>
+        </div>
+        <div class="quick-stat">
+          <span class="qs-value">{{ stats().playlists }}</span>
+          <span class="qs-label">Playlists</span>
+        </div>
+        <div class="quick-stat">
+          <span class="qs-value">{{ topArtists().length }}</span>
+          <span class="qs-label">Artistas</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPI strip -->
+  <section class="stats-strip vx-kpi-grid">
+    <app-kpi-card label="Tracks recientes" [value]="listenHistory().length" iconKey="clock" color="primary" subtitle="historial local" />
+    <app-kpi-card label="Tracks favoritos" [value]="stats().favorites" iconKey="heart" color="info" subtitle="guardados" />
+    <app-kpi-card label="Playlists" [value]="stats().playlists" iconKey="playlist" color="warning" subtitle="propias" />
+    <app-kpi-card label="Artistas" [value]="topArtists().length" iconKey="user" color="secondary" subtitle="en historial" />
+  </section>
+
+  <div class="profile-layout">
+    <div class="profile-main">
+      <!-- Recently played carousel -->
+      <section class="glass-panel section-panel">
+        <div class="section-head">
+          <h2>Escuchado recientemente</h2>
+          <span class="section-meta">Últimas sesiones</span>
+        </div>
+        <div class="recent-scroll">
+          @for (item of recentCarousel(); track item.id) {
+            <article class="recent-card" [routerLink]="['/tracks', item.id]">
+              <div class="album-cover" [style.background]="item.coverGradient">
+                <span class="cover-initial">{{ trackInitial(item.track) }}</span>
+                <div class="cover-play"><span [innerHTML]="icon('play', 14)"></span></div>
+              </div>
+              <div class="recent-info">
+                <span class="recent-track">{{ item.track }}</span>
+                <span class="recent-artist">{{ item.artist }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+
+      <!-- Listening activity + top genres -->
+      <div class="dual-row">
+        <section class="glass-panel section-panel chart-panel">
+          <div class="section-head">
+            <h2>Actividad de escucha</h2>
+            <span class="section-meta">Últimos 7 días</span>
+          </div>
+          <svg viewBox="0 0 360 100" class="activity-chart" aria-hidden="true">
+            <defs>
+              <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ff8c42" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#ff8c42" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="88" x2="360" y2="88" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <polygon [attr.points]="activityArea()" fill="url(#actGrad)"/>
+            <polyline [attr.points]="activityLine()" fill="none" stroke="#ff8c42" stroke-width="2" stroke-linecap="round"/>
+            @for (pt of activityPoints(); track pt.x) {
+              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" fill="#ff8c42"/>
+            }
+            @for (lbl of weekLabels; track lbl.x) {
+              <text [attr.x]="lbl.x" y="98" fill="rgba(255,255,255,0.3)" font-size="8">{{ lbl.label }}</text>
+            }
+          </svg>
+        </section>
+
+        <section class="glass-panel section-panel">
+          <div class="section-head">
+            <h2>Top géneros</h2>
+            <span class="section-meta">30 días</span>
+          </div>
+          <div class="genre-cards">
+            @for (g of topGenres(); track g.name; let i = $index) {
+              <div class="genre-card" [style.--gc]="g.color">
+                <span class="genre-rank">#{{ i + 1 }}</span>
+                <span class="genre-name">{{ g.name }}</span>
+                <div class="genre-bar"><div class="genre-fill" [style.width.%]="g.value"></div></div>
+                <span class="genre-pct">{{ g.value }}%</span>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <!-- Recently played list (card rows) -->
+      <section class="glass-panel section-panel">
+        <div class="section-head">
+          <h2>Historial reciente</h2>
+          <input type="search" class="search-input" placeholder="Buscar..." [ngModel]="searchQuery()" (ngModelChange)="onSearchChange($event)" />
+        </div>
+        <div class="history-list">
+          @for (row of pagedHistory(); track row.id; let i = $index) {
+            <div class="history-row">
+              <span class="history-rank">{{ (historyPage() - 1) * pageSize + i + 1 }}</span>
+              <div class="album-cover sm" [style.background]="coverGradient(row.id)">
+                <span class="cover-initial">{{ trackInitial(row.track) }}</span>
+              </div>
+              <div class="history-track">
+                <span class="ht-name">{{ row.track }}</span>
+                <span class="ht-artist">{{ row.artist }}</span>
+              </div>
+              <span class="genre-chip">{{ row.genre }}</span>
+              <span class="ht-duration mono">{{ row.duration }}</span>
+              <span class="ht-time mono">{{ row.playedAt }}</span>
+            </div>
+          }
+          @if (!pagedHistory().length) {
+            <p class="empty-msg">Sin resultados para "{{ searchQuery() }}"</p>
+          }
+        </div>
+        <div class="pagination">
+          <button type="button" class="page-btn" [disabled]="historyPage() <= 1" (click)="goHistoryPage(historyPage() - 1)">Anterior</button>
+          <span class="page-info">{{ historyPage() }} / {{ totalHistoryPages() }}</span>
+          <button type="button" class="page-btn" [disabled]="historyPage() >= totalHistoryPages()" (click)="goHistoryPage(historyPage() + 1)">Siguiente</button>
+        </div>
+      </section>
+
+      <!-- Favorite playlists -->
+      <section class="glass-panel section-panel">
+        <div class="section-head">
+          <h2>Playlists favoritas</h2>
+          <span class="section-meta">{{ favoritePlaylists().length }} playlists</span>
+        </div>
+        <div class="playlist-grid">
+          @for (pl of favoritePlaylists(); track pl.id) {
+            <article class="playlist-card" [style.background]="pl.gradient">
+              <div class="pl-overlay">
+                <span class="pl-icon" [innerHTML]="icon('playlist', 20)"></span>
+                <span class="pl-name">{{ pl.name }}</span>
+                <span class="pl-tracks">{{ pl.tracks }} tracks</span>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+
+      <!-- Top artists visual -->
+      <section class="glass-panel section-panel">
+        <div class="section-head">
+          <h2>Top artistas</h2>
+          <span class="section-meta">Ranking personal</span>
+        </div>
+        <div class="artist-rank-list">
+          @for (a of topArtists(); track a.name; let i = $index) {
+            <div class="artist-rank-row">
+              <span class="ar-rank" [class.top3]="i < 3">{{ i + 1 }}</span>
+              <div class="artist-avatar" [style.background]="a.color">{{ a.name.charAt(0) }}</div>
+              <div class="ar-info">
+                <span class="ar-name">{{ a.name }}</span>
+                <div class="ar-bar"><div class="ar-fill" [style.width.%]="barWidth(a.value)" [style.background]="a.color"></div></div>
+              </div>
+              <span class="ar-pct">{{ a.value }}%</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <aside class="profile-sidebar">
+      <section class="glass-panel section-panel">
+        <div class="section-head"><h2>Preferencias</h2></div>
+        <div class="pref-list">
+          <div class="pref-row">
+            <div><span class="pref-label">Género favorito</span><span class="pref-value">{{ preferences().favoriteGenre }}</span></div>
+          </div>
+          <div class="pref-row">
+            <div><span class="pref-label">Calidad</span><span class="pref-value">{{ preferences().audioQuality }}</span></div>
+          </div>
+          @for (pref of prefToggles; track pref.key) {
+            <div class="pref-row">
+              <div><span class="pref-label">{{ pref.label }}</span>@if (pref.hint) { <span class="pref-hint">{{ pref.hint }}</span> }</div>
+              <label class="toggle">
+                <input type="checkbox" [checked]="preferences()[pref.key]" (change)="togglePref(pref.key)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="glass-panel section-panel">
+        <div class="section-head"><h2>Actividad</h2></div>
+        <div class="timeline">
+          @for (act of activities(); track act.id; let last = $last) {
+            <div class="timeline-item">
+              <div class="timeline-dot" [innerHTML]="icon(act.iconKey, 14)"></div>
+              @if (!last) { <div class="timeline-line"></div> }
+              <div class="timeline-content">
+                <span class="timeline-title">{{ act.title }}</span>
+                <span class="timeline-detail">{{ act.detail }}</span>
+                <span class="timeline-time">{{ act.time }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="glass-panel section-panel">
+        <div class="section-head"><h2>Dispositivos</h2></div>
+        <div class="devices-grid">
+          @for (dev of devices; track dev.id) {
+            <div class="device-card">
+              <span class="device-icon" [innerHTML]="icon(dev.iconKey, 18)"></span>
+              <div class="device-info">
+                <span class="device-name">{{ dev.name }}</span>
+                <span class="device-platform">{{ dev.platform }}</span>
+              </div>
+              <span class="device-status" [class.online]="dev.online">{{ dev.online ? 'Online' : 'Off' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>

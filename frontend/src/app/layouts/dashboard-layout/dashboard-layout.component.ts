@@ -1,9 +1,23 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { LoadingService } from '../../shared/services/loading.service';
+import { FavoritesService } from '../../packages/streaming/services/favorites.service';
+import { HistoryService } from '../../packages/streaming/services/history.service';
+import { AuthService } from '../../core/services/auth.service';
+import { IconRenderService } from '../../shared/services/icon-render.service';
+import { SafeHtml } from '@angular/platform-browser';
 
-interface NavItem { path: string; label: string; icon: string; }
+interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
 
 @Component({
   selector: 'app-dashboard-layout',
@@ -13,36 +27,234 @@ interface NavItem { path: string; label: string; icon: string; }
   styleUrls: ['./dashboard-layout.component.css'],
 })
 export class DashboardLayoutComponent implements OnInit, OnDestroy {
+  private auth = inject(AuthService);
+  private iconRender = inject(IconRenderService);
+  private router = inject(Router);
+  private favorites = inject(FavoritesService);
+  private history = inject(HistoryService);
+
   sidebarOpen = signal(false);
+  sidebarCollapsed = signal(this.readCollapsedPref());
+  userMenuOpen = signal(false);
   private resizeHandler = () => this.checkScreenSize();
+
+  private static readonly COLLAPSE_KEY = 'voxmetrik_sidebar_collapsed';
+
+  userName = computed(() => this.auth.getUser()?.username ?? 'Usuario');
+  userPlan = computed(() => this.auth.getUser()?.plan ?? 'Free');
+  isDemoUser = computed(() => {
+    const email = this.auth.getUser()?.email ?? '';
+    return email.includes('demo@') || this.userPlan().toLowerCase() === 'demo';
+  });
+  userInitial = computed(() => this.userName().charAt(0).toUpperCase());
+  avatarGradient = computed(() => {
+    const id = this.auth.getUser()?.id ?? 0;
+    const gradients = [
+      'linear-gradient(135deg, #1ed896, #148f5e)',
+      'linear-gradient(135deg, #3b82f6, #1e3a8a)',
+      'linear-gradient(135deg, #a855f7, #6b21a8)',
+    ];
+    return gradients[id % gradients.length];
+  });
 
   private svgIcon(path: string): string {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   }
 
-  navItems: NavItem[] = [
-    { path: '/dashboard', label: 'Dashboard',      icon: this.svgIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>') },
-    { path: '/artists',   label: 'Artistas',       icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
-    { path: '/tracks',    label: 'Tracks',         icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>') },
-    { path: '/genres',    label: 'Géneros',        icon: this.svgIcon('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>') },
-    { path: '/analytics', label: 'Analytics',      icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>') },
-    { path: '/trending',  label: 'Trending',       icon: this.svgIcon('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>') },
-    { path: '/settings',  label: 'Settings',       icon: this.svgIcon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>') },
+  navSections: NavSection[] = [
+    {
+      title: 'MAIN',
+      items: [
+        {
+          path: '/dashboard',
+          label: 'Dashboard',
+          icon: this.svgIcon(
+            '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'
+          ),
+        },
+      ],
+    },
+    {
+      title: 'STREAMING',
+      items: [
+        {
+          path: '/artists',
+          label: 'Artistas',
+          icon: this.svgIcon(
+            '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+          ),
+        },
+        {
+          path: '/tracks',
+          label: 'Tracks',
+          icon: this.svgIcon(
+            '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+          ),
+        },
+        {
+          path: '/genres',
+          label: 'Géneros',
+          icon: this.svgIcon(
+            '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>'
+          ),
+        },
+        {
+          path: '/audio-features',
+          label: 'Audio Features',
+          icon: this.svgIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+        },
+        {
+          path: '/search',
+          label: 'Buscar',
+          icon: this.svgIcon('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+        },
+        {
+          path: '/playlists',
+          label: 'Playlists',
+          icon: this.svgIcon(
+            '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'
+          ),
+        },
+        {
+          path: '/liked',
+          label: 'Liked Songs',
+          icon: this.svgIcon(
+            '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'
+          ),
+        },
+      ],
+    },
+    {
+      title: 'ANALYTICS',
+      items: [
+        {
+          path: '/analytics',
+          label: 'Analytics',
+          icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+        },
+        {
+          path: '/trending',
+          label: 'Trending',
+          icon: this.svgIcon(
+            '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
+          ),
+        },
+        {
+          path: '/comparatives',
+          label: 'Comparativas',
+          icon: this.svgIcon(
+            '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'
+          ),
+        },
+      ],
+    },
+    {
+      title: 'RECOMMENDATIONS',
+      items: [
+        {
+          path: '/recommendations',
+          label: 'Recommendations',
+          icon: this.svgIcon(
+            '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
+          ),
+        },
+      ],
+    },
+    {
+      title: 'DATA ENGINEERING',
+      items: [
+        {
+          path: '/elt-pipeline',
+          label: 'Pipeline ELT',
+          icon: this.svgIcon(
+            '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'
+          ),
+        },
+        {
+          path: '/explorer',
+          label: 'Data Explorer',
+          icon: this.svgIcon(
+            '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
+          ),
+        },
+      ],
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        {
+          path: '/settings',
+          label: 'Configuración',
+          icon: this.svgIcon(
+            '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
+          ),
+        },
+      ],
+    },
   ];
 
   constructor(public loading: LoadingService) {}
 
-  ngOnInit() { this.checkScreenSize(); window.addEventListener('resize', this.resizeHandler); }
-  ngOnDestroy() { window.removeEventListener('resize', this.resizeHandler); }
-
-  toggleSidebar() { this.sidebarOpen.update(v => !v); }
-  closeSidebar()  { this.sidebarOpen.set(false); }
-  checkScreenSize() {
-    if (window.innerWidth >= 1024) this.sidebarOpen.set(true);
-    else this.sidebarOpen.set(false);
+  ngOnInit() {
+    this.checkScreenSize();
+    window.addEventListener('resize', this.resizeHandler);
+    this.history.reload();
+    this.favorites.refreshIds();
   }
 
-  userName    = signal('Admin');
-  userInitial = computed(() => this.userName().charAt(0).toUpperCase());
-  logout() { window.location.href = '/login'; }
+  ngOnDestroy() {
+    window.removeEventListener('resize', this.resizeHandler);
+  }
+
+  @HostListener('document:click')
+  closeUserMenuOnOutsideClick() {
+    this.userMenuOpen.set(false);
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen.update((v) => !v);
+  }
+
+  toggleSidebarCollapse() {
+    this.sidebarCollapsed.update((v) => {
+      const next = !v;
+      localStorage.setItem(DashboardLayoutComponent.COLLAPSE_KEY, String(next));
+      return next;
+    });
+  }
+
+  closeSidebar() {
+    if (window.innerWidth >= 1024) return;
+    this.sidebarOpen.set(false);
+  }
+
+  private readCollapsedPref(): boolean {
+    try {
+      return localStorage.getItem(DashboardLayoutComponent.COLLAPSE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  toggleUserMenu(e: Event) {
+    e.stopPropagation();
+    this.userMenuOpen.update((v) => !v);
+  }
+
+  checkScreenSize() {
+    if (window.innerWidth >= 1024) {
+      this.sidebarOpen.set(true);
+    } else {
+      this.sidebarOpen.set(false);
+    }
+  }
+
+  logout() {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+
+  safeSvg(svg: string): SafeHtml {
+    return this.iconRender.renderSvg(svg);
+  }
 }

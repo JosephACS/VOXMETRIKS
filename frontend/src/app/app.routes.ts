@@ -1,10 +1,25 @@
 import { Routes } from '@angular/router';
 import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
+import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { authGuard, guestGuard } from './core/guards/auth.guard';
 
 export const APP_ROUTES: Routes = [
   {
+    path: 'login',
+    component: AuthLayoutComponent,
+    canActivate: [guestGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/login/login.component').then((m) => m.LoginComponent),
+      },
+    ],
+  },
+  {
     path: '',
     component: DashboardLayoutComponent,
+    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -26,10 +41,38 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        path: 'tracks/:id',
+        loadComponent: () =>
+          import('./packages/streaming/track-detail/track-detail.component').then(
+            (m) => m.TrackDetailComponent
+          ),
+      },
+      {
         path: 'tracks',
         loadComponent: () =>
           import('./packages/streaming/tracks/tracks.component').then(
             (m) => m.TracksComponent
+          ),
+      },
+      {
+        path: 'search',
+        loadComponent: () =>
+          import('./packages/streaming/search/search.component').then(
+            (m) => m.SearchComponent
+          ),
+      },
+      {
+        path: 'playlists',
+        loadComponent: () =>
+          import('./packages/streaming/playlists/playlists.component').then(
+            (m) => m.PlaylistsComponent
+          ),
+      },
+      {
+        path: 'liked',
+        loadComponent: () =>
+          import('./packages/streaming/liked/liked.component').then(
+            (m) => m.LikedComponent
           ),
       },
       {
@@ -61,11 +104,16 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
-        path: 'etl-pipeline',
+        path: 'elt-pipeline',
         loadComponent: () =>
           import('./packages/data-engineering/etl-pipeline/etl-pipeline.component').then(
             (m) => m.EtlPipelineComponent
           ),
+      },
+      {
+        path: 'etl-pipeline',
+        redirectTo: 'elt-pipeline',
+        pathMatch: 'full',
       },
       {
         path: 'explorer',
@@ -79,6 +127,20 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./packages/analytics/comparatives/comparatives.component').then(
             (m) => m.ComparativesComponent
+          ),
+      },
+      {
+        path: 'recommendations',
+        loadComponent: () =>
+          import('./packages/recommendations/recommendations.component').then(
+            (m) => m.RecommendationsComponent
+          ),
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./packages/users/users.component').then(
+            (m) => m.UsersComponent
           ),
       },
       {
@@ -96,5 +158,4 @@ export const APP_ROUTES: Routes = [
   },
 ];
 
-// Alias para compatibilidad con app.config.ts
 export const routes = APP_ROUTES;
