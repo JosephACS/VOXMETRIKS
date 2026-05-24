@@ -1,0 +1,96 @@
+version: "3.9"
+
+# ── VOXMETRIK_V2 — docker-compose.yml ────────────────────────────────────────
+#
+# Servicios:
+#   pipeline   → ejecuta elt_pipeline.py una sola vez y termina
+#   api        → FastAPI en puerto 8000, arranca cuando el pipeline termina
+#   pocketbase → PocketBase en puerto 8090 (opcional, fuente de datos)
+#
+# Uso rápido:
+#   docker compose up --build          # primera vez
+#   docker compose up api pocketbase   # solo API (pipeline ya corrió)
+#   docker compose run --rm pipeline   # re-ejecutar pipeline manualmente
+
+services:
+
+  # ── ELT Pipeline (job de una sola corrida) ──────────────────────────────────
+  pipeline:
+    build:
+      context: .
+      target: runtime           # usa el stage final del Dockerfile multi-stage
+    image: voxmetrik_v2:latest
+    command: python elt_pipeline.py
+    env_file: .env
+    environment:
+      DB_PATH: /app/duckdb/voxmetrik.duckdb
+      PYTHONPATH: /app
+    volumes:
+      - duckdb_data:/app/duckdb
+      - parquet_data:/app/data
+    networks: [voxmetrik]
+    restart: "no"               # no reiniciar: es un job, no un servicio
+    # El pipeline sale con código 0 si tiene éxito, 1 si falla.
+    # El servicio 'api' espera service_completed_successfully (exit 0).
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: runtime
+    image: voxmetrik_v2:latest
+    command: >
+      uvicorn backend.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+      --log-level info
+    env_file: .env
+    environment:
+      DB_PATH: /app/duckdb/voxmetrik.duckdb
+      PYTHONPATH: /app
+    ports:
+      - "8000:8000"
+    volumes:
+      - duckdb_data:/app/duckdb   # DuckDB compartido con pipeline (read-only en API)
+    networks: [voxmetrik]
+    restart: unless-stopped
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully   # espera que el pipeline termine OK
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── PocketBase ───────────────────────────────────────────────────────────────
+  # Imagen oficial de PocketBase (reemplaza la imagen abandonada muchobien)
+  pocketbase:
+    image: spectado/pocketbase:latest   # imagen actualizada y mantenida
+    ports:
+      - "8090:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+    networks: [voxmetrik]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# ── Volúmenes persistentes ────────────────────────────────────────────────────
+volumes:
+  duckdb_data:    # DuckDB — compartido entre pipeline y api
+  parquet_data:   # Parquet raw — solo lo usa el pipeline
+  pb_data:        # PocketBase data
+
+# ── Red interna ───────────────────────────────────────────────────────────────
+networks:
+  voxmetrik:
+    driver: bridge

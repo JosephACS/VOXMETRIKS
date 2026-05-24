@@ -1,0 +1,30 @@
+# ── VOXMETRIK_V2 .gitignore ───────────────────────────────────────────────────
+.env
+*.duckdb
+*.duckdb.wal
+*.bak_*.duckdb
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Data
+data/processed/
+*.parquet
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Docker
+*.log
