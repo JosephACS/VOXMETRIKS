@@ -36,11 +36,13 @@ export class PlaylistsComponent implements OnInit {
   selected = signal<PlaylistDetail | null>(null);
   isLoading = signal(true);
   showCreate = signal(false);
+  showEdit = signal(false);
   showDetail = signal(false);
   formName = signal('');
   formDesc = signal('');
   formError = signal('');
   saving = signal(false);
+  editingId = signal<number | null>(null);
 
   constructor(private svc: PlaylistsService) {}
 
@@ -82,8 +84,16 @@ export class PlaylistsComponent implements OnInit {
     this.player.setQueue(queue, 0);
   }
 
-  mockDuration(tracks: number): string {
-    const mins = Math.round(tracks * 3.5);
+  formatDuration(tracks: PlaylistTrackItem[]): string {
+    const ms = tracks.reduce((s, t) => s + (t.duration_ms ?? 210000), 0);
+    const mins = Math.round(ms / 60000);
+    if (!mins) return '0 min';
+    return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
+  }
+
+  durationLabel(count: number, tracks?: PlaylistTrackItem[]): string {
+    if (tracks?.length) return this.formatDuration(tracks);
+    const mins = Math.round(count * 3.5);
     return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
   }
 
@@ -118,6 +128,57 @@ export class PlaylistsComponent implements OnInit {
   closeDetail() {
     this.showDetail.set(false);
     this.selected.set(null);
+  }
+
+  openEdit(det: PlaylistDetail) {
+    this.editingId.set(det.id);
+    this.formName.set(det.name);
+    this.formDesc.set(det.description ?? '');
+    this.formError.set('');
+    this.showEdit.set(true);
+  }
+
+  closeEdit() {
+    this.showEdit.set(false);
+    this.editingId.set(null);
+    this.saving.set(false);
+  }
+
+  saveEdit() {
+    const id = this.editingId();
+    const name = this.formName().trim();
+    if (!id || !name) { this.formError.set('Nombre requerido'); return; }
+    this.saving.set(true);
+    this.svc.update(id, { name, description: this.formDesc().trim() || undefined }).subscribe({
+      next: (updated) => {
+        this.closeEdit();
+        this.load();
+        const det = this.selected();
+        if (det?.id === id) {
+          this.selected.set({ ...det, name: updated.name, description: updated.description });
+        }
+      },
+      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al guardar'); this.saving.set(false); },
+    });
+  }
+
+  deletePlaylist(det: PlaylistDetail) {
+    if (!confirm(`¿Eliminar la playlist "${det.name}"?`)) return;
+    this.svc.delete(det.id).subscribe({
+      next: () => { this.closeDetail(); this.load(); },
+    });
+  }
+
+  removeTrack(trackId: number) {
+    const det = this.selected();
+    if (!det) return;
+    this.svc.removeTrack(det.id, trackId).subscribe({
+      next: () => {
+        this.svc.get(det.id).subscribe({
+          next: (d) => { this.selected.set(d); this.load(); },
+        });
+      },
+    });
   }
 
   icon(key: string, size = 18): SafeHtml {

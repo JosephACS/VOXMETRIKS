@@ -25,6 +25,10 @@
           <span class="track-artist">{{ t.artist }}</span>
         </div>
         @if (t.explicit) { <span class="explicit-badge">{{ 'common.explicit' | t }}</span> }
+        <div class="track-actions" (click)="$event.stopPropagation()">
+          <app-favorite-btn [trackId]="t.id" size="sm" />
+          <app-add-to-playlist-btn [trackId]="t.id" size="sm" [dropUp]="true" />
+        </div>
         <button
           type="button"
           class="expand-btn"

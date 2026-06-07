@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 
@@ -243,4 +243,286 @@ def get_engagement_analytics(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
         "user_retention": retention,
         "top_searches": top_searches,
         "recommendation_avg": engagement_score,
+    }
+
+
+def _table_kind(name: str) -> str:
+    if name.startswith("dim_"):
+        return "dimension"
+    if name.startswith("fact_"):
+        return "fact"
+    if name.startswith("agg_"):
+        return "aggregation"
+    if name.startswith("ctl_") or name == "raw_spotify":
+        return "control"
+    if name.startswith("app_"):
+        return "application"
+    return "other"
+
+
+def _allowed_tables(conn: duckdb.DuckDBPyConnection) -> List[str]:
+    rows = conn.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' ORDER BY table_name"
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
+def get_warehouse_tables(conn: duckdb.DuckDBPyConnection) -> List[Dict[str, Any]]:
+    result: List[Dict[str, Any]] = []
+    for name in _allowed_tables(conn):
+        kind = _table_kind(name)
+        row_count = count_rows(conn, name)
+        columns: List[Dict[str, str]] = []
+        try:
+            desc = conn.execute(f'DESCRIBE "{name}"').fetchall()
+            columns = [{"name": r[0], "type": str(r[1])} for r in desc]
+        except Exception:
+            pass
+        result.append({
+            "name": name,
+            "kind": kind,
+            "layer": "gold" if kind in ("dimension", "fact", "aggregation") else "warehouse",
+            "row_count": row_count,
+            "columns": columns,
+        })
+    return result
+
+
+def get_table_preview(
+    conn: duckdb.DuckDBPyConnection,
+    table_name: str,
+    page: int = 1,
+    limit: int = 8,
+) -> Dict[str, Any]:
+    allowed = set(_allowed_tables(conn))
+    if table_name not in allowed:
+        raise ValueError(f"Table '{table_name}' not found")
+
+    offset = max(0, (page - 1) * limit)
+    total = count_rows(conn, table_name)
+
+    rows_raw = conn.execute(
+        f'SELECT * FROM "{table_name}" LIMIT ? OFFSET ?',
+        [limit, offset],
+    ).fetchall()
+    cols = [d[0] for d in conn.description]
+    rows = []
+    for r in rows_raw:
+        item: Dict[str, Any] = {}
+        for col, val in zip(cols, r):
+            if val is None:
+                item[col] = None
+            elif hasattr(val, "isoformat"):
+                item[col] = val.isoformat()
+            else:
+                item[col] = val
+        rows.append(item)
+
+    col_list = ", ".join(cols[:8]) if cols else "*"
+    query = f"SELECT {col_list}\nFROM {table_name}\nLIMIT {limit}\nOFFSET {offset};"
+
+    return {
+        "table": table_name,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "columns": cols,
+        "rows": rows,
+        "query": query,
+    }
+
+
+MOOD_ENERGY_RANGES: Dict[str, Tuple[float, float]] = {
+    "1_muy_baja": (0.0, 0.2),
+    "2_baja": (0.2, 0.4),
+    "3_media": (0.4, 0.6),
+    "4_alta": (0.6, 0.8),
+    "5_muy_alta": (0.8, 1.001),
+}
+
+MOOD_LABELS: Dict[str, Tuple[str, str]] = {
+    "1_muy_baja": ("Chill", "Muy baja energía · ambiente relajado"),
+    "2_baja": ("Focus", "Baja energía · concentración moderada"),
+    "3_media": ("Balance", "Energía media equilibrada"),
+    "4_alta": ("Workout", "Alta energía · actividad física"),
+    "5_muy_alta": ("Party", "Máxima intensidad · fiesta"),
+}
+
+
+def _parse_energy_range(mood_key: str) -> Optional[Tuple[float, float]]:
+    """Convierte id warehouse o rango numérico a (low, high)."""
+    if mood_key in MOOD_ENERGY_RANGES:
+        return MOOD_ENERGY_RANGES[mood_key]
+    normalized = mood_key.replace("_", ".")
+    if "-" not in normalized:
+        return None
+    parts = normalized.split("-", 1)
+    try:
+        return float(parts[0]), float(parts[1])
+    except ValueError:
+        return None
+
+
+def get_mood_tracks(
+    conn: duckdb.DuckDBPyConnection,
+    mood_key: str,
+    limit: int = 12,
+) -> List[Dict[str, Any]]:
+    parsed = _parse_energy_range(mood_key)
+    if not parsed:
+        return []
+    low, high = parsed
+    rows = conn.execute(
+        """
+        SELECT
+            dt.id_track,
+            dt.nombre_track,
+            da.nombre_artista,
+            dg.nombre_genero,
+            dt.popularity,
+            dt.energy,
+            ROUND(dt.popularity * 0.6 + dt.energy * 100 * 0.4, 1) AS recommendation_score
+        FROM dim_track dt
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
+        LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
+        WHERE dt.energy >= ? AND dt.energy < ?
+        ORDER BY dt.popularity DESC NULLS LAST
+        LIMIT ?
+        """,
+        [low, high if high < 1.0 else 1.001, limit],
+    ).fetchall()
+    result = []
+    for r in rows:
+        artist_raw = r[2] or ""
+        primary = artist_raw.split(";")[0].strip() if artist_raw else None
+        result.append({
+            "id_track": r[0],
+            "nombre_track": r[1],
+            "nombre_artista": primary,
+            "nombre_artista_full": artist_raw,
+            "nombre_genero": r[3],
+            "popularity": r[4],
+            "energy": r[5],
+            "recommendation_score": float(r[6] or 0),
+        })
+    return result
+
+
+def get_recommendations(
+    conn: duckdb.DuckDBPyConnection,
+    favorite_genre: Optional[str] = None,
+    limit: int = 12,
+    mood: Optional[str] = None,
+) -> Dict[str, Any]:
+    tracks: List[Dict[str, Any]] = []
+    try:
+        rows, _ = fetch_rows(
+            conn, "agg_recommendation_scores",
+            columns=[
+                "id_track", "nombre_track", "nombre_artista", "nombre_genero",
+                "recommendation_score", "engagement_score", "popularity",
+            ],
+            order_by="recommendation_score DESC",
+            limit=limit,
+        )
+        tracks = rows
+    except Exception:
+        from .stats_service import get_top_tracks_by_popularity
+        raw = get_top_tracks_by_popularity(conn, limit=limit)
+        tracks = [
+            {
+                "id_track": t.get("id_track"),
+                "nombre_track": t.get("nombre_track"),
+                "nombre_artista": t.get("nombre_artista"),
+                "nombre_genero": t.get("nombre_genero"),
+                "recommendation_score": t.get("popularity"),
+                "popularity": t.get("popularity"),
+            }
+            for t in raw
+        ]
+
+    if favorite_genre and tracks:
+        genre_lower = favorite_genre.lower()
+        preferred = [t for t in tracks if (t.get("nombre_genero") or "").lower() == genre_lower]
+        others = [t for t in tracks if (t.get("nombre_genero") or "").lower() != genre_lower]
+        tracks = preferred + others
+
+    artists: List[Dict[str, Any]] = []
+    try:
+        rows, _ = fetch_rows(
+            conn, "agg_top_artistas",
+            columns=["id_artista", "nombre_artista", "promedio_popularidad", "total_tracks"],
+            order_by="promedio_popularidad DESC",
+            limit=8,
+        )
+        artists = [
+            {
+                **r,
+                "affinity": round((r.get("promedio_popularidad") or 0), 1),
+            }
+            for r in rows
+        ]
+    except Exception:
+        pass
+
+    genres: List[Dict[str, Any]] = []
+    try:
+        rows, _ = fetch_rows(
+            conn, "agg_genero_popularidad",
+            columns=["id_genero", "nombre_genero", "popularidad_promedio", "total_tracks"],
+            order_by="popularidad_promedio DESC",
+            limit=10,
+        )
+        max_pop = max((r.get("popularidad_promedio") or 0) for r in rows) if rows else 1
+        genres = [
+            {
+                "genre": r.get("nombre_genero"),
+                "score": round(((r.get("popularidad_promedio") or 0) / max_pop) * 100, 1),
+                "total_tracks": r.get("total_tracks"),
+            }
+            for r in rows
+        ]
+    except Exception:
+        pass
+
+    moods: List[Dict[str, Any]] = []
+    try:
+        rows, _ = fetch_rows(
+            conn, "agg_distribucion_energia",
+            columns=["rango_energia", "cantidad_tracks", "popularidad_promedio"],
+            order_by="rango_energia",
+        )
+        for r in rows:
+            key = r.get("rango_energia", "")
+            meta = MOOD_LABELS.get(key, (key.replace("_", " ").title(), "Colección por energía"))
+            moods.append({
+                "id": key,
+                "name": meta[0],
+                "description": meta[1],
+                "tracks": int(r.get("cantidad_tracks") or 0),
+            })
+    except Exception:
+        pass
+
+    mood_tracks: List[Dict[str, Any]] = []
+    mood_label = None
+    if mood:
+        mood_tracks = get_mood_tracks(conn, mood, limit=limit)
+        for m in moods:
+            if m.get("id") == mood:
+                mood_label = m.get("name")
+                break
+        if not mood_label:
+            meta = MOOD_LABELS.get(mood)
+            mood_label = meta[0] if meta else mood.replace("_", " ")
+
+    return {
+        "for_you": tracks,
+        "artists": artists,
+        "genres": genres,
+        "moods": moods,
+        "mood_filter": mood,
+        "mood_label": mood_label,
+        "mood_tracks": mood_tracks,
+        "mood_count": len(mood_tracks),
     }

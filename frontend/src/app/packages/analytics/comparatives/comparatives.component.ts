@@ -32,7 +32,7 @@ export class ComparativesComponent implements OnInit {
     const top = g[0];
     return [
       { label: 'Géneros', value: g.length, iconKey: 'layers', trend: 'activos', trendClass: 'neutral' },
-      { label: 'Popularidad media', value: avgPop.toFixed(1), iconKey: 'star', trend: '+2.4%', trendClass: 'up' },
+      { label: 'Popularidad media', value: avgPop.toFixed(1), iconKey: 'star', trend: `${avgPop.toFixed(1)} avg`, trendClass: 'neutral' },
       { label: 'Energía media', value: (avgEn * 100).toFixed(0) + '%', iconKey: 'zap', trend: 'estable', trendClass: 'neutral' },
       { label: 'Total canciones', value: this.fmt(totalTracks), iconKey: 'music', trend: top?.nombre_genero ?? '—', trendClass: 'neutral' },
     ];
@@ -91,11 +91,16 @@ export class ComparativesComponent implements OnInit {
         const raw = (g[m.key] as number | undefined) ?? 0;
         const norm = m.key === 'energia_promedio' ? raw : raw / m.max;
         const intensity = Math.min(Math.max(norm, 0), 1);
+        const displayVal = m.key === 'energia_promedio'
+          ? `${Math.round(raw * 100)}%`
+          : m.key === 'total_tracks'
+            ? `${Math.round(raw)} canciones`
+            : `${Math.round(raw)} pts`;
         return {
           genreId: g.id_genero,
           display: m.key === 'energia_promedio' ? `${Math.round(raw * 100)}` : `${Math.round(raw)}`,
           color: this.heatColor(intensity),
-          tooltip: `${g.nombre_genero}: ${raw}`,
+          tooltip: `${g.nombre_genero ?? 'Género'} · ${m.metric}: ${displayVal} · intensidad ${Math.round(intensity * 100)}%`,
         };
       }),
     }));

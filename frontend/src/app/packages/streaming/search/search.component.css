@@ -1,5 +1,16 @@
 .search-page { width: 100%; display: flex; flex-direction: column; gap: var(--section-gap); }
 
+.section-title { font-size: 0.95rem; font-weight: 700; margin: 1rem 0 0.5rem; color: var(--text-muted); }
+.artist-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.artist-chip {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.85rem;
+  border-radius: 999px; text-decoration: none; color: inherit;
+}
+.artist-initial {
+  width: 28px; height: 28px; border-radius: 50%; background: rgba(30,216,150,0.2);
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+}
+
 .search-header { padding: 1rem 1.125rem; }
 .search-header h1 { font-size: 1.25rem; margin: 0 0 0.75rem; font-weight: 700; }
 

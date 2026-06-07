@@ -3,8 +3,10 @@ import { IconRenderService } from '../../../shared/services/icon-render.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ArtistsService } from '../services/artists.service';
 import { Artista, TopArtista, PaginatedResponse } from '../../../shared/models/api.models';
+import { splitArtistNames, primaryArtistName } from '../../../shared/utils/artist.util';
 
 type ModalMode = 'create' | 'edit' | 'delete' | null;
 
@@ -39,11 +41,27 @@ export class ArtistsComponent implements OnInit {
   formError    = signal('');
   formSaving   = signal(false);
 
-  constructor(private svc: ArtistsService) {}
+  constructor(private svc: ArtistsService, private route: ActivatedRoute) {}
 
   ngOnInit() {
     this.loadTopArtists();
-    this.loadArtists();
+    this.route.queryParamMap.subscribe((pm) => {
+      const q = pm.get('q') ?? '';
+      if (q) this.searchVal.set(q);
+      this.loadArtists();
+    });
+  }
+
+  artistNames(name: string): string[] {
+    return splitArtistNames(name);
+  }
+
+  displayPrimaryName(name?: string | null): string {
+    return primaryArtistName(name);
+  }
+
+  displayPrimaryInitial(name?: string | null): string {
+    return primaryArtistName(name).charAt(0).toUpperCase() || '?';
   }
 
   loadTopArtists() {

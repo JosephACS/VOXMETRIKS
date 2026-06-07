@@ -11,7 +11,7 @@
         </svg>
         Artistas
       </h1>
-      <p class="page-subtitle">Directorio completo · dim_artista</p>
+      <p class="page-subtitle">Artistas individuales · colaboraciones mostradas por separado</p>
     </div>
     <div class="page-header-actions">
       @if (!isLoading() && !hasError()) {
@@ -29,9 +29,9 @@
       @for (a of topArtists(); track a.id_artista; let i = $index) {
         <div class="top-artist-card">
           <span class="rank-badge">#{{ i + 1 }}</span>
-          <div class="top-artist-avatar">{{ (a.nombre_artista ?? '?').charAt(0).toUpperCase() }}</div>
+          <div class="top-artist-avatar">{{ displayPrimaryInitial(a.nombre_artista) }}</div>
           <div class="top-artist-info">
-            <span class="top-artist-name" [title]="a.nombre_artista ?? ''">{{ a.nombre_artista ?? '—' }}</span>
+            <span class="top-artist-name" [title]="a.nombre_artista ?? ''">{{ displayPrimaryName(a.nombre_artista) }}</span>
             <div class="top-artist-meta">
               <span class="stat-pill popularity"><span class="pill-icon" [innerHTML]="icon('star', 12)"></span> {{ (a.promedio_popularidad ?? 0) | number:'1.0-1' }}</span>
               <span class="stat-pill tracks"><span class="pill-icon" [innerHTML]="icon('music', 12)"></span> {{ (a.total_tracks ?? 0) | number }}</span>
@@ -101,8 +101,13 @@
                   <td class="col-id mono text-muted">{{ artist.id_artista }}</td>
                   <td class="col-name">
                     <div class="artist-cell">
-                      <div class="artist-avatar-initials">{{ artist.nombre_artista.charAt(0).toUpperCase() }}</div>
-                      <span class="artist-name">{{ artist.nombre_artista }}</span>
+                      <div class="artist-avatar-initials">{{ displayPrimaryInitial(artist.nombre_artista) }}</div>
+                      <div class="artist-name-wrap">
+                        @for (name of artistNames(artist.nombre_artista); track name; let last = $last) {
+                          <span class="artist-chip-name">{{ name }}</span>
+                          @if (!last) { <span class="feat-sep">·</span> }
+                        }
+                      </div>
                     </div>
                   </td>
                   <td class="col-actions">

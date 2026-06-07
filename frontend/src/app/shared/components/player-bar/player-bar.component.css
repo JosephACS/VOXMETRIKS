@@ -44,6 +44,13 @@
   min-width: 0;
 }
 
+.track-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 .player-track.expandable {
   cursor: pointer;
   border-radius: 8px;

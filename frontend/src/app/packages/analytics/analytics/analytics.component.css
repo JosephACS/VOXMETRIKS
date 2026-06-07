@@ -101,11 +101,20 @@
 
 .chart-card:hover { background: var(--spotify-card-hover); }
 
+.chart-head { margin-bottom: 1rem; }
+
 .chart-title {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 1rem;
+  margin: 0;
+}
+
+.chart-subtitle {
+  font-size: 0.7rem;
+  color: var(--spotify-muted);
+  margin: 0.25rem 0 0;
+  line-height: 1.35;
 }
 
 .skel-chart {
@@ -146,22 +155,21 @@
 
 .e-bar {
   width: 100%;
-  background: var(--chart-fill);
+  background: linear-gradient(180deg, #1ed896 0%, #148f5e 100%);
   border-radius: 4px 4px 0 0;
   position: relative;
   min-height: 6px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 4px;
   transition: height 600ms;
 }
 
-.e-val {
-  font-size: 0.6rem;
+.e-val-out {
+  font-size: 0.72rem;
   font-family: var(--font-mono);
-  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .e-label {

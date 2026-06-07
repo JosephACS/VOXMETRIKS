@@ -2,11 +2,13 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { FavoriteBtnComponent } from '../favorite-btn/favorite-btn.component';
+import { AddToPlaylistBtnComponent } from '../add-to-playlist-btn/add-to-playlist-btn.component';
 
 @Component({
   selector: 'app-player-bar',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, FavoriteBtnComponent, AddToPlaylistBtnComponent],
   templateUrl: './player-bar.component.html',
   styleUrls: ['./player-bar.component.css'],
 })

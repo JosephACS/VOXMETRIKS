@@ -244,7 +244,7 @@
       <section class="glass-panel section-panel">
         <div class="section-head"><h2>Dispositivos</h2></div>
         <div class="devices-grid">
-          @for (dev of devices; track dev.id) {
+          @for (dev of devices(); track dev.id) {
             <div class="device-card">
               <span class="device-icon" [innerHTML]="icon(dev.iconKey, 18)"></span>
               <div class="device-info">

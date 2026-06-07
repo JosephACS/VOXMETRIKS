@@ -138,6 +138,60 @@ def add_track_to_playlist(
     return True
 
 
+def update_playlist(
+    conn: duckdb.DuckDBPyConnection,
+    playlist_id: int,
+    user_id: int,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    ensure_app_tables(conn)
+    row = conn.execute(
+        "SELECT id, name, description, created_at FROM app_playlist WHERE id = ? AND user_id = ?",
+        [playlist_id, user_id],
+    ).fetchone()
+    if not row:
+        return None
+    new_name = name.strip() if name and name.strip() else row[1]
+    new_desc = description if description is not None else row[2]
+    conn.execute(
+        "UPDATE app_playlist SET name = ?, description = ? WHERE id = ? AND user_id = ?",
+        [new_name, new_desc, playlist_id, user_id],
+    )
+    count = conn.execute(
+        "SELECT COUNT(*) FROM app_playlist_track WHERE playlist_id = ?",
+        [playlist_id],
+    ).fetchone()[0]
+    return {
+        "id": playlist_id,
+        "name": new_name,
+        "description": new_desc,
+        "created_at": str(row[3]) if row[3] else None,
+        "total_tracks": int(count or 0),
+    }
+
+
+def delete_playlist(
+    conn: duckdb.DuckDBPyConnection, playlist_id: int, user_id: int
+) -> bool:
+    ensure_app_tables(conn)
+    owned = conn.execute(
+        "SELECT 1 FROM app_playlist WHERE id = ? AND user_id = ?",
+        [playlist_id, user_id],
+    ).fetchone()
+    if not owned:
+        return False
+    conn.execute(
+        "DELETE FROM app_playlist_track WHERE playlist_id = ?",
+        [playlist_id],
+    )
+    conn.execute(
+        "DELETE FROM app_playlist WHERE id = ? AND user_id = ?",
+        [playlist_id, user_id],
+    )
+    return True
+
+
 def remove_track_from_playlist(
     conn: duckdb.DuckDBPyConnection, playlist_id: int, track_id: int, user_id: int
 ) -> bool:

@@ -1,6 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
@@ -15,6 +15,8 @@ import {
   LoadMode,
 } from '../../../core/services/ui-preferences.service';
 import { TranslationKey } from '../../../core/i18n/translations';
+import { StatsService } from '../../analytics/services/stats.service';
+import { HealthResponse } from '../../../shared/models/api.models';
 
 type SettingsTab = 'general' | 'api' | 'warehouse' | 'pipeline';
 
@@ -25,13 +27,17 @@ type SettingsTab = 'general' | 'api' | 'warehouse' | 'pipeline';
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   private iconRender = inject(IconRenderService);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
+  private stats = inject(StatsService);
   ui = inject(UiPreferencesService);
 
   activeTab = signal<SettingsTab>('general');
+  healthLoading = signal(false);
+  healthError = signal(false);
+  health = signal<HealthResponse | null>(null);
 
   apiUrl = environment.apiUrl;
   warehousePath = 'data/warehouse/voxmetrik.duckdb';
@@ -102,8 +108,46 @@ export class SettingsComponent {
     return list.map((t) => ({ ...t, label: this.i18n.t(t.labelKey) }));
   });
 
+  ngOnInit() {
+    this.refreshHealth();
+  }
+
   selectTab(tab: SettingsTab) {
     this.activeTab.set(tab);
+    if (tab === 'api') this.refreshHealth();
+  }
+
+  refreshHealth() {
+    this.healthLoading.set(true);
+    this.healthError.set(false);
+    this.stats.getHealth().subscribe({
+      next: (h) => {
+        this.health.set(h);
+        this.healthLoading.set(false);
+      },
+      error: () => {
+        this.healthError.set(true);
+        this.healthLoading.set(false);
+      },
+    });
+  }
+
+  healthStatusClass(): string {
+    if (this.healthError() || this.healthLoading()) return 'status-warn';
+    const s = this.health()?.status;
+    if (s === 'ok') return 'status-ok';
+    if (s === 'degraded') return 'status-warn';
+    return 'status-error';
+  }
+
+  healthStatusText(): string {
+    if (this.healthLoading()) return 'Comprobando estado del sistema…';
+    if (this.healthError()) return 'No se pudo contactar el backend en /health';
+    const h = this.health();
+    if (!h) return 'Estado desconocido';
+    if (h.status === 'ok') return `Sistema operativo · ${h.tables.length} tablas en warehouse`;
+    if (h.status === 'degraded') return 'Sistema degradado · base de datos no encontrada';
+    return `Estado: ${h.status}`;
   }
 
   icon(key: string, size = 18): SafeHtml {

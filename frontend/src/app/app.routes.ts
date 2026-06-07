@@ -83,6 +83,13 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        path: 'history',
+        loadComponent: () =>
+          import('./packages/history/history.component').then(
+            (m) => m.HistoryComponent
+          ),
+      },
+      {
         path: 'genres',
         loadComponent: () =>
           import('./packages/streaming/genres/genres.component').then(

@@ -11,7 +11,13 @@ from app.packages.analytics.services.analytics_service import (
     get_trending_analytics,
     get_platform_analytics,
     get_engagement_analytics,
+    get_warehouse_tables,
+    get_table_preview,
+    get_recommendations,
 )
+from app.packages.analytics.services.history_service import get_history_hub
+from app.packages.users.services.auth_deps import get_optional_user_id
+from app.packages.users.services.user_service import get_me
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -37,3 +43,46 @@ def platform(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
 @router.get("/engagement", summary="Engagement metrics — skip rate, retention, searches")
 def engagement(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
     return get_engagement_analytics(conn)
+
+
+@router.get("/explorer/tables", summary="List warehouse tables with metadata")
+def explorer_tables(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+    return get_warehouse_tables(conn)
+
+
+@router.get("/explorer/preview/{table_name}", summary="Preview rows from a warehouse table")
+def explorer_preview(
+    table_name: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(8, ge=1, le=50),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    try:
+        return get_table_preview(conn, table_name, page=page, limit=limit)
+    except ValueError as exc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/history", summary="Unified history — user activity and searches")
+def history(
+    limit: int = Query(25, ge=1, le=50),
+    user_id: int | None = Depends(get_optional_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    return get_history_hub(conn, user_id=user_id, limit=limit)
+
+
+@router.get("/recommendations", summary="Personalized recommendations from warehouse")
+def recommendations(
+    limit: int = Query(12, ge=1, le=50),
+    mood: str | None = Query(None, description="Energy range id e.g. 0_0-0_2"),
+    user_id: int | None = Depends(get_optional_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    favorite_genre = None
+    if user_id:
+        profile = get_me(conn, user_id)
+        if profile:
+            favorite_genre = profile.get("favorite_genre")
+    return get_recommendations(conn, favorite_genre=favorite_genre, limit=limit, mood=mood)

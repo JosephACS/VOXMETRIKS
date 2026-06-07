@@ -31,11 +31,25 @@
           </div>
           <div class="pl-info">
             <h3>{{ pl.name }}</h3>
-            <p class="pl-meta">{{ pl.total_tracks }} canciones · {{ mockDuration(pl.total_tracks) }}</p>
+            <p class="pl-meta">{{ pl.total_tracks }} canciones · {{ durationLabel(pl.total_tracks) }}</p>
             @if (pl.description) { <p class="pl-desc">{{ pl.description }}</p> }
           </div>
         </article>
       }
+    </div>
+  }
+
+  @if (showEdit()) {
+    <div class="overlay" (click)="closeEdit()"></div>
+    <div class="modal glass-panel">
+      <h2>Editar playlist</h2>
+      <label>Nombre<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" /></label>
+      <label>Descripción<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2"></textarea></label>
+      @if (formError()) { <p class="err">{{ formError() }}</p> }
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" (click)="closeEdit()">Cancelar</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveEdit()">Guardar</button>
+      </div>
     </div>
   }
 
@@ -65,8 +79,12 @@
         <div class="detail-meta-block">
           <span class="detail-type">Lista</span>
           <h2>{{ det.name }}</h2>
-          <p class="det-meta">{{ det.total_tracks }} canciones · {{ mockDuration(det.total_tracks) }}</p>
+          <p class="det-meta">{{ det.total_tracks }} canciones · {{ formatDuration(det.tracks) }}</p>
           @if (det.description) { <p class="det-desc">{{ det.description }}</p> }
+          <div class="detail-actions">
+            <button type="button" class="btn-ghost-sm" (click)="openEdit(det)">Editar</button>
+            <button type="button" class="btn-danger-sm" (click)="deletePlaylist(det)">Eliminar</button>
+          </div>
           <button type="button" class="btn-play-pl" (click)="playPlaylist()" [disabled]="!det.tracks.length">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Reproducir
@@ -75,11 +93,14 @@
       </div>
       <div class="track-list">
         @for (t of det.tracks; track t.id_track; let i = $index) {
-          <app-track-row
-            [track]="playlistQueue(det.tracks)[i]"
-            [index]="i + 1"
-            [queue]="playlistQueue(det.tracks)"
-          />
+          <div class="track-row-wrap">
+            <app-track-row
+              [track]="playlistQueue(det.tracks)[i]"
+              [index]="i + 1"
+              [queue]="playlistQueue(det.tracks)"
+            />
+            <button type="button" class="btn-remove-track" title="Quitar de la playlist" (click)="removeTrack(t.id_track)">×</button>
+          </div>
         }
         @if (!det.tracks.length) {
           <p class="empty-tracks">Sin canciones — agrégalas desde el detalle de una canción.</p>

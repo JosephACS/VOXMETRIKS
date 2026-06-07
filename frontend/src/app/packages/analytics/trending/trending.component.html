@@ -36,7 +36,7 @@
             <span class="pop-val">{{ hero.popularity ?? 0 }} popularidad</span>
           </div>
           <div class="hero-trend up">
-            <span [innerHTML]="icon('trend-up', 14)"></span> +12% esta semana
+            <span [innerHTML]="icon('trend-up', 14)"></span> Popularidad {{ hero.popularity ?? 0 }}
           </div>
           <div class="hero-actions">
             <button type="button" class="hero-play" (click)="playHero()">
@@ -58,7 +58,7 @@
       <section class="glass-panel chart-section">
         <div class="panel-head">
           <h2>Chart semanal</h2>
-          <span class="panel-meta">Reproducciones simuladas</span>
+          <span class="panel-meta">Streams diarios (agg_daily_streams)</span>
         </div>
         <svg viewBox="0 0 400 120" class="weekly-chart" aria-hidden="true">
           <defs>

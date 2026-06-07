@@ -7,13 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import get_conn, get_write_conn
 from app.shared.schemas.models import (
-    PlaylistCreate, PlaylistDetail, PlaylistSummary,
-    PlaylistTrackAdd,
+    PlaylistCreate, PlaylistUpdate, PlaylistDetail, PlaylistSummary,
+    PlaylistTrackAdd, DeleteResponse,
 )
 from app.packages.users.services.auth_deps import require_user_id
 from app.packages.streaming.services.playlist_service import (
-    list_playlists, get_playlist, create_playlist,
-    add_track_to_playlist, remove_track_from_playlist,
+    list_playlists, get_playlist, create_playlist, update_playlist,
+    delete_playlist, add_track_to_playlist, remove_track_from_playlist,
 )
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
@@ -48,6 +48,36 @@ def get_one(
     if not row:
         raise HTTPException(status_code=404, detail=f"Playlist {playlist_id} not found")
     return row
+
+
+@router.put("/{playlist_id}", response_model=PlaylistSummary, summary="Update playlist")
+def update(
+    playlist_id: int,
+    body: PlaylistUpdate,
+    user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    if body.name is not None and not body.name.strip():
+        raise HTTPException(status_code=400, detail="name cannot be empty")
+    row = update_playlist(
+        conn, playlist_id, user_id,
+        name=body.name, description=body.description,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Playlist {playlist_id} not found")
+    return row
+
+
+@router.delete("/{playlist_id}", response_model=DeleteResponse, summary="Delete playlist")
+def delete(
+    playlist_id: int,
+    user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    ok = delete_playlist(conn, playlist_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"Playlist {playlist_id} not found")
+    return DeleteResponse(deleted=True, id=playlist_id)
 
 
 @router.post("/{playlist_id}/tracks", status_code=201, summary="Add track to playlist")

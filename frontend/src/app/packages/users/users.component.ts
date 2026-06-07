@@ -7,6 +7,7 @@ import { RouterModule } from '@angular/router';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
 import { UserService } from './services/user.service';
 import { HistoryService } from '../streaming/services/history.service';
+import { StatsService } from '../analytics/services/stats.service';
 import { UserProfile, HistoryEntry } from '../../shared/models/api.models';
 
 interface ListenRecord {
@@ -73,6 +74,7 @@ export class UsersComponent implements OnInit {
 
   private userSvc = inject(UserService);
   private historySvc = inject(HistoryService);
+  private statsSvc = inject(StatsService);
 
   isLoading = signal(true);
   searchQuery = signal('');
@@ -87,7 +89,8 @@ export class UsersComponent implements OnInit {
     { x: 160, label: 'Jue' }, { x: 210, label: 'Vie' }, { x: 260, label: 'Sáb' }, { x: 310, label: 'Dom' },
   ];
 
-  private activityData = [32, 48, 41, 65, 58, 78, 72];
+  activityData = signal<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  devices = signal<{ id: string; name: string; platform: string; lastAccess: string; online: boolean; iconKey: string }[]>([]);
 
   private translatePlan(plan: string): string {
     const map: Record<string, string> = {
@@ -207,11 +210,6 @@ export class UsersComponent implements OnInit {
     }];
   });
 
-  devices = [
-    { id: 'desktop', name: 'Desktop', platform: 'Web · VOXMETRIK', lastAccess: 'Ahora', online: true, iconKey: 'monitor' },
-    { id: 'mobile', name: 'Mobile', platform: 'PWA', lastAccess: '—', online: false, iconKey: 'smartphone' },
-  ];
-
   recentCarousel = computed((): RecentItem[] =>
     this.listenHistory().slice(0, 8).map((r, i) => ({
       ...r,
@@ -239,7 +237,7 @@ export class UsersComponent implements OnInit {
   );
 
   activityPoints = computed(() =>
-    this.activityData.map((v, i) => ({ x: 10 + i * 50, y: 88 - v * 0.75 }))
+    this.activityData().map((v, i) => ({ x: 10 + i * 50, y: 88 - Math.min(v, 100) * 0.75 }))
   );
 
   ngOnInit() {
@@ -248,6 +246,36 @@ export class UsersComponent implements OnInit {
     this.userSvc.getMe().subscribe({
       next: (p) => { this.profile.set(p); this.isLoading.set(false); },
       error: () => this.isLoading.set(false),
+    });
+
+    this.statsSvc.getTrendingAnalytics(7).subscribe({
+      next: (d) => {
+        const vals = (d.daily_streams ?? []).slice(-7).map((x) => {
+          const max = Math.max(...(d.daily_streams ?? []).map((s) => s.total_streams ?? 0), 1);
+          return Math.round(((x.total_streams ?? 0) / max) * 100);
+        });
+        if (vals.length) this.activityData.set(vals);
+      },
+    });
+
+    this.statsSvc.getPlatformAnalytics().subscribe({
+      next: (d) => {
+        const devs = (d.devices ?? []).slice(0, 4).map((dev, i) => ({
+          id: dev.device_type ?? `dev-${i}`,
+          name: dev.device_type ?? 'Dispositivo',
+          platform: `${dev.device_type ?? '—'} · ${dev.stream_count ?? 0} streams`,
+          lastAccess: 'Sesión activa',
+          online: i === 0,
+          iconKey: i === 0 ? 'monitor' : 'smartphone',
+        }));
+        if (devs.length) {
+          this.devices.set(devs);
+        } else {
+          this.devices.set([
+            { id: 'web', name: 'Web Player', platform: 'VOXMETRIK SPA', lastAccess: 'Ahora', online: true, iconKey: 'monitor' },
+          ]);
+        }
+      },
     });
   }
 

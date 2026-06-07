@@ -390,6 +390,115 @@
   margin-top: auto;
 }
 
+.panel-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0.2rem 0 0;
+}
+
+.mood-hint {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+}
+
+.mood-results {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.mood-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mood-results-badge {
+  padding: 0.35rem 0.75rem;
+  background: rgba(30, 216, 150, 0.15);
+  border: 1px solid rgba(30, 216, 150, 0.35);
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mood-results-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.mood-status {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 1.5rem;
+}
+
+.mood-empty {
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.mood-empty p { margin: 0 0 0.5rem; }
+.mood-empty-hint { font-size: 0.8rem; color: var(--text-muted); }
+
+.mood-tracks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.mood-track-card {
+  display: block;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s, border-color 0.15s;
+  border-left: 3px solid var(--accent, #1ed896);
+}
+
+.mood-track-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.mood-track-card h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: #fff;
+}
+
+.mt-artist {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.mt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mt-energy {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
 /* Table */
 .table-wrap {
   overflow-x: auto;

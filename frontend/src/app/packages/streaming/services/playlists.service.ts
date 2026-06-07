@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-  PlaylistSummary, PlaylistDetail, PlaylistCreate,
+  PlaylistSummary, PlaylistDetail, PlaylistCreate, PlaylistUpdate, DeleteResponse,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -29,5 +29,13 @@ export class PlaylistsService {
 
   removeTrack(playlistId: number, trackId: number): Observable<{ removed: boolean }> {
     return this.http.delete<{ removed: boolean }>(`${this.API}/${playlistId}/tracks/${trackId}`);
+  }
+
+  update(id: number, body: PlaylistUpdate): Observable<PlaylistSummary> {
+    return this.http.put<PlaylistSummary>(`${this.API}/${id}`, body);
+  }
+
+  delete(id: number): Observable<DeleteResponse> {
+    return this.http.delete<DeleteResponse>(`${this.API}/${id}`);
   }
 }

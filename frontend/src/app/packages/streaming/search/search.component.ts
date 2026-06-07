@@ -5,8 +5,11 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TracksService } from '../services/tracks.service';
-import { TrackSearchResult } from '../../../shared/models/api.models';
+import { ArtistsService } from '../services/artists.service';
+import { TrackSearchResult, Artista } from '../../../shared/models/api.models';
+import { primaryArtistName } from '../../../shared/utils/artist.util';
 import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
+import { SearchHistoryService } from '../services/search-history.service';
 
 @Component({
   selector: 'app-search',
@@ -19,12 +22,18 @@ export class SearchComponent implements OnInit {
   private iconRender = inject(IconRenderService);
 
   query = signal('');
-  results = signal<TrackSearchResult[]>([]);
+  trackResults = signal<TrackSearchResult[]>([]);
+  artistResults = signal<Artista[]>([]);
   isLoading = signal(false);
   searched = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private route: ActivatedRoute, private tracksSvc: TracksService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private tracksSvc: TracksService,
+    private artistsSvc: ArtistsService,
+    private searchHistory: SearchHistoryService,
+  ) {}
 
   ngOnInit() {
     this.route.queryParamMap.subscribe((pm) => {
@@ -42,16 +51,47 @@ export class SearchComponent implements OnInit {
 
   runSearch(q: string) {
     if (!q.trim()) {
-      this.results.set([]);
+      this.trackResults.set([]);
+      this.artistResults.set([]);
       this.searched.set(false);
       return;
     }
     this.isLoading.set(true);
     this.searched.set(true);
-    this.tracksSvc.searchTracks(q.trim()).subscribe({
-      next: (d) => { this.results.set(d ?? []); this.isLoading.set(false); },
-      error: () => { this.results.set([]); this.isLoading.set(false); },
+    const term = q.trim();
+    let pending = 2;
+    let trackCount = 0;
+    let artistCount = 0;
+    const done = () => {
+      if (--pending <= 0) {
+        this.isLoading.set(false);
+        this.searchHistory.add(term, trackCount, artistCount);
+      }
+    };
+
+    this.tracksSvc.searchTracks(term).subscribe({
+      next: (d) => {
+        const items = d ?? [];
+        trackCount = items.length;
+        this.trackResults.set(items);
+        done();
+      },
+      error: () => { this.trackResults.set([]); done(); },
     });
+
+    this.artistsSvc.listArtists(1, 20, term).subscribe({
+      next: (res) => {
+        const items = res.items ?? [];
+        artistCount = items.length;
+        this.artistResults.set(items);
+        done();
+      },
+      error: () => { this.artistResults.set([]); done(); },
+    });
+  }
+
+  hasResults(): boolean {
+    return this.trackResults().length > 0 || this.artistResults().length > 0;
   }
 
   cover(i: number): string {
@@ -65,5 +105,9 @@ export class SearchComponent implements OnInit {
 
   icon(key: string, size = 18): SafeHtml {
     return this.iconRender.render(key, size);
+  }
+
+  artistLabel(name?: string): string {
+    return primaryArtistName(name);
   }
 }

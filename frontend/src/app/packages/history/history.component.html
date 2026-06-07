@@ -1,0 +1,212 @@
+<div class="hist-page">
+  <header class="vx-page-header">
+    <div>
+      <h1>Historial</h1>
+      <p class="page-subtitle">Música escuchada, actividad de usuario y búsquedas recientes</p>
+    </div>
+    <button type="button" class="refresh-btn" (click)="loadHub()" [disabled]="isLoading()">
+      {{ isLoading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </header>
+
+  <nav class="tab-bar">
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'music'" (click)="selectTab('music')">
+      <span [innerHTML]="icon('music', 16)"></span>
+      Música
+      <span class="tab-count">{{ musicCount() }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'user'" (click)="selectTab('user')">
+      <span [innerHTML]="icon('user', 16)"></span>
+      Usuario
+      <span class="tab-count">{{ userCount() }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'search'" (click)="selectTab('search')">
+      <span [innerHTML]="icon('search', 16)"></span>
+      Búsquedas
+      <span class="tab-count">{{ searchCount() }}</span>
+    </button>
+  </nav>
+
+  @if (hasError()) {
+    <div class="empty-panel glass-panel">
+      <p>No se pudo cargar datos del warehouse. Los historiales locales siguen disponibles.</p>
+    </div>
+  }
+
+  <!-- MÚSICA -->
+  @if (activeTab() === 'music') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>Historial de música</h2>
+          <p class="section-desc">Canciones que has reproducido o visitado (guardado en tu navegador)</p>
+        </div>
+        @if (localMusicEntries().length) {
+          <button type="button" class="ghost-btn" (click)="clearLocalMusic()">Limpiar</button>
+        }
+      </div>
+
+      @if (!localMusicEntries().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('music', 28)"></span>
+          <p>Aún no hay canciones en tu historial.</p>
+          <p class="empty-hint">Reproduce o abre un track para que aparezca aquí.</p>
+          <a routerLink="/tracks" class="cta-link">Explorar canciones</a>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (item of localMusicEntries(); track item.id_track; let i = $index) {
+            <a class="timeline-row" [routerLink]="['/tracks', item.id_track]">
+              <span class="row-rank">{{ i + 1 }}</span>
+              <div class="row-main">
+                <span class="row-title">{{ item.nombre_track }}</span>
+                <span class="row-sub">{{ artistName(item.nombre_artista) }}</span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(item.viewed_at) }}</span>
+            </a>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- USUARIO -->
+  @if (activeTab() === 'user') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>Historial de usuario</h2>
+          <p class="section-desc">Sesiones, favoritos y acciones en la plataforma — sin búsquedas</p>
+        </div>
+      </div>
+
+      @if (isLoading()) {
+        <p class="loading-msg">Cargando actividad…</p>
+      } @else if (!userTimeline().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('user', 28)"></span>
+          <p>No hay actividad registrada para tu cuenta.</p>
+          <p class="empty-hint">Inicia sesión, añade favoritos o reproduce música para ver eventos aquí.</p>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (ev of userTimeline(); track $index) {
+            <div class="timeline-row static">
+              <span class="event-icon" [innerHTML]="icon(eventIcon(ev.event_type), 16)"></span>
+              <div class="row-main">
+                <span class="row-title">{{ ev.label ?? ev.event_type }}</span>
+                <span class="row-sub">
+                  @if (ev.nombre_track) {
+                    {{ ev.nombre_track }} — {{ artistName(ev.nombre_artista) }}
+                  } @else {
+                    {{ ev.detalle ?? 'Evento de cuenta' }}
+                  }
+                </span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(ev.fecha_evento) }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    @if (userFavorites().length) {
+      <section class="glass-panel section">
+        <div class="section-head">
+          <h2>Favoritos añadidos</h2>
+          <span class="meta-badge">{{ userFavorites().length }}</span>
+        </div>
+        <div class="chip-list">
+          @for (f of userFavorites(); track $index) {
+            @if (f.id_track) {
+              <a class="fav-chip" [routerLink]="['/tracks', f.id_track]">
+                {{ f.nombre_track }} · {{ artistName(f.nombre_artista) }}
+              </a>
+            }
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <!-- BÚSQUEDAS -->
+  @if (activeTab() === 'search') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>Tus búsquedas recientes</h2>
+          <p class="section-desc">Consultas realizadas en la app (almacenadas localmente por usuario)</p>
+        </div>
+        @if (localSearchEntries().length) {
+          <button type="button" class="ghost-btn" (click)="clearLocalSearch()">Limpiar</button>
+        }
+      </div>
+
+      @if (!localSearchEntries().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('search', 28)"></span>
+          <p>No hay búsquedas guardadas.</p>
+          <p class="empty-hint">Usa el buscador para que tus consultas aparezcan aquí.</p>
+          <a routerLink="/search" class="cta-link">Ir a buscar</a>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (s of localSearchEntries(); track s.query + s.searched_at; let i = $index) {
+            <a class="timeline-row search-row" [routerLink]="['/search']" [queryParams]="{ q: s.query }">
+              <span class="row-rank">{{ i + 1 }}</span>
+              <div class="row-main">
+                <span class="row-title">"{{ s.query }}"</span>
+                <span class="row-sub">
+                  {{ s.track_count ?? 0 }} canciones · {{ s.artist_count ?? 0 }} artistas
+                </span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(s.searched_at) }}</span>
+            </a>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>Búsquedas en el warehouse</h2>
+          <p class="section-desc">Registros de <code>fact_searches</code> vinculados a tu usuario analítico</p>
+        </div>
+        <span class="meta-badge">{{ warehouseSearches().length }}</span>
+      </div>
+
+      @if (isLoading()) {
+        <p class="loading-msg">Cargando búsquedas del warehouse…</p>
+      } @else if (!warehouseSearches().length) {
+        <p class="empty-hint center">Sin búsquedas en el warehouse para tu usuario. Inicia sesión para ver datos analíticos.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Consulta</th>
+                <th>Resultados</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ws of warehouseSearches(); track ws.id_search ?? $index) {
+                <tr>
+                  <td>
+                    <a class="search-link" [routerLink]="['/search']" [queryParams]="{ q: ws.query }">
+                      {{ ws.query ?? '—' }}
+                    </a>
+                  </td>
+                  <td class="mono">{{ ws.results_count ?? 0 }}</td>
+                  <td class="mono">{{ formatRelative(ws.fecha_evento) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+</div>

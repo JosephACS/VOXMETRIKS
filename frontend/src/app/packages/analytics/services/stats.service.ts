@@ -6,6 +6,7 @@ import {
   StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad,
   SyntheticResult, SyntheticLimits, CatalogGrowthPoint,
   WarehouseStatus, TrendingAnalytics, PlatformAnalytics, EngagementAnalytics,
+  WarehouseTableMeta, TablePreview, RecommendationPayload, HealthResponse, HistoryHub,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -64,5 +65,33 @@ export class StatsService {
 
   getEngagementAnalytics(): Observable<EngagementAnalytics> {
     return this.http.get<EngagementAnalytics>(`${environment.apiUrl}/analytics/engagement`);
+  }
+
+  getExplorerTables(): Observable<WarehouseTableMeta[]> {
+    return this.http.get<WarehouseTableMeta[]>(`${environment.apiUrl}/analytics/explorer/tables`);
+  }
+
+  getTablePreview(table: string, page = 1, limit = 8): Observable<TablePreview> {
+    const params = new HttpParams().set('page', page).set('limit', limit);
+    return this.http.get<TablePreview>(
+      `${environment.apiUrl}/analytics/explorer/preview/${encodeURIComponent(table)}`,
+      { params },
+    );
+  }
+
+  getRecommendations(limit = 12, mood?: string): Observable<RecommendationPayload> {
+    let params = new HttpParams().set('limit', limit);
+    if (mood) params = params.set('mood', mood);
+    return this.http.get<RecommendationPayload>(`${environment.apiUrl}/analytics/recommendations`, { params });
+  }
+
+  getHealth(): Observable<HealthResponse> {
+    const root = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+    return this.http.get<HealthResponse>(`${root}/health`);
+  }
+
+  getHistoryHub(limit = 25): Observable<HistoryHub> {
+    const params = new HttpParams().set('limit', limit);
+    return this.http.get<HistoryHub>(`${environment.apiUrl}/analytics/history`, { params });
   }
 }

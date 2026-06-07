@@ -224,13 +224,21 @@
 
 
 
-            <div class="status-banner status-ok">
+            <div class="status-banner" [class]="healthStatusClass()">
 
               <span class="status-dot"></span>
 
-              {{ 'settings.api.status' | t }}
+              {{ healthStatusText() }}
+
+              @if (!healthLoading() && !healthError() && health(); as h) {
+                <span class="health-meta">v{{ h.version }} · DuckDB</span>
+              }
 
             </div>
+
+            <button type="button" class="refresh-health-btn" (click)="refreshHealth()" [disabled]="healthLoading()">
+              {{ healthLoading() ? 'Comprobando…' : 'Actualizar health check' }}
+            </button>
 
           </section>
 

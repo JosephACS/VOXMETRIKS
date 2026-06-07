@@ -1,23 +1,12 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { MetricBarComponent } from '../../../shared/components/metric-bar/metric-bar.component';
-
-interface AudioFeatureTrack {
-  id: number;
-  nombre: string;
-  artista: string;
-  popularity: number;
-  danceability: number;
-  energy: number;
-  valence: number;
-  acousticness: number;
-  speechiness: number;
-  instrumentalness: number;
-  liveness: number;
-}
+import { TracksService } from '../services/tracks.service';
+import { TrackDetail } from '../../../shared/models/api.models';
 
 interface FeatureDef {
-  key: keyof AudioFeatureTrack;
+  key: keyof TrackDetail;
   label: string;
   color: string;
 }
@@ -25,11 +14,13 @@ interface FeatureDef {
 @Component({
   selector: 'app-audio-features',
   standalone: true,
-  imports: [CommonModule, MetricBarComponent],
+  imports: [CommonModule, RouterModule, MetricBarComponent],
   templateUrl: './audio-features.component.html',
   styleUrls: ['./audio-features.component.css'],
 })
-export class AudioFeaturesComponent {
+export class AudioFeaturesComponent implements OnInit {
+  private tracksSvc = inject(TracksService);
+
   featureDefs: FeatureDef[] = [
     { key: 'danceability', label: 'Bailabilidad', color: '#1ed896' },
     { key: 'energy', label: 'Energía', color: '#7c3aed' },
@@ -40,66 +31,70 @@ export class AudioFeaturesComponent {
     { key: 'liveness', label: 'En vivo', color: '#6366f1' },
   ];
 
-  tracks = signal<AudioFeatureTrack[]>([
-    {
-      id: 1, nombre: 'Blinding Lights', artista: 'The Weeknd',
-      popularity: 89, danceability: 0.73, energy: 0.84, valence: 0.56,
-      acousticness: 0.001, speechiness: 0.05, instrumentalness: 0.0, liveness: 0.09,
-    },
-    {
-      id: 2, nombre: 'Levitating', artista: 'Dua Lipa',
-      popularity: 85, danceability: 0.83, energy: 0.83, valence: 0.84,
-      acousticness: 0.002, speechiness: 0.06, instrumentalness: 0.0, liveness: 0.09,
-    },
-    {
-      id: 3, nombre: 'Shape of You', artista: 'Ed Sheeran',
-      popularity: 82, danceability: 0.76, energy: 0.65, valence: 0.93,
-      acousticness: 0.58, speechiness: 0.09, instrumentalness: 0.0, liveness: 0.09,
-    },
-    {
-      id: 4, nombre: 'Starboy', artista: 'The Weeknd',
-      popularity: 78, danceability: 0.68, energy: 0.59, valence: 0.48,
-      acousticness: 0.14, speechiness: 0.05, instrumentalness: 0.0, liveness: 0.14,
-    },
-    {
-      id: 5, nombre: 'Bad Guy', artista: 'Billie Eilish',
-      popularity: 76, danceability: 0.70, energy: 0.43, valence: 0.56,
-      acousticness: 0.10, speechiness: 0.38, instrumentalness: 0.13, liveness: 0.10,
-    },
-  ]);
+  isLoading = signal(true);
+  hasError = signal(false);
+  tracks = signal<TrackDetail[]>([]);
+  selectedId = signal(0);
 
-  selectedId = signal(1);
-
-  selectedTrack = computed(() =>
-    this.tracks().find((t) => t.id === this.selectedId()) ?? this.tracks()[0]
+  selectedTrack = computed((): TrackDetail | null =>
+    this.tracks().find((t) => t.id_track === this.selectedId()) ?? this.tracks()[0] ?? null
   );
+
+  selectedTrackTitle = computed(() => {
+    const track = this.selectedTrack();
+    return track?.nombre_track ?? '—';
+  });
 
   avgEnergy = computed(() => {
     const t = this.tracks();
-    return +(t.reduce((s, x) => s + x.energy, 0) / t.length).toFixed(2);
+    if (!t.length) return 0;
+    return +(t.reduce((s, x) => s + (x.energy ?? 0), 0) / t.length).toFixed(2);
   });
 
   avgDanceability = computed(() => {
     const t = this.tracks();
-    return +(t.reduce((s, x) => s + x.danceability, 0) / t.length).toFixed(2);
+    if (!t.length) return 0;
+    return +(t.reduce((s, x) => s + (x.danceability ?? 0), 0) / t.length).toFixed(2);
   });
 
   avgValence = computed(() => {
     const t = this.tracks();
-    return +(t.reduce((s, x) => s + x.valence, 0) / t.length).toFixed(2);
+    if (!t.length) return 0;
+    return +(t.reduce((s, x) => s + (x.valence ?? 0), 0) / t.length).toFixed(2);
   });
+
+  ngOnInit() {
+    this.tracksSvc.listTracks(1, 8, undefined, undefined, undefined).subscribe({
+      next: async (res) => {
+        const items = res.items ?? [];
+        const details: TrackDetail[] = [];
+        for (const t of items.slice(0, 6)) {
+          try {
+            const d = await new Promise<TrackDetail>((resolve, reject) => {
+              this.tracksSvc.getTrackDetail(t.id_track).subscribe({ next: resolve, error: reject });
+            });
+            details.push(d);
+          } catch { /* skip */ }
+        }
+        this.tracks.set(details);
+        if (details.length) this.selectedId.set(details[0].id_track);
+        this.isLoading.set(false);
+        if (!details.length) this.hasError.set(true);
+      },
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+  }
 
   selectTrack(id: number) {
     this.selectedId.set(id);
   }
 
-  featureValue(track: AudioFeatureTrack, key: keyof AudioFeatureTrack): number {
+  featureValue(track: TrackDetail, key: keyof TrackDetail): number {
     const v = track[key];
     return typeof v === 'number' ? v : 0;
   }
 
-  /** Punto individual del radar por índice de eje */
-  radarPoint(track: AudioFeatureTrack, index: number): { x: number; y: number } {
+  radarPoint(track: TrackDetail, index: number): { x: number; y: number } {
     const cx = 100;
     const cy = 100;
     const maxR = 72;
@@ -112,8 +107,7 @@ export class AudioFeaturesComponent {
     return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
   }
 
-  /** Puntos SVG para radar chart (7 ejes, valor 0-1) */
-  radarPoints(track: AudioFeatureTrack): string {
+  radarPoints(track: TrackDetail): string {
     return this.featureDefs
       .map((_, i) => {
         const p = this.radarPoint(track, i);

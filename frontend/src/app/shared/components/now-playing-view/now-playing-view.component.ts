@@ -9,13 +9,14 @@ import { StatsService } from '../../../packages/analytics/services/stats.service
 import { PlaylistSummary, HistoryEntry } from '../../models/api.models';
 import { PlayableTrack } from '../../models/player.models';
 import { FavoriteBtnComponent } from '../favorite-btn/favorite-btn.component';
+import { AddToPlaylistBtnComponent } from '../add-to-playlist-btn/add-to-playlist-btn.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { demoAudioUrlForTrack } from '../../config/demo-audio.config';
 
 @Component({
   selector: 'app-now-playing-view',
   standalone: true,
-  imports: [CommonModule, RouterModule, FavoriteBtnComponent, TranslatePipe],
+  imports: [CommonModule, RouterModule, FavoriteBtnComponent, AddToPlaylistBtnComponent, TranslatePipe],
   templateUrl: './now-playing-view.component.html',
   styleUrls: ['./now-playing-view.component.css'],
 })

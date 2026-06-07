@@ -1,247 +1,152 @@
 <div class="rec-page">
-  <!-- Header -->
   <header class="page-header">
     <div class="header-text">
       <h1>Recomendaciones</h1>
-      <p class="page-subtitle">Recomendaciones inteligentes basadas en preferencias musicales</p>
+      <p class="page-subtitle">Sugerencias basadas en el warehouse analítico y tu género favorito</p>
     </div>
-    <div class="header-badges">
-      <span class="badge badge-demo">Datos de demostración</span>
-      <span class="badge badge-ai">Motor IA simulado</span>
-    </div>
+    <span class="badge badge-live">Datos desde DuckDB</span>
   </header>
 
-  <!-- KPIs -->
-  <section class="kpi-grid">
-    <app-kpi-card
-      label="Recomendaciones generadas"
-      [value]="1247"
-      iconKey="chart"
-      color="primary"
-      subtitle="Últimas 24h"
-      trend="+18%"
-      trendLabel="vs ayer"
-      [trendPositive]="true"
-    />
-    <app-kpi-card
-      label="Precisión estimada"
-      [value]="87"
-      iconKey="target"
-      color="info"
-      subtitle="Modelo simulado"
-      trend="87.3%"
-      trendLabel="puntuación"
-    />
-    <app-kpi-card
-      label="Géneros analizados"
-      [value]="42"
-      iconKey="music"
-      color="warning"
-      subtitle="Catálogo activo"
-    />
-    <app-kpi-card
-      label="Usuarios personalizados"
-      [value]="156"
-      iconKey="users"
-      color="secondary"
-      subtitle="Perfiles activos"
-      trend="+12"
-      trendLabel="nuevos"
-      [trendPositive]="true"
-    />
-  </section>
+  @if (isLoading()) {
+    <p class="loading-msg">Cargando recomendaciones...</p>
+  } @else if (hasError()) {
+    <div class="empty glass-panel"><p>No se pudieron cargar recomendaciones. Verifica el backend.</p></div>
+  } @else {
+    <section class="kpi-grid">
+      <app-kpi-card label="Tracks sugeridos" [value]="kpiTracks()" iconKey="music" color="primary" subtitle="Para ti" />
+      <app-kpi-card label="Puntuación media" [value]="avgScore()" iconKey="target" color="info" subtitle="Recomendación" />
+      <app-kpi-card label="Géneros" [value]="kpiGenres()" iconKey="layers" color="warning" subtitle="Afinidad" />
+      <app-kpi-card label="Moods" [value]="moods().length" iconKey="chart" color="secondary" subtitle="Por energía" />
+    </section>
 
-  <!-- Charts row -->
-  <div class="charts-row">
-    <section class="panel chart-panel">
-      <div class="panel-header">
-        <h2>Afinidad por género</h2>
-        <span class="panel-meta">Puntuación simulada 0–100</span>
-      </div>
-      <div class="genre-chart">
-        @for (g of genreAffinities; track g.genre) {
-          <div class="genre-bar-row">
-            <span class="genre-label">{{ g.genre }}</span>
-            <div class="genre-bar-track">
-              <div
-                class="genre-bar-fill"
-                [style.width.%]="genreBarWidth(g.score)"
-                [style.background]="g.color"
-              ></div>
+    <div class="charts-row">
+      <section class="panel chart-panel">
+        <div class="panel-header">
+          <h2>Afinidad por género</h2>
+          <span class="panel-meta">agg_genero_popularidad</span>
+        </div>
+        <div class="genre-chart">
+          @for (g of genres(); track g.genre; let i = $index) {
+            <div class="genre-bar-row">
+              <span class="genre-label">{{ g.genre }}</span>
+              <div class="genre-bar-track">
+                <div class="genre-bar-fill" [style.width.%]="genreBarWidth(g.score ?? 0)" [style.background]="accent(i)"></div>
+              </div>
+              <span class="genre-score">{{ g.score }}</span>
             </div>
-            <span class="genre-score">{{ g.score }}</span>
-          </div>
-        }
-      </div>
-    </section>
-
-    <section class="panel chart-panel">
-      <div class="panel-header">
-        <h2>Distribución de puntuaciones</h2>
-        <span class="panel-meta">Compatibilidad global</span>
-      </div>
-      <svg viewBox="0 0 320 160" class="distribution-chart" aria-hidden="true">
-        <defs>
-          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
-            <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-        <line x1="40" y1="130" x2="300" y2="130" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-        <line x1="40" y1="20" x2="40" y2="130" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-        <polygon
-          points="40,130 80,95 120,110 160,70 200,85 240,55 280,75 300,60 300,130"
-          fill="url(#areaGrad)"
-        />
-        <polyline
-          points="40,130 80,95 120,110 160,70 200,85 240,55 280,75 300,60"
-          fill="none"
-          stroke="#1ed896"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        @for (pt of chartPoints; track pt.x) {
-          <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#1ed896"/>
-        }
-        <text x="40" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Lun</text>
-        <text x="120" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Mié</text>
-        <text x="200" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Vie</text>
-        <text x="280" y="148" fill="rgba(255,255,255,0.35)" font-size="9">Dom</text>
-      </svg>
-    </section>
-  </div>
-
-  <!-- Para ti -->
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Para ti</h2>
-      <span class="panel-meta">Basado en tu historial simulado</span>
+          }
+        </div>
+      </section>
     </div>
-    <div class="horizontal-scroll">
-      @for (item of forYouTracks; track item.id) {
-        <article class="for-you-card" [style.--accent]="item.accent">
-          <div class="fy-artwork">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M9 18V5l12-2v13"/>
-              <circle cx="6" cy="18" r="3"/>
-              <circle cx="18" cy="16" r="3"/>
-            </svg>
-          </div>
-          <div class="fy-body">
-            <h3 class="fy-track">{{ item.track }}</h3>
-            <p class="fy-artist">{{ item.artist }}</p>
-            <div class="fy-score">
-              <span class="score-label">Compatibilidad</span>
-              <span class="score-value">{{ item.score }}%</span>
-            </div>
-            <div class="fy-tags">
-              @for (tag of item.tags; track tag) {
-                <span class="tag">{{ tag }}</span>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Para ti</h2>
+        <span class="panel-meta">agg_recommendation_scores</span>
+      </div>
+      <div class="horizontal-scroll">
+        @for (item of forYou(); track item.id_track; let i = $index) {
+          <a class="for-you-card" [style.--accent]="accent(i)" [routerLink]="['/tracks', item.id_track]">
+            <div class="fy-body">
+              <h3 class="fy-track">{{ item.nombre_track }}</h3>
+              <p class="fy-artist">{{ item.nombre_artista ?? '—' }}</p>
+              <div class="fy-score">
+                <span class="score-label">Score</span>
+                <span class="score-value">{{ item.recommendation_score ?? item.popularity ?? 0 }}</span>
+              </div>
+              @if (item.nombre_genero) {
+                <span class="tag">{{ item.nombre_genero }}</span>
               }
             </div>
-          </div>
-        </article>
-      }
-    </div>
-  </section>
+          </a>
+        }
+      </div>
+    </section>
 
-  <!-- Artistas recomendados -->
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Artistas recomendados</h2>
-      <span class="panel-meta">{{ recommendedArtists.length }} artistas</span>
-    </div>
-    <div class="artists-grid">
-      @for (artist of recommendedArtists; track artist.id) {
-        <article class="artist-card">
-          <div class="artist-avatar" [style.background]="artist.gradient">
-            {{ artist.initial }}
-          </div>
-          <div class="artist-info">
-            <h3 class="artist-name">{{ artist.name }}</h3>
-            <span class="artist-genre">{{ artist.genre }}</span>
-            <div class="artist-metrics">
-              <div class="metric-row">
-                <span class="metric-label">Popularidad</span>
-                <app-metric-bar [value]="artist.popularity" [max]="100" color="primary" suffix="" digitsInfo="1.0-0"/>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Afinidad</span>
-                <app-metric-bar [value]="artist.affinity" [max]="100" color="info" suffix="%" digitsInfo="1.0-0"/>
-              </div>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Artistas recomendados</h2>
+        <span class="panel-meta">agg_top_artistas</span>
+      </div>
+      <div class="artists-grid">
+        @for (artist of artists(); track artist.id_artista) {
+          <article class="artist-card">
+            <div class="artist-avatar" [style.background]="artistGradient(artist.nombre_artista)">
+              {{ artistInitial(artist.nombre_artista) }}
             </div>
-            <div class="affinity-badge">{{ artist.affinity }}% match</div>
-          </div>
-        </article>
-      }
-    </div>
-  </section>
+            <div class="artist-info">
+              <h3 class="artist-name">{{ displayArtist(artist.nombre_artista) }}</h3>
+              <div class="artist-metrics">
+                <div class="metric-row">
+                  <span class="metric-label">Popularidad</span>
+                  <app-metric-bar [value]="artist.promedio_popularidad ?? 0" [max]="100" color="primary" suffix="" digitsInfo="1.0-0"/>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Tracks</span>
+                  <span>{{ artist.total_tracks ?? 0 }}</span>
+                </div>
+              </div>
+              <div class="affinity-badge">{{ artist.affinity ?? 0 }}% afinidad</div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
 
-  <!-- Mood -->
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Recomendaciones por mood</h2>
-      <span class="panel-meta">Listas contextuales simuladas</span>
-    </div>
-    <div class="mood-grid">
-      @for (mood of moodCards; track mood.id) {
-        <button
-          type="button"
-          class="mood-card"
-          [class.selected]="selectedMood() === mood.id"
-          [style.background]="mood.gradient"
-          (click)="selectMood(mood.id)"
-        >
-          <span class="mood-icon" [innerHTML]="icon(mood.iconKey, 22)"></span>
-          <span class="mood-name">{{ mood.name }}</span>
-          <span class="mood-desc">{{ mood.description }}</span>
-          <span class="mood-tracks">{{ mood.tracks }} canciones</span>
-        </button>
-      }
-    </div>
-  </section>
+    <section class="panel mood-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Recomendaciones por mood</h2>
+          <p class="panel-sub">Filtra canciones reales del catálogo según su nivel de energía</p>
+        </div>
+        <span class="panel-meta">agg_distribucion_energia</span>
+      </div>
+      <div class="mood-grid">
+        @for (mood of moods(); track mood.id) {
+          <button
+            type="button"
+            class="mood-card"
+            [class.selected]="selectedMood() === mood.id"
+            (click)="selectMood(mood.id!)"
+          >
+            <span class="mood-name">{{ mood.name }}</span>
+            <span class="mood-desc">{{ mood.description }}</span>
+            <span class="mood-tracks">{{ mood.tracks }} canciones en catálogo</span>
+          </button>
+        }
+      </div>
 
-  <!-- Tendencias -->
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Tendencias recomendadas</h2>
-      <span class="panel-meta">Ranking simulado del catálogo</span>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Canción</th>
-            <th>Género</th>
-            <th>Popularidad</th>
-            <th>Tendencia</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of trendingRows; track row.id; let i = $index) {
-            <tr>
-              <td class="col-rank">{{ i + 1 }}</td>
-              <td class="col-song">{{ row.song }}</td>
-              <td><span class="genre-chip">{{ row.genre }}</span></td>
-              <td class="col-pop">
-                <app-metric-bar [value]="row.popularity" [max]="100" color="warning" suffix="" digitsInfo="1.0-0"/>
-              </td>
-              <td>
-                <span class="trend-badge" [class]="trendClass(row.trend)">
-                  {{ trendIcon(row.trend) }}
-                  @if (row.change !== 0) {
-                    {{ row.change > 0 ? '+' : '' }}{{ row.change }}%
-                  } @else {
-                    estable
-                  }
-                </span>
-              </td>
-            </tr>
+      @if (selectedMood()) {
+        <div class="mood-results" [class.loading]="moodLoading()">
+          @if (moodLoading()) {
+            <p class="mood-status">Buscando canciones para el mood seleccionado…</p>
+          } @else if (moodCount() === 0) {
+            <div class="mood-empty glass-panel">
+              <p>No hay canciones en el rango de energía <strong>{{ moodLabel() }}</strong>.</p>
+              <p class="mood-empty-hint">Prueba otro mood o amplía el catálogo con el pipeline ELT.</p>
+            </div>
+          } @else {
+            <div class="mood-results-head">
+              <span class="mood-results-badge">{{ moodCount() }} canción{{ moodCount() === 1 ? '' : 'es' }} encontrada{{ moodCount() === 1 ? '' : 's' }}</span>
+              <span class="mood-results-label">Mood: <strong>{{ moodLabel() }}</strong></span>
+            </div>
+            <div class="mood-tracks-grid">
+              @for (track of moodTracks(); track track.id_track; let i = $index) {
+                <a class="mood-track-card" [routerLink]="['/tracks', track.id_track]" [style.--accent]="accent(i)">
+                  <h3>{{ track.nombre_track }}</h3>
+                  <p class="mt-artist">{{ displayArtist(track.nombre_artista) }}</p>
+                  <div class="mt-meta">
+                    @if (track.nombre_genero) { <span class="tag">{{ track.nombre_genero }}</span> }
+                    <span class="mt-energy" title="Nivel de energía">⚡ {{ ((track.energy ?? 0) * 100) | number:'1.0-0' }}%</span>
+                  </div>
+                </a>
+              }
+            </div>
           }
-        </tbody>
-      </table>
-    </div>
-  </section>
+        </div>
+      } @else {
+        <p class="mood-hint">Selecciona un mood para ver canciones filtradas por energía.</p>
+      }
+    </section>
+  }
 </div>

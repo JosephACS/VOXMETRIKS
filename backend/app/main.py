@@ -30,6 +30,8 @@ if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
 from app.core import get_settings, get_conn, list_tables
+from app.packages.streaming.services.app_storage import ensure_app_tables
+from app.packages.users.services.user_storage import ensure_user_tables
 from app.packages.streaming.routes import (
     artists_router, genres_router, tracks_router,
     playlists_router, favorites_router,
@@ -65,8 +67,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         try:
             conn = duckdb.connect(str(db_path))
             tables = list_tables(conn)
+            ensure_user_tables(conn)
+            ensure_app_tables(conn)
             conn.close()
-            logger.info(f"Database OK — {len(tables)} tables: {tables}")
+            logger.info(f"Database OK — {len(tables)} tables")
         except Exception as exc:
             logger.error(f"Database check failed: {exc}")
 

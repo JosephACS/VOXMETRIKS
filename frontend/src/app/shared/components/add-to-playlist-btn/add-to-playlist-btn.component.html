@@ -1,0 +1,44 @@
+<div
+  class="atp-wrap"
+  [class.open]="open()"
+  [class.drop-up]="dropUp"
+  [class.sm]="size === 'sm'"
+  [class.variant-button]="variant === 'button'"
+  (click)="$event.stopPropagation()"
+>
+  <button
+    type="button"
+    class="atp-btn"
+    [class.active]="open()"
+    (click)="toggle($event)"
+    [title]="'player.addToPlaylist' | t"
+  >
+    <span [innerHTML]="icon(size === 'sm' ? 12 : 14)" aria-hidden="true"></span>
+    @if (variant === 'button') {
+      <span class="atp-label">{{ 'player.addToPlaylist' | t }}</span>
+    }
+  </button>
+
+  @if (open()) {
+    <div class="atp-menu" role="menu">
+      <p class="atp-menu-title">{{ 'player.pickPlaylist' | t }}</p>
+      @if (!playlists().length) {
+        <a routerLink="/playlists" class="atp-empty" (click)="open.set(false)">
+          {{ 'player.createPlaylistFirst' | t }}
+        </a>
+      } @else {
+        @for (pl of playlists(); track pl.id) {
+          <button type="button" class="atp-opt" role="menuitem" (click)="add(pl.id, $event)">
+            <span class="atp-opt-name">{{ pl.name }}</span>
+            <span class="atp-opt-count">{{ pl.total_tracks || 0 }}</span>
+          </button>
+        }
+      }
+      @if (msg() === 'ok') {
+        <span class="atp-msg ok">{{ 'player.addedToPlaylist' | t }}</span>
+      } @else if (msg() === 'err') {
+        <span class="atp-msg err">{{ 'player.addPlaylistError' | t }}</span>
+      }
+    </div>
+  }
+</div>

@@ -4,12 +4,12 @@
       <h1>Explorador de datos</h1>
       <p class="page-subtitle">Explorador visual del Data Warehouse — capa Gold & DuckDB</p>
     </div>
-    <span class="badge-demo">Preview simulado — no ejecuta SQL real</span>
+    <span class="badge-live">Datos en vivo desde DuckDB</span>
   </header>
 
   <!-- KPIs -->
   <section class="kpi-grid">
-    <app-kpi-card label="Total tablas" [value]="12" iconKey="grid" color="primary" subtitle="Gold + aggs" />
+    <app-kpi-card label="Total tablas" [value]="kindCounts().total" iconKey="grid" color="primary" subtitle="Gold + aggs" />
     <app-kpi-card label="Dimensiones" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
     <app-kpi-card label="Hechos" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
     <app-kpi-card label="Agregaciones" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
@@ -38,7 +38,7 @@
           >
             <span class="table-name">{{ t.name }}</span>
             <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
-            <span class="table-rows">{{ fmt(t.rowCount) }} filas</span>
+            <span class="table-rows">{{ fmt(t.row_count) }} filas</span>
           </button>
         }
       </nav>
@@ -46,32 +46,30 @@
 
     <!-- Main preview -->
     <main class="preview-main">
+      @if (activeTable(); as tbl) {
       <section class="panel">
         <div class="panel-header">
           <div>
-            <h2>{{ activeTable().name }}</h2>
+            <h2>{{ tbl.name }}</h2>
             <div class="table-meta">
-              <span class="kind-badge lg" [class]="kindClass(activeTable().kind)">{{ kindLabel(activeTable().kind) }}</span>
-              <span class="meta-item">{{ fmt(activeTable().rowCount) }} registros</span>
-              <span class="meta-item">Actualizado: {{ activeTable().lastUpdated }}</span>
-              <span class="meta-item">Capa: {{ activeTable().layer }}</span>
+              <span class="kind-badge lg" [class]="kindClass(tbl.kind)">{{ kindLabel(tbl.kind) }}</span>
+              <span class="meta-item">{{ fmt(tbl.row_count) }} registros</span>
+              <span class="meta-item">Capa: {{ tbl.layer }}</span>
             </div>
           </div>
         </div>
 
-        <!-- SQL preview -->
         <div class="sql-client">
           <div class="sql-bar">
             <span class="sql-dot"></span>
-            <span>Cliente SQL — vista previa</span>
+            <span>Consulta ejecutada en DuckDB</span>
           </div>
-          <pre class="sql-code">{{ mockQuery() }}</pre>
+          <pre class="sql-code">{{ sqlQuery() }}</pre>
         </div>
 
-        <!-- Schema -->
         <h3 class="section-label">Esquema</h3>
         <div class="schema-grid">
-          @for (col of activeTable().columns; track col.name) {
+          @for (col of tbl.columns; track col.name) {
             <div class="schema-col">
               <span class="col-name">{{ col.name }}</span>
               <span class="col-type">{{ col.type }}</span>
@@ -109,6 +107,9 @@
           <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">Siguiente →</button>
         </div>
       </section>
+      } @else if (isLoadingTables()) {
+        <div class="panel"><p>Cargando tablas del warehouse...</p></div>
+      }
     </main>
   </div>
 
@@ -155,7 +156,7 @@
         </table>
       </div>
     } @else if (hasError()) {
-      <p class="error-msg">No se pudo conectar con el backend. El explorador de tablas sigue disponible con datos mock.</p>
+      <p class="error-msg">No se pudo conectar con el backend. Verifica que FastAPI esté en localhost:8000.</p>
     } @else {
       <p class="empty-msg">No hay registros de carga en el warehouse.</p>
     }

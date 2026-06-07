@@ -141,6 +141,10 @@ class PlaylistCreate(BaseModel):
     name:        str
     description: Optional[str] = None
 
+class PlaylistUpdate(BaseModel):
+    name:        Optional[str] = None
+    description: Optional[str] = None
+
 class PlaylistTrackAdd(BaseModel):
     track_id: int
 

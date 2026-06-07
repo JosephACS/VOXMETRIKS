@@ -19,13 +19,13 @@ services:
       context: .
       target: runtime           # usa el stage final del Dockerfile multi-stage
     image: voxmetrik_v2:latest
-    command: python elt_pipeline.py
+    command: python elt/pipelines/elt_pipeline.py
     env_file: .env
     environment:
-      DB_PATH: /app/duckdb/voxmetrik.duckdb
+      DB_PATH: /app/data/warehouse/voxmetrik.duckdb
       PYTHONPATH: /app
     volumes:
-      - duckdb_data:/app/duckdb
+      - duckdb_data:/app/data/warehouse
       - parquet_data:/app/data
     networks: [voxmetrik]
     restart: "no"               # no reiniciar: es un job, no un servicio
@@ -38,20 +38,21 @@ services:
       context: .
       target: runtime
     image: voxmetrik_v2:latest
+    working_dir: /app/backend
     command: >
-      uvicorn backend.main:app
+      uvicorn app.main:app
       --host 0.0.0.0
       --port 8000
       --workers 2
       --log-level info
     env_file: .env
     environment:
-      DB_PATH: /app/duckdb/voxmetrik.duckdb
+      DB_PATH: /app/data/warehouse/voxmetrik.duckdb
       PYTHONPATH: /app
     ports:
       - "8000:8000"
     volumes:
-      - duckdb_data:/app/duckdb   # DuckDB compartido con pipeline (read-only en API)
+      - duckdb_data:/app/data/warehouse   # DuckDB compartido con pipeline (read-only en API)
     networks: [voxmetrik]
     restart: unless-stopped
     depends_on:

@@ -421,6 +421,46 @@ code.info-value {
   color: #34d399;
 }
 
+.status-warn {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
+.status-error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+.health-meta {
+  margin-left: auto;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  font-family: var(--font-mono);
+}
+
+.refresh-health-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle, #1e2347);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.refresh-health-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.refresh-health-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

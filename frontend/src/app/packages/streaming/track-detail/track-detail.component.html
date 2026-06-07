@@ -24,21 +24,8 @@
           </div>
           <div class="td-actions">
             <app-favorite-btn [trackId]="t.id_track" />
-            <button type="button" class="btn-pl" (click)="togglePlaylistPicker()">
-              <span [innerHTML]="icon('playlist', 14)"></span> Agregar a lista
-            </button>
+            <app-add-to-playlist-btn [trackId]="t.id_track" variant="button" />
           </div>
-          @if (showPlaylistPicker()) {
-            <div class="pl-picker">
-              @for (pl of playlists(); track pl.id) {
-                <button type="button" class="pl-opt" (click)="addToPlaylist(pl.id)">{{ pl.name }}</button>
-              }
-              @if (!playlists().length) {
-                <a routerLink="/playlists" class="pl-opt">Crear lista primero →</a>
-              }
-              @if (addMsg()) { <span class="add-msg">{{ addMsg() }}</span> }
-            </div>
-          }
         </div>
       </section>
 

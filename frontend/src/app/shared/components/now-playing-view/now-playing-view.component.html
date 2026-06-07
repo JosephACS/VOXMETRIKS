@@ -107,6 +107,7 @@
 
             <div class="np-actions">
               <app-favorite-btn [trackId]="t.id" />
+              <app-add-to-playlist-btn [trackId]="t.id" variant="button" />
               <a [routerLink]="['/tracks', t.id]" class="np-link" (click)="player.closeExpandedView()">{{ 'player.viewTrack' | t }}</a>
             </div>
           }

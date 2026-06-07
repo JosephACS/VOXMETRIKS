@@ -298,6 +298,68 @@ export interface PlaylistCreate {
   description?: string;
 }
 
+export interface PlaylistUpdate {
+  name?: string;
+  description?: string;
+}
+
+export interface WarehouseTableMeta {
+  name: string;
+  kind: string;
+  layer: string;
+  row_count: number;
+  columns: { name: string; type: string }[];
+}
+
+export interface TablePreview {
+  table: string;
+  total: number;
+  page: number;
+  limit: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  query: string;
+}
+
+export interface RecommendationPayload {
+  for_you: {
+    id_track?: number;
+    nombre_track?: string;
+    nombre_artista?: string;
+    nombre_genero?: string;
+    recommendation_score?: number;
+    popularity?: number;
+  }[];
+  artists: {
+    id_artista?: number;
+    nombre_artista?: string;
+    promedio_popularidad?: number;
+    total_tracks?: number;
+    affinity?: number;
+  }[];
+  genres: { genre?: string; score?: number; total_tracks?: number }[];
+  moods: { id?: string; name?: string; description?: string; tracks?: number }[];
+  mood_filter?: string | null;
+  mood_label?: string | null;
+  mood_tracks?: {
+    id_track?: number;
+    nombre_track?: string;
+    nombre_artista?: string;
+    nombre_genero?: string;
+    popularity?: number;
+    energy?: number;
+    recommendation_score?: number;
+  }[];
+  mood_count?: number;
+}
+
+export interface HealthResponse {
+  status: string;
+  database: string;
+  tables: string[];
+  version: string;
+}
+
 export interface FavoriteTrack extends PlaylistTrackItem {
   added_at?: string;
 }
@@ -334,6 +396,76 @@ export interface HistoryEntry {
   nombre_track: string;
   nombre_artista?: string;
   viewed_at: string;
+}
+
+export interface AuditRecord {
+  id_auditoria?: number;
+  accion?: string;
+  tabla_afectada?: string;
+  fecha_evento?: string;
+  detalles?: string;
+}
+
+export interface PipelineStageRecord {
+  run_id?: number;
+  stage?: string;
+  layer?: string;
+  started_at?: string;
+  duration_ms?: number;
+  rows_in?: number;
+  rows_out?: number;
+  status?: string;
+  details?: string;
+}
+
+export interface StreamingHistoryItem {
+  id_streaming?: number;
+  fecha_evento?: string;
+  device_type?: string;
+  platform?: string;
+  id_track?: number;
+  nombre_track?: string;
+  nombre_artista?: string;
+  nombre_genero?: string;
+}
+
+export interface UserHistoryEvent {
+  event_type?: string;
+  label?: string;
+  fecha_evento?: string;
+  detalle?: string;
+  device_type?: string;
+  id_track?: number;
+  nombre_track?: string;
+  nombre_artista?: string;
+}
+
+export interface UserHistoryPayload {
+  user_id?: number;
+  warehouse_user_id?: number;
+  sessions?: UserHistoryEvent[];
+  favorites?: UserHistoryEvent[];
+  activity?: UserHistoryEvent[];
+  timeline?: UserHistoryEvent[];
+}
+
+export interface SearchHistoryEntry {
+  query: string;
+  searched_at: string;
+  track_count?: number;
+  artist_count?: number;
+}
+
+export interface WarehouseSearchItem {
+  id_search?: number;
+  query?: string;
+  results_count?: number;
+  fecha_evento?: string;
+}
+
+export interface HistoryHub {
+  search: WarehouseSearchItem[];
+  user: UserHistoryPayload | null;
 }
 
 // ── Users (Package 2) ────────────────────────────────────────────────────────

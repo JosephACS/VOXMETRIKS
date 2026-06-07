@@ -41,7 +41,13 @@ export class TrendingComponent implements OnInit {
     { x: 191, label: 'J' }, { x: 248, label: 'V' }, { x: 305, label: 'S' }, { x: 362, label: 'D' },
   ];
 
-  private weeklyData = [45, 62, 55, 78, 71, 88, 82, 95, 87, 92, 85, 98];
+  streamChartValues = computed(() => {
+    const daily = this.dailyStreams();
+    if (!daily.length) return [0];
+    const vals = daily.slice(-14).map((d) => d.total_streams ?? 0);
+    const max = Math.max(...vals, 1);
+    return vals.map((v) => Math.round((v / max) * 100));
+  });
 
   topTrack = computed(() => this.tracks()[0] ?? null);
 
@@ -110,12 +116,17 @@ export class TrendingComponent implements OnInit {
   }
 
   weeklyLine(): string {
-    return this.weeklyData.map((v, i) => `${i * 33 + 5},${100 - v * 0.75}`).join(' ');
+    const data = this.streamChartValues();
+    const step = data.length > 1 ? 390 / (data.length - 1) : 0;
+    return data.map((v, i) => `${i * step + 5},${100 - v * 0.75}`).join(' ');
   }
 
   weeklyArea(): string {
-    const pts = this.weeklyData.map((v, i) => `${i * 33 + 5},${100 - v * 0.75}`);
-    return `5,100 ${pts.join(' ')} ${this.weeklyData.length * 33 - 28},100`;
+    const data = this.streamChartValues();
+    const step = data.length > 1 ? 390 / (data.length - 1) : 0;
+    const pts = data.map((v, i) => `${i * step + 5},${100 - v * 0.75}`);
+    const lastX = data.length > 1 ? (data.length - 1) * step + 5 : 5;
+    return `5,100 ${pts.join(' ')} ${lastX},100`;
   }
 
   icon(key: string, size = 18): SafeHtml {

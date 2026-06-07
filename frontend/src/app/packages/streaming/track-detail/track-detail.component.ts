@@ -4,15 +4,15 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TracksService } from '../services/tracks.service';
-import { PlaylistsService } from '../services/playlists.service';
 import { HistoryService } from '../services/history.service';
-import { TrackDetail, PlaylistSummary } from '../../../shared/models/api.models';
+import { TrackDetail } from '../../../shared/models/api.models';
 import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
+import { AddToPlaylistBtnComponent } from '../../../shared/components/add-to-playlist-btn/add-to-playlist-btn.component';
 
 @Component({
   selector: 'app-track-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FavoriteBtnComponent],
+  imports: [CommonModule, RouterModule, FavoriteBtnComponent, AddToPlaylistBtnComponent],
   templateUrl: './track-detail.component.html',
   styleUrls: ['./track-detail.component.css'],
 })
@@ -22,9 +22,6 @@ export class TrackDetailComponent implements OnInit {
   track = signal<TrackDetail | null>(null);
   isLoading = signal(true);
   hasError = signal(false);
-  playlists = signal<PlaylistSummary[]>([]);
-  showPlaylistPicker = signal(false);
-  addMsg = signal('');
 
   featureBars = computed(() => {
     const t = this.track();
@@ -55,12 +52,10 @@ export class TrackDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private tracksSvc: TracksService,
-    private plSvc: PlaylistsService,
     private history: HistoryService,
   ) {}
 
   ngOnInit() {
-    this.plSvc.list().subscribe({ next: (d) => this.playlists.set(d ?? []), error: () => {} });
     this.route.paramMap.subscribe((pm) => {
       const id = Number(pm.get('id'));
       if (!id) return;
@@ -97,23 +92,6 @@ export class TrackDetailComponent implements OnInit {
     const seed = t?.id_track ?? 0;
     const hues = ['#1ed896', '#7c3aed', '#3b82f6', '#10b981'];
     return `linear-gradient(135deg, ${hues[seed % hues.length]}, ${hues[(seed + 1) % hues.length]})`;
-  }
-
-  togglePlaylistPicker() {
-    this.showPlaylistPicker.update((v) => !v);
-    this.addMsg.set('');
-  }
-
-  addToPlaylist(plId: number) {
-    const t = this.track();
-    if (!t) return;
-    this.plSvc.addTrack(plId, t.id_track).subscribe({
-      next: () => {
-        this.addMsg.set('Agregado a playlist');
-        setTimeout(() => this.showPlaylistPicker.set(false), 800);
-      },
-      error: () => this.addMsg.set('Error al agregar'),
-    });
   }
 
   icon(key: string, size = 18): SafeHtml {
