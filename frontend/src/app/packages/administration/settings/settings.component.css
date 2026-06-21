@@ -517,3 +517,39 @@ code.info-value {
   color: var(--accent);
   font-size: 0.875rem;
 }
+
+.settings-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 1.25rem 0;
+}
+
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.prefs-toast {
+  padding: 0.65rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  margin-bottom: 0.75rem;
+}
+
+.prefs-toast.ok {
+  background: rgba(30, 216, 150, 0.12);
+  border: 1px solid rgba(30, 216, 150, 0.25);
+  color: var(--accent);
+}
+
+.prefs-toast.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+.text-input.setting-control {
+  min-width: 220px;
+  padding: 0.5rem 0.75rem;
+}

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { engineerGuard } from './core/guards/engineer.guard';
 
 export const APP_ROUTES: Routes = [
   {
@@ -119,6 +120,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'elt-pipeline',
+        canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/elt-pipeline/elt-pipeline.component').then(
             (m) => m.EltPipelineComponent
@@ -131,6 +133,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'explorer',
+        canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/explorer/explorer.component').then(
             (m) => m.ExplorerComponent

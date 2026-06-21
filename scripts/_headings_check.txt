@@ -1,0 +1,55 @@
+[Heading 3] 2.6.1 Cadena de trazabilidad oficial
+[Heading 3] 2.6.2 Definición de eslabones
+[Heading 3] 2.6.3 Matriz de trazabilidad (plantilla)
+[Heading 3] 2.6.4 Trazabilidad técnica Git
+[Heading 3] 2.6.5 Trazabilidad de datos (ELT)
+[Heading 2] 3. Especificacion operativa — Modulo 001-user-identity-access
+[Heading 2] 3.1 Contexto Empresarial
+[Heading 2] 3.2 Problema
+[Heading 3] 3.2.1 Situación actual
+[Heading 3] 3.2.2 Problema de negocio
+[Heading 2] 3.3 Objetivo
+[Heading 2] 3.4 Trazabilidad Empresarial
+[Heading 3] 3.4.1 Cadena oficial (Constitución v1.0.0 seccion 12)
+[Heading 2] 3.5 Matriz CU → HU → FR → CA
+[Heading 2] 3.6 Actores
+[Heading 2] 3.7 Casos de Uso
+[Heading 3] 3.7.1 CU-01: Registrar cuenta de usuario
+[Heading 3] 3.7.2 CU-02: Iniciar sesión
+[Heading 3] 3.7.3 CU-03: Consultar perfil del usuario autenticado
+[Heading 3] 3.7.4 CU-04: Actualizar preferencias de perfil
+[Heading 3] 3.7.5 CU-05: Cerrar sesión
+[Heading 3] 3.7.6 CU-06: Control de acceso a funcionalidades operativas
+[Heading 3] 3.7.7 CU-07: Persistir identidad y sesiones de usuario
+[Heading 3] 3.7.8 Historia de usuario US-01 — Registro de nueva cuenta (Prioridad: P1)
+[Heading 3] 3.7.9 Historia de usuario US-02 — Inicio de sesión (Prioridad: P1)
+[Heading 3] 3.7.10 Historia de usuario US-03 — Consulta de perfil autenticado (Prioridad: P1)
+[Heading 3] 3.7.11 Historia de usuario US-04 — Actualización de preferencias (Prioridad: P2)
+[Heading 3] 3.7.12 Historia de usuario US-05 — Cierre de sesión (Prioridad: P2)
+[Heading 3] 3.7.13 Historia de usuario US-06 — Protección de rutas y operaciones (Prioridad: P1)
+[Heading 3] 3.7.14 Historia de usuario US-07 — Acceso por rol Engineer (Prioridad: P3)
+[Heading 3] 3.7.15 Edge Cases
+[Heading 2] 3.8 Requirements
+[Heading 3] 3.8.1 Functional Requirements
+[Heading 3] 3.8.2 Non-Functional Requirements
+[Heading 3] 3.8.3 Reglas de Negocio
+[Heading 3] 3.8.4 Key Entities
+[Heading 2] 3.9 Criterios de Aceptación Globales (Feature)
+[Heading 2] 3.10 Success Criteria
+[Heading 3] 3.10.1 Measurable Outcomes
+[Heading 2] 3.11 Riesgos
+[Heading 2] 3.12 Dependencias
+[Heading 3] 3.12.1 Dependencias internas (runtime)
+[Heading 3] 3.12.2 Dependencias de gobernanza
+[Heading 3] 3.12.3 Dependencias externas
+[Heading 2] 3.13 Relación con la Constitución v1.0.0
+[Heading 2] 3.14 Out of Scope
+[Heading 2] 3.15 Assumptions
+[Heading 2] 4. Especificacion operativa — Modulo 002-personal-music-library
+[Heading 2] 4.1 Contexto Empresarial
+[Heading 2] 4.2 Problema
+[Heading 3] 4.2.1 Situación actual
+[Heading 3] 4.2.2 Problema de negocio
+[Heading 2] 4.3 Objetivo
+[Heading 2] 4.4 Trazabilidad Empresarial
+[Heading 2] 4.5 Matriz CU → HU → FR → CA

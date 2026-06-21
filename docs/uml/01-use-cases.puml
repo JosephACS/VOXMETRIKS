@@ -1,0 +1,138 @@
+@startuml voxmetriks-use-cases
+' Casos de uso — specs operativas 001–011
+' Fuente: TRACEABILITY-MASTER.md v2.0.0, specs individuales
+' Actores verificados en código (001 spec §Actores, 008 engineerGuard)
+
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+left to right direction
+
+actor "Usuario Visitante" as Visitor
+actor "Usuario Registrado" as User
+actor "Engineer\n(001 FR-015)" as Engineer
+actor "DevOps / Operador" as DevOps
+
+rectangle "Voxmetriks — Capa Operativa" {
+
+  package "001 Identidad y acceso\n(PKG-01 | OT-01)" #LightBlue {
+    usecase "CU-01\nRegistrar cuenta" as CU01
+    usecase "CU-02\nIniciar sesión" as CU02
+    usecase "CU-03\nVer perfil autenticado" as CU03
+    usecase "CU-04\nCerrar sesión" as CU04
+    usecase "CU-05\nRecordar sesión" as CU05
+    usecase "CU-06\nProteger rutas auth" as CU06
+    usecase "CU-07\nSesión / token API" as CU07
+  }
+
+  package "002 Biblioteca personal\n(PKG-02 | OT-02)" #LightGreen {
+    usecase "CU-P01..P07\nGestionar playlists" as CUP
+    usecase "CU-F01..F04\nGestionar favoritos" as CUF
+  }
+
+  package "003 Catálogo consumible\n(PKG-02 | OT-03)" #LightGreen {
+    usecase "CU-C01..C06\nNavegar catálogo" as CUC
+    usecase "CU-S01..S03\nBuscar tracks" as CUS
+    usecase "CU-AF01..AF02\nAudio features" as CUAF
+  }
+
+  package "004 Experiencia escucha\n(PKG-03 | OT-04)" #Wheat {
+    usecase "CU-R01..R08\nReproductor global" as CUR
+    usecase "CU-H01..H04\nHome hub" as CUH
+  }
+
+  package "005 Descubrimiento\n(PKG-04 | OT-05)" #Plum {
+    usecase "CU-RC01..RC04\nRecomendaciones" as CURC
+    usecase "CU-HI01..HI05\nHistorial unificado" as CUHI
+  }
+
+  package "006 Autogestión cuenta\n(PKG-05 | OT-06)" #LightYellow {
+    usecase "CU-PF01..PF03\nPerfil usuario" as CUPF
+    usecase "CU-ST01..ST06\nPreferencias / settings" as CUST
+  }
+
+  package "007 Analítica operativa\n(PKG-06 | OT-07)" #LightCoral {
+    usecase "CU-AN01..AN09\nDashboards y KPIs" as CUAN
+  }
+
+  package "008 Pipeline monitoring\n(PKG-07 | OT-08)" #AliceBlue {
+    usecase "CU-PM01\nConsola ELT + KPIs" as CUPM1
+    usecase "CU-PM02..PM03\nVolumen y run UI" as CUPM23
+    usecase "CU-PM04\nHistorial cargas" as CUPM4
+    usecase "CU-PM05\nEstado warehouse" as CUPM5
+    usecase "CU-PM07\nTabs engineer settings" as CUPM7
+    usecase "CU-PM08\nELT medallion CLI/Docker" as CUPM8
+  }
+
+  package "009 Data Explorer\n(PKG-07 | OT-09)" #AliceBlue {
+    usecase "CU-DE01..DE02\nListar/filtrar tablas" as CUDE1
+    usecase "CU-DE03..DE04\nPreview paginado" as CUDE34
+    usecase "CU-DE06\nPanel cargas ELT" as CUDE6
+    usecase "CU-DE07\nAcceso engineer" as CUDE7
+  }
+
+  package "010 Catalog Steward\n(PKG-02 | OT-09)" #HoneyDew {
+    usecase "CU-CS01..CS03\nCRUD artistas" as CUCS1
+    usecase "CU-CS04..CS06\nCRUD géneros" as CUCS4
+    usecase "CU-CS07..CS09\nCRUD tracks" as CUCS7
+  }
+
+  package "011 Health & Operations\n(PKG-05 | OT-10)" #LightYellow {
+    usecase "CU-HO01..HO02\nHealth en settings" as CUHO1
+    usecase "CU-HO03..HO04\nAPI /health y /" as CUHO34
+    usecase "CU-HO05..HO06\nCompose + scripts CLI" as CUHO56
+  }
+}
+
+' --- Relaciones actores ---
+
+Visitor --> CU01
+Visitor --> CU02
+Visitor --> CUC
+Visitor --> CUS
+
+User --> CU02
+User --> CU03
+User --> CU04
+User --> CUP
+User --> CUF
+User --> CUC
+User --> CUS
+User --> CUAF
+User --> CUR
+User --> CUH
+User --> CURC
+User --> CUHI
+User --> CUPF
+User --> CUST
+User --> CUAN
+User --> CUCS1
+User --> CUCS4
+User --> CUCS7
+User --> CUHO1
+
+Engineer --> CUPM1
+Engineer --> CUPM23
+Engineer --> CUPM4
+Engineer --> CUPM5
+Engineer --> CUPM7
+Engineer --> CUDE1
+Engineer --> CUDE34
+Engineer --> CUDE6
+Engineer --> CUDE7
+Engineer --> CUST
+
+DevOps --> CUPM8
+DevOps --> CUHO56
+
+note right of CUPM23
+  Delimitación spec 008:
+  timeline UI = simulación;
+  mutación real = POST /stats/synthetic
+end note
+
+note bottom of CUCS1
+  Spec 010: CRUD sin rol steward
+  dedicado (auth FE; deuda P11 BE)
+end note
+
+@enduml

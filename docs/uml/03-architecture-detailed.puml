@@ -1,0 +1,87 @@
+@startuml voxmetriks-architecture-detailed
+' Version detallada original (puede fallar en PlantUML web por card/storage/portin)
+' Usar 03-architecture.puml para export PNG
+
+skinparam nodesep 40
+skinparam ranksep 50
+
+title Voxmetriks — Arquitectura (detallado)
+
+actor "Usuario\n(navegador)" as Browser
+actor "Engineer" as Eng
+actor "DevOps" as Ops
+
+node "Cliente" {
+  component "Angular SPA\nfrontend/\npuerto dev: 4200" as SPA
+}
+
+node "Docker Compose — red voxmetrik" as Compose {
+
+  node "Job one-shot" as Job {
+    component "pipeline\npython elt/pipelines/\nelt_pipeline.py" as Pipeline
+  }
+
+  node "Servicio persistente" as Svc {
+    component "api\nuvicorn app.main:app\n:8000" as API
+  }
+
+  node "Fuente opcional" as Src {
+    component "pocketbase\n:8090" as PB
+  }
+
+  folder "Volúmenes" as Vol {
+    database "duckdb_data\nvoxmetrik.duckdb" as VDB
+    component "parquet_data\nBronze/Silver" as VPQ
+    component "pb_data" as VPB
+  }
+}
+
+cloud "Scripts locales\n(no container)" as Local {
+  component "validate_warehouse.py\nanalyze_warehouse.py" as Scripts
+}
+
+Browser --> SPA : UI / routing\nauthGuard | engineerGuard
+Eng --> SPA : /elt-pipeline\n/explorer
+SPA --> API : REST /api/v1/*\nBearer session token
+SPA --> API : GET /health\n(vía StatsService)
+
+Ops --> Pipeline : docker compose run\n--rm pipeline
+Ops --> Scripts : post-ELT manual
+
+Pipeline --> PB : extract CSV\n(opcional)
+Pipeline --> VPQ : Bronze / Silver Parquet
+Pipeline --> VDB : Gold dims/facts/agg\nctl_carga_dataset\nctl_pipeline_stages
+API --> VDB : read + write\n(app_user, app_playlist,\ncatalog CRUD, synthetic)
+
+PB --> VPB
+
+Pipeline ..> API : depends_on:\nservice_completed_successfully\n(P7)
+
+package "Capas Medallion (DuckDB)" as Layers #FFF8DC {
+  component "Bronze\nraw_spotify Parquet" as B
+  component "Silver\nParquet limpio" as S
+  component "Gold\ndim_* fact_* agg_* ctl_*" as G
+  component "App\napp_user app_playlist app_favorite" as A
+  B -down-> S : transform
+  S -down-> G : load + build
+  G -down-> A : API runtime
+}
+
+VDB ..> Layers
+
+note right of API
+  Contratos publicos
+  GET /  — metadata API
+  GET /health — HealthResponse
+  GET /docs — OpenAPI
+end note
+
+note left of SPA
+  Paquetes FE (P2)
+  PKG-01 users · PKG-02 streaming
+  PKG-03 player · PKG-04 discovery
+  PKG-05 settings · PKG-06 analytics
+  PKG-07 data-engineering
+end note
+
+@enduml

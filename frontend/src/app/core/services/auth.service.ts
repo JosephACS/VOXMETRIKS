@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AppUser, AuthResponse } from '../../shared/models/api.models';
+import { UiPreferencesService } from './ui-preferences.service';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -13,6 +14,7 @@ export interface AuthState {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly ui = inject(UiPreferencesService);
   private readonly API = `${environment.apiUrl}/users`;
   private readonly AUTH_KEY = 'voxmetrik_auth_token';
   private readonly USER_KEY = 'voxmetrik_user';
@@ -42,11 +44,11 @@ export class AuthService {
     this.syncFromStorage();
   }
 
-  async login(email: string, password: string, remember = true): Promise<boolean> {
+  async login(loginId: string, password: string, remember = true): Promise<boolean> {
     try {
       const res = await firstValueFrom(
         this.http.post<AuthResponse>(`${this.API}/login`, {
-          login: email,
+          login: loginId.trim(),
           password,
           remember,
         })
@@ -101,6 +103,9 @@ export class AuthService {
       user: res.user,
       token: res.token,
     });
+    if (res.user.preferences?.dark_mode != null) {
+      this.ui.syncThemeFromDarkMode(res.user.preferences.dark_mode);
+    }
   }
 
   private syncFromStorage(): void {
@@ -108,6 +113,9 @@ export class AuthService {
     const user = this.getStoredUser();
     if (token && user) {
       this.authState.set({ isAuthenticated: true, user, token });
+      if (user.preferences?.dark_mode != null) {
+        this.ui.syncThemeFromDarkMode(user.preferences.dark_mode);
+      }
     }
   }
 

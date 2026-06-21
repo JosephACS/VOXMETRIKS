@@ -57,6 +57,16 @@ export class UiPreferencesService {
     this.patch({ theme });
   }
 
+  /** Maps API dark_mode flag to local theme (dark / light). */
+  syncThemeFromDarkMode(darkMode: boolean): void {
+    this.patch({ theme: darkMode ? 'dark' : 'light' });
+  }
+
+  /** Resolves whether the active theme is visually dark (for API dark_mode sync). */
+  isVisuallyDark(theme: AppTheme = this.prefs().theme): boolean {
+    return this.resolveTheme(theme) === 'dark';
+  }
+
   setLanguage(language: AppLanguage): void {
     this.patch({ language });
   }

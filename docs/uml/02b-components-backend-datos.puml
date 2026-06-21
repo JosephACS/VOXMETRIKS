@@ -1,0 +1,59 @@
+@startuml voxmetriks-components-backend-datos
+' Backend FastAPI + Datos — entrega GA07, figura 16b
+' Layout vertical: Backend arriba, Datos abajo (hidden link fuerza apilado)
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam nodesep 28
+skinparam ranksep 40
+top to bottom direction
+
+title Voxmetriks — Backend FastAPI y capa de datos
+
+package "Backend — FastAPI" as BE #E8F8E8 {
+
+  component "Root API\nGET / · GET /health" as Root
+
+  together {
+    component "PKG-01 Users API\n/api/v1/users/*" as BE01
+    component "PKG-02 Streaming API\nartists · tracks · playlists · favorites" as BE02
+    component "PKG-06/07 Analytics API\nstats · warehouse · explorer · recs" as BE67
+  }
+
+  Root -down-> BE01
+  Root -down-> BE02
+  Root -down-> BE67
+}
+
+package "Datos y operaciones" as Data #FFF8E7 {
+
+  together {
+    database "DuckDB\nvoxmetrik.duckdb" as DB
+    component "ELT CLI\nelt_pipeline.py" as ELT
+  }
+
+  together {
+    component "Scripts ops\nvalidate · analyze" as Ops
+    cloud "PocketBase\n(ingest opcional)" as PB
+  }
+}
+
+' Apila Backend sobre Datos (no lado a lado)
+BE -[hidden]down-> Data
+
+BE01 -down-> DB
+BE02 -down-> DB
+BE67 -down-> DB
+Root -down-> DB
+
+PB ..> ELT : extract
+ELT -down-> DB : Bronze → Silver → Gold
+Ops ..> DB
+BE67 ..> DB : POST synthetic
+
+note right of ELT
+  Docker service pipeline
+  job one-shot antes de api (P7)
+end note
+
+@enduml

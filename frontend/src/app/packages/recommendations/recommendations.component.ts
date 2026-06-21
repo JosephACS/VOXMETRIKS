@@ -12,17 +12,33 @@ import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.comp
 
 import { MetricBarComponent } from '../../shared/components/metric-bar/metric-bar.component';
 
+import { MediaCardComponent } from '../../shared/components/media-card/media-card.component';
+
+import { FavoriteBtnComponent } from '../../shared/components/favorite-btn/favorite-btn.component';
+
 import { StatsService } from '../analytics/services/stats.service';
+
+import { UserService } from '../users/services/user.service';
 
 import { RecommendationPayload } from '../../shared/models/api.models';
 
 import { CoverArtService } from '../../shared/services/cover-art.service';
 
+import { MusicPlayerService } from '../../shared/services/music-player.service';
+
 import { primaryArtistName } from '../../shared/utils/artist.util';
+
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+
+import { PlayableTrack } from '../../shared/models/player.models';
 
 
 
 const ACCENTS = ['#7c3aed', '#1ed896', '#10b981', '#3b82f6', '#ec4899', '#f59e0b'];
+
+
+
+type RecTrack = NonNullable<RecommendationPayload['for_you']>[number];
 
 
 
@@ -32,7 +48,23 @@ const ACCENTS = ['#7c3aed', '#1ed896', '#10b981', '#3b82f6', '#ec4899', '#f59e0b
 
   standalone: true,
 
-  imports: [CommonModule, RouterModule, KpiCardComponent, MetricBarComponent],
+  imports: [
+
+    CommonModule,
+
+    RouterModule,
+
+    KpiCardComponent,
+
+    MetricBarComponent,
+
+    MediaCardComponent,
+
+    FavoriteBtnComponent,
+
+    TranslatePipe,
+
+  ],
 
   templateUrl: './recommendations.component.html',
 
@@ -46,7 +78,11 @@ export class RecommendationsComponent implements OnInit {
 
   private stats = inject(StatsService);
 
-  private covers = inject(CoverArtService);
+  private userSvc = inject(UserService);
+
+  covers = inject(CoverArtService);
+
+  player = inject(MusicPlayerService);
 
 
 
@@ -55,6 +91,10 @@ export class RecommendationsComponent implements OnInit {
   moodLoading = signal(false);
 
   hasError = signal(false);
+
+  recsEnabled = signal(true);
+
+  prefsLoaded = signal(false);
 
   data = signal<RecommendationPayload | null>(null);
 
@@ -75,6 +115,12 @@ export class RecommendationsComponent implements OnInit {
   moodCount = computed(() => this.data()?.mood_count ?? 0);
 
   moodLabel = computed(() => this.data()?.mood_label ?? null);
+
+
+
+  forYouPlayable = computed(() => this.forYou().map((t) => this.toPlayable(t)));
+
+  moodTracksPlayable = computed(() => this.moodTracks().map((t) => this.toPlayable(t)));
 
 
 
@@ -108,13 +154,37 @@ export class RecommendationsComponent implements OnInit {
 
   ngOnInit() {
 
-    this.loadRecommendations();
+    this.userSvc.getMe().subscribe({
+
+      next: (p) => {
+
+        this.recsEnabled.set(p.preferences?.recommendations_enabled ?? true);
+
+        this.prefsLoaded.set(true);
+
+        if (this.recsEnabled()) this.loadRecommendations();
+
+        else this.isLoading.set(false);
+
+      },
+
+      error: () => {
+
+        this.prefsLoaded.set(true);
+
+        this.loadRecommendations();
+
+      },
+
+    });
 
   }
 
 
 
   selectMood(id: string) {
+
+    if (!this.recsEnabled()) return;
 
     const next = this.selectedMood() === id ? null : id;
 
@@ -127,6 +197,8 @@ export class RecommendationsComponent implements OnInit {
 
 
   private loadRecommendations(mood?: string, moodOnly = false) {
+
+    if (!this.recsEnabled()) return;
 
     if (moodOnly) this.moodLoading.set(true);
 
@@ -157,6 +229,28 @@ export class RecommendationsComponent implements OnInit {
       },
 
     });
+
+  }
+
+
+
+  toPlayable(t: RecTrack): PlayableTrack {
+
+    const id = t.id_track ?? 0;
+
+    return {
+
+      id,
+
+      title: t.nombre_track ?? '—',
+
+      artist: primaryArtistName(t.nombre_artista),
+
+      audioUrl: `/assets/audio/demo-${String((id % 8) + 1).padStart(2, '0')}.wav`,
+
+      coverGradient: this.covers.gradientFor(id),
+
+    };
 
   }
 
@@ -209,4 +303,3 @@ export class RecommendationsComponent implements OnInit {
   }
 
 }
-

@@ -8,6 +8,7 @@ import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.comp
 import { UserService } from './services/user.service';
 import { HistoryService } from '../streaming/services/history.service';
 import { StatsService } from '../analytics/services/stats.service';
+import { UiPreferencesService } from '../../core/services/ui-preferences.service';
 import { UserProfile, HistoryEntry } from '../../shared/models/api.models';
 
 interface ListenRecord {
@@ -75,6 +76,7 @@ export class UsersComponent implements OnInit {
   private userSvc = inject(UserService);
   private historySvc = inject(HistoryService);
   private statsSvc = inject(StatsService);
+  private ui = inject(UiPreferencesService);
 
   isLoading = signal(true);
   searchQuery = signal('');
@@ -244,7 +246,13 @@ export class UsersComponent implements OnInit {
     this.historySvc.reload();
     this.loadHistoryFromStorage();
     this.userSvc.getMe().subscribe({
-      next: (p) => { this.profile.set(p); this.isLoading.set(false); },
+      next: (p) => {
+        this.profile.set(p);
+        if (p.preferences?.dark_mode != null) {
+          this.ui.syncThemeFromDarkMode(p.preferences.dark_mode);
+        }
+        this.isLoading.set(false);
+      },
       error: () => this.isLoading.set(false),
     });
 
@@ -333,6 +341,9 @@ export class UsersComponent implements OnInit {
       next: (u) => {
         const cur = this.profile();
         if (cur) this.profile.set({ ...cur, preferences: u.preferences, favorite_genre: u.favorite_genre });
+        if (key === 'darkMode' && u.preferences?.dark_mode != null) {
+          this.ui.syncThemeFromDarkMode(u.preferences.dark_mode);
+        }
       },
     });
   }

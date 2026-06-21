@@ -46,6 +46,88 @@
   color: #a78bfa;
 }
 
+.synthetic-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-lg);
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+}
+
+.synthetic-banner p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #c4b5fd;
+}
+
+.synthetic-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.25);
+  color: #a78bfa;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.disabled-panel {
+  padding: 2rem;
+  text-align: center;
+}
+
+.disabled-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.disabled-panel p {
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+}
+
+.cta-link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.rec-card-wrap,
+.mood-track-wrap {
+  position: relative;
+  flex: 0 0 150px;
+}
+
+.rec-card-wrap app-favorite-btn,
+.mood-track-wrap app-favorite-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 3;
+}
+
+.mood-tracks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.mood-track-wrap {
+  flex: 0 0 150px;
+}
+
 .badge-ai {
   background: rgba(30, 216, 150, 0.1);
   border-color: rgba(30, 216, 150, 0.25);

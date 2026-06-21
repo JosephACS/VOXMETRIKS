@@ -6,6 +6,7 @@ import { FavoritesService } from '../../packages/streaming/services/favorites.se
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { UiPreferencesService } from '../../core/services/ui-preferences.service';
 import { IconRenderService } from '../../shared/services/icon-render.service';
 import { PlayerBarComponent } from '../../shared/components/player-bar/player-bar.component';
 import { NowPlayingViewComponent } from '../../shared/components/now-playing-view/now-playing-view.component';
@@ -50,6 +51,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private iconRender = inject(IconRenderService);
   private i18n = inject(I18nService);
+  private ui = inject(UiPreferencesService);
   router = inject(Router);
   private favorites = inject(FavoritesService);
   private history = inject(HistoryService);
@@ -152,7 +154,11 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     }));
   });
 
-  visibleNavSections = computed(() => this.navSections());
+  visibleNavSections = computed(() => {
+    const sections = this.navSections();
+    if (this.auth.hasEngineerAccess()) return sections;
+    return sections.filter((s) => s.id !== 'data');
+  });
 
   userInitial = computed(() => this.userName().charAt(0).toUpperCase());
   avatarGradient = computed(() => {
@@ -172,6 +178,10 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     window.addEventListener('resize', this.resizeHandler);
     this.history.reload();
     this.favorites.refreshIds();
+    const user = this.auth.getUser();
+    if (user?.preferences?.dark_mode != null) {
+      this.ui.syncThemeFromDarkMode(user.preferences.dark_mode);
+    }
   }
 
   ngOnDestroy() {

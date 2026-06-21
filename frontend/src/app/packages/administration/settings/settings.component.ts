@@ -3,6 +3,7 @@ import { IconRenderService } from '../../../shared/services/icon-render.service'
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -16,14 +17,15 @@ import {
 } from '../../../core/services/ui-preferences.service';
 import { TranslationKey } from '../../../core/i18n/translations';
 import { StatsService } from '../../analytics/services/stats.service';
-import { HealthResponse } from '../../../shared/models/api.models';
+import { UserService } from '../../users/services/user.service';
+import { HealthResponse, UserPreferencesUpdate } from '../../../shared/models/api.models';
 
 type SettingsTab = 'general' | 'api' | 'warehouse' | 'pipeline';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
 })
@@ -32,12 +34,20 @@ export class SettingsComponent implements OnInit {
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
   private stats = inject(StatsService);
+  private userSvc = inject(UserService);
   ui = inject(UiPreferencesService);
 
   activeTab = signal<SettingsTab>('general');
   healthLoading = signal(false);
   healthError = signal(false);
   health = signal<HealthResponse | null>(null);
+  prefsSaving = signal(false);
+  prefsFeedback = signal<'ok' | 'error' | null>(null);
+
+  recommendationsEnabled = signal(true);
+  privacyPublic = signal(false);
+  audioQuality = signal('high');
+  favoriteGenre = signal('');
 
   apiUrl = environment.apiUrl;
   warehousePath = 'data/warehouse/voxmetrik.duckdb';
@@ -50,6 +60,12 @@ export class SettingsComponent implements OnInit {
   aggregations = [
     'agg_top_artistas', 'agg_genero_popularidad',
     'agg_distribucion_energia', 'agg_tracks_populares',
+  ];
+
+  readonly audioQualityOptions = [
+    { value: 'high', label: 'Alta (320 kbps)' },
+    { value: 'normal', label: 'Normal (160 kbps)' },
+    { value: 'low', label: 'Baja (96 kbps)' },
   ];
 
   themeOptions = computed(() => {
@@ -93,6 +109,8 @@ export class SettingsComponent implements OnInit {
       : this.i18n.t('settings.theme.activeLight');
   });
 
+  private readonly engineerTabs: SettingsTab[] = ['warehouse', 'pipeline'];
+
   private readonly allTabs: { id: SettingsTab; labelKey: TranslationKey; iconKey: string }[] = [
     { id: 'general', labelKey: 'settings.tab.general', iconKey: 'settings' },
     { id: 'api', labelKey: 'settings.tab.api', iconKey: 'link' },
@@ -104,17 +122,80 @@ export class SettingsComponent implements OnInit {
     this.i18n.tick();
     const list = this.auth.hasEngineerAccess()
       ? this.allTabs
-      : this.allTabs.filter((t) => t.id !== 'pipeline');
+      : this.allTabs.filter((t) => !this.engineerTabs.includes(t.id));
     return list.map((t) => ({ ...t, label: this.i18n.t(t.labelKey) }));
   });
 
   ngOnInit() {
     this.refreshHealth();
+    this.loadBusinessPreferences();
   }
 
   selectTab(tab: SettingsTab) {
     this.activeTab.set(tab);
     if (tab === 'api') this.refreshHealth();
+  }
+
+  onThemeChange(theme: AppTheme) {
+    this.ui.setTheme(theme);
+    this.patchBusinessPreferences({ dark_mode: this.ui.isVisuallyDark(theme) });
+  }
+
+  toggleRecommendations(enabled: boolean) {
+    this.recommendationsEnabled.set(enabled);
+    this.patchBusinessPreferences({ recommendations_enabled: enabled });
+  }
+
+  togglePrivacyPublic(enabled: boolean) {
+    this.privacyPublic.set(enabled);
+    this.patchBusinessPreferences({ privacy_public: enabled });
+  }
+
+  onAudioQualityChange(value: string) {
+    this.audioQuality.set(value);
+    this.patchBusinessPreferences({ audio_quality: value });
+  }
+
+  onFavoriteGenreBlur() {
+    const genre = this.favoriteGenre().trim();
+    this.patchBusinessPreferences({ favorite_genre: genre || undefined });
+  }
+
+  private loadBusinessPreferences() {
+    this.userSvc.getMe().subscribe({
+      next: (p) => {
+        const prefs = p.preferences;
+        if (prefs?.dark_mode != null) {
+          this.ui.syncThemeFromDarkMode(prefs.dark_mode);
+        }
+        this.recommendationsEnabled.set(prefs?.recommendations_enabled ?? true);
+        this.privacyPublic.set(prefs?.privacy_public ?? false);
+        this.audioQuality.set(prefs?.audio_quality ?? 'high');
+        this.favoriteGenre.set(p.favorite_genre ?? '');
+      },
+    });
+  }
+
+  private patchBusinessPreferences(body: UserPreferencesUpdate) {
+    this.prefsSaving.set(true);
+    this.prefsFeedback.set(null);
+    this.userSvc.updatePreferences(body).subscribe({
+      next: (u) => {
+        this.prefsSaving.set(false);
+        this.prefsFeedback.set('ok');
+        if (u.preferences?.dark_mode != null) {
+          this.ui.syncThemeFromDarkMode(u.preferences.dark_mode);
+        }
+        if (body.favorite_genre !== undefined) {
+          this.favoriteGenre.set(u.favorite_genre ?? '');
+        }
+        setTimeout(() => this.prefsFeedback.set(null), 2500);
+      },
+      error: () => {
+        this.prefsSaving.set(false);
+        this.prefsFeedback.set('error');
+      },
+    });
   }
 
   refreshHealth() {

@@ -1,0 +1,54 @@
+@startuml voxmetriks-components-frontend
+' Frontend Angular — PKG-01..07 (entrega GA07, figura 16a)
+' Sin skinparam padding (deprecado — evita franja amarilla en PNG)
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam nodesep 28
+skinparam ranksep 35
+top to bottom direction
+
+title Voxmetriks — Frontend Angular (PKG-01..07)
+
+package "Frontend — Angular" as FE #E8F4FC {
+
+  component "Core transversal\nAuth · Guards · Interceptor · Player · I18n" as Core
+
+  together {
+    component "PKG-01 Users\nLogin · Perfil" as FE01
+    component "PKG-02 Streaming\nCatalogo · Playlists · Favoritos" as FE02
+    component "PKG-03 Listening\nReproductor · Now playing" as FE03
+  }
+
+  together {
+    component "PKG-04 Discovery\nRecomendaciones · Historial" as FE04
+    component "PKG-05 Admin\nSettings (api · warehouse* · pipeline*)" as FE05
+    component "PKG-06 Analytics\nDashboard · Trending · Comparativas" as FE06
+    component "PKG-07 Data-Eng\nELT UI · Explorer" as FE07
+  }
+
+  Core -down-> FE01
+  Core -down-> FE02
+  Core -down-> FE03
+  Core -down-> FE04
+  Core -down-> FE05
+  Core -down-> FE06
+  Core -down-> FE07
+}
+
+interface "REST /api/v1\n(ver figura Backend)" as API #White
+
+FE01 -down-> API
+FE02 -down-> API
+FE03 -down-> API
+FE04 -down-> API
+FE05 -down-> API
+FE06 -down-> API
+FE07 -down-> API
+
+note right of FE07
+  * tabs engineer
+  warehouse / pipeline
+end note
+
+@enduml

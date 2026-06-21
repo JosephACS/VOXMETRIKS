@@ -1,0 +1,94 @@
+@startuml voxmetriks-elt-flow
+' Flujo ELT — dos caminos documentados (spec 008 RB-PM01, RB-PM02)
+' A) Medallion real: Docker/CLI (elt_pipeline.py)
+' B) Consola SPA: timeline simulado + POST synthetic
+
+skinparam activityBackgroundColor #FEFEFE
+skinparam activityBorderColor #333333
+
+title Voxmetriks — Flujo ELT (Medallion + consola UI)
+
+|DevOps / Docker|
+start
+:docker compose up --build;
+note right
+  docker-compose.yml
+  pipeline → exit 0
+  api depends_on pipeline OK
+end note
+
+|elt_pipeline.py|
+:ensure_bronze_parquet\n(PocketBase CSV o Parquet local);
+:register_pipeline_stage\nctl_pipeline_stages;
+
+partition "Extract — Bronze" {
+  :bronze_extract();
+  :Persist Bronze Parquet\ndata/bronze/;
+}
+
+partition "Transform — Silver" {
+  :silver_transform(df_bronze);
+  :Persist Silver Parquet\ndata/silver/;
+}
+
+partition "Load — Gold (DuckDB)" {
+  :gold_load_staging → raw_spotify;
+  :build_enterprise_warehouse\n(dim_*, fact_*, agg_*);
+  :INSERT ctl_carga_dataset\nmodo=elt;
+}
+
+:Export Parquet Gold\n(opcional BI);
+stop
+
+|Engineer — SPA /elt-pipeline|
+start
+:engineerGuard + authGuard;
+:GET /stats/synthetic/limits\nGET /stats/summary\nGET /stats/loads?limit=1\nGET /analytics/warehouse;
+
+if (Volumen válido?) then (sí)
+  partition "Timeline UI — SIMULACIÓN (RB-PM01)" {
+    :Animar pasos\nextract → bronze → silver → gold → warehouse;
+    :append logs INFO/WARN/SUCCESS;
+  }
+  if (delta > 0?) then (sí)
+    :POST /api/v1/stats/synthetic\n{target_total | multiplier};
+    :stats_service.generate_synthetic_tracks\nINSERT dim_track [syn-*];
+    :INSERT ctl_carga_dataset\nmodo=synthetic;
+    :Refresh GET /stats/loads;
+  else (no)
+    :Deshabilitar run\n(delta cero);
+  endif
+else (no)
+  :Bloquear ejecución\n(FR-PM10);
+endif
+
+if (Reset?) then (sí)
+  :Limpiar timeline, logs, timers\n(FR-PM15);
+endif
+stop
+
+|Data Explorer — SPA /explorer|
+start
+:GET /analytics/explorer/tables;
+:GET /analytics/explorer/preview/{table};
+:GET /stats/loads?limit=10\n(delimitación spec 008);
+note right
+  Read-only (P6, FR-DE21)
+  Sin mutación warehouse
+end note
+stop
+
+|Operador — post-ELT|
+start
+:python scripts/validate_warehouse.py;
+:python scripts/analyze_warehouse.py\n(opcional);
+stop
+
+legend right
+  |= Símbolo |= Significado |
+  | **Pipeline CLI** | Único camino medallion completo (FR-PM24, P7) |
+  | **Timeline UI** | Visualización; NO invoca elt_pipeline.py |
+  | **POST synthetic** | Mutación controlada P10; no reemplaza ELT |
+endlegend
+
+@enduml

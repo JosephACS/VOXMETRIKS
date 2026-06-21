@@ -1,0 +1,190 @@
+# Voxmetriks — Quickstart (guía única)
+
+Arranque local oficial. Sustituye cualquier `QUICKSTART.md` o README legacy en subcarpetas.
+
+**Requisitos:** Python **3.12**, Node.js **20+**, npm **10+**. Docker opcional (final de esta guía).
+
+---
+
+## 1. Clonar y entrar al proyecto
+
+```bash
+cd voxmetriks
+```
+
+---
+
+## 2. Entorno Python
+
+```bash
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# Linux / macOS
+source .venv/bin/activate
+```
+
+Instalar dependencias ELT + API:
+
+```bash
+pip install -r requirements.txt
+pip install -r backend/requirements.txt
+```
+
+---
+
+## 3. Configuración
+
+```bash
+cp .env.example .env
+```
+
+Variables relevantes (`.env`):
+
+| Variable | Descripción |
+|----------|-------------|
+| `DB_PATH` | Vacío = `data/warehouse/voxmetrik.duckdb` (auto-resuelto) |
+| `POCKETBASE_URL` | Fuente opcional de ingest |
+| `POCKETBASE_EMAIL` / `PASSWORD` | Credenciales PocketBase |
+
+Sin PocketBase, coloca Parquet en:
+
+```
+data/processed/stage/raw_spotify.parquet
+```
+
+(o deja que el bootstrap del pipeline lo genere).
+
+---
+
+## 4. Ejecutar ELT (obligatorio antes de la API)
+
+```bash
+python elt/pipelines/elt_pipeline.py
+```
+
+Crea o actualiza `data/warehouse/voxmetrik.duckdb` con capas Medallion (`dim_*`, `fact_*`, `agg_*`, `ctl_*`).
+
+Validación opcional post-ELT:
+
+```bash
+python scripts/validate_warehouse.py
+```
+
+---
+
+## 5. Levantar API
+
+Desde `backend/`:
+
+```bash
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Verificar:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/
+```
+
+- Documentación interactiva: http://localhost:8000/docs  
+- OpenAPI: prefijo `/api/v1`
+
+---
+
+## 6. Levantar frontend
+
+En otra terminal:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Abrir http://localhost:4200
+
+| Usuario | Contraseña | Rol |
+|---------|------------|-----|
+| `demo` o `demo@voxmetrik.io` | `demo123` | Usuario estándar |
+| `admin` o `admin@voxmetrik.io` | `admin123` | Engineer (+ `/elt-pipeline`, `/explorer`) |
+
+---
+
+## 7. Tests mínimos (opcional)
+
+```bash
+cd backend
+pytest tests/test_api.py -v
+```
+
+Esperado: **12 passed** (health, login, playlists, favorites).
+
+---
+
+## 8. Docker (alternativa)
+
+```bash
+docker compose up --build
+```
+
+- `pipeline` — job one-shot ELT  
+- `api` — http://localhost:8000 (tras pipeline OK)  
+- `pocketbase` — http://localhost:8090 (opcional)
+
+Re-ejecutar solo ELT:
+
+```bash
+docker compose run --rm pipeline
+```
+
+---
+
+## Endpoints de referencia (API v1)
+
+| Área | Ejemplos |
+|------|----------|
+| Identidad | `POST /api/v1/users/login`, `POST /api/v1/users/register`, `GET /api/v1/users/me` |
+| Catálogo | `GET /api/v1/artists`, `/genres`, `/tracks` |
+| Biblioteca | `GET/POST /api/v1/playlists`, `GET/POST /api/v1/favorites/{id}` |
+| Analítica | `GET /api/v1/stats/summary`, `/api/v1/analytics/trending` |
+| Ingeniería | `GET /api/v1/analytics/warehouse`, `POST /api/v1/stats/synthetic` |
+| Explorer | `GET /api/v1/analytics/explorer/tables`, `.../preview/{table}` |
+
+Listado completo en Swagger: `/docs`.
+
+---
+
+## Solución de problemas
+
+### `Database not found` / health `degraded`
+
+Ejecuta el ELT (paso 4). Verifica que exista `data/warehouse/voxmetrik.duckdb`.
+
+### `SerializationError` (DuckDB)
+
+Versión incompatible del archivo. Borra el `.duckdb` y vuelve a correr el pipeline.
+
+### Puerto 8000 ocupado
+
+```bash
+uvicorn app.main:app --reload --port 8001
+```
+
+Actualiza `frontend/src/environments/environment.ts` → `apiUrl`.
+
+### Frontend no conecta a API
+
+Confirma CORS (API permite `*`) y que `apiUrl` apunte a `http://localhost:8000/api/v1`.
+
+---
+
+## Documentación relacionada
+
+- [README.md](../README.md) — visión y estructura del repo  
+- [specs/README.md](../specs/README.md) — índice de specs  
+- [docs/uml/README.md](uml/README.md) — diagramas PlantUML

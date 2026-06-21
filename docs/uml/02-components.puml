@@ -1,0 +1,79 @@
+@startuml voxmetriks-components
+' Diagrama unificado (referencia). Para entrega GA07 preferir 02a + 02b (mas legible).
+' Fuente: specs 001–011, Package-by-Domain P2
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam nodesep 24
+skinparam ranksep 32
+top to bottom direction
+
+title Voxmetriks — Componentes por dominio (PKG-01..07)
+
+package "Frontend — Angular" as FE #E8F4FC {
+
+  component "Core transversal\nAuth · Guards · Interceptor · Player · I18n" as Core
+
+  together {
+    component "PKG-01 Users\nLogin · Perfil" as FE01
+    component "PKG-02 Streaming\nCatalogo · Playlists · Favoritos" as FE02
+    component "PKG-03 Listening\nReproductor · Now playing" as FE03
+  }
+
+  together {
+    component "PKG-04 Discovery\nRecomendaciones · Historial" as FE04
+    component "PKG-05 Admin\nSettings" as FE05
+    component "PKG-06 Analytics\nDashboard · Trending" as FE06
+    component "PKG-07 Data-Eng\nELT UI · Explorer" as FE07
+  }
+}
+
+package "Backend — FastAPI" as BE #E8F8E8 {
+
+  component "Root API\nGET / · GET /health" as Root
+
+  together {
+    component "PKG-01 Users API\n/api/v1/users/*" as BE01
+    component "PKG-02 Streaming API\nartists · tracks · playlists · favorites" as BE02
+    component "PKG-06/07 Analytics API\nstats · warehouse · explorer · recs" as BE67
+  }
+}
+
+package "Datos y operaciones" as Data #FFF8E7 {
+
+  together {
+    database "DuckDB\nvoxmetrik.duckdb" as DB
+    component "ELT CLI\nelt_pipeline.py" as ELT
+  }
+  together {
+    component "Scripts ops\nvalidate · analyze" as Ops
+    cloud "PocketBase\n(ingest opcional)" as PB
+  }
+}
+
+FE -[hidden]down-> BE
+BE -[hidden]down-> Data
+
+Core -down-> BE01
+Core -down-> BE02
+Core -down-> BE67
+
+FE01 -down-> BE01
+FE02 -down-> BE02
+FE03 -down-> BE02
+FE04 -down-> BE67
+FE05 -down-> Root
+FE06 -down-> BE67
+FE07 -down-> BE67
+
+BE01 -down-> DB
+BE02 -down-> DB
+BE67 -down-> DB
+Root -down-> DB
+
+PB ..> ELT : extract
+ELT -down-> DB : Bronze → Silver → Gold
+Ops ..> DB
+BE67 ..> DB : POST synthetic
+
+@enduml

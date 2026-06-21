@@ -41,9 +41,9 @@
 
       <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="email">{{ 'login.email' | t | uppercase }}</label>
-          <div class="input-wrap" [class.invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched">
-            <input id="email" type="email" formControlName="email" placeholder="demo@voxmetrik.io" class="field-input" autocomplete="username" />
+          <label class="field-label" for="loginId">{{ 'login.loginId' | t | uppercase }}</label>
+          <div class="input-wrap" [class.invalid]="loginForm.controls.loginId.invalid && loginForm.controls.loginId.touched">
+            <input id="loginId" type="text" formControlName="loginId" placeholder="demo@voxmetrik.io o admin" class="field-input" autocomplete="username" />
           </div>
         </div>
         <div class="field">

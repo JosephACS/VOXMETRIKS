@@ -82,7 +82,7 @@
 
                     [class.active]="ui.theme() === opt.value"
 
-                    (click)="ui.setTheme(opt.value)"
+                    (click)="onThemeChange(opt.value)"
 
                   >{{ opt.label }}</button>
 
@@ -169,6 +169,162 @@
               </label>
 
             </div>
+
+
+
+            <div class="settings-divider"></div>
+
+
+
+            <h3 class="subsection-title">{{ 'settings.business.title' | t }}</h3>
+
+            <p class="section-desc">{{ 'settings.business.desc' | t }}</p>
+
+
+
+            @if (prefsFeedback() === 'ok') {
+
+              <div class="prefs-toast ok" role="status">{{ 'settings.business.saved' | t }}</div>
+
+            }
+
+            @if (prefsFeedback() === 'error') {
+
+              <div class="prefs-toast error" role="alert">{{ 'settings.business.error' | t }}</div>
+
+            }
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.business.recs' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.business.recsHint' | t }}</span>
+
+              </div>
+
+              <label class="toggle">
+
+                <input
+
+                  type="checkbox"
+
+                  [checked]="recommendationsEnabled()"
+
+                  [disabled]="prefsSaving()"
+
+                  (change)="toggleRecommendations($any($event.target).checked)"
+
+                />
+
+                <span class="toggle-slider"></span>
+
+              </label>
+
+            </div>
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.business.privacy' | t }}</span>
+
+                <span class="setting-hint">{{ 'settings.business.privacyHint' | t }}</span>
+
+              </div>
+
+              <label class="toggle">
+
+                <input
+
+                  type="checkbox"
+
+                  [checked]="privacyPublic()"
+
+                  [disabled]="prefsSaving()"
+
+                  (change)="togglePrivacyPublic($any($event.target).checked)"
+
+                />
+
+                <span class="toggle-slider"></span>
+
+              </label>
+
+            </div>
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.business.audioQuality' | t }}</span>
+
+              </div>
+
+              <div class="select-wrap">
+
+                <select
+
+                  class="setting-control"
+
+                  [ngModel]="audioQuality()"
+
+                  [disabled]="prefsSaving()"
+
+                  (ngModelChange)="onAudioQualityChange($event)"
+
+                >
+
+                  @for (opt of audioQualityOptions; track opt.value) {
+
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+
+                  }
+
+                </select>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="setting-row">
+
+              <div class="setting-info">
+
+                <span class="setting-title">{{ 'settings.business.favoriteGenre' | t }}</span>
+
+              </div>
+
+              <input
+
+                type="text"
+
+                class="setting-control text-input"
+
+                [ngModel]="favoriteGenre()"
+
+                [disabled]="prefsSaving()"
+
+                (ngModelChange)="favoriteGenre.set($event)"
+
+                (blur)="onFavoriteGenreBlur()"
+
+                placeholder="Pop, Rock, Latin..."
+
+              />
+
+            </div>
+
+
 
           </section>
 

@@ -7,11 +7,22 @@
     <span class="badge badge-live">Datos desde DuckDB</span>
   </header>
 
-  @if (isLoading()) {
+  @if (prefsLoaded() && !recsEnabled()) {
+    <div class="disabled-panel glass-panel">
+      <h2>{{ 'recommendations.disabledTitle' | t }}</h2>
+      <p>{{ 'recommendations.disabledMessage' | t }}</p>
+      <a routerLink="/settings" class="cta-link">{{ 'recommendations.goSettings' | t }}</a>
+    </div>
+  } @else if (isLoading()) {
     <p class="loading-msg">Cargando recomendaciones...</p>
   } @else if (hasError()) {
     <div class="empty glass-panel"><p>No se pudieron cargar recomendaciones. Verifica el backend.</p></div>
   } @else {
+    <div class="synthetic-banner" role="note">
+      <span class="synthetic-icon" aria-hidden="true">ℹ</span>
+      <p>{{ 'recommendations.syntheticDisclaimer' | t }}</p>
+    </div>
+
     <section class="kpi-grid">
       <app-kpi-card label="Tracks sugeridos" [value]="kpiTracks()" iconKey="music" color="primary" subtitle="Para ti" />
       <app-kpi-card label="Puntuación media" [value]="avgScore()" iconKey="target" color="info" subtitle="Recomendación" />
@@ -46,19 +57,20 @@
       </div>
       <div class="horizontal-scroll">
         @for (item of forYou(); track item.id_track; let i = $index) {
-          <a class="for-you-card" [style.--accent]="accent(i)" [routerLink]="['/tracks', item.id_track]">
-            <div class="fy-body">
-              <h3 class="fy-track">{{ item.nombre_track }}</h3>
-              <p class="fy-artist">{{ item.nombre_artista ?? '—' }}</p>
-              <div class="fy-score">
-                <span class="score-label">Score</span>
-                <span class="score-value">{{ item.recommendation_score ?? item.popularity ?? 0 }}</span>
-              </div>
-              @if (item.nombre_genero) {
-                <span class="tag">{{ item.nombre_genero }}</span>
-              }
+          @if (item.id_track) {
+            <div class="rec-card-wrap">
+              <app-media-card
+                [title]="item.nombre_track ?? '—'"
+                [subtitle]="item.nombre_artista ?? '—'"
+                [gradient]="covers.gradientFor(item.id_track)"
+                [link]="'/tracks/' + item.id_track"
+                [track]="toPlayable(item)"
+                [queue]="forYouPlayable()"
+                [badge]="item.recommendation_score ?? item.popularity"
+              />
+              <app-favorite-btn [trackId]="item.id_track" size="sm" />
             </div>
-          </a>
+          }
         }
       </div>
     </section>
@@ -132,14 +144,20 @@
             </div>
             <div class="mood-tracks-grid">
               @for (track of moodTracks(); track track.id_track; let i = $index) {
-                <a class="mood-track-card" [routerLink]="['/tracks', track.id_track]" [style.--accent]="accent(i)">
-                  <h3>{{ track.nombre_track }}</h3>
-                  <p class="mt-artist">{{ displayArtist(track.nombre_artista) }}</p>
-                  <div class="mt-meta">
-                    @if (track.nombre_genero) { <span class="tag">{{ track.nombre_genero }}</span> }
-                    <span class="mt-energy" title="Nivel de energía">⚡ {{ ((track.energy ?? 0) * 100) | number:'1.0-0' }}%</span>
+                @if (track.id_track) {
+                  <div class="mood-track-wrap" [style.--accent]="accent(i)">
+                    <app-media-card
+                      [title]="track.nombre_track ?? '—'"
+                      [subtitle]="displayArtist(track.nombre_artista)"
+                      [gradient]="covers.gradientFor(track.id_track)"
+                      [link]="'/tracks/' + track.id_track"
+                      [track]="toPlayable(track)"
+                      [queue]="moodTracksPlayable()"
+                      [meta]="'⚡ ' + (((track.energy ?? 0) * 100) | number:'1.0-0') + '%'"
+                    />
+                    <app-favorite-btn [trackId]="track.id_track" size="sm" />
                   </div>
-                </a>
+                }
               }
             </div>
           }

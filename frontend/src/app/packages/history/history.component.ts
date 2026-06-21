@@ -6,6 +6,8 @@ import { IconRenderService } from '../../shared/services/icon-render.service';
 import { StatsService } from '../analytics/services/stats.service';
 import { HistoryService } from '../streaming/services/history.service';
 import { SearchHistoryService } from '../streaming/services/search-history.service';
+import { MusicPlayerService } from '../../shared/services/music-player.service';
+import { CoverArtService } from '../../shared/services/cover-art.service';
 import { HistoryHub, HistoryEntry, SearchHistoryEntry } from '../../shared/models/api.models';
 import { primaryArtistName } from '../../shared/utils/artist.util';
 
@@ -23,6 +25,8 @@ export class HistoryComponent implements OnInit {
   private stats = inject(StatsService);
   private localMusic = inject(HistoryService);
   private localSearch = inject(SearchHistoryService);
+  private player = inject(MusicPlayerService);
+  private covers = inject(CoverArtService);
 
   activeTab = signal<HistoryTab>('music');
   isLoading = signal(true);
@@ -72,6 +76,20 @@ export class HistoryComponent implements OnInit {
 
   clearLocalSearch() {
     this.localSearch.clear();
+  }
+
+  playFromHistory(item: HistoryEntry, e?: Event) {
+    e?.stopPropagation();
+    e?.preventDefault();
+    const id = item.id_track;
+    if (!id) return;
+    this.player.playTrack({
+      id,
+      title: item.nombre_track,
+      artist: this.artistName(item.nombre_artista),
+      audioUrl: `/assets/audio/demo-${String((id % 8) + 1).padStart(2, '0')}.wav`,
+      coverGradient: this.covers.gradientFor(id),
+    });
   }
 
   artistName(raw?: string): string {

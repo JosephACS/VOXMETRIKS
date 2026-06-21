@@ -56,14 +56,17 @@
       } @else {
         <div class="timeline-list">
           @for (item of localMusicEntries(); track item.id_track; let i = $index) {
-            <a class="timeline-row" [routerLink]="['/tracks', item.id_track]">
+            <div class="timeline-row interactive">
+              <button type="button" class="row-play-btn" (click)="playFromHistory(item, $event)" [attr.aria-label]="'Reproducir ' + item.nombre_track">
+                <span [innerHTML]="icon('play', 14)"></span>
+              </button>
               <span class="row-rank">{{ i + 1 }}</span>
               <div class="row-main">
-                <span class="row-title">{{ item.nombre_track }}</span>
+                <a class="row-title link" [routerLink]="['/tracks', item.id_track]">{{ item.nombre_track }}</a>
                 <span class="row-sub">{{ artistName(item.nombre_artista) }}</span>
               </div>
               <span class="row-time mono">{{ formatRelative(item.viewed_at) }}</span>
-            </a>
+            </div>
           }
         </div>
       }

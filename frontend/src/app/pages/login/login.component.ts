@@ -44,7 +44,7 @@ export class LoginComponent implements OnInit {
   protected readonly summary = signal<StatsSummary | null>(null);
 
   protected readonly loginForm = this.fb.group({
-    email: ['demo@voxmetrik.io', [Validators.required, Validators.email]],
+    loginId: ['demo@voxmetrik.io', [Validators.required, Validators.minLength(3)]],
     password: ['demo123', [Validators.required, Validators.minLength(4)]],
     remember: [true],
   });
@@ -83,8 +83,8 @@ export class LoginComponent implements OnInit {
     }
     this.isLoading.set(true);
     this.errorMessage.set('');
-    const { email, password, remember } = this.loginForm.getRawValue();
-    this.auth.login(email!, password!, remember ?? true).then((ok) => {
+    const { loginId, password, remember } = this.loginForm.getRawValue();
+    this.auth.login(loginId!, password!, remember ?? true).then((ok) => {
       if (ok) {
         this.router.navigate(['/dashboard']);
       } else {
