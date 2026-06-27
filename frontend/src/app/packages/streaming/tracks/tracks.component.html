@@ -12,7 +12,6 @@
     </div>
     <div class="page-header-actions">
       <app-data-source-badge kind="live" />
-      <app-data-source-badge kind="demo" />
       @if (!isLoading() && !hasError()) { <div class="page-meta">{{ 'tracks.count' | t: { count: (displayTotal() | number) ?? 0 } }}</div> }
       @if (auth.isCatalogSteward()) {
       <button class="btn-primary" (click)="openCreate()">

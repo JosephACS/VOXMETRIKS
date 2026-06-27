@@ -1,16 +1,18 @@
 import { Injectable } from '@angular/core';
 
+// Paleta neutra y sobria (tonos apagados, sin verdes chillones).
+// Cada gradiente es oscuro con un tinte sutil para dar variedad discreta.
 const GRADIENTS = [
-  'linear-gradient(135deg, #1ed896 0%, #0d3d2e 100%)',
-  'linear-gradient(135deg, #148f5e 0%, #121212 100%)',
-  'linear-gradient(135deg, #1db954 0%, #004225 100%)',
-  'linear-gradient(135deg, #2dd4bf 0%, #134e4a 100%)',
-  'linear-gradient(135deg, #34d399 0%, #064e3b 100%)',
-  'linear-gradient(135deg, #6ee7b7 0%, #1e293b 100%)',
-  'linear-gradient(135deg, #059669 0%, #000000 100%)',
-  'linear-gradient(135deg, #10b981 0%, #312e81 55%, #000 100%)',
-  'linear-gradient(160deg, #1ed896 0%, #181818 50%, #000 100%)',
-  'linear-gradient(145deg, #065f46 0%, #1ed896 100%)',
+  'linear-gradient(145deg, #2a2d34 0%, #16181c 100%)',
+  'linear-gradient(145deg, #2e2a33 0%, #18161c 100%)',
+  'linear-gradient(145deg, #26303a 0%, #15191e 100%)',
+  'linear-gradient(145deg, #313037 0%, #1a191e 100%)',
+  'linear-gradient(145deg, #2b3330 0%, #16191a 100%)',
+  'linear-gradient(145deg, #343033 0%, #1c1a1c 100%)',
+  'linear-gradient(145deg, #2a2e38 0%, #15171c 100%)',
+  'linear-gradient(145deg, #38332e 0%, #1c1a17 100%)',
+  'linear-gradient(145deg, #2d2d2d 0%, #161616 100%)',
+  'linear-gradient(145deg, #283038 0%, #14171b 100%)',
 ];
 
 @Injectable({ providedIn: 'root' })

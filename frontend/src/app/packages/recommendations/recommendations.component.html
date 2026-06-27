@@ -6,8 +6,6 @@
     </div>
     <div class="header-badges">
       <app-data-source-badge kind="live" />
-      <app-data-source-badge kind="synthetic" />
-      <app-data-source-badge kind="demo" />
     </div>
   </header>
 
@@ -27,11 +25,6 @@
       <button type="button" class="retry-btn" (click)="retryRecommendations()">{{ 'common.retry' | t }}</button>
     </div>
   } @else {
-    <div class="synthetic-banner" role="note">
-      <span class="synthetic-icon" [innerHTML]="icon('target', 14)"></span>
-      <p>{{ 'recommendations.syntheticDisclaimer' | t }} {{ 'recommendations.scoreNote' | t }}</p>
-    </div>
-
     <section class="kpi-grid">
       <app-kpi-card [label]="'recommendations.kpi.tracks' | t" [value]="kpiTracks()" iconKey="music" color="primary" [subtitle]="'recommendations.kpi.tracksSub' | t" />
       <app-kpi-card [label]="'recommendations.kpi.score' | t" [value]="avgScore()" iconKey="target" color="info" [subtitle]="'recommendations.kpi.scoreSub' | t" />
@@ -43,7 +36,6 @@
       <section class="panel chart-panel">
         <div class="panel-header">
           <h2>Afinidad por género</h2>
-          <span class="panel-meta">agg_genero_popularidad</span>
         </div>
         <div class="genre-chart">
           @for (g of genres(); track g.genre; let i = $index) {
@@ -65,14 +57,13 @@
     <section class="panel">
       <div class="panel-header">
         <h2>{{ 'recommendations.forYou' | t }}</h2>
-        <span class="panel-meta">agg_recommendation_scores</span>
       </div>
       <div class="horizontal-scroll">
         @for (item of forYou(); track item.id_track; let i = $index) {
           @if (item.id_track) {
             <div class="rec-card-wrap">
               <app-media-card
-                [title]="item.nombre_track ?? '—'"
+                [title]="displayTitle(item.nombre_track)"
                 [subtitle]="item.nombre_artista ?? '—'"
                 [gradient]="covers.gradientFor(item.id_track)"
                 [link]="'/tracks/' + item.id_track"
@@ -93,7 +84,6 @@
     <section class="panel">
       <div class="panel-header">
         <h2>Artistas recomendados</h2>
-        <span class="panel-meta">agg_top_artistas</span>
       </div>
       <div class="artists-grid">
         @for (artist of artists(); track artist.id_artista) {
@@ -127,9 +117,8 @@
       <div class="panel-header">
         <div>
           <h2>{{ 'recommendations.mood' | t }}</h2>
-          <p class="panel-sub">Filtra canciones reales del catálogo según su nivel de energía</p>
+          <p class="panel-sub">Filtra canciones del catálogo según su nivel de energía</p>
         </div>
-        <span class="panel-meta">agg_distribucion_energia</span>
       </div>
       <div class="mood-grid">
         @for (mood of moods(); track mood.id) {
@@ -165,7 +154,7 @@
                 @if (track.id_track) {
                   <div class="mood-track-wrap" [style.--accent]="accent(i)">
                     <app-media-card
-                      [title]="track.nombre_track ?? '—'"
+                      [title]="displayTitle(track.nombre_track)"
                       [subtitle]="displayArtist(track.nombre_artista)"
                       [gradient]="covers.gradientFor(track.id_track)"
                       [link]="'/tracks/' + track.id_track"

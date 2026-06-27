@@ -9,7 +9,6 @@
       <p>{{ 'liked.count' | t: { count: tracks().length } }}</p>
       <div class="hero-badges">
         <app-data-source-badge kind="live" />
-        <app-data-source-badge kind="demo" />
       </div>
       <p class="hero-note">{{ 'liked.note' | t }}</p>
       @if (tracks().length) {

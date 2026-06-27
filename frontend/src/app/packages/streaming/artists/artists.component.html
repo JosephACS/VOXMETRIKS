@@ -38,8 +38,6 @@
 
       <app-data-source-badge kind="live" />
 
-      <app-data-source-badge kind="demo" />
-
       @if (!isLoading() && !hasError()) {
 
         <div class="page-meta">{{ 'artists.count' | t: { count: (displayTotal() | number) ?? 0 } }}</div>

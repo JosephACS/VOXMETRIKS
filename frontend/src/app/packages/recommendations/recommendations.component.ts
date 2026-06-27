@@ -27,6 +27,8 @@ import { CoverArtService } from '../../shared/services/cover-art.service';
 import { MusicPlayerService } from '../../shared/services/music-player.service';
 
 import { primaryArtistName } from '../../shared/utils/artist.util';
+import { displayTrackTitle } from '../../shared/utils/track-display.util';
+import { demoAudioUrlForTrack } from '../../shared/config/demo-audio.config';
 
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
@@ -252,11 +254,11 @@ export class RecommendationsComponent implements OnInit {
 
       id,
 
-      title: t.nombre_track ?? '—',
+      title: displayTrackTitle(t.nombre_track),
 
       artist: primaryArtistName(t.nombre_artista),
 
-      audioUrl: `/assets/audio/demo-${String((id % 8) + 1).padStart(2, '0')}.wav`,
+      audioUrl: demoAudioUrlForTrack(id),
 
       coverGradient: this.covers.gradientFor(id),
 
@@ -293,6 +295,14 @@ export class RecommendationsComponent implements OnInit {
   displayArtist(name?: string): string {
 
     return primaryArtistName(name);
+
+  }
+
+
+
+  displayTitle(name?: string): string {
+
+    return displayTrackTitle(name);
 
   }
 

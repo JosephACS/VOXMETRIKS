@@ -33,7 +33,6 @@
     <div class="source-badges">
       <app-data-source-badge kind="local" />
       <app-data-source-badge kind="mixed" />
-      <app-data-source-badge kind="synthetic" />
     </div>
   </div>
 
@@ -94,7 +93,6 @@
           <p class="section-desc">{{ 'history.user.desc' | t }}</p>
         </div>
         <app-data-source-badge kind="mixed" />
-        <app-data-source-badge kind="synthetic" />
       </div>
 
       @if (isLoading()) {
@@ -193,7 +191,6 @@
           <p class="section-desc">{{ 'history.search.warehouseDesc' | t }}</p>
         </div>
         <app-data-source-badge kind="mixed" />
-        <app-data-source-badge kind="synthetic" />
         <span class="meta-badge">{{ warehouseSearches().length }}</span>
       </div>
 

@@ -11,7 +11,10 @@ import { AddToPlaylistBtnComponent } from '../../../shared/components/add-to-pla
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
-import { displayTrackTitle } from '../../../shared/utils/track-display.util';
+import { CoverArtService } from '../../../shared/services/cover-art.service';
+import { displayTrackTitle, displayTrackSubtitle } from '../../../shared/utils/track-display.util';
+import { primaryArtistName } from '../../../shared/utils/artist.util';
+import { demoAudioUrlForTrack } from '../../../shared/config/demo-audio.config';
 
 @Component({
   selector: 'app-track-detail',
@@ -22,6 +25,7 @@ import { displayTrackTitle } from '../../../shared/utils/track-display.util';
 })
 export class TrackDetailComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  private coverArt = inject(CoverArtService);
 
   track = signal<TrackDetail | null>(null);
   isLoading = signal(true);
@@ -94,25 +98,26 @@ export class TrackDetailComponent implements OnInit {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  playDemo() {
+  playTrack() {
     const t = this.track();
     if (!t) return;
+    const artist = t.nombre_artista?.trim()
+      ? primaryArtistName(t.nombre_artista)
+      : '—';
     this.player.playTrack({
       id: t.id_track,
-      title: t.nombre_track ?? 'Track',
-      artist: t.nombre_artista ?? '—',
+      title: displayTrackTitle(t.nombre_track),
+      artist: displayTrackSubtitle(artist, t.nombre_genero, t.id_track),
       durationMs: t.duration_ms,
-      audioUrl: `/assets/audio/demo-${String((t.id_track % 8) + 1).padStart(2, '0')}.wav`,
-      coverGradient: this.coverGradient(),
+      audioUrl: demoAudioUrlForTrack(t.id_track),
+      coverGradient: this.coverArt.gradientFor(t.id_track),
       explicit: t.explicit,
     });
   }
 
   coverGradient(): string {
     const t = this.track();
-    const seed = t?.id_track ?? 0;
-    const hues = ['#1ed896', '#7c3aed', '#3b82f6', '#10b981'];
-    return `linear-gradient(135deg, ${hues[seed % hues.length]}, ${hues[(seed + 1) % hues.length]})`;
+    return this.coverArt.gradientFor(t?.id_track ?? 0);
   }
 
   icon(key: string, size = 18): SafeHtml {

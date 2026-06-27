@@ -107,7 +107,6 @@
           <div class="section-head">
             <h2>{{ 'profile.sections.activity' | t }}</h2>
             <div class="section-head-actions">
-              <app-data-source-badge kind="synthetic" />
               <span class="section-meta">Serie normalizada</span>
             </div>
           </div>
@@ -228,9 +227,7 @@
       <section class="glass-panel section-panel">
         <div class="section-head">
           <h2>{{ 'profile.sections.activityTimeline' | t }}</h2>
-          <app-data-source-badge kind="synthetic" />
         </div>
-        <p class="pref-readonly-note">{{ 'profile.activityDemo' | t }}</p>
         <div class="timeline">
           @for (act of activities(); track act.id; let last = $last) {
             <div class="timeline-item">
