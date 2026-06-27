@@ -1,10 +1,14 @@
 <div class="rec-page">
   <header class="page-header">
     <div class="header-text">
-      <h1>Recomendaciones</h1>
-      <p class="page-subtitle">Sugerencias basadas en el warehouse analítico y tu género favorito</p>
+      <h1>{{ 'recommendations.title' | t }}</h1>
+      <p class="page-subtitle">{{ 'recommendations.subtitle' | t }}</p>
     </div>
-    <span class="badge badge-live">Datos desde DuckDB</span>
+    <div class="header-badges">
+      <app-data-source-badge kind="live" />
+      <app-data-source-badge kind="synthetic" />
+      <app-data-source-badge kind="demo" />
+    </div>
   </header>
 
   @if (prefsLoaded() && !recsEnabled()) {
@@ -14,20 +18,25 @@
       <a routerLink="/settings" class="cta-link">{{ 'recommendations.goSettings' | t }}</a>
     </div>
   } @else if (isLoading()) {
-    <p class="loading-msg">Cargando recomendaciones...</p>
+    <p class="loading-msg">{{ 'recommendations.loading' | t }}</p>
   } @else if (hasError()) {
-    <div class="empty glass-panel"><p>No se pudieron cargar recomendaciones. Verifica el backend.</p></div>
+    <div class="empty glass-panel error-state">
+      <span [innerHTML]="icon('alert', 28)"></span>
+      <p>{{ 'recommendations.error' | t }}</p>
+      <small>{{ 'recommendations.errorHint' | t }}</small>
+      <button type="button" class="retry-btn" (click)="retryRecommendations()">{{ 'common.retry' | t }}</button>
+    </div>
   } @else {
     <div class="synthetic-banner" role="note">
-      <span class="synthetic-icon" aria-hidden="true">ℹ</span>
-      <p>{{ 'recommendations.syntheticDisclaimer' | t }}</p>
+      <span class="synthetic-icon" [innerHTML]="icon('target', 14)"></span>
+      <p>{{ 'recommendations.syntheticDisclaimer' | t }} {{ 'recommendations.scoreNote' | t }}</p>
     </div>
 
     <section class="kpi-grid">
-      <app-kpi-card label="Tracks sugeridos" [value]="kpiTracks()" iconKey="music" color="primary" subtitle="Para ti" />
-      <app-kpi-card label="Puntuación media" [value]="avgScore()" iconKey="target" color="info" subtitle="Recomendación" />
-      <app-kpi-card label="Géneros" [value]="kpiGenres()" iconKey="layers" color="warning" subtitle="Afinidad" />
-      <app-kpi-card label="Moods" [value]="moods().length" iconKey="chart" color="secondary" subtitle="Por energía" />
+      <app-kpi-card [label]="'recommendations.kpi.tracks' | t" [value]="kpiTracks()" iconKey="music" color="primary" [subtitle]="'recommendations.kpi.tracksSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.score' | t" [value]="avgScore()" iconKey="target" color="info" [subtitle]="'recommendations.kpi.scoreSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.genres' | t" [value]="kpiGenres()" iconKey="layers" color="warning" [subtitle]="'recommendations.kpi.genresSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.moods' | t" [value]="moods().length" iconKey="chart" color="secondary" [subtitle]="'recommendations.kpi.moodsSub' | t" />
     </section>
 
     <div class="charts-row">
@@ -46,13 +55,16 @@
               <span class="genre-score">{{ g.score }}</span>
             </div>
           }
+          @if (!genres().length) {
+            <p class="empty-inline">Sin afinidades de género todavía. Completa el pipeline o define tu género favorito.</p>
+          }
         </div>
       </section>
     </div>
 
     <section class="panel">
       <div class="panel-header">
-        <h2>Para ti</h2>
+        <h2>{{ 'recommendations.forYou' | t }}</h2>
         <span class="panel-meta">agg_recommendation_scores</span>
       </div>
       <div class="horizontal-scroll">
@@ -71,6 +83,9 @@
               <app-favorite-btn [trackId]="item.id_track" size="sm" />
             </div>
           }
+        }
+        @if (!forYou().length) {
+          <p class="empty-inline">No hay tracks recomendados con los datos actuales.</p>
         }
       </div>
     </section>
@@ -102,13 +117,16 @@
             </div>
           </article>
         }
+        @if (!artists().length) {
+          <p class="empty-inline">Aún no hay artistas recomendados. Revisa agregaciones del warehouse.</p>
+        }
       </div>
     </section>
 
     <section class="panel mood-panel">
       <div class="panel-header">
         <div>
-          <h2>Recomendaciones por mood</h2>
+          <h2>{{ 'recommendations.mood' | t }}</h2>
           <p class="panel-sub">Filtra canciones reales del catálogo según su nivel de energía</p>
         </div>
         <span class="panel-meta">agg_distribucion_energia</span>

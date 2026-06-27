@@ -1,233 +1,486 @@
 <div class="page">
 
+
+
   <div class="page-header">
+
     <div class="page-header-main">
+
       <h1 class="page-title">
+
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon">
+
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+
           <circle cx="9" cy="7" r="4"/>
+
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+
         </svg>
-        Artistas
+
+        {{ 'artists.title' | t }}
+
       </h1>
-      <p class="page-subtitle">Artistas individuales · colaboraciones mostradas por separado</p>
+
+      <p class="page-subtitle">
+
+        {{ 'artists.subtitle' | t }}
+
+        @if (!auth.isCatalogSteward()) { <span class="readonly-tag">{{ 'artists.readonly' | t }}</span> }
+
+      </p>
+
     </div>
+
     <div class="page-header-actions">
+
+      <app-data-source-badge kind="live" />
+
+      <app-data-source-badge kind="demo" />
+
       @if (!isLoading() && !hasError()) {
-        <div class="page-meta">{{ displayTotal() | number }} artistas</div>
+
+        <div class="page-meta">{{ 'artists.count' | t: { count: (displayTotal() | number) ?? 0 } }}</div>
+
       }
+
+      @if (auth.isCatalogSteward()) {
+
       <button class="btn-primary" (click)="openCreate()">
+
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nuevo Artista
+
+        {{ 'artists.new' | t }}
+
       </button>
+
+      }
+
     </div>
+
   </div>
+
+
 
   @if (topArtists().length > 0) {
+
+    <p class="section-hint">{{ 'artists.kpi.topHint' | t }}</p>
+
     <div class="top-artists-row">
+
       @for (a of topArtists(); track a.id_artista; let i = $index) {
-        <div class="top-artist-card">
+
+        <a class="top-artist-card" [routerLink]="['/artists', a.id_artista]">
+
           <span class="rank-badge">#{{ i + 1 }}</span>
+
           <div class="top-artist-avatar">{{ displayPrimaryInitial(a.nombre_artista) }}</div>
+
           <div class="top-artist-info">
+
             <span class="top-artist-name" [title]="a.nombre_artista ?? ''">{{ displayPrimaryName(a.nombre_artista) }}</span>
+
             <div class="top-artist-meta">
+
               <span class="stat-pill popularity"><span class="pill-icon" [innerHTML]="icon('star', 12)"></span> {{ (a.promedio_popularidad ?? 0) | number:'1.0-1' }}</span>
+
               <span class="stat-pill tracks"><span class="pill-icon" [innerHTML]="icon('music', 12)"></span> {{ (a.total_tracks ?? 0) | number }}</span>
+
             </div>
+
           </div>
-        </div>
+
+        </a>
+
       }
+
     </div>
+
   }
+
+
 
   <div class="search-bar">
+
     <div class="search-input-wrap">
+
       <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+
       </svg>
-      <input class="search-input" type="text" placeholder="Buscar artista..." [value]="searchVal()" (input)="onSearch($any($event.target).value)"/>
+
+      <input class="search-input" type="text" [placeholder]="'artists.searchPlaceholder' | t" [value]="searchVal()" (input)="onSearch($any($event.target).value)"/>
+
       @if (searchVal()) {
+
         <button class="search-clear" (click)="clearSearch()">✕</button>
+
       }
+
     </div>
+
     @if (!isLoading() && !hasError()) {
-      <span class="search-count">{{ displayTotal() | number }} artistas</span>
+
+      <span class="search-count">{{ 'artists.count' | t: { count: (displayTotal() | number) ?? 0 } }}</span>
+
     }
+
   </div>
 
+
+
   @if (hasError()) {
+
     <div class="error-card">
+
       <div class="error-icon" [innerHTML]="icon('alert', 20)"></div>
-      <div><strong>Error de conexión</strong><p>{{ errorMsg() }}</p></div>
-      <button class="btn-retry" (click)="loadArtists()">Reintentar</button>
+
+      <div><strong>{{ 'artists.connectionError' | t }}</strong><p>{{ errorMsg() }}</p></div>
+
+      <button class="btn-retry" (click)="loadArtists()">{{ 'artists.retry' | t }}</button>
+
     </div>
+
   }
+
+
 
   @if (!hasError()) {
+
     <div class="table-card">
+
       <div class="table-scroll">
+
         <table class="data-table">
+
           <thead>
+
             <tr>
+
               <th class="col-idx">#</th>
+
               <th class="col-id">ID</th>
-              <th class="col-name">Artista</th>
-              <th class="col-actions">Acciones</th>
+
+              <th class="col-name">{{ 'common.artist' | t }}</th>
+
+              @if (auth.isCatalogSteward()) { <th class="col-actions"></th> }
+
             </tr>
+
           </thead>
+
           <tbody>
+
             @if (isLoading()) {
+
               @for (s of skeletonRows; track $index) {
+
                 <tr class="skeleton-row">
+
                   <td><div class="skel skel-sm"></div></td>
+
                   <td><div class="skel skel-sm"></div></td>
+
                   <td><div class="skel skel-lg"></div></td>
+
                   <td><div class="skel skel-sm"></div></td>
+
                 </tr>
+
               }
+
             } @else if (artists().length === 0) {
+
               <tr><td colspan="4" class="empty-cell">
+
                 <div class="empty-state">
+
                   <div class="empty-icon" [innerHTML]="icon('music', 24)"></div>
-                  <p>No se encontraron artistas{{ searchVal() ? ' para "' + searchVal() + '"' : '' }}</p>
+
+                  <p>{{ 'artists.empty' | t: { query: searchVal() ? ' para "' + searchVal() + '"' : '' } }}</p>
+
+                  <small>{{ 'artists.emptyHint' | t }}</small>
+
                 </div>
+
               </td></tr>
+
             } @else {
+
               @for (artist of artists(); track artist.id_artista; let i = $index) {
-                <tr class="data-row">
+
+                <tr class="data-row" (click)="openArtist(artist.id_artista)">
+
                   <td class="col-idx text-muted mono">{{ rowIndex(i) }}</td>
+
                   <td class="col-id mono text-muted">{{ artist.id_artista }}</td>
+
                   <td class="col-name">
-                    <div class="artist-cell">
+
+                    <div class="artist-cell artist-link">
+
                       <div class="artist-avatar-initials">{{ displayPrimaryInitial(artist.nombre_artista) }}</div>
+
                       <div class="artist-name-wrap">
+
                         @for (name of artistNames(artist.nombre_artista); track name; let last = $last) {
+
                           <span class="artist-chip-name">{{ name }}</span>
+
                           @if (!last) { <span class="feat-sep">·</span> }
+
                         }
+
                       </div>
+
                     </div>
+
                   </td>
-                  <td class="col-actions">
+
+                  @if (auth.isCatalogSteward()) {
+
+                  <td class="col-actions" (click)="$event.stopPropagation()">
+
                     <div class="action-btns">
-                      <button class="btn-icon btn-edit" (click)="openEdit(artist)" title="Editar">
+
+                      <button class="btn-icon btn-edit" (click)="openEdit(artist)" [title]="'common.edit' | t">
+
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+
                       </button>
-                      <button class="btn-icon btn-delete" (click)="openDelete(artist)" title="Eliminar">
+
+                      <button class="btn-icon btn-delete" (click)="openDelete(artist)" [title]="'common.delete' | t">
+
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+
                       </button>
+
                     </div>
+
                   </td>
+
+                  }
+
                 </tr>
+
               }
+
             }
+
           </tbody>
+
         </table>
+
       </div>
+
     </div>
 
+
+
     @if (!isLoading() && totalPages() > 1) {
+
       <div class="pagination">
+
         <button class="page-btn" [disabled]="page() <= 1" (click)="goTo(page() - 1)">
+
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+
         </button>
+
         @if (page() > 3) {
+
           <button class="page-btn" (click)="goTo(1)">1</button>
+
           @if (page() > 4) { <span class="page-ellipsis">…</span> }
+
         }
+
         @for (p of pageNumbers; track p) {
+
           <button class="page-btn" [class.active]="p === page()" (click)="goTo(p)">{{ p }}</button>
+
         }
+
         @if (page() < totalPages() - 2) {
+
           @if (page() < totalPages() - 3) { <span class="page-ellipsis">…</span> }
+
           <button class="page-btn" (click)="goTo(totalPages())">{{ totalPages() }}</button>
+
         }
+
         <button class="page-btn" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)">
+
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+
         </button>
+
         <span class="page-info">Pág. {{ page() }} / {{ totalPages() }}</span>
+
       </div>
+
     }
+
   }
+
+
 
 </div>
 
-<!-- ═══ MODAL ═══ -->
-@if (modalMode() !== null) {
+
+
+@if (modalMode() !== null && auth.isCatalogSteward()) {
+
   <div class="modal-backdrop" (click)="closeModal()">
+
     <div class="modal" (click)="$event.stopPropagation()">
 
+
+
       @if (modalMode() === 'create') {
+
         <div class="modal-header">
+
           <h3 class="modal-title">
+
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Nuevo Artista
+
+            {{ 'artists.modal.create' | t }}
+
           </h3>
+
           <button class="modal-close" (click)="closeModal()">✕</button>
+
         </div>
+
         <div class="modal-body">
+
           <div class="form-group">
-            <label class="form-label">Nombre del Artista</label>
-            <input class="form-input" type="text" placeholder="Ej: The Beatles" [value]="formName()" (input)="formName.set($any($event.target).value)" (keydown.enter)="saveCreate()"/>
+
+            <label class="form-label">{{ 'artists.modal.nameLabel' | t }}</label>
+
+            <input class="form-input" type="text" [placeholder]="'artists.modal.namePlaceholder' | t" [value]="formName()" (input)="formName.set($any($event.target).value)" (keydown.enter)="saveCreate()"/>
+
           </div>
+
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
+
         </div>
+
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+
+          <button class="btn-secondary" (click)="closeModal()">{{ 'artists.modal.cancel' | t }}</button>
+
           <button class="btn-primary" [disabled]="formSaving()" (click)="saveCreate()">
-            @if (formSaving()) { <span class="spinner"></span> } Crear
+
+            @if (formSaving()) { <span class="spinner"></span> } {{ 'artists.modal.createBtn' | t }}
+
           </button>
+
         </div>
+
       }
+
+
 
       @if (modalMode() === 'edit') {
+
         <div class="modal-header">
+
           <h3 class="modal-title">
+
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar Artista
+
+            {{ 'artists.modal.edit' | t }}
+
           </h3>
+
           <button class="modal-close" (click)="closeModal()">✕</button>
+
         </div>
+
         <div class="modal-body">
+
           <div class="form-group">
-            <label class="form-label">Nombre del Artista</label>
+
+            <label class="form-label">{{ 'artists.modal.nameLabel' | t }}</label>
+
             <input class="form-input" type="text" [value]="formName()" (input)="formName.set($any($event.target).value)" (keydown.enter)="saveEdit()"/>
+
           </div>
+
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
+
         </div>
+
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+
+          <button class="btn-secondary" (click)="closeModal()">{{ 'artists.modal.cancel' | t }}</button>
+
           <button class="btn-primary" [disabled]="formSaving()" (click)="saveEdit()">
-            @if (formSaving()) { <span class="spinner"></span> } Guardar
+
+            @if (formSaving()) { <span class="spinner"></span> } {{ 'artists.modal.save' | t }}
+
           </button>
+
         </div>
+
       }
+
+
 
       @if (modalMode() === 'delete') {
+
         <div class="modal-header">
+
           <h3 class="modal-title modal-title-danger">
+
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-            Eliminar Artista
+
+            {{ 'artists.modal.delete' | t }}
+
           </h3>
+
           <button class="modal-close" (click)="closeModal()">✕</button>
+
         </div>
+
         <div class="modal-body">
+
           <p class="delete-confirm-text">
-            ¿Eliminar <strong>{{ modalArtist()?.nombre_artista }}</strong>?<br>
-            <span class="delete-warn">Esta acción no se puede deshacer.</span>
+
+            {{ 'artists.modal.deleteConfirm' | t: { name: modalArtist()?.nombre_artista ?? '' } }}<br>
+
+            <span class="delete-warn">{{ 'artists.modal.deleteWarn' | t }}</span>
+
           </p>
+
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
+
         </div>
+
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+
+          <button class="btn-secondary" (click)="closeModal()">{{ 'artists.modal.cancel' | t }}</button>
+
           <button class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">
-            @if (formSaving()) { <span class="spinner"></span> } Eliminar
+
+            @if (formSaving()) { <span class="spinner"></span> } {{ 'artists.modal.deleteBtn' | t }}
+
           </button>
+
         </div>
+
       }
 
+
+
     </div>
+
   </div>
+
 }
+

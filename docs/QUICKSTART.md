@@ -48,6 +48,8 @@ Variables relevantes (`.env`):
 | `DB_PATH` | Vacío = `data/warehouse/voxmetrik.duckdb` (auto-resuelto) |
 | `POCKETBASE_URL` | Fuente opcional de ingest |
 | `POCKETBASE_EMAIL` / `PASSWORD` | Credenciales PocketBase |
+| `CORS_ORIGINS` | Orígenes permitidos para el frontend, separados por coma |
+| `HEALTH_VERBOSE` | `true` solo en dev/ops si necesitas ver ruta DB y tablas en `/health` |
 
 Sin PocketBase, coloca Parquet en:
 
@@ -93,6 +95,7 @@ curl http://localhost:8000/
 
 - Documentación interactiva: http://localhost:8000/docs  
 - OpenAPI: prefijo `/api/v1`
+- `/health` público no expone ruta de DB ni nombres de tablas por defecto.
 
 ---
 
@@ -115,14 +118,21 @@ Abrir http://localhost:4200
 
 ---
 
-## 7. Tests mínimos (opcional)
+## 7. Tests y smoke (opcional)
 
 ```bash
 cd backend
-pytest tests/test_api.py -v
+pytest tests/ -v
 ```
 
-Esperado: **12 passed** (health, login, playlists, favorites).
+Smoke contra la API real (requiere backend levantado):
+
+```bash
+python ../scripts/smoke_api.py --base-url http://localhost:8000
+python ../scripts/smoke_user_journey.py --base-url http://localhost:8000
+```
+
+La regresión cubre health, login, logout server-side, RBAC engineer, explorer, protección de datos sensibles, búsqueda y limpieza de textos. El journey agrega favoritos, playlists, recomendaciones e historial.
 
 ---
 
@@ -179,12 +189,13 @@ Actualiza `frontend/src/environments/environment.ts` → `apiUrl`.
 
 ### Frontend no conecta a API
 
-Confirma CORS (API permite `*`) y que `apiUrl` apunte a `http://localhost:8000/api/v1`.
+Confirma `CORS_ORIGINS` e incluye `http://localhost:4200`. Verifica también que `apiUrl` apunte a `http://localhost:8000/api/v1`.
 
 ---
 
 ## Documentación relacionada
 
 - [README.md](../README.md) — visión y estructura del repo  
-- [specs/README.md](../specs/README.md) — índice de specs  
-- [docs/uml/README.md](uml/README.md) — diagramas PlantUML
+- [specs/README.md](../specs/README.md) — índice de specs SDD  
+- [docs/uml/README.md](uml/README.md) — diagramas PlantUML  
+- [../voxmetriks-entregas](../voxmetriks-entregas) — entrega académica TGA07 (docx)

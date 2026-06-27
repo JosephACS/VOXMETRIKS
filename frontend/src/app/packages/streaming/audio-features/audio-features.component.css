@@ -23,9 +23,12 @@
   color: rgba(255, 255, 255, 0.45);
   margin: 0.35rem 0 0;
   font-size: 0.9rem;
+  max-width: 680px;
+  line-height: 1.45;
 }
 
-.mock-badge {
+.mock-badge,
+.live-badge {
   padding: 0.4rem 0.875rem;
   background: rgba(124, 58, 237, 0.12);
   border: 1px solid rgba(124, 58, 237, 0.25);
@@ -33,6 +36,12 @@
   font-size: 0.72rem;
   font-weight: 600;
   color: #a78bfa;
+}
+
+.live-badge {
+  background: rgba(30, 216, 150, 0.1);
+  border-color: rgba(30, 216, 150, 0.25);
+  color: #6ee7b7;
 }
 
 .kpi-grid {
@@ -102,6 +111,13 @@
   margin: 0;
 }
 
+.panel-desc {
+  margin: 0.25rem 0 0;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .panel-meta {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.35);
@@ -157,6 +173,29 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
+.inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(239, 68, 68, 0.9);
+}
+
+.retry-btn {
+  border: 1px solid rgba(30, 216, 150, 0.35);
+  border-radius: 999px;
+  background: rgba(30, 216, 150, 0.08);
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+}
+
+.retry-btn:hover {
+  background: rgba(30, 216, 150, 0.16);
+  color: #fff;
+}
+
 .radar-wrap {
   display: flex;
   justify-content: center;
@@ -194,6 +233,14 @@
   align-items: center;
   gap: 0.4rem;
   color: rgba(255, 255, 255, 0.55);
+}
+
+.feature-label small {
+  display: block;
+  margin-top: 0.1rem;
+  color: rgba(255, 255, 255, 0.32);
+  font-size: 0.64rem;
+  line-height: 1.25;
 }
 
 .feature-dot {

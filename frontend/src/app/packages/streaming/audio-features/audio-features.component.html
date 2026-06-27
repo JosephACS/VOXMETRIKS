@@ -2,12 +2,13 @@
   <header class="page-header">
     <div>
       <h1>Características de audio</h1>
-      <p class="page-subtitle">Análisis de características acústicas del catálogo musical</p>
+      <p class="page-subtitle">Perfil acústico de canciones del catálogo. Las métricas Spotify van de 0 a 100%.</p>
     </div>
     <span class="live-badge">Datos desde DuckDB</span>
   </header>
 
   <!-- KPIs -->
+  @if (!hasError()) {
   <section class="kpi-grid">
     <div class="kpi-card">
       <span class="kpi-label">Canciones analizadas</span>
@@ -15,24 +16,28 @@
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Energía promedio</span>
-      <span class="kpi-value kpi-purple">{{ avgEnergy() }}</span>
+      <span class="kpi-value kpi-purple">{{ avgEnergy() * 100 | number:'1.0-0' }}%</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Bailabilidad promedio</span>
-      <span class="kpi-value">{{ avgDanceability() }}</span>
+      <span class="kpi-value">{{ avgDanceability() * 100 | number:'1.0-0' }}%</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Valencia promedio</span>
-      <span class="kpi-value kpi-green">{{ avgValence() }}</span>
+      <span class="kpi-value kpi-green">{{ avgValence() * 100 | number:'1.0-0' }}%</span>
     </div>
   </section>
+  }
 
   <div class="content-grid">
     <!-- Tabla -->
     <section class="panel table-panel">
       <div class="panel-header">
-        <h2>Catálogo con features</h2>
-        <span class="panel-meta">Selecciona una canción para el radar</span>
+        <div>
+          <h2>Catálogo con features</h2>
+          <p class="panel-desc">Selecciona una canción para comparar su perfil acústico en el radar.</p>
+        </div>
+        <span class="panel-meta">Muestra inicial</span>
       </div>
 
       <div class="table-wrap">
@@ -51,7 +56,14 @@
             @if (isLoading()) {
               <tr><td colspan="6">Cargando características...</td></tr>
             } @else if (hasError()) {
-              <tr><td colspan="6">No hay datos disponibles. Verifica el backend.</td></tr>
+              <tr>
+                <td colspan="6">
+                  <div class="inline-error">
+                    <span>No hay datos disponibles. Verifica el backend o el warehouse.</span>
+                    <button type="button" class="retry-btn" (click)="loadFeatures()">Reintentar</button>
+                  </div>
+                </td>
+              </tr>
             }
             @for (track of tracks(); track track.id_track) {
               <tr
@@ -64,13 +76,13 @@
                   <app-metric-bar [value]="track.popularity ?? 0" [max]="100" color="primary" suffix="" digitsInfo="1.0-0" />
                 </td>
                 <td>
-                  <app-metric-bar [value]="track.energy ?? 0" [max]="1" color="info" suffix="" digitsInfo="1.2-2" />
+                  <app-metric-bar [value]="featurePct(track, 'energy')" [max]="100" color="info" suffix="%" digitsInfo="1.0-0" />
                 </td>
                 <td>
-                  <app-metric-bar [value]="track.danceability ?? 0" [max]="1" color="warning" suffix="" digitsInfo="1.2-2" />
+                  <app-metric-bar [value]="featurePct(track, 'danceability')" [max]="100" color="warning" suffix="%" digitsInfo="1.0-0" />
                 </td>
                 <td>
-                  <app-metric-bar [value]="track.valence ?? 0" [max]="1" color="success" suffix="" digitsInfo="1.2-2" />
+                  <app-metric-bar [value]="featurePct(track, 'valence')" [max]="100" color="success" suffix="%" digitsInfo="1.0-0" />
                 </td>
               </tr>
             }
@@ -82,7 +94,10 @@
     <!-- Radar -->
     <section class="panel radar-panel">
       <div class="panel-header">
-        <h2>Perfil acústico</h2>
+        <div>
+          <h2>Perfil acústico</h2>
+          <p class="panel-desc">Más lejos del centro significa mayor intensidad de la característica.</p>
+        </div>
         <span class="panel-meta">{{ selectedTrackTitle() }}</span>
       </div>
 
@@ -142,16 +157,19 @@
           <div class="feature-row">
             <span class="feature-label">
               <span class="feature-dot" [style.background]="f.color"></span>
-              {{ f.label }}
+                <span>
+                  {{ f.label }}
+                  <small>{{ f.help }}</small>
+                </span>
             </span>
             <div class="feature-bar-track">
               <div
                 class="feature-bar-fill"
-                [style.width.%]="featureValue(sel, f.key) * 100"
+                [style.width.%]="featurePct(sel, f.key)"
                 [style.background]="f.color"
               ></div>
             </div>
-            <span class="feature-val">{{ featureValue(sel, f.key) | number:'1.2-2' }}</span>
+            <span class="feature-val">{{ featurePct(sel, f.key) | number:'1.0-0' }}%</span>
           </div>
         }
       </div>

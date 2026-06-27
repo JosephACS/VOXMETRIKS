@@ -16,6 +16,11 @@
   color: #a78bfa;
 }
 
+.page-subtitle {
+  max-width: 680px;
+  line-height: 1.45;
+}
+
 /* Insights row */
 .insights-row {
   display: grid;
@@ -102,6 +107,15 @@
   font-size: 0.65rem;
   color: var(--text-muted);
   font-family: var(--font-mono);
+}
+
+.chart-note {
+  margin: 0.7rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
 }
 
 .radar-chart {
@@ -386,5 +400,24 @@
 }
 
 .error-icon { display: flex; color: #ef4444; flex-shrink: 0; }
+
+.error-state p {
+  margin: 0 0 0.75rem;
+}
+
+.retry-btn {
+  border: 1px solid rgba(30, 216, 150, 0.35);
+  border-radius: 999px;
+  background: rgba(30, 216, 150, 0.08);
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.5rem 0.95rem;
+}
+
+.retry-btn:hover {
+  background: rgba(30, 216, 150, 0.16);
+  color: #fff;
+}
 
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }

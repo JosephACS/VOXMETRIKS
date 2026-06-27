@@ -8,6 +8,7 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_conn, get_write_conn
+from app.packages.users.services.auth_deps import require_engineer_user
 from app.shared.schemas.models import (
     Genero, GeneroCreate, GeneroUpdate,
     GeneroPopularidad, PaginatedResponse, DeleteResponse,
@@ -34,19 +35,29 @@ def list_genres(
 @router.post("", response_model=Genero, status_code=201, summary="Create genre")
 def create_genre_route(
     body: GeneroCreate,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_genero.strip():
         raise HTTPException(status_code=400, detail="nombre_genero cannot be empty")
-    return create_genre(conn, body.nombre_genero)
+    row = create_genre(conn, body.nombre_genero)
+    if row.get("duplicate"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Genre '{body.nombre_genero.strip()}' already exists (id={row['id_genero']})",
+        )
+    return row
 
 
-@router.get("/stats", response_model=list[GeneroPopularidad], summary="Genre statistics")
+@router.get("/stats", response_model=PaginatedResponse, summary="Genre statistics")
 def genre_stats(
-    limit: int = Query(20, ge=1, le=200),
-    conn:  duckdb.DuckDBPyConnection = Depends(get_conn),
+    page:   int           = Query(1, ge=1),
+    limit:  int           = Query(20, ge=1, le=500),
+    search: Optional[str] = Query(None),
+    conn:   duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
-    return get_genre_stats(conn, limit=limit)
+    rows, total = get_genre_stats(conn, page=page, limit=limit, search=search)
+    return PaginatedResponse(total=total, page=page, limit=limit, items=rows)
 
 
 @router.get("/{genre_id}", response_model=Genero, summary="Get genre by ID")
@@ -64,6 +75,7 @@ def get_genre(
 def update_genre_route(
     genre_id: int,
     body: GeneroUpdate,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_genero.strip():
@@ -77,6 +89,7 @@ def update_genre_route(
 @router.delete("/{genre_id}", response_model=DeleteResponse, summary="Delete genre")
 def delete_genre_route(
     genre_id: int,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     ok = delete_genre(conn, genre_id)

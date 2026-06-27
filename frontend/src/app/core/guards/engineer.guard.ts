@@ -7,5 +7,7 @@ export const engineerGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.hasEngineerAccess()) return true;
-  return router.createUrlTree(['/dashboard']);
+  return router.createUrlTree(['/dashboard'], {
+    queryParams: { access: 'engineer' },
+  });
 };

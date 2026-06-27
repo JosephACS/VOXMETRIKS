@@ -8,6 +8,7 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_conn, get_write_conn
+from app.packages.users.services.auth_deps import require_engineer_user
 from app.shared.schemas.models import (
     Artista, ArtistaCreate, ArtistaUpdate,
     PaginatedResponse, TopArtista, DeleteResponse,
@@ -34,11 +35,18 @@ def list_artists(
 @router.post("", response_model=Artista, status_code=201, summary="Create artist")
 def create_artist_route(
     body: ArtistaCreate,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_artista.strip():
         raise HTTPException(status_code=400, detail="nombre_artista cannot be empty")
-    return create_artist(conn, body.nombre_artista)
+    row = create_artist(conn, body.nombre_artista)
+    if row.get("duplicate"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Artist '{body.nombre_artista.strip()}' already exists (id={row['id_artista']})",
+        )
+    return row
 
 
 @router.get("/top", response_model=list[TopArtista], summary="Top artists by avg popularity")
@@ -64,6 +72,7 @@ def get_artist(
 def update_artist_route(
     artist_id: int,
     body: ArtistaUpdate,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_artista.strip():
@@ -71,12 +80,18 @@ def update_artist_route(
     row = update_artist(conn, artist_id, body.nombre_artista)
     if not row:
         raise HTTPException(status_code=404, detail=f"Artist {artist_id} not found")
+    if row.get("duplicate"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Another artist already uses the name '{body.nombre_artista.strip()}'",
+        )
     return row
 
 
 @router.delete("/{artist_id}", response_model=DeleteResponse, summary="Delete artist")
 def delete_artist_route(
     artist_id: int,
+    _engineer: int = Depends(require_engineer_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     ok = delete_artist(conn, artist_id)

@@ -2,17 +2,27 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Any, Dict, List
 
 import duckdb
 
 from .base_service import count_rows, fetch_rows
 
-# Límites validados — DuckDB aguanta millones; el cuello suele ser RAM/disco en la PC.
-MAX_TARGET_TOTAL = 5_000_000       # tope absoluto en dim_track
+# Límites validados — el catálogo musical queda real; lo sintético son eventos/facts.
+MAX_TARGET_TOTAL = 2_000_000       # tope práctico para actividad sintética
 MAX_CREATE_PER_RUN = 2_000_000     # máx. filas nuevas por ejecución
 WARN_CREATE_ABOVE = 500_000        # aviso UI / respuesta
 SYNTHETIC_BATCH_SIZE = 100_000     # insert por lotes para no saturar memoria
+ACTIVITY_FACT_TABLES = [
+    "fact_streaming",
+    "fact_user_activity",
+    "fact_playlist_activity",
+    "fact_favorites",
+    "fact_searches",
+    "fact_stream_sessions",
+]
 
 
 def get_summary(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
@@ -26,6 +36,7 @@ def get_summary(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
         "active_users":   count_rows(conn, "dim_usuario"),
         "total_playlists": count_rows(conn, "dim_playlist"),
     }
+    result["total_events"] = sum(count_rows(conn, table) for table in ACTIVITY_FACT_TABLES)
 
     try:
         row = conn.execute("""
@@ -208,90 +219,293 @@ def get_synthetic_limits() -> Dict[str, Any]:
         "warn_create_above": WARN_CREATE_ABOVE,
         "batch_size": SYNTHETIC_BATCH_SIZE,
         "duckdb_note": (
-            "DuckDB soporta millones de filas. Tiempo y disco dependen de tu PC "
-            f"(~0.5–1 KB por track → 1.6M ≈ 1–2 GB en voxmetrik.duckdb)."
+            "DuckDB soporta millones de eventos. El catálogo musical se mantiene real; "
+            "lo sintético se genera en streams, búsquedas, favoritos, playlists y sesiones."
         ),
     }
 
 
-def _insert_synthetic_batch(
-    conn: duckdb.DuckDBPyConnection,
-    batch_size: int,
-    seq_offset: int,
-    source_count: int,
-    source_filter: str,
-) -> None:
-    max_id = conn.execute("SELECT COALESCE(MAX(id_track), 0) FROM dim_track").fetchone()[0]
-    start = seq_offset + 1
-    end = seq_offset + batch_size + 1
+def _activity_total(conn: duckdb.DuckDBPyConnection) -> int:
+    return sum(count_rows(conn, table) for table in ACTIVITY_FACT_TABLES)
 
+
+def _purge_synthetic_catalog(conn: duckdb.DuckDBPyConnection) -> int:
+    """Remove old syn_% track clones so the visible catalog stays real."""
+    if count_rows(conn, "dim_track") == 0:
+        return 0
+    before = count_rows(conn, "dim_track")
+    conn.execute("DELETE FROM dim_track WHERE spotify_track_id LIKE 'syn_%'")
+    return before - count_rows(conn, "dim_track")
+
+
+def _ensure_activity_dimensions(conn: duckdb.DuckDBPyConnection, target_total: int) -> Dict[str, int]:
+    """Generate synthetic users/playlists only; musical dimensions remain real."""
+    user_count = max(5_000, min(50_000, target_total // 80))
+    playlist_count = max(800, min(20_000, target_total // 250))
+
+    conn.execute("DELETE FROM dim_usuario WHERE id_usuario > 1")
     conn.execute(f"""
-        INSERT INTO dim_track (
-            id_track, spotify_track_id, nombre_track,
-            id_artista, id_album, id_genero, explicit, duration_ms,
-            danceability, energy, loudness, speechiness, acousticness,
-            instrumentalness, liveness, valence, tempo, popularity
+        INSERT INTO dim_usuario (id_usuario, nombre, email, pais, plan)
+        SELECT 1 + i,
+               'User_' || LPAD(CAST(i AS VARCHAR), 5, '0'),
+               'user' || i || '@voxmetrik.io',
+               (ARRAY['EC','US','MX','CO','AR','ES','CL','PE'])[1 + (i % 8)],
+               (ARRAY['free','premium','family','student'])[1 + (i % 4)]
+        FROM generate_series(1, {user_count - 1}) AS t(i)
+    """)
+
+    conn.execute("DELETE FROM dim_playlist WHERE id_playlist > 1")
+    conn.execute(f"""
+        INSERT INTO dim_playlist (id_playlist, nombre, id_usuario, descripcion, publica)
+        SELECT 1 + i,
+               (ARRAY['Daily Mix','Discover Weekly','Release Radar','Chill Vibes',
+                      'Workout Hits','Focus Flow','Top 50','Road Trip'])[1 + (i % 8)] || ' ' || i,
+               1 + (i % {user_count}),
+               'Synthetic behavior playlist over real catalog',
+               (i % 3) <> 0
+        FROM generate_series(1, {playlist_count - 1}) AS t(i)
+    """)
+    return {"users": user_count, "playlists": playlist_count}
+
+
+def _split_activity_counts(target_total: int) -> Dict[str, int]:
+    counts = {
+        "fact_streaming": int(target_total * 0.65),
+        "fact_user_activity": int(target_total * 0.12),
+        "fact_playlist_activity": int(target_total * 0.08),
+        "fact_favorites": int(target_total * 0.06),
+        "fact_searches": int(target_total * 0.05),
+    }
+    counts["fact_stream_sessions"] = target_total - sum(counts.values())
+    return counts
+
+
+def _real_track_count(conn: duckdb.DuckDBPyConnection) -> int:
+    return int(conn.execute("""
+        SELECT COUNT(*) FROM dim_track
+        WHERE spotify_track_id IS NULL OR spotify_track_id NOT LIKE 'syn_%'
+    """).fetchone()[0])
+
+
+def _replace_fact_streaming(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_streaming")
+    if n <= 0:
+        return
+    track_count = _real_track_count(conn)
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    playlist_count = max(count_rows(conn, "dim_playlist"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_streaming (
+            id_streaming, id_track, id_usuario, id_tiempo, id_playlist,
+            streams, duracion_ms, completado, skipped, device_type, platform,
+            session_id, hour_of_day, fecha_evento
         )
-        SELECT
-            {max_id} + ROW_NUMBER() OVER (ORDER BY seq.i) AS id_track,
-            COALESCE(
-                'syn_' || dt.spotify_track_id || '_' || seq.i,
-                'syn_' || CAST(dt.id_track AS VARCHAR) || '_' || seq.i
-            ) AS spotify_track_id,
-            dt.nombre_track || ' [syn-' || seq.i || ']' AS nombre_track,
-            dt.id_artista,
-            dt.id_album,
-            dt.id_genero,
-            dt.explicit,
-            dt.duration_ms,
-            dt.danceability,
-            LEAST(1.0, GREATEST(0.0, COALESCE(dt.energy, 0.5) + ((seq.i % 17) * 0.005 - 0.04))),
-            dt.loudness,
-            dt.speechiness,
-            dt.acousticness,
-            dt.instrumentalness,
-            dt.liveness,
-            dt.valence,
-            dt.tempo,
-            GREATEST(0, LEAST(100, COALESCE(dt.popularity, 0) + ((seq.i % 11) - 5)))
-        FROM (
-            SELECT unnest(range({start}, {end})) AS i
-        ) AS seq
-        INNER JOIN (
-            SELECT
-                dt.*,
-                (ROW_NUMBER() OVER (ORDER BY dt.id_track) - 1) AS src_idx
-            FROM dim_track dt
-            WHERE {source_filter}
-        ) dt ON (seq.i - 1) % {source_count} = dt.src_idx
+        WITH tracks AS (
+            SELECT id_track, duration_ms, popularity,
+                   ROW_NUMBER() OVER (ORDER BY id_track) rn, COUNT(*) OVER () total
+            FROM dim_track
+            WHERE spotify_track_id IS NULL OR spotify_track_id NOT LIKE 'syn_%'
+        ),
+        tiempo AS (
+            SELECT id_tiempo, fecha, ROW_NUMBER() OVER (ORDER BY fecha DESC) rn
+            FROM dim_tiempo WHERE fecha <= CURRENT_DATE
+        )
+        SELECT g.i, t.id_track, 1 + (g.i % {user_count}), ti.id_tiempo,
+               1 + (g.i % {playlist_count}),
+               1 + (COALESCE(t.popularity, 0) / 20), COALESCE(t.duration_ms, 180000),
+               (g.i % 100) >= 18, (g.i % 100) < 22,
+               (ARRAY['mobile','desktop','tablet','smart_tv','web'])[1 + (g.i % 5)],
+               (ARRAY['ios','android','web','desktop','car'])[1 + (g.i % 5)],
+               1 + (g.i % GREATEST(1, CAST({n} / 20 AS INTEGER))), g.i % 24,
+               CAST(ti.fecha AS TIMESTAMP) + (g.i % 86400) * INTERVAL '1' SECOND
+        FROM generate_series(1, {n}) g(i)
+        JOIN tracks t ON t.rn = ((g.i - 1) % {track_count}) + 1
+        JOIN tiempo ti ON ti.rn = 1 + (g.i % 90)
     """)
 
 
-def generate_synthetic_tracks(
+def _replace_fact_user_activity(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_user_activity")
+    if n <= 0:
+        return
+    track_count = _real_track_count(conn)
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_user_activity (
+            id_activity, id_usuario, id_track, id_tiempo, action_type,
+            device_type, duration_ms, fecha_evento
+        )
+        WITH tracks AS (
+            SELECT id_track, ROW_NUMBER() OVER (ORDER BY id_track) rn
+            FROM dim_track
+            WHERE spotify_track_id IS NULL OR spotify_track_id NOT LIKE 'syn_%'
+        ),
+        tiempo AS (
+            SELECT id_tiempo, ROW_NUMBER() OVER (ORDER BY fecha DESC) rn
+            FROM dim_tiempo WHERE fecha <= CURRENT_DATE
+        )
+        SELECT i, 1 + (i % {user_count}), t.id_track, ti.id_tiempo,
+               (ARRAY['play','pause','skip','like','share','add_playlist'])[1 + (i % 6)],
+               (ARRAY['mobile','desktop','web'])[1 + (i % 3)],
+               30000 + (i % 240000),
+               CURRENT_TIMESTAMP - (i % 604800) * INTERVAL '1' SECOND
+        FROM generate_series(1, {n}) g(i)
+        JOIN tracks t ON t.rn = ((i - 1) % {track_count}) + 1
+        JOIN tiempo ti ON ti.rn = 1 + (i % 90)
+    """)
+
+
+def _replace_fact_playlist_activity(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_playlist_activity")
+    if n <= 0:
+        return
+    track_count = _real_track_count(conn)
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    playlist_count = max(count_rows(conn, "dim_playlist"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_playlist_activity (
+            id_activity, id_playlist, id_usuario, id_track, action_type, fecha_evento
+        )
+        WITH tracks AS (
+            SELECT id_track, ROW_NUMBER() OVER (ORDER BY id_track) rn
+            FROM dim_track
+            WHERE spotify_track_id IS NULL OR spotify_track_id NOT LIKE 'syn_%'
+        )
+        SELECT i, 1 + (i % {playlist_count}), 1 + (i % {user_count}), t.id_track,
+               (ARRAY['add','remove','play','follow','share'])[1 + (i % 5)],
+               CURRENT_TIMESTAMP - (i % 2592000) * INTERVAL '1' SECOND
+        FROM generate_series(1, {n}) g(i)
+        JOIN tracks t ON t.rn = ((i - 1) % {track_count}) + 1
+    """)
+
+
+def _replace_fact_favorites(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_favorites")
+    if n <= 0:
+        return
+    track_count = _real_track_count(conn)
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_favorites (id_favorite, id_usuario, id_track, id_tiempo, fecha_evento)
+        WITH tracks AS (
+            SELECT id_track, ROW_NUMBER() OVER (ORDER BY id_track) rn
+            FROM dim_track
+            WHERE spotify_track_id IS NULL OR spotify_track_id NOT LIKE 'syn_%'
+        ),
+        tiempo AS (
+            SELECT id_tiempo, ROW_NUMBER() OVER (ORDER BY fecha DESC) rn
+            FROM dim_tiempo WHERE fecha <= CURRENT_DATE
+        )
+        SELECT i, 1 + (i % {user_count}), t.id_track, ti.id_tiempo,
+               CURRENT_TIMESTAMP - (i % 7776000) * INTERVAL '1' SECOND
+        FROM generate_series(1, {n}) g(i)
+        JOIN tracks t ON t.rn = ((i - 1) % {track_count}) + 1
+        JOIN tiempo ti ON ti.rn = 1 + (i % 60)
+    """)
+
+
+def _replace_fact_searches(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_searches")
+    if n <= 0:
+        return
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_searches (id_search, id_usuario, query_text, results_count, id_tiempo, fecha_evento)
+        WITH tiempo AS (
+            SELECT id_tiempo, ROW_NUMBER() OVER (ORDER BY fecha DESC) rn
+            FROM dim_tiempo WHERE fecha <= CURRENT_DATE
+        )
+        SELECT i, 1 + (i % {user_count}),
+               (ARRAY['bad bunny','taylor swift','drake','reggaeton','rock','pop','chill',
+                      'workout','latin hits','indie','focus','party','electronic','jazz',
+                      'kpop','metal','hip hop','oldies','discover weekly','sad songs'])[1 + (i % 20)],
+               5 + (i % 95), ti.id_tiempo,
+               CURRENT_TIMESTAMP - (i % 1209600) * INTERVAL '1' SECOND
+        FROM generate_series(1, {n}) g(i)
+        JOIN tiempo ti ON ti.rn = 1 + (i % 30)
+    """)
+
+
+def _replace_fact_stream_sessions(conn: duckdb.DuckDBPyConnection, n: int) -> None:
+    conn.execute("DELETE FROM fact_stream_sessions")
+    if n <= 0:
+        return
+    user_count = max(count_rows(conn, "dim_usuario"), 1)
+    conn.execute(f"""
+        INSERT INTO fact_stream_sessions (
+            id_session, id_usuario, device_type, platform,
+            session_start, session_end, tracks_played, total_ms, skips
+        )
+        SELECT i, 1 + (i % {user_count}),
+               (ARRAY['mobile','desktop','tablet','web','smart_tv'])[1 + (i % 5)],
+               (ARRAY['ios','android','web','desktop','car'])[1 + (i % 5)],
+               CURRENT_TIMESTAMP - (i % 604800) * INTERVAL '1' SECOND,
+               CURRENT_TIMESTAMP - (i % 604800) * INTERVAL '1' SECOND + (1800 + i % 5400) * INTERVAL '1' SECOND,
+               3 + (i % 25), 180000 + (i % 3600000), i % 8
+        FROM generate_series(1, {n}) g(i)
+    """)
+
+
+def _refresh_enterprise_aggregates(conn: duckdb.DuckDBPyConnection) -> None:
+    """Rebuild derived agg_* tables after regenerating synthetic activity."""
+    root = Path(__file__).resolve().parents[5]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from elt.transform.enterprise_analytics import (  # local project module
+        apply_enterprise_schema,
+        _build_agg_daily_streams,
+        _build_agg_user_activity,
+        _build_agg_genre_trends,
+        _build_agg_artist_growth,
+        _build_agg_platform_usage,
+        _build_agg_top_playlists,
+        _build_agg_recommendation_scores,
+        _build_agg_user_engagement,
+        _build_agg_streaming_devices,
+        _build_agg_recent_activity,
+        _build_agg_top_searches,
+        _build_agg_user_retention,
+    )
+
+    apply_enterprise_schema(conn)
+    _build_agg_daily_streams(conn)
+    _build_agg_user_activity(conn)
+    _build_agg_genre_trends(conn)
+    _build_agg_artist_growth(conn)
+    _build_agg_platform_usage(conn)
+    _build_agg_top_playlists(conn)
+    _build_agg_recommendation_scores(conn)
+    _build_agg_user_engagement(conn)
+    _build_agg_streaming_devices(conn)
+    _build_agg_recent_activity(conn)
+    _build_agg_top_searches(conn)
+    _build_agg_user_retention(conn)
+
+
+def generate_synthetic_activity(
     conn: duckdb.DuckDBPyConnection,
     *,
     target_total: int | None = None,
     multiplier: int | None = None,
 ) -> Dict[str, Any]:
     """
-    Expand dim_track until reaching target_total rows.
-    Inserts in batches (100K) for stability on consumer hardware.
+    Generate high-volume behavioral activity over real catalog rows.
+
+    Musical catalog tables (dim_track, dim_artista, dim_album, dim_genero) stay real.
+    Synthetic data is limited to users/playlists and activity facts.
     """
     if target_total is None and multiplier is None:
         raise ValueError("provide target_total or multiplier")
 
-    before = count_rows(conn, "dim_track")
-    if before == 0:
-        return {
-            "before": 0,
-            "after": 0,
-            "created": 0,
-            "target_total": target_total or 0,
-            "source_rows": 0,
-            "batches": 0,
-            "warning": None,
-        }
+    purged_tracks = _purge_synthetic_catalog(conn)
+    real_tracks = _real_track_count(conn)
+    if real_tracks == 0:
+        raise ValueError(
+            "No hay tracks reales en el warehouse. Importa primero desde PocketBase "
+            "(POST /api/v1/stats/import o python scripts/import_from_pocketbase.py)."
+        )
 
+    before = _activity_total(conn)
     if target_total is None:
         if multiplier is None or multiplier < 1:
             raise ValueError("multiplier must be >= 1")
@@ -305,46 +519,39 @@ def generate_synthetic_tracks(
             f"(DuckDB límite del proyecto; pediste {target_total:,})"
         )
 
-    needed = max(0, target_total - before)
-    if needed == 0:
+    created = max(0, target_total - before)
+    if created == 0:
         return {
             "before": before,
             "after": before,
             "created": 0,
             "target_total": target_total,
-            "source_rows": before,
+            "source_rows": real_tracks,
+            "track_total": real_tracks,
+            "purged_synthetic_tracks": purged_tracks,
             "batches": 0,
             "warning": None,
         }
 
-    if needed > MAX_CREATE_PER_RUN:
+    if created > MAX_CREATE_PER_RUN:
         raise ValueError(
             f"cannot create more than {MAX_CREATE_PER_RUN:,} rows in one run "
-            f"(requested {needed:,}). Usa varias ejecuciones (+100K) o baja el objetivo."
+            f"(requested {created:,}). Usa varias ejecuciones (+100K) o baja el objetivo."
         )
 
-    source_count = conn.execute(
-        "SELECT COUNT(*) FROM dim_track WHERE nombre_track NOT LIKE '%[syn-%'"
-    ).fetchone()[0]
-    if source_count == 0:
-        source_count = before
-        source_filter = "TRUE"
-    else:
-        source_filter = "nombre_track NOT LIKE '%[syn-%'"
+    dimensions = _ensure_activity_dimensions(conn, target_total)
+    activity_counts = _split_activity_counts(target_total)
+    _replace_fact_streaming(conn, activity_counts["fact_streaming"])
+    _replace_fact_user_activity(conn, activity_counts["fact_user_activity"])
+    _replace_fact_playlist_activity(conn, activity_counts["fact_playlist_activity"])
+    _replace_fact_favorites(conn, activity_counts["fact_favorites"])
+    _replace_fact_searches(conn, activity_counts["fact_searches"])
+    _replace_fact_stream_sessions(conn, activity_counts["fact_stream_sessions"])
+    _refresh_enterprise_aggregates(conn)
 
-    inserted = 0
-    seq_offset = 0
-    batches = 0
-    while inserted < needed:
-        batch = min(SYNTHETIC_BATCH_SIZE, needed - inserted)
-        _insert_synthetic_batch(conn, batch, seq_offset, source_count, source_filter)
-        inserted += batch
-        seq_offset += batch
-        batches += 1
-
-    after = count_rows(conn, "dim_track")
-    created = after - before
-    warning = "large" if needed >= WARN_CREATE_ABOVE else None
+    after = _activity_total(conn)
+    created = max(0, after - before)
+    warning = "large" if created >= WARN_CREATE_ABOVE else None
 
     try:
         id_carga = conn.execute(
@@ -356,7 +563,7 @@ def generate_synthetic_tracks(
                 (id_carga, fecha_carga, modo, registros_nuevos, total_raw, estado)
             VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, 'OK')
             """,
-            [id_carga, f"synthetic_target_{target_total}", created, after],
+            [id_carga, f"synthetic_activity_target_{target_total}", created, after],
         )
     except Exception:
         pass
@@ -366,7 +573,15 @@ def generate_synthetic_tracks(
         "after": after,
         "created": created,
         "target_total": target_total,
-        "source_rows": before,
-        "batches": batches,
+        "source_rows": real_tracks,
+        "track_total": real_tracks,
+        "purged_synthetic_tracks": purged_tracks,
+        "dimensions": dimensions,
+        "activity_counts": activity_counts,
+        "batches": max(1, (target_total + SYNTHETIC_BATCH_SIZE - 1) // SYNTHETIC_BATCH_SIZE),
         "warning": warning,
     }
+
+
+# Backwards-compatible name for existing route/client code.
+generate_synthetic_tracks = generate_synthetic_activity

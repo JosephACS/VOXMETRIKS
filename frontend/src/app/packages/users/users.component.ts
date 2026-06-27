@@ -5,10 +5,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
 import { UserService } from './services/user.service';
 import { HistoryService } from '../streaming/services/history.service';
 import { StatsService } from '../analytics/services/stats.service';
 import { UiPreferencesService } from '../../core/services/ui-preferences.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { UserProfile, HistoryEntry } from '../../shared/models/api.models';
 
 interface ListenRecord {
@@ -66,7 +69,7 @@ const AUDIO_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, KpiCardComponent],
+  imports: [CommonModule, FormsModule, RouterModule, KpiCardComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './users.component.html',
   styleUrls: ['./users.component.css'],
 })
@@ -77,6 +80,7 @@ export class UsersComponent implements OnInit {
   private historySvc = inject(HistoryService);
   private statsSvc = inject(StatsService);
   private ui = inject(UiPreferencesService);
+  private i18n = inject(I18nService);
 
   isLoading = signal(true);
   searchQuery = signal('');
@@ -95,8 +99,8 @@ export class UsersComponent implements OnInit {
   devices = signal<{ id: string; name: string; platform: string; lastAccess: string; online: boolean; iconKey: string }[]>([]);
 
   private translatePlan(plan: string): string {
+    if (plan === 'Free') return this.i18n.t('shell.planFree');
     const map: Record<string, string> = {
-      Free: 'Gratis',
       Demo: 'Demo',
       Premium: 'Premium',
     };
@@ -104,12 +108,13 @@ export class UsersComponent implements OnInit {
   }
 
   displayProfile = computed(() => {
+    this.i18n.tick();
     const p = this.profile();
     if (!p) {
       return {
         name: 'Usuario',
         username: '@user',
-        plan: 'Gratis',
+        plan: this.i18n.t('shell.planFree'),
         initial: 'U',
         avatarGradient: COVER_GRADIENTS[0],
         badges: ['Oyente'],
@@ -142,11 +147,6 @@ export class UsersComponent implements OnInit {
     };
   });
 
-  prefToggles = [
-    { key: 'personalizedRecs' as const, label: 'Recomendaciones IA', hint: 'Motor simulado' },
-    { key: 'darkMode' as const, label: 'Modo oscuro', hint: '' },
-    { key: 'privacyPublic' as const, label: 'Perfil público', hint: 'Privacidad' },
-  ];
 
   favoritePlaylists = computed((): PlaylistCard[] => {
     const pls = this.profile()?.playlists ?? [];
@@ -325,27 +325,6 @@ export class UsersComponent implements OnInit {
 
   barWidth(value: number): number {
     return Math.round((value / this.maxTopValue()) * 100);
-  }
-
-  togglePref(key: 'personalizedRecs' | 'darkMode' | 'privacyPublic') {
-    const p = this.profile();
-    if (!p) return;
-    const map = {
-      personalizedRecs: 'recommendations_enabled',
-      darkMode: 'dark_mode',
-      privacyPublic: 'privacy_public',
-    } as const;
-    const apiKey = map[key];
-    const current = p.preferences?.[apiKey] ?? false;
-    this.userSvc.updatePreferences({ [apiKey]: !current }).subscribe({
-      next: (u) => {
-        const cur = this.profile();
-        if (cur) this.profile.set({ ...cur, preferences: u.preferences, favorite_genre: u.favorite_genre });
-        if (key === 'darkMode' && u.preferences?.dark_mode != null) {
-          this.ui.syncThemeFromDarkMode(u.preferences.dark_mode);
-        }
-      },
-    });
   }
 
   coverGradient(id: number): string {

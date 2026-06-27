@@ -26,6 +26,14 @@
 .td-type { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
 .td-info h1 { font-size: 1.75rem; font-weight: 800; margin: 0.2rem 0; line-height: 1.1; }
 .td-artist { font-size: 1rem; color: var(--text-muted); margin: 0 0 0.75rem; }
+.td-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.65rem; }
+.td-note {
+  max-width: 620px;
+  margin: -0.35rem 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 
 .td-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.875rem; }
 .chip {
@@ -37,6 +45,24 @@
 }
 
 .td-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.play-demo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 2rem;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.play-demo-btn:hover {
+  background: #fff;
+}
+
 .btn-pl {
   display: inline-flex;
   align-items: center;
@@ -80,6 +106,12 @@
 
 .td-panel { padding: 1rem 1.125rem; }
 .td-panel h2 { font-size: 0.875rem; font-weight: 600; margin: 0 0 0.75rem; }
+.panel-note {
+  margin: -0.35rem 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
 
 .feat-bars { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
 .feat-row { display: grid; grid-template-columns: 90px 1fr 36px; gap: 0.5rem; align-items: center; }

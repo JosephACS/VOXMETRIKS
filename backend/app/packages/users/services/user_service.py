@@ -2,28 +2,25 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 import duckdb
 
+from app.core.time_util import utc_now
 from app.packages.streaming.services.app_storage import ensure_app_tables
 from app.packages.streaming.services.favorite_service import favorite_ids
 from app.packages.streaming.services.playlist_service import list_playlists
 
+from .password_security import hash_password, needs_rehash, verify_password
 from .user_storage import (
     create_session,
     ensure_user_tables,
     migrate_user_scoping,
     parse_preferences,
     resolve_session,
+    revoke_session,
 )
-
-
-def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def _next_user_id(conn: duckdb.DuckDBPyConnection) -> int:
@@ -32,14 +29,15 @@ def _next_user_id(conn: duckdb.DuckDBPyConnection) -> int:
 
 
 def _user_row_to_dict(row: tuple) -> Dict[str, Any]:
-    prefs = parse_preferences(row[7] if len(row) > 7 else "{}")
+    prefs = parse_preferences(row[8] if len(row) > 8 else "{}")
     return {
         "id": row[0],
         "username": row[1],
         "email": row[2],
-        "plan": row[4],
-        "favorite_genre": row[5],
-        "created_at": str(row[6]) if row[6] else None,
+        "role": row[4] or "user",
+        "plan": row[5],
+        "favorite_genre": row[6],
+        "created_at": str(row[7]) if row[7] else None,
         "preferences": prefs,
     }
 
@@ -48,7 +46,7 @@ def _fetch_user(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dict[
     ensure_user_tables(conn)
     row = conn.execute(
         """
-        SELECT id, username, email, password_hash, plan, favorite_genre, created_at, preferences_json
+        SELECT id, username, email, password_hash, role, plan, favorite_genre, created_at, preferences_json
         FROM app_user WHERE id = ?
         """,
         [user_id],
@@ -69,16 +67,22 @@ def login(
     login_id = login_id.strip().lower()
     row = conn.execute(
         """
-        SELECT id, username, email, password_hash, plan, favorite_genre, created_at, preferences_json
+        SELECT id, username, email, password_hash, role, plan, favorite_genre, created_at, preferences_json
         FROM app_user
         WHERE LOWER(email) = ? OR LOWER(username) = ?
         """,
         [login_id, login_id],
     ).fetchone()
-    if not row or row[3] != _hash_password(password):
+    if not row or not verify_password(password, row[3]):
         return None
+    user_id = int(row[0])
+    if needs_rehash(row[3]):
+        conn.execute(
+            "UPDATE app_user SET password_hash = ? WHERE id = ?",
+            [hash_password(password), user_id],
+        )
     days = 90 if remember else 1
-    token = create_session(conn, int(row[0]), days=days)
+    token = create_session(conn, user_id, days=days)
     user = _user_row_to_dict(row)
     return {"token": token, "user": user}
 
@@ -116,12 +120,12 @@ def register(
     conn.execute(
         """
         INSERT INTO app_user
-            (id, username, email, password_hash, plan, favorite_genre, created_at, preferences_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (id, username, email, password_hash, role, plan, favorite_genre, created_at, preferences_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
-            new_id, username, email, _hash_password(password),
-            "Free", favorite_genre, datetime.utcnow(), prefs,
+            new_id, username, email, hash_password(password),
+            "user", "Free", favorite_genre, utc_now(), prefs,
         ],
     )
     token = create_session(conn, new_id, days=90)
@@ -173,3 +177,7 @@ def update_preferences(
 
 def get_user_id_from_token(conn: duckdb.DuckDBPyConnection, token: str) -> Optional[int]:
     return resolve_session(conn, token)
+
+
+def logout(conn: duckdb.DuckDBPyConnection, token: str) -> None:
+    revoke_session(conn, token)

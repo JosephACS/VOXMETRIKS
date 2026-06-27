@@ -8,11 +8,15 @@ import { HistoryService } from '../services/history.service';
 import { TrackDetail } from '../../../shared/models/api.models';
 import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/favorite-btn.component';
 import { AddToPlaylistBtnComponent } from '../../../shared/components/add-to-playlist-btn/add-to-playlist-btn.component';
+import { MusicPlayerService } from '../../../shared/services/music-player.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { displayTrackTitle } from '../../../shared/utils/track-display.util';
 
 @Component({
   selector: 'app-track-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FavoriteBtnComponent, AddToPlaylistBtnComponent],
+  imports: [CommonModule, RouterModule, FavoriteBtnComponent, AddToPlaylistBtnComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './track-detail.component.html',
   styleUrls: ['./track-detail.component.css'],
 })
@@ -34,6 +38,8 @@ export class TrackDetailComponent implements OnInit {
     ];
   });
 
+  title = computed(() => displayTrackTitle(this.track()?.nombre_track));
+
   sparkPoints = computed(() => {
     const t = this.track();
     if (!t) return '';
@@ -53,6 +59,7 @@ export class TrackDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private tracksSvc: TracksService,
     private history: HistoryService,
+    private player: MusicPlayerService,
   ) {}
 
   ngOnInit() {
@@ -85,6 +92,20 @@ export class TrackDetailComponent implements OnInit {
     const m = Math.floor(ms / 60000);
     const s = Math.floor((ms % 60000) / 1000);
     return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  playDemo() {
+    const t = this.track();
+    if (!t) return;
+    this.player.playTrack({
+      id: t.id_track,
+      title: t.nombre_track ?? 'Track',
+      artist: t.nombre_artista ?? '—',
+      durationMs: t.duration_ms,
+      audioUrl: `/assets/audio/demo-${String((t.id_track % 8) + 1).padStart(2, '0')}.wav`,
+      coverGradient: this.coverGradient(),
+      explicit: t.explicit,
+    });
   }
 
   coverGradient(): string {

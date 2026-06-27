@@ -7,6 +7,8 @@ import { FavoriteBtnComponent } from '../../../shared/components/favorite-btn/fa
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { StatsService } from '../services/stats.service';
 import { TopTrack } from '../../../shared/models/api.models';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 const COVER_GRADIENTS = [
   'linear-gradient(135deg, #1ed896, #148f5e)',
@@ -22,7 +24,7 @@ const COVER_GRADIENTS = [
 @Component({
   selector: 'app-trending',
   standalone: true,
-  imports: [CommonModule, RouterModule, FavoriteBtnComponent],
+  imports: [CommonModule, RouterModule, FavoriteBtnComponent, DataSourceBadgeComponent, TranslatePipe],
   templateUrl: './trending.component.html',
   styleUrls: ['./trending.component.css'],
 })
@@ -36,11 +38,6 @@ export class TrendingComponent implements OnInit {
   dailyStreams = signal<{ fecha: string; total_streams?: number }[]>([]);
   skeletonRows = Array(10).fill(0);
 
-  weekLabels = [
-    { x: 20, label: 'L' }, { x: 77, label: 'M' }, { x: 134, label: 'X' },
-    { x: 191, label: 'J' }, { x: 248, label: 'V' }, { x: 305, label: 'S' }, { x: 362, label: 'D' },
-  ];
-
   streamChartValues = computed(() => {
     const daily = this.dailyStreams();
     if (!daily.length) return [0];
@@ -50,6 +47,23 @@ export class TrendingComponent implements OnInit {
   });
 
   topTrack = computed(() => this.tracks()[0] ?? null);
+
+  chartDateLabels = computed(() => {
+    const daily = this.dailyStreams().slice(-14);
+    if (!daily.length) return [];
+    const indexes = daily.length > 6
+      ? [0, Math.floor((daily.length - 1) / 2), daily.length - 1]
+      : daily.map((_, i) => i);
+    const step = daily.length > 1 ? 390 / (daily.length - 1) : 0;
+    return indexes.map((i) => ({
+      x: i * step + 5,
+      label: this.formatShortDate(daily[i]?.fecha),
+    }));
+  });
+
+  maxDailyStreams = computed(() =>
+    Math.max(...this.dailyStreams().slice(-14).map((d) => d.total_streams ?? 0), 0)
+  );
 
   avgPopularity = computed(() => {
     const t = this.tracks();
@@ -83,6 +97,12 @@ export class TrendingComponent implements OnInit {
   constructor(private stats: StatsService) {}
 
   ngOnInit() {
+    this.loadTrending();
+  }
+
+  loadTrending() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
     this.stats.getTopTracks(25).subscribe({
       next: (d) => { this.tracks.set(d ?? []); this.isLoading.set(false); },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
@@ -113,6 +133,13 @@ export class TrendingComponent implements OnInit {
     if (mod === 0 || mod === 1) return 'up';
     if (mod === 2) return 'down';
     return 'stable';
+  }
+
+  formatShortDate(value?: string): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value.slice(0, 5);
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
   }
 
   weeklyLine(): string {

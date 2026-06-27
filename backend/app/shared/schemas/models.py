@@ -8,7 +8,7 @@ All fields match the DuckDB warehouse schema exactly.
 from __future__ import annotations
 
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class _Base(BaseModel):
@@ -54,6 +54,9 @@ class Track(BaseModel):
     id_genero:        Optional[int] = None
     explicit:         Optional[bool] = None
     duration_ms:      Optional[int] = None
+    popularity:         Optional[int]   = None
+    nombre_artista:   Optional[str] = None
+    nombre_genero:    Optional[str] = None
 
 class TrackCreate(BaseModel):
     nombre_track:     str
@@ -72,6 +75,15 @@ class TrackUpdate(BaseModel):
     id_genero:        Optional[int] = None
     explicit:         Optional[bool] = None
     duration_ms:      Optional[int] = None
+
+
+class AudioSource(BaseModel):
+    """Resolved playback source for a track (real, full-length playback)."""
+    track_id:         int
+    provider:         str = "youtube"
+    youtube_video_id: Optional[str] = None
+    query:            Optional[str] = None
+    status:           str  # ok | not_found | disabled
 
 
 # ── Fact ──────────────────────────────────────────────────────────────────────
@@ -216,10 +228,11 @@ class TrackDetail(BaseModel):
 # ── Health ────────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
-    status:   str
-    database: str
-    tables:   List[str]
-    version:  str
+    status:       str
+    version:      str
+    table_count:  int = 0
+    database:     Optional[str] = None
+    tables:       List[str] = Field(default_factory=list)
 
 
 # ── Users (Package 2) ─────────────────────────────────────────────────────────
@@ -235,6 +248,7 @@ class UserPublic(BaseModel):
     id: int
     username: str
     email: str
+    role: str = "user"
     plan: str
     favorite_genre: Optional[str] = None
     created_at: Optional[str] = None

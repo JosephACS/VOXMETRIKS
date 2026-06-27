@@ -11,6 +11,8 @@
   color: var(--text-muted);
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
+  max-width: 760px;
+  line-height: 1.45;
 }
 
 .refresh-btn {
@@ -58,6 +60,39 @@
   background: rgba(255, 255, 255, 0.08);
   font-size: 0.68rem;
   font-family: var(--font-mono);
+}
+
+.source-note {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.source-note span {
+  color: var(--accent);
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.source-note p {
+  margin: 0;
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.source-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
 }
 
 .section { padding: 1rem 1.125rem; }
@@ -282,6 +317,24 @@ a.timeline-row:hover {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.warn-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.warn-panel span {
+  color: #fbbf24;
+  display: inline-flex;
+}
+
+.warn-panel p {
+  margin: 0;
 }
 
 .table-wrap { overflow-x: auto; }

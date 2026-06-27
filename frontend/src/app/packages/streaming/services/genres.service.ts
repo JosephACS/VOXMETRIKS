@@ -21,9 +21,10 @@ export class GenresService {
     return this.http.get<PaginatedResponse<Genero>>(this.API_URL, { params: httpParams });
   }
 
-  getGenreStats(limit = 50): Observable<GeneroPopularidad[]> {
-    const params = new HttpParams().set('limit', limit);
-    return this.http.get<GeneroPopularidad[]>(`${this.API_URL}/stats`, { params });
+  getGenreStats(page = 1, limit = 50, search?: string): Observable<PaginatedResponse<GeneroPopularidad>> {
+    let httpParams = new HttpParams().set('page', page).set('limit', limit);
+    if (search) httpParams = httpParams.set('search', search);
+    return this.http.get<PaginatedResponse<GeneroPopularidad>>(`${this.API_URL}/stats`, { params: httpParams });
   }
 
   getGenreById(id: number): Observable<Genero> {

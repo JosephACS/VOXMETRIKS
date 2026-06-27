@@ -7,17 +7,18 @@ import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../services/icon-render.service';
 import { Component, inject, Input } from '@angular/core';
 import { DecimalPipe }      from '@angular/common';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-kpi-card',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TranslatePipe],
   template: `
     <div
       class="kpi-card"
       [class]="'kpi-card kpi-color-' + color"
       [attr.role]="'figure'"
-      [attr.aria-label]="label + ': ' + (value !== null && value !== undefined ? value : 'cargando')"
+      [attr.aria-label]="label + ': ' + (value !== null && value !== undefined ? value : ('common.loading' | t))"
     >
       <!-- Accent line top -->
       <div class="kpi-accent" aria-hidden="true"></div>
@@ -33,7 +34,7 @@ import { DecimalPipe }      from '@angular/common';
         @if (value !== null && value !== undefined) {
           <span class="kpi-value-num">{{ value | number }}</span>
         } @else {
-          <span class="kpi-skeleton" aria-label="Cargando..." aria-busy="true"></span>
+          <span class="kpi-skeleton" [attr.aria-label]="'common.loading' | t" aria-busy="true"></span>
         }
       </div>
 

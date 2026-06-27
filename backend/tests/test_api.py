@@ -26,8 +26,7 @@ class TestHealth:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ("ok", "degraded", "error")
-        assert "database" in data
-        assert isinstance(data["tables"], list)
+        assert "table_count" in data
         assert "version" in data
 
     def test_health_ok_with_test_database(self, client: TestClient) -> None:
@@ -35,7 +34,9 @@ class TestHealth:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert len(data["tables"]) > 0
+        assert data["table_count"] > 0
+        assert data.get("database") is None
+        assert data.get("tables") == []
 
 
 class TestLogin:
@@ -169,3 +170,83 @@ class TestFavorites:
     ) -> None:
         response = client.post("/api/v1/favorites/99999", headers=auth_headers)
         assert response.status_code == 404
+
+
+class TestCatalogSteward:
+    """Normal listeners can read catalog but not mutate it (Spotify-like)."""
+
+    def test_demo_cannot_create_artist(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.post(
+            "/api/v1/artists",
+            json={"nombre_artista": "Forbidden Artist"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+
+    def test_demo_cannot_create_genre(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.post(
+            "/api/v1/genres",
+            json={"nombre_genero": "Forbidden Genre"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+
+    def test_demo_cannot_create_track(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.post(
+            "/api/v1/tracks",
+            json={"nombre_track": "Forbidden Track"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+
+    def test_admin_can_create_artist(
+        self, client: TestClient, admin_auth_headers: dict[str, str]
+    ) -> None:
+        response = client.post(
+            "/api/v1/artists",
+            json={"nombre_artista": "Steward Artist"},
+            headers=admin_auth_headers,
+        )
+        assert response.status_code == 201
+        assert response.json()["nombre_artista"] == "Steward Artist"
+
+    def test_demo_can_list_artists(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.get("/api/v1/artists", headers=auth_headers)
+        assert response.status_code == 200
+        assert "items" in response.json()
+
+
+class TestTrackSearch:
+    def test_search_by_token(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.get(
+            "/api/v1/tracks/search",
+            params={"q": "golden"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+
+    def test_search_accent_insensitive(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.get(
+            "/api/v1/tracks/search",
+            params={"q": "vamonos marte"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert any("marte" in (t.get("nombre_track") or "").lower() for t in data)

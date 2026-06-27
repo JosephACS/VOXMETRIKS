@@ -13,6 +13,8 @@ from fastapi.testclient import TestClient
 BACKEND = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND))
 
+os.environ.setdefault("AUTH_RATE_LIMIT", "0")
+
 _TEST_DB_DIR = BACKEND / "tests" / ".pytest_db"
 _TEST_DB_PATH = _TEST_DB_DIR / "voxmetrik_test.duckdb"
 
@@ -37,22 +39,59 @@ def _init_test_database(db_path: Path) -> None:
     """)
     conn.execute("""
         CREATE TABLE dim_track (
-            id_track     INTEGER PRIMARY KEY,
-            nombre_track VARCHAR NOT NULL,
-            id_artista   INTEGER,
-            id_genero    INTEGER,
-            duration_ms  INTEGER,
-            popularity   INTEGER
+            id_track          INTEGER PRIMARY KEY,
+            spotify_track_id  VARCHAR,
+            nombre_track      VARCHAR NOT NULL,
+            id_artista        INTEGER,
+            id_album          INTEGER,
+            id_genero         INTEGER,
+            explicit          BOOLEAN DEFAULT FALSE,
+            duration_ms       INTEGER,
+            popularity        INTEGER
         )
     """)
     conn.execute(
         """
-        INSERT INTO dim_track (id_track, nombre_track, id_artista, id_genero, duration_ms, popularity)
+        INSERT INTO dim_track (id_track, spotify_track_id, nombre_track, id_artista, id_genero, duration_ms, popularity)
         VALUES
-            (1, 'Test Track', NULL, NULL, 180000, 50),
-            (2, 'Second Track', NULL, NULL, 200000, 40)
+            (1, 'boot_000001', 'Vámonos a Marte', NULL, NULL, 180000, 88),
+            (2, 'boot_000002', 'Golden Dreams #00002', NULL, NULL, 200000, 72),
+            (3, 'boot_000003', 'Despacito', NULL, NULL, 210000, 95)
         """
     )
+    conn.execute("""
+        CREATE TABLE dim_usuario (
+            id_usuario     INTEGER PRIMARY KEY,
+            nombre_usuario VARCHAR NOT NULL
+        )
+    """)
+    conn.execute("""
+        INSERT INTO dim_usuario (id_usuario, nombre_usuario)
+        VALUES (1, 'Demo Listener')
+    """)
+    conn.execute("""
+        CREATE TABLE dim_playlist (
+            id_playlist     INTEGER PRIMARY KEY,
+            nombre_playlist VARCHAR NOT NULL
+        )
+    """)
+    conn.execute("""
+        INSERT INTO dim_playlist (id_playlist, nombre_playlist)
+        VALUES (1, 'Smoke Playlist')
+    """)
+    conn.execute("""
+        CREATE TABLE fact_streaming (
+            id_stream    INTEGER PRIMARY KEY,
+            id_usuario   INTEGER,
+            id_track     INTEGER,
+            played_at    TIMESTAMP,
+            duration_ms  INTEGER
+        )
+    """)
+    conn.execute("""
+        INSERT INTO fact_streaming (id_stream, id_usuario, id_track, played_at, duration_ms)
+        VALUES (1, 1, 1, CURRENT_TIMESTAMP, 180000)
+    """)
 
     from app.packages.users.services.user_storage import ensure_user_tables
     from app.packages.streaming.services.app_storage import ensure_app_tables
@@ -79,6 +118,17 @@ def client() -> TestClient:
 
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def admin_auth_headers(client: TestClient) -> dict[str, str]:
+    response = client.post(
+        "/api/v1/users/login",
+        json={"login": "admin", "password": "admin123", "remember": True},
+    )
+    assert response.status_code == 200, response.text
+    token = response.json()["token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

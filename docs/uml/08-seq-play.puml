@@ -1,0 +1,20 @@
+@startuml voxmetriks-seq-play
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+title Secuencia — Reproducir track (CU-R01)
+
+actor Usuario as U
+participant UI as UI
+participant Player as P
+participant API as API
+database DuckDB as DB
+
+U -> UI : Play
+UI -> API : GET /tracks/{id}
+API -> DB : metadata
+API --> UI : track
+UI -> P : load
+P --> U : now-playing
+
+@enduml

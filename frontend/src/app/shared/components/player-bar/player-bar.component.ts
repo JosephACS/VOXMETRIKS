@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -14,6 +14,14 @@ import { AddToPlaylistBtnComponent } from '../add-to-playlist-btn/add-to-playlis
 })
 export class PlayerBarComponent {
   player = inject(MusicPlayerService);
+
+  sourceLabel = computed(() => {
+    switch (this.player.audioMode()) {
+      case 'youtube': return 'player.sourceYoutube';
+      case 'loading': return 'player.sourceLoading';
+      default: return 'player.sourceDemo';
+    }
+  });
 
   onProgressClick(e: MouseEvent) {
     const el = e.currentTarget as HTMLElement;

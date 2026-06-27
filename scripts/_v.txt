@@ -1,8 +1,0 @@
-1. Metodologia Spec Driven Development
-1.1 Fases SDD
-1.2 Estructura de una buena especificacion
-1.3 Plantilla de trabajo
-1.4 Ejemplo login — tabla Elemento / Ejemplo
-1.2 Estructura de una buena especificacion
-1.6 Tabla modelo — partes del sistema
-14. Matriz maestra de trazabilidad — Resumen por modulo

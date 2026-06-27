@@ -18,15 +18,22 @@ _HERE = Path(__file__).resolve().parent          # backend/app/core/
 _BACKEND = _HERE.parent.parent                   # backend/
 _PROJECT_ROOT = _BACKEND.parent                  # VOXMETRIK_V2/
 
-for _candidate in [_BACKEND / ".env", _PROJECT_ROOT / ".env"]:
-    if _candidate.exists():
-        load_dotenv(dotenv_path=str(_candidate), override=False)
-        break
+# Load backend/.env first, then project root (root wins on duplicate keys)
+if (_BACKEND / ".env").exists():
+    load_dotenv(dotenv_path=str(_BACKEND / ".env"), override=False)
+if (_PROJECT_ROOT / ".env").exists():
+    load_dotenv(dotenv_path=str(_PROJECT_ROOT / ".env"), override=True)
+
+_ENV_FILES = tuple(
+    str(p)
+    for p in (_BACKEND / ".env", _PROJECT_ROOT / ".env")
+    if p.exists()
+)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES or ".env",
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -45,6 +52,24 @@ class Settings(BaseSettings):
     port: int      = 8000
     reload: bool   = False
     log_level: str = "INFO"
+
+    # Security / ops
+    cors_origins: str = "http://localhost:4200,http://127.0.0.1:4200"
+    health_verbose: bool = False
+    seed_demo_users: bool = True
+    auth_rate_limit: int = 20
+    auth_rate_window_sec: int = 60
+
+    # Audio playback — YouTube Data API v3 key (resolves real, full-length
+    # playback via the official IFrame player). Leave blank to disable.
+    youtube_api_key: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
     def db_path_resolved(self) -> Path:

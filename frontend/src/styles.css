@@ -236,6 +236,20 @@ html[data-theme='light'] .search-input::placeholder {
   color: var(--color-text-muted) !important;
 }
 
+.search-input::placeholder,
+.form-input::placeholder,
+input[type='search']::placeholder,
+textarea::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.35));
+}
+
+html[data-theme='light'] .search-input::placeholder,
+html[data-theme='light'] .form-input::placeholder,
+html[data-theme='light'] input[type='search']::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
 html[data-theme='light'] .btn-secondary {
   background: var(--shell-control-bg) !important;
   border-color: var(--border) !important;
@@ -260,6 +274,33 @@ html[data-theme='light'] .modal {
 
 html[data-theme='light'] .data-row:hover {
   background: rgba(15, 168, 118, 0.06) !important;
+}
+
+html[data-theme='light'] .genre-name,
+html[data-theme='light'] .catalog-note,
+html[data-theme='light'] .metric-note,
+html[data-theme='light'] .history-tab,
+html[data-theme='light'] .settings-section-desc {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme='light'] .btn-secondary:hover {
+  background: var(--shell-hover-strong) !important;
+  color: var(--text) !important;
+}
+
+html[data-theme='light'] .catalog-note {
+  color: var(--color-text-secondary) !important;
+}
+
+html[data-theme='light'] .chart-axis-label {
+  fill: var(--text-muted) !important;
+}
+
+html[data-theme='light'] .comparatives-chart line,
+html[data-theme='light'] .comparatives-chart text {
+  stroke: var(--border) !important;
+  fill: var(--text-muted) !important;
 }
 
 html[data-theme='light'] .chart-card:hover,

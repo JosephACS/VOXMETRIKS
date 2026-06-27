@@ -39,7 +39,7 @@
 - [x] §3.1 In Scope — ELT UI, pipeline monitoring
 - [x] §4.3 Nivel Operativo — ELT CLI/Docker CU-PM08
 - [x] §5 P2 Package-by-Domain — PKG-07 data-engineering
-- [x] §5 P6 Warehouse — synthetic muta dim_track; monitoreo read ctl_*
+- [x] §5 P6 Warehouse — synthetic genera facts de actividad sobre catálogo real; monitoreo read ctl_*
 - [x] §5 P7 ELT-before-API — FR-PM24, NFR-PM06
 - [x] §5 P10 Synthetic boundary — NFR-PM05, RB-PM05
 - [x] §5 P11 Security — RB-PM10, NFR-PM10 deuda documentada

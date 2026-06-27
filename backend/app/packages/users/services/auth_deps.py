@@ -20,6 +20,9 @@ def _extract_token(authorization: Optional[str]) -> Optional[str]:
     return authorization.strip()
 
 
+extract_token = _extract_token
+
+
 def get_optional_user_id(
     authorization: Optional[str] = Header(None),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
@@ -35,4 +38,23 @@ def require_user_id(
 ) -> int:
     if user_id is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    return user_id
+
+
+def require_engineer_user(
+    user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+) -> int:
+    """Catalog steward / engineer mutations (mirrors FE engineerGuard)."""
+    from .user_service import _fetch_user
+
+    user = _fetch_user(conn, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role = (user.get("role") or "user").lower()
+    if role not in {"admin", "engineer"}:
+        raise HTTPException(
+            status_code=403,
+            detail="Engineer role required",
+        )
     return user_id

@@ -15,6 +15,7 @@ import { HorizontalSectionComponent } from '../../../shared/components/horizonta
 import { MediaCardComponent } from '../../../shared/components/media-card/media-card.component';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import {
   StatsSummary, TopTrack, GeneroPopularidad, HistoryEntry, PlaylistSummary, Track,
 } from '../../../shared/models/api.models';
@@ -25,7 +26,7 @@ import { PlayableTrack } from '../../../shared/models/player.models';
   standalone: true,
   imports: [
     CommonModule, RouterModule, HorizontalSectionComponent, MediaCardComponent,
-    TrackRowComponent, KpiCardComponent, TranslatePipe,
+    TrackRowComponent, KpiCardComponent, TranslatePipe, DataSourceBadgeComponent,
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
@@ -47,6 +48,7 @@ export class HomeComponent implements OnInit {
   });
 
   isLoading = signal(true);
+  hasError = signal(false);
   summary = signal<StatsSummary | null>(null);
   topTracks = signal<TopTrack[]>([]);
   recentTracks = signal<Track[]>([]);
@@ -63,44 +65,62 @@ export class HomeComponent implements OnInit {
   madeForYouPlayable = computed(() => this.madeForYou().map((t) => this.player.fromTopTrack(t)));
   trendingPlayable = computed(() => this.trending().map((t) => this.player.fromTopTrack(t)));
 
+  feedEmpty = computed(() =>
+    !this.isLoading()
+    && !this.history().length
+    && !this.madeForYou().length
+    && !this.trending().length
+    && !this.artists().length
+    && !this.playlists().length
+    && !this.genres().length
+    && !this.topTracks().length
+  );
+
   ngOnInit() {
     let pending = 6;
-    const done = () => { if (--pending <= 0) this.isLoading.set(false); };
+    let failures = 0;
+    const done = (ok = true) => {
+      if (!ok) failures += 1;
+      if (--pending <= 0) {
+        this.isLoading.set(false);
+        this.hasError.set(failures > 0 && !this.summary());
+      }
+    };
 
     this.stats.getSummary().subscribe({
-      next: (d) => { this.summary.set(d); done(); },
-      error: () => done(),
+      next: (d) => { this.summary.set(d); done(true); },
+      error: () => done(false),
     });
     this.stats.getTopTracks(12).subscribe({
-      next: (d) => { this.topTracks.set(d ?? []); done(); },
-      error: () => done(),
+      next: (d) => { this.topTracks.set(d ?? []); done(true); },
+      error: () => done(false),
     });
     this.stats.getCatalogGrowth(12).subscribe({
       next: (pts) => {
         this.growthLabels.set(pts.map((p) => p.label));
         this.growthValues.set(pts.map((p) => p.total || p.added));
-        done();
+        done(true);
       },
-      error: () => done(),
+      error: () => done(false),
     });
     this.tracksSvc.listTracks(1, 12).subscribe({
-      next: (r) => { this.recentTracks.set(r.items ?? []); done(); },
-      error: () => done(),
+      next: (r) => { this.recentTracks.set(r.items ?? []); done(true); },
+      error: () => done(false),
     });
-    this.genresSvc.getGenreStats(8).subscribe({
-      next: (d) => { this.genres.set(d ?? []); done(); },
-      error: () => done(),
+    this.genresSvc.getGenreStats(1, 8).subscribe({
+      next: (r) => { this.genres.set(r.items ?? []); done(true); },
+      error: () => done(false),
     });
     this.artistsSvc.listArtists(1, 8).subscribe({
       next: (r) => {
         this.artists.set((r.items ?? []).map((a) => ({ id: a.id_artista, name: a.nombre_artista })));
-        done();
+        done(true);
       },
-      error: () => done(),
+      error: () => done(false),
     });
     this.playlistsSvc.list().subscribe({
-      next: (d) => { this.playlists.set((d ?? []).slice(0, 6)); done(); },
-      error: () => done(),
+      next: (d) => { this.playlists.set((d ?? []).slice(0, 6)); done(true); },
+      error: () => done(false),
     });
     this.historySvc.history$.subscribe((h) => this.history.set(h.slice(0, 8)));
     this.historySvc.reload();
@@ -154,5 +174,10 @@ export class HomeComponent implements OnInit {
   energyMeta(energy?: number | null): string | undefined {
     if (energy == null) return undefined;
     return this.i18n.t('home.energy', { value: Math.round(energy) });
+  }
+
+  genreLink(g: GeneroPopularidad): string {
+    const name = (g.nombre_genero ?? '').trim();
+    return name ? `/genres?q=${encodeURIComponent(name)}` : '/genres';
   }
 }

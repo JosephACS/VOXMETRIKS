@@ -1,7 +1,0 @@
-﻿Heading 1 | Parte II ù Documento del Sistema en UML
-Heading 2 | 12.1 Diagrama de casos de uso
-Heading 2 | 12.2 Diagrama de componentes
-Heading 2 | 12.3 Diagrama de arquitectura
-Heading 2 | 12.4 Diagrama flujo ELT
-Heading 2 | 12.5 Trazabilidad UML y specs
-Heading 1 | Resumen ejecutivo final

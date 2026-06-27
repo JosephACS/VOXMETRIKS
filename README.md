@@ -14,9 +14,10 @@ Plataforma de analítica musical sobre dataset Spotify: SPA Angular + API FastAP
 | API | FastAPI 2.x | `backend/app/` |
 | Warehouse | DuckDB (Gold + tablas app) | `data/warehouse/voxmetrik.duckdb` |
 | ELT | Python (Bronze → Silver → Gold) | `elt/pipelines/elt_pipeline.py` |
+
 | Specs SDD | Markdown 001–011 | `specs/` |
 
-Principios de diseño: package-by-domain (P2), single warehouse authority (P4), ELT-before-API (P7). Ver [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+Principios de diseño: package-by-domain (P2), single warehouse authority (P4), ELT-before-API (P7). Ver [`.specify/memory/constitution.md`](.specify/memory/constitution.md). La entrega académica TGA07 (docx) está en el repo hermano [`../voxmetriks-entregas`](../voxmetriks-entregas).
 
 ---
 
@@ -49,12 +50,13 @@ voxmetriks/
 │   └── tests/             # pytest (health, login, playlists, favorites)
 ├── elt/                   # Extract / transform / pipelines
 ├── data/warehouse/        # DuckDB canónico (generado por ELT)
-├── specs/                 # Specs operativas 001–011 + trazabilidad
+├── specs/                 # Specs operativas 001–011 + trazabilidad (SDD)
+├── .specify/              # Spec Kit (constitución, plantillas, scripts)
 ├── docs/
 │   ├── QUICKSTART.md      # ← guía única de arranque
 │   └── uml/               # Diagramas PlantUML
-├── docker-compose.yml     # pipeline (job) → api → pocketbase
-└── scripts/               # validate_warehouse.py, analyze_warehouse.py
+├── docker-compose.yml     # pocketbase → pipeline → api → frontend
+└── scripts/               # validate_warehouse.py, smoke tests
 ```
 
 ---
@@ -71,17 +73,14 @@ Prefijo REST: `/api/v1`. Autenticación: header `Authorization: Bearer <token>` 
 
 ---
 
-## Specs y trazabilidad
+## Specs y documentación
 
 | Documento | Descripción |
 |-----------|-------------|
 | [`specs/README.md`](specs/README.md) | Índice specs 001–011 |
-| [`specs/TRACEABILITY-MASTER.md`](specs/TRACEABILITY-MASTER.md) | Matriz CU→FR→Impl v2.0 (248 filas) |
-| [`specs/DELIVERY-VERIFICATION-CHECKLIST.md`](specs/DELIVERY-VERIFICATION-CHECKLIST.md) | Verificación pre-entrega (Bloque 5) |
-| [`specs/TRACEABILITY-COVERAGE-REPORT.md`](specs/TRACEABILITY-COVERAGE-REPORT.md) | Cobertura trazabilidad v2.0 |
+| [`specs/TRACEABILITY-MASTER.md`](specs/TRACEABILITY-MASTER.md) | Matriz CU→FR→Impl |
 | [`docs/uml/`](docs/uml/) | Casos de uso, componentes, arquitectura, flujo ELT |
-
-Auditorías de soporte: `specs/OPERATIVE-COMPLETENESS-AUDIT.md`, `specs/SPEC-008-011-EVIDENCE-AUDIT.md`.
+| [`../voxmetriks-entregas`](../voxmetriks-entregas) | Entrega académica TGA07 (docx) |
 
 ---
 
@@ -90,20 +89,43 @@ Auditorías de soporte: `specs/OPERATIVE-COMPLETENESS-AUDIT.md`, `specs/SPEC-008
 ```bash
 cd backend
 pip install -r requirements.txt
-pytest tests/test_api.py -v
+pytest tests/ -v
 ```
 
-12 tests mínimos: health, login, playlists, favorites.
+Smoke contra el backend real:
+
+```bash
+uvicorn app.main:app --reload --port 8000
+python ../scripts/smoke_api.py --base-url http://localhost:8000
+python ../scripts/smoke_user_journey.py --base-url http://localhost:8000
+```
+
+La suite cubre health, login, logout real, RBAC engineer, explorer, protección de datos sensibles, búsqueda y limpieza de textos. `smoke_user_journey.py` agrega favoritos, playlists, recomendaciones e historial contra la API real.
 
 ---
 
-## Docker (opcional)
+## Docker
+
+Una sola orden levanta todo (primera vez):
 
 ```bash
 docker compose up --build
 ```
 
-El servicio `pipeline` ejecuta el ELT una vez; `api` arranca cuando el pipeline termina con éxito (P7). Ver `docker-compose.yml`.
+Orden de arranque: **pocketbase** (sirve el dataset ~100k desde `./pocketbase/pb_data`) → **pipeline** (corre el ELT y construye el DuckDB) → **api** (arranca al terminar el pipeline, P7) → **frontend** (nginx sirve la SPA y hace proxy `/api` → api).
+
+| Servicio | URL |
+|----------|-----|
+| Frontend | http://localhost:8080 |
+| API / Swagger | http://localhost:8000/docs |
+| PocketBase | http://localhost:8090 |
+
+```bash
+docker compose up -d pocketbase api frontend   # sin re-correr el pipeline
+docker compose run --rm pipeline               # re-ejecutar el ELT
+```
+
+> El primer arranque requiere que `./pocketbase/pb_data` tenga el dataset y el superusuario, y que `.env` tenga las credenciales de PocketBase.
 
 ---
 

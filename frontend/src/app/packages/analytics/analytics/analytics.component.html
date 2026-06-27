@@ -1,105 +1,250 @@
 <div class="page">
+
   <div class="page-header">
+
     <div>
+
       <h1 class="page-title">
+
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Análisis
+
+        {{ 'analytics.title' | t }}
+
       </h1>
-      <p class="page-subtitle">Análisis detallado · características de audio y géneros</p>
+
+      <p class="page-subtitle">{{ 'analytics.subtitle' | t }}</p>
+
     </div>
+
+    <div class="source-badges">
+
+      <app-data-source-badge kind="live" />
+
+      <app-data-source-badge kind="synthetic" />
+
+    </div>
+
   </div>
 
-  @if (!isLoading()) {
-    <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">Canciones analizadas</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">Popularidad Media</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">Energía Media</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">Géneros</span></div></div>
-      @if (engagement(); as e) {
-        <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">Puntuación de engagement</span></div></div>
-        <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">Tasa de finalización</span></div></div>
-        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">Sesión promedio</span></div></div>
-      }
-    </div>
+
+
+  @if (partialError() && !isLoading()) {
+
+    <section class="inline-warning">
+
+      <div>
+
+        <strong>{{ 'analytics.partialError' | t }}</strong>
+
+        <p>{{ 'analytics.partialErrorHint' | t }}</p>
+
+      </div>
+
+      <button type="button" class="retry-btn" (click)="loadAnalytics()">{{ 'analytics.retry' | t }}</button>
+
+    </section>
+
   }
 
+
+
+  @if (!isLoading()) {
+
+    <div class="kpi-row">
+
+      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">{{ 'analytics.kpi.tracks' | t }}</span></div></div>
+
+      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">{{ 'analytics.kpi.avgPop' | t }}</span></div></div>
+
+      <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">{{ 'analytics.kpi.avgEnergy' | t }}</span></div></div>
+
+      <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">{{ 'analytics.kpi.genres' | t }}</span></div></div>
+
+      @if (engagement(); as e) {
+
+        <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">{{ 'analytics.kpi.engagement' | t }}</span></div></div>
+
+        <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">{{ 'analytics.kpi.completion' | t }}</span></div></div>
+
+        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">{{ 'analytics.kpi.session' | t }}</span></div></div>
+
+      }
+
+    </div>
+
+  }
+
+
+
   <div class="analytics-grid">
+
     <div class="chart-card chart-wide">
+
       <div class="chart-head">
-        <h3 class="chart-title">Distribución de energía del catálogo</h3>
-        <p class="chart-subtitle">Cantidad de canciones por rango de energía (0 = calmado, 1 = intenso)</p>
+
+        <h3 class="chart-title">{{ 'analytics.chart.energyTitle' | t }}</h3>
+
+        <p class="chart-subtitle">{{ 'analytics.chart.energySub' | t }}</p>
+
       </div>
+
       @if (isLoading()) { <div class="skel-chart"></div> }
-      @else if (energyDist().length === 0) { <div class="empty">Sin datos</div> }
+
+      @else if (energyDist().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+
       @else {
+
         <div class="energy-chart">
+
           @for (e of energyDist(); track e.rango_energia) {
+
             <div class="e-col">
+
               <div class="e-bar-wrap">
+
                 <div class="e-bar" [style.height.%]="energyBarH(e.cantidad_tracks ?? 0)"></div>
+
               </div>
+
               <span class="e-val-out">{{ e.cantidad_tracks ?? 0 | number }}</span>
+
               <span class="e-label">{{ e.rango_energia }}</span>
+
               <div class="e-stats">
-                <span class="e-stat" title="Popularidad promedio del rango">pop. {{ (e.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+
+                <span class="e-stat" [title]="'analytics.chart.popShort' | t">{{ 'analytics.chart.popShort' | t }} {{ (e.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+
               </div>
+
             </div>
+
           }
+
         </div>
+
+        <div class="chart-note">{{ 'analytics.chart.energyNote' | t }}</div>
+
       }
+
     </div>
 
+
+
     <div class="chart-card">
+
       <div class="chart-head">
-        <h3 class="chart-title">Géneros con más canciones</h3>
-        <p class="chart-subtitle">Volumen del catálogo por género musical</p>
+
+        <h3 class="chart-title">{{ 'analytics.chart.genresTitle' | t }}</h3>
+
+        <p class="chart-subtitle">{{ 'analytics.chart.genresSub' | t }}</p>
+
       </div>
+
       @if (isLoading()) { <div class="skel-chart"></div> }
-      @else if (topGenres().length === 0) { <div class="empty">Sin datos</div> }
+
+      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+
       @else {
+
         <div class="genre-bars">
+
           @for (g of topGenres(); track g.id_genero; let i = $index) {
+
             <div class="genre-row">
+
               <div class="genre-dot" [style.background]="genreColor(i)"></div>
+
               <span class="genre-name">{{ g.nombre_genero ?? '—' }}</span>
+
               <div class="genre-bar-outer"><div class="genre-bar-fill" [style.width.%]="trackBarW(g.total_tracks ?? 0)" [style.background]="genreColor(i)"></div></div>
+
               <span class="genre-count mono">{{ (g.total_tracks ?? 0) | number }}</span>
+
             </div>
+
           }
+
         </div>
+
+        <div class="chart-note">{{ 'analytics.chart.genresNote' | t }}</div>
+
       }
+
     </div>
 
+
+
     <div class="chart-card">
+
       <div class="chart-head">
-        <h3 class="chart-title">Popularidad vs energía por género</h3>
-        <p class="chart-subtitle">Comparación dual: escala 0–100 (popularidad) y 0–100% (energía)</p>
-      </div>
-      @if (isLoading()) { <div class="skel-chart"></div> }
-      @else if (topGenres().length === 0) { <div class="empty">Sin datos</div> }
-      @else {
-        <div class="bubble-chart">
-          @for (g of topGenres().slice(0,10); track g.id_genero; let i = $index) {
-            <div class="bubble-item">
-              <div class="bubble-row">
-                <span class="bubble-label">{{ g.nombre_genero ?? '—' }}</span>
-                <div class="bubble-bars">
-                  <div class="bubble-bar-wrap">
-                    <span class="bubble-bar-label">Pop.</span>
-                    <div class="bubble-bar"><div class="b-fill b-pop" [style.width.%]="g.popularidad_promedio ?? 0"></div></div>
-                    <span class="bubble-bar-val mono">{{ (g.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
-                  </div>
-                  <div class="bubble-bar-wrap">
-                    <span class="bubble-bar-label">Energ.</span>
-                    <div class="bubble-bar"><div class="b-fill b-energy" [style.width.%]="(g.energia_promedio ?? 0) * 100"></div></div>
-                    <span class="bubble-bar-val mono">{{ ((g.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
+
+        <h3 class="chart-title">{{ 'analytics.chart.popEnergyTitle' | t }}</h3>
+
+        <p class="chart-subtitle">{{ 'analytics.chart.popEnergySub' | t }}</p>
+
+        <div class="legend-row">
+
+          <span><i class="legend-dot pop"></i>{{ 'analytics.chart.popLegend' | t }}</span>
+
+          <span><i class="legend-dot energy"></i>{{ 'analytics.chart.energyLegend' | t }}</span>
+
         </div>
+
+      </div>
+
+      @if (isLoading()) { <div class="skel-chart"></div> }
+
+      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+
+      @else {
+
+        <div class="bubble-chart">
+
+          @for (g of topGenres().slice(0,10); track g.id_genero; let i = $index) {
+
+            <div class="bubble-item">
+
+              <div class="bubble-row">
+
+                <span class="bubble-label">{{ g.nombre_genero ?? '—' }}</span>
+
+                <div class="bubble-bars">
+
+                  <div class="bubble-bar-wrap">
+
+                    <span class="bubble-bar-label">{{ 'analytics.chart.popShort' | t }}</span>
+
+                    <div class="bubble-bar"><div class="b-fill b-pop" [style.width.%]="popWidth(g.popularidad_promedio)"></div></div>
+
+                    <span class="bubble-bar-val mono">{{ (g.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+
+                  </div>
+
+                  <div class="bubble-bar-wrap">
+
+                    <span class="bubble-bar-label">{{ 'analytics.chart.energyShort' | t }}</span>
+
+                    <div class="bubble-bar"><div class="b-fill b-energy" [style.width.%]="energyWidth(g.energia_promedio)"></div></div>
+
+                    <span class="bubble-bar-val mono">{{ ((g.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          }
+
+        </div>
+
       }
+
     </div>
+
   </div>
+
 </div>
+

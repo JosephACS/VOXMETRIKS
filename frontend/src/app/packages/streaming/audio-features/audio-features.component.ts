@@ -9,6 +9,7 @@ interface FeatureDef {
   key: keyof TrackDetail;
   label: string;
   color: string;
+  help: string;
 }
 
 @Component({
@@ -22,13 +23,13 @@ export class AudioFeaturesComponent implements OnInit {
   private tracksSvc = inject(TracksService);
 
   featureDefs: FeatureDef[] = [
-    { key: 'danceability', label: 'Bailabilidad', color: '#1ed896' },
-    { key: 'energy', label: 'Energía', color: '#7c3aed' },
-    { key: 'valence', label: 'Valencia', color: '#10b981' },
-    { key: 'acousticness', label: 'Acústica', color: '#3b82f6' },
-    { key: 'speechiness', label: 'Locución', color: '#f59e0b' },
-    { key: 'instrumentalness', label: 'Instrumental', color: '#ec4899' },
-    { key: 'liveness', label: 'En vivo', color: '#6366f1' },
+    { key: 'danceability', label: 'Bailabilidad', color: '#1ed896', help: 'Qué tan apta es para bailar.' },
+    { key: 'energy', label: 'Energía', color: '#7c3aed', help: 'Intensidad y actividad percibida.' },
+    { key: 'valence', label: 'Valencia', color: '#10b981', help: 'Tono emocional positivo.' },
+    { key: 'acousticness', label: 'Acústica', color: '#3b82f6', help: 'Probabilidad de sonido acústico.' },
+    { key: 'speechiness', label: 'Locución', color: '#f59e0b', help: 'Presencia de voz hablada.' },
+    { key: 'instrumentalness', label: 'Instrumental', color: '#ec4899', help: 'Probabilidad de ausencia de voz.' },
+    { key: 'liveness', label: 'En vivo', color: '#6366f1', help: 'Presencia de audiencia o directo.' },
   ];
 
   isLoading = signal(true);
@@ -64,6 +65,13 @@ export class AudioFeaturesComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.loadFeatures();
+  }
+
+  loadFeatures() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.tracks.set([]);
     this.tracksSvc.listTracks(1, 8, undefined, undefined, undefined).subscribe({
       next: async (res) => {
         const items = res.items ?? [];
@@ -92,6 +100,10 @@ export class AudioFeaturesComponent implements OnInit {
   featureValue(track: TrackDetail, key: keyof TrackDetail): number {
     const v = track[key];
     return typeof v === 'number' ? v : 0;
+  }
+
+  featurePct(track: TrackDetail, key: keyof TrackDetail): number {
+    return Math.max(0, Math.min(100, this.featureValue(track, key) * 100));
   }
 
   radarPoint(track: TrackDetail, index: number): { x: number; y: number } {

@@ -1,0 +1,36 @@
+@startuml uc-006-perfil
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle stickman
+skinparam defaultFontSize 10
+skinparam nodesep 20
+skinparam ranksep 24
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+left to right direction
+title 006 — Perfil (PKG-05 | OT-06)
+
+actor "Usuario Registrado" as User
+
+rectangle "Autogestión — Perfil" {
+  usecase "CU-PF01\nVer identidad" as CU_PF01
+  usecase "CU-PF02\nStats biblioteca" as CU_PF02
+  usecase "CU-PF03\nPreview playlists" as CU_PF03
+}
+User --> CU_PF01
+User --> CU_PF02
+User --> CU_PF03
+CU_PF01 ..> CU_03 : <<include>> spec 001
+
+@enduml

@@ -1,0 +1,41 @@
+@startuml uc-011-health
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle stickman
+skinparam defaultFontSize 10
+skinparam nodesep 20
+skinparam ranksep 24
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+left to right direction
+title 011 — Health y operaciones (PKG-05 | OT-10)
+
+actor "Usuario Registrado" as User
+actor "DevOps" as Ops
+
+rectangle "Salud del sistema" {
+  usecase "CU-HO01\nHealth en settings" as CU_HO01
+  usecase "CU-HO02\nRefrescar health" as CU_HO02
+  usecase "CU-HO03\nMetadata API raíz" as CU_HO03
+  usecase "CU-HO04\nEvaluar estados" as CU_HO04
+  usecase "CU-HO05\nDocker Compose" as CU_HO05
+  usecase "CU-HO06\nScripts CLI warehouse" as CU_HO06
+}
+User --> CU_HO01
+User --> CU_HO02
+Ops --> CU_HO05
+Ops --> CU_HO06
+CU_HO01 ..> CU_HO04 : <<include>>
+
+@enduml

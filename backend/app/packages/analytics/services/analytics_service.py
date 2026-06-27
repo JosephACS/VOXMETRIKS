@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import duckdb
 
 from .base_service import count_rows, fetch_rows
+from app.packages.streaming.services.display_text import sanitize_display_text
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 BRONZE_PARQUET = PROJECT_ROOT / "data" / "bronze" / "raw_spotify.parquet"
@@ -246,6 +247,21 @@ def get_engagement_analytics(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
     }
 
 
+# Tables never exposed via Data Explorer (auth/session data).
+EXPLORER_BLOCKED_TABLES: frozenset[str] = frozenset({
+    "app_user",
+    "app_session",
+})
+
+# Column names redacted in preview rows (defense in depth).
+SENSITIVE_COLUMN_NAMES: frozenset[str] = frozenset({
+    "password_hash",
+    "password",
+    "token",
+    "session_token",
+})
+
+
 def _table_kind(name: str) -> str:
     if name.startswith("dim_"):
         return "dimension"
@@ -260,6 +276,16 @@ def _table_kind(name: str) -> str:
     return "other"
 
 
+def _explorer_visible_tables(conn: duckdb.DuckDBPyConnection) -> List[str]:
+    return [n for n in _allowed_tables(conn) if n not in EXPLORER_BLOCKED_TABLES]
+
+
+def _redact_cell(column: str, value: Any) -> Any:
+    if column.lower() in SENSITIVE_COLUMN_NAMES:
+        return "***"
+    return value
+
+
 def _allowed_tables(conn: duckdb.DuckDBPyConnection) -> List[str]:
     rows = conn.execute(
         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' ORDER BY table_name"
@@ -269,7 +295,7 @@ def _allowed_tables(conn: duckdb.DuckDBPyConnection) -> List[str]:
 
 def get_warehouse_tables(conn: duckdb.DuckDBPyConnection) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
-    for name in _allowed_tables(conn):
+    for name in _explorer_visible_tables(conn):
         kind = _table_kind(name)
         row_count = count_rows(conn, name)
         columns: List[Dict[str, str]] = []
@@ -294,8 +320,10 @@ def get_table_preview(
     page: int = 1,
     limit: int = 8,
 ) -> Dict[str, Any]:
-    allowed = set(_allowed_tables(conn))
+    allowed = set(_explorer_visible_tables(conn))
     if table_name not in allowed:
+        if table_name in EXPLORER_BLOCKED_TABLES:
+            raise ValueError(f"Table '{table_name}' is not accessible")
         raise ValueError(f"Table '{table_name}' not found")
 
     offset = max(0, (page - 1) * limit)
@@ -306,19 +334,24 @@ def get_table_preview(
         [limit, offset],
     ).fetchall()
     cols = [d[0] for d in conn.description]
+    safe_cols = [c for c in cols if c.lower() not in SENSITIVE_COLUMN_NAMES]
+    if not safe_cols:
+        safe_cols = cols
     rows = []
     for r in rows_raw:
         item: Dict[str, Any] = {}
         for col, val in zip(cols, r):
+            if col.lower() in SENSITIVE_COLUMN_NAMES:
+                continue
             if val is None:
                 item[col] = None
             elif hasattr(val, "isoformat"):
                 item[col] = val.isoformat()
             else:
-                item[col] = val
+                item[col] = _redact_cell(col, val)
         rows.append(item)
 
-    col_list = ", ".join(cols[:8]) if cols else "*"
+    col_list = ", ".join(safe_cols[:8]) if safe_cols else "*"
     query = f"SELECT {col_list}\nFROM {table_name}\nLIMIT {limit}\nOFFSET {offset};"
 
     return {
@@ -326,7 +359,7 @@ def get_table_preview(
         "total": total,
         "page": page,
         "limit": limit,
-        "columns": cols,
+        "columns": safe_cols if safe_cols else cols,
         "rows": rows,
         "query": query,
     }
@@ -406,6 +439,15 @@ def get_mood_tracks(
             "recommendation_score": float(r[6] or 0),
         })
     return result
+
+
+def _clean_track_labels(track: Dict[str, Any]) -> Dict[str, Any]:
+    cleaned = dict(track)
+    if "nombre_track" in cleaned:
+        cleaned["nombre_track"] = sanitize_display_text(cleaned.get("nombre_track"))
+    if "nombre_artista" in cleaned:
+        cleaned["nombre_artista"] = sanitize_display_text(cleaned.get("nombre_artista"))
+    return cleaned
 
 
 def get_recommendations(
@@ -517,12 +559,12 @@ def get_recommendations(
             mood_label = meta[0] if meta else mood.replace("_", " ")
 
     return {
-        "for_you": tracks,
+        "for_you": [_clean_track_labels(t) for t in tracks],
         "artists": artists,
         "genres": genres,
         "moods": moods,
         "mood_filter": mood,
         "mood_label": mood_label,
-        "mood_tracks": mood_tracks,
+        "mood_tracks": [_clean_track_labels(t) for t in mood_tracks],
         "mood_count": len(mood_tracks),
     }

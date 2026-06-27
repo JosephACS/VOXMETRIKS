@@ -9,13 +9,15 @@ import { TrackRowComponent } from '../../../shared/components/track-row/track-ro
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { PlayableTrack } from '../../../shared/models/player.models';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 
 const COVER = 'linear-gradient(135deg, #1db954 0%, #065f46 50%, #064e3b 100%)';
 
 @Component({
   selector: 'app-liked',
   standalone: true,
-  imports: [CommonModule, RouterModule, TrackRowComponent],
+  imports: [CommonModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './liked.component.html',
   styleUrls: ['./liked.component.css'],
 })
@@ -26,15 +28,22 @@ export class LikedComponent implements OnInit {
 
   tracks = signal<FavoriteTrack[]>([]);
   isLoading = signal(true);
+  hasError = signal(false);
 
   heroCover = COVER;
 
   constructor(private favSvc: FavoritesService) {}
 
   ngOnInit() {
+    this.loadFavorites();
+  }
+
+  loadFavorites() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
     this.favSvc.loadFavorites().subscribe({
       next: (d) => { this.tracks.set(d ?? []); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });
   }
 

@@ -5,8 +5,10 @@ import { environment } from '../../../../environments/environment';
 import {
   StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad,
   SyntheticResult, SyntheticLimits, CatalogGrowthPoint,
+  ImportResult,
   WarehouseStatus, TrendingAnalytics, PlatformAnalytics, EngagementAnalytics,
   WarehouseTableMeta, TablePreview, RecommendationPayload, HealthResponse, HistoryHub,
+  PaginatedResponse,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -32,13 +34,18 @@ export class StatsService {
     return this.http.get<LoadRecord[]>(`${this.BASE}/loads`, { params });
   }
 
-  getGenreStats(limit = 20): Observable<GeneroPopularidad[]> {
-    const params = new HttpParams().set('limit', limit);
-    return this.http.get<GeneroPopularidad[]>(`${environment.apiUrl}/genres/stats`, { params });
+  getGenreStats(page = 1, limit = 20, search?: string): Observable<PaginatedResponse<GeneroPopularidad>> {
+    let params = new HttpParams().set('page', page).set('limit', limit);
+    if (search) params = params.set('search', search);
+    return this.http.get<PaginatedResponse<GeneroPopularidad>>(`${environment.apiUrl}/genres/stats`, { params });
   }
 
   generateSynthetic(body: { target_total?: number; multiplier?: number }): Observable<SyntheticResult> {
     return this.http.post<SyntheticResult>(`${this.BASE}/synthetic`, body);
+  }
+
+  importFromPocketBase(): Observable<ImportResult> {
+    return this.http.post<ImportResult>(`${this.BASE}/import`, {});
   }
 
   getSyntheticLimits(): Observable<SyntheticLimits> {

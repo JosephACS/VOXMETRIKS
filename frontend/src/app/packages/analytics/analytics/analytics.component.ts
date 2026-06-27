@@ -5,11 +5,13 @@ import { CommonModule } from '@angular/common';
 import { StatsService } from '../services/stats.service';
 import { GenresService } from '../../streaming/services/genres.service';
 import { DistribucionEnergia, GeneroPopularidad } from '../../../shared/models/api.models';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DataSourceBadgeComponent, TranslatePipe],
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.css'],
 })
@@ -17,6 +19,7 @@ export class AnalyticsComponent implements OnInit {
   private iconRender = inject(IconRenderService);
 
   isLoading    = signal(true);
+  partialError = signal(false);
   energyDist   = signal<DistribucionEnergia[]>([]);
   genreStats   = signal<GeneroPopularidad[]>([]);
   engagement   = signal<{ skip_rate?: number; completion_rate?: number; engagement_score?: number; avg_session_time_min?: number } | null>(null);
@@ -36,18 +39,36 @@ export class AnalyticsComponent implements OnInit {
   constructor(private stats: StatsService, private genres: GenresService) {}
 
   ngOnInit() {
-    let n = 0; const done = () => { if (++n >= 3) this.isLoading.set(false); };
-    this.stats.getEnergyDistribution().subscribe({ next: d => { this.energyDist.set(d ?? []); done(); }, error: () => done() });
-    this.genres.getGenreStats(50).subscribe({ next: d => { this.genreStats.set(d ?? []); done(); }, error: () => done() });
+    this.loadAnalytics();
+  }
+
+  loadAnalytics() {
+    this.isLoading.set(true);
+    this.partialError.set(false);
+    let completed = 0;
+    let failed = 0;
+    const done = (ok: boolean) => {
+      completed += 1;
+      if (!ok) failed += 1;
+      if (completed >= 3) {
+        this.partialError.set(failed > 0);
+        this.isLoading.set(false);
+      }
+    };
+
+    this.stats.getEnergyDistribution().subscribe({ next: d => { this.energyDist.set(d ?? []); done(true); }, error: () => done(false) });
+    this.genres.getGenreStats(1, 50).subscribe({ next: r => { this.genreStats.set(r.items ?? []); done(true); }, error: () => done(false) });
     this.stats.getEngagementAnalytics().subscribe({
-      next: d => { this.engagement.set(d); done(); },
-      error: () => done(),
+      next: d => { this.engagement.set(d); done(true); },
+      error: () => done(false),
     });
   }
 
   energyBarH(count: number): number { return Math.round((count / this.maxEnergy()) * 100); }
   trackBarW(tracks: number): number { return Math.round((tracks / this.maxTracks()) * 100); }
   genreColor(i: number): string { return `hsl(${(i * 37) % 360},65%,55%)`; }
+  popWidth(value?: number | null): number { return Math.max(0, Math.min(100, value ?? 0)); }
+  energyWidth(value?: number | null): number { return Math.max(0, Math.min(100, (value ?? 0) * 100)); }
   skeletonRows = Array(8).fill(0);
 
   icon(key: string, size = 18): SafeHtml {

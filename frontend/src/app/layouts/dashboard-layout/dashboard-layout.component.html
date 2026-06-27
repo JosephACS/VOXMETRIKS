@@ -37,12 +37,18 @@
     <nav class="sidebar-nav">
       @for (section of visibleNavSections(); track section.id) {
         <div class="nav-section">
-          <span class="nav-section-label">{{ section.title }}</span>
+          <span class="nav-section-label">
+            {{ section.title }}
+            @if (section.id === 'data' && isEngineerRole()) {
+              <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t }}</span>
+            }
+          </span>
           @for (item of section.items; track item.path) {
             <a
               class="nav-item"
               [routerLink]="item.path"
               routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.exact }"
               [title]="item.label"
               [attr.aria-label]="item.label"
               (click)="closeSidebar()"
@@ -71,6 +77,8 @@
         </svg>
       </button>
 
+      <p class="topbar-context" aria-hidden="true">{{ 'shell.contextNote' | t }}</p>
+
       <div class="topbar-profile">
         <div class="user-menu-wrap">
           <button type="button" class="topbar-user-btn" (click)="toggleUserMenu($event)">
@@ -78,6 +86,8 @@
             <span class="topbar-user-name">{{ userName() }}</span>
             @if (isDemoUser()) {
               <span class="demo-badge">{{ 'shell.demo' | t }}</span>
+            } @else if (isEngineerRole()) {
+              <span class="role-badge role-badge--engineer">{{ roleLabel() }}</span>
             }
             <svg class="topbar-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
@@ -85,7 +95,10 @@
             <div class="user-dropdown glass-panel" (click)="$event.stopPropagation()">
               <div class="ud-header">
                 <strong>{{ userName() }}</strong>
-                <span>{{ userPlan() }}</span>
+                <span class="ud-meta">
+                  <span class="role-badge" [class.role-badge--engineer]="isEngineerRole()">{{ roleLabel() }}</span>
+                  <span class="ud-plan">{{ userPlan() }}</span>
+                </span>
               </div>
               <a routerLink="/users" class="ud-item" (click)="userMenuOpen.set(false)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

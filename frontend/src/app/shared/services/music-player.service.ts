@@ -3,8 +3,12 @@ import { BehaviorSubject } from 'rxjs';
 import { PlayableTrack } from '../models/player.models';
 import { CoverArtService } from './cover-art.service';
 import { demoAudioUrlForTrack } from '../config/demo-audio.config';
+import { primaryArtistName } from '../utils/artist.util';
+import { displayTrackTitle, displayTrackSubtitle } from '../utils/track-display.util';
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { Track, TopTrack } from '../models/api.models';
+import { TracksService } from '../../packages/streaming/services/tracks.service';
+import { YoutubeEngineService } from './youtube-engine.service';
 
 const VOLUME_KEY = 'voxmetrik_volume';
 const TRACK_KEY = 'voxmetrik_last_track';
@@ -13,9 +17,18 @@ const TRACK_KEY = 'voxmetrik_last_track';
 export class MusicPlayerService {
   private coverArt = inject(CoverArtService);
   private history = inject(HistoryService);
+  private tracksApi = inject(TracksService);
+  private yt = inject(YoutubeEngineService);
   private audio = new Audio();
   private queueInternal: PlayableTrack[] = [];
   private queueIndex = 0;
+
+  /** True when playback is currently driven by the YouTube engine. */
+  private usingYt = false;
+  /** Track id currently loaded into an engine (guards restore + resume). */
+  private engineLoadedTrackId: number | null = null;
+  /** Monotonic token to drop stale async audio-source resolutions. */
+  private playbackToken = 0;
 
   private tickTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -28,6 +41,8 @@ export class MusicPlayerService {
   repeat = signal(false);
   queue = signal<PlayableTrack[]>([]);
   expandedOpen = signal(false);
+  /** Active playback source for the current track. */
+  audioMode = signal<'youtube' | 'demo' | 'loading'>('demo');
 
   progressPct = computed(() => {
     const d = this.duration();
@@ -40,19 +55,41 @@ export class MusicPlayerService {
   constructor() {
     this.audio.volume = this.volume();
     this.audio.preload = 'metadata';
-    this.audio.addEventListener('ended', () => this.onEnded());
-    this.audio.addEventListener('loadedmetadata', () => {
-      this.duration.set(this.audio.duration || 0);
+    this.audio.addEventListener('ended', () => {
+      if (!this.usingYt) this.onEnded();
     });
+    this.audio.addEventListener('loadedmetadata', () => {
+      if (!this.usingYt) this.duration.set(this.audio.duration || 0);
+    });
+
+    this.yt.setVolume(this.volume() * 100);
+    this.yt.onPlay = () => {
+      if (this.usingYt) { this.isPlaying.set(true); this.state$.next({ playing: true }); }
+    };
+    this.yt.onPause = () => {
+      if (this.usingYt) { this.isPlaying.set(false); this.state$.next({ playing: false }); }
+    };
+    this.yt.onEnded = () => {
+      if (this.usingYt) this.onEnded();
+    };
+    this.yt.onError = () => {
+      // YouTube playback failed for this track → fall back to demo audio.
+      const t = this.currentTrack();
+      if (this.usingYt && t) this.startDemo(t, true);
+    };
+
     this.restoreLastTrack();
     this.startTick();
   }
 
-  fromTrack(t: Track, artistName = '—'): PlayableTrack {
+  fromTrack(t: Track, artistName?: string): PlayableTrack {
+    const artist = t.nombre_artista?.trim()
+      ? primaryArtistName(t.nombre_artista)
+      : (artistName?.trim() || '—');
     return {
       id: t.id_track,
-      title: t.nombre_track,
-      artist: artistName,
+      title: displayTrackTitle(t.nombre_track),
+      artist: displayTrackSubtitle(artist, t.nombre_genero, t.id_track),
       durationMs: t.duration_ms,
       audioUrl: demoAudioUrlForTrack(t.id_track),
       coverGradient: this.coverArt.gradientFor(t.id_track),
@@ -63,8 +100,8 @@ export class MusicPlayerService {
   fromTopTrack(t: TopTrack): PlayableTrack {
     return {
       id: t.id_track,
-      title: t.nombre_track ?? '—',
-      artist: t.nombre_artista ?? '—',
+      title: displayTrackTitle(t.nombre_track),
+      artist: displayTrackSubtitle(t.nombre_artista, undefined, t.id_track),
       audioUrl: demoAudioUrlForTrack(t.id_track),
       coverGradient: this.coverArt.gradientFor(t.id_track),
     };
@@ -96,14 +133,25 @@ export class MusicPlayerService {
   }
 
   pause() {
-    this.audio.pause();
+    if (this.usingYt) this.yt.pause();
+    else this.audio.pause();
     this.isPlaying.set(false);
     this.state$.next({ playing: false });
   }
 
   resume() {
-    if (!this.currentTrack()) return;
-    this.audio.play().catch(() => this.isPlaying.set(false));
+    const track = this.currentTrack();
+    if (!track) return;
+    // After a session restore nothing is loaded into an engine yet → reload.
+    if (this.engineLoadedTrackId !== track.id) {
+      this.loadTrack(track, true);
+      return;
+    }
+    if (this.usingYt) {
+      this.yt.play();
+    } else {
+      this.audio.play().catch(() => this.isPlaying.set(false));
+    }
     this.isPlaying.set(true);
     this.state$.next({ playing: true });
   }
@@ -129,8 +177,14 @@ export class MusicPlayerService {
   }
 
   seek(seconds: number) {
-    this.audio.currentTime = Math.max(0, seconds);
-    this.currentTime.set(this.audio.currentTime);
+    const target = Math.max(0, seconds);
+    if (this.usingYt) {
+      this.yt.seekTo(target);
+      this.currentTime.set(target);
+    } else {
+      this.audio.currentTime = target;
+      this.currentTime.set(this.audio.currentTime);
+    }
   }
 
   seekPct(pct: number) {
@@ -142,6 +196,7 @@ export class MusicPlayerService {
     const vol = Math.max(0, Math.min(1, v));
     this.volume.set(vol);
     this.audio.volume = vol;
+    this.yt.setVolume(vol * 100);
     localStorage.setItem(VOLUME_KEY, String(vol));
   }
 
@@ -171,7 +226,6 @@ export class MusicPlayerService {
 
   private loadTrack(track: PlayableTrack, autoplay: boolean) {
     this.currentTrack.set(track);
-    this.audio.src = track.audioUrl;
     this.currentTime.set(0);
     this.duration.set(track.durationMs ? track.durationMs / 1000 : 0);
     sessionStorage.setItem(TRACK_KEY, JSON.stringify(track));
@@ -180,6 +234,51 @@ export class MusicPlayerService {
       nombre_track: track.title,
       nombre_artista: track.artist,
     });
+
+    const token = ++this.playbackToken;
+    if (track.youtubeVideoId) {
+      this.startYt(track, track.youtubeVideoId, autoplay);
+      return;
+    }
+    this.audioMode.set('loading');
+    // Resolve the real (YouTube) source lazily, then play it. Until it
+    // resolves we keep the UI responsive; on failure we fall back to demo.
+    this.tracksApi.getAudioSource(track.id).subscribe({
+      next: (src) => {
+        if (token !== this.playbackToken) return; // user moved on
+        if (src.status === 'ok' && src.youtube_video_id) {
+          track.youtubeVideoId = src.youtube_video_id;
+          this.currentTrack.set({ ...track });
+          sessionStorage.setItem(TRACK_KEY, JSON.stringify(track));
+          this.startYt(track, src.youtube_video_id, autoplay);
+        } else {
+          this.startDemo(track, autoplay);
+        }
+      },
+      error: () => {
+        if (token === this.playbackToken) this.startDemo(track, autoplay);
+      },
+    });
+  }
+
+  private startYt(track: PlayableTrack, videoId: string, autoplay: boolean) {
+    this.usingYt = true;
+    this.audioMode.set('youtube');
+    this.engineLoadedTrackId = track.id;
+    this.audio.pause();
+    this.yt.load(videoId, autoplay);
+    if (autoplay) {
+      this.isPlaying.set(true);
+      this.state$.next({ playing: true });
+    }
+  }
+
+  private startDemo(track: PlayableTrack, autoplay: boolean) {
+    this.usingYt = false;
+    this.audioMode.set('demo');
+    this.engineLoadedTrackId = track.id;
+    this.yt.stop();
+    this.audio.src = track.audioUrl;
     if (autoplay) {
       this.audio.play().then(() => {
         this.isPlaying.set(true);
@@ -201,9 +300,15 @@ export class MusicPlayerService {
     if (this.tickTimer) clearInterval(this.tickTimer);
     this.tickTimer = setInterval(() => {
       if (!this.isPlaying()) return;
-      this.currentTime.set(this.audio.currentTime || 0);
-      if (this.audio.duration && !this.duration()) {
-        this.duration.set(this.audio.duration);
+      if (this.usingYt) {
+        this.currentTime.set(this.yt.getCurrentTime() || 0);
+        const d = this.yt.getDuration();
+        if (d && Math.abs(d - this.duration()) > 1) this.duration.set(d);
+      } else {
+        this.currentTime.set(this.audio.currentTime || 0);
+        if (this.audio.duration && !this.duration()) {
+          this.duration.set(this.audio.duration);
+        }
       }
     }, 250);
   }
@@ -221,7 +326,8 @@ export class MusicPlayerService {
       this.currentTrack.set(track);
       this.queueInternal = [track];
       this.queue.set([track]);
-      this.audio.src = track.audioUrl;
+      this.audioMode.set(track.youtubeVideoId ? 'youtube' : 'demo');
+      if (!track.youtubeVideoId) this.audio.src = track.audioUrl;
     } catch { /* ignore */ }
   }
 }

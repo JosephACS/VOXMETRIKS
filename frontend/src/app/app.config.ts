@@ -27,6 +27,9 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { APP_ROUTES as routes } from './app.routes';
 import { apiInterceptor }     from './core/interceptors/api.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+import { catalogStewardInterceptor } from './core/interceptors/catalog-steward.interceptor';
+import { authErrorInterceptor } from './core/interceptors/auth-error.interceptor';
+import { AppTitleStrategy } from './core/routing/app-title.strategy';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -46,10 +49,12 @@ export const appConfig: ApplicationConfig = {
     // HttpClient: Fetch API nativa + interceptors funcionales
     provideHttpClient(
       withFetch(),
-      withInterceptors([loadingInterceptor, apiInterceptor]),
+      withInterceptors([loadingInterceptor, apiInterceptor, authErrorInterceptor, catalogStewardInterceptor]),
     ),
 
     // Animaciones asíncronas (no bloquean bootstrap)
     provideAnimationsAsync(),
+
+    { provide: TitleStrategy, useClass: AppTitleStrategy },
   ],
 };

@@ -140,6 +140,27 @@
   margin-bottom: 1.25rem;
 }
 
+.auth-note {
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 0.65rem;
+  background: rgba(30, 216, 150, 0.07);
+  border: 1px solid rgba(30, 216, 150, 0.18);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.auth-note strong {
+  color: var(--accent);
+}
+
+.auth-note code,
+.demo-accounts code {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
 .tab {
   flex: 1;
   padding: 0.45rem 0.75rem;
@@ -190,6 +211,15 @@
   padding: 0.65rem 0;
 }
 
+.field-error,
+.field-help {
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.field-error { color: var(--color-danger); }
+.field-help { color: var(--color-text-muted); }
+
 .toggle-pw {
   background: none;
   border: none;
@@ -236,19 +266,22 @@
 .submit-btn:hover:not(:disabled) { transform: translateY(-1px); }
 .submit-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
-.login-hint {
+.demo-accounts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
   text-align: center;
   margin-top: 1rem;
   font-size: 0.72rem;
   color: var(--color-text-muted);
 }
 
-.login-hint code {
+.demo-accounts span {
   background: var(--shell-control-bg);
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.25rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  border: 1px solid var(--shell-border);
+  padding: 0.25rem 0.45rem;
+  border-radius: 2rem;
 }
 
 @keyframes scaleIn {

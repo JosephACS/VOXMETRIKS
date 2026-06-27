@@ -12,6 +12,7 @@ export const APP_ROUTES: Routes = [
     children: [
       {
         path: '',
+        title: 'login.title',
         loadComponent: () =>
           import('./pages/login/login.component').then((m) => m.LoginComponent),
       },
@@ -29,6 +30,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'dashboard',
+        title: 'nav.home',
         loadComponent: () =>
           import('./packages/streaming/home/home.component').then(
             (m) => m.HomeComponent
@@ -36,13 +38,20 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'dashboard/analytics',
+        redirectTo: '/analytics',
+        pathMatch: 'full',
+      },
+      {
+        path: 'artists/:id',
+        title: 'artistDetail.type',
         loadComponent: () =>
-          import('./packages/analytics/dashboard/dashboard.component').then(
-            (m) => m.DashboardComponent
+          import('./packages/streaming/artist-detail/artist-detail.component').then(
+            (m) => m.ArtistDetailComponent
           ),
       },
       {
         path: 'artists',
+        title: 'nav.artists',
         loadComponent: () =>
           import('./packages/streaming/artists/artists.component').then(
             (m) => m.ArtistsComponent
@@ -50,6 +59,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'tracks/:id',
+        title: 'trackDetail.type',
         loadComponent: () =>
           import('./packages/streaming/track-detail/track-detail.component').then(
             (m) => m.TrackDetailComponent
@@ -57,6 +67,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'tracks',
+        title: 'tracks.title',
         loadComponent: () =>
           import('./packages/streaming/tracks/tracks.component').then(
             (m) => m.TracksComponent
@@ -64,6 +75,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'search',
+        title: 'nav.search',
         loadComponent: () =>
           import('./packages/streaming/search/search.component').then(
             (m) => m.SearchComponent
@@ -71,6 +83,15 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'playlists',
+        title: 'playlists.title',
+        loadComponent: () =>
+          import('./packages/streaming/playlists/playlists.component').then(
+            (m) => m.PlaylistsComponent
+          ),
+      },
+      {
+        path: 'playlists/:id',
+        title: 'playlists.shareable',
         loadComponent: () =>
           import('./packages/streaming/playlists/playlists.component').then(
             (m) => m.PlaylistsComponent
@@ -78,6 +99,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'liked',
+        title: 'liked.title',
         loadComponent: () =>
           import('./packages/streaming/liked/liked.component').then(
             (m) => m.LikedComponent
@@ -85,6 +107,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'history',
+        title: 'nav.history',
         loadComponent: () =>
           import('./packages/history/history.component').then(
             (m) => m.HistoryComponent
@@ -92,6 +115,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'genres',
+        title: 'nav.genres',
         loadComponent: () =>
           import('./packages/streaming/genres/genres.component').then(
             (m) => m.GenresComponent
@@ -99,6 +123,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'audio-features',
+        title: 'nav.audioFeatures',
         loadComponent: () =>
           import('./packages/streaming/audio-features/audio-features.component').then(
             (m) => m.AudioFeaturesComponent
@@ -106,6 +131,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'trending',
+        title: 'nav.trending',
         loadComponent: () =>
           import('./packages/analytics/trending/trending.component').then(
             (m) => m.TrendingComponent
@@ -113,6 +139,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'analytics',
+        title: 'nav.analytics',
         loadComponent: () =>
           import('./packages/analytics/analytics/analytics.component').then(
             (m) => m.AnalyticsComponent
@@ -120,6 +147,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'elt-pipeline',
+        title: 'elt.title',
         canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/elt-pipeline/elt-pipeline.component').then(
@@ -133,6 +161,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'explorer',
+        title: 'explorer.title',
         canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/explorer/explorer.component').then(
@@ -141,6 +170,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'comparatives',
+        title: 'nav.comparatives',
         loadComponent: () =>
           import('./packages/analytics/comparatives/comparatives.component').then(
             (m) => m.ComparativesComponent
@@ -148,6 +178,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'recommendations',
+        title: 'nav.recommendations',
         loadComponent: () =>
           import('./packages/recommendations/recommendations.component').then(
             (m) => m.RecommendationsComponent
@@ -155,6 +186,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'users',
+        title: 'shell.myProfile',
         loadComponent: () =>
           import('./packages/users/users.component').then(
             (m) => m.UsersComponent
@@ -162,9 +194,18 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'settings',
+        title: 'nav.settings',
         loadComponent: () =>
           import('./packages/administration/settings/settings.component').then(
             (m) => m.SettingsComponent
+          ),
+      },
+      {
+        path: '**',
+        title: 'notFound.title',
+        loadComponent: () =>
+          import('./pages/not-found/not-found.component').then(
+            (m) => m.NotFoundComponent
           ),
       },
     ],

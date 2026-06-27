@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Dict, List
 
 import duckdb
 
+from app.core.time_util import utc_now
 from .app_storage import ensure_app_tables
+from .display_text import clean_catalog_rows
 
 
 def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[str, Any]]:
@@ -34,7 +35,7 @@ def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[s
         item = dict(zip(cols, r))
         item["added_at"] = str(item["added_at"]) if item["added_at"] else None
         result.append(item)
-    return result
+    return clean_catalog_rows(result)
 
 
 def add_favorite(conn: duckdb.DuckDBPyConnection, user_id: int, track_id: int) -> bool:
@@ -52,7 +53,7 @@ def add_favorite(conn: duckdb.DuckDBPyConnection, user_id: int, track_id: int) -
         return True
     conn.execute(
         "INSERT INTO app_favorite (user_id, track_id, added_at) VALUES (?, ?, ?)",
-        [user_id, track_id, datetime.utcnow()],
+        [user_id, track_id, utc_now()],
     )
     return True
 

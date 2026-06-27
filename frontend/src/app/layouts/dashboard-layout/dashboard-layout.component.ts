@@ -19,6 +19,7 @@ interface NavItemConfig {
   path: string;
   labelKey: TranslationKey;
   icon: string;
+  exact?: boolean;
 }
 
 interface NavSectionConfig {
@@ -31,6 +32,7 @@ interface NavItem {
   path: string;
   label: string;
   icon: string;
+  exact: boolean;
 }
 
 interface NavSection {
@@ -78,6 +80,21 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     return email.includes('demo@') || this.userPlan().toLowerCase() === 'demo';
   });
 
+  userRole = computed(() => (this.auth.getUser()?.role ?? 'user').toLowerCase());
+
+  roleLabel = computed(() => {
+    this.i18n.tick();
+    const role = this.userRole();
+    if (role === 'admin') return this.i18n.t('shell.role.admin');
+    if (role === 'engineer') return this.i18n.t('shell.role.engineer');
+    return this.i18n.t('shell.role.user');
+  });
+
+  isEngineerRole = computed(() => {
+    const role = this.userRole();
+    return role === 'admin' || role === 'engineer';
+  });
+
   private svgIcon(path: string): string {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   }
@@ -91,6 +108,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           path: '/dashboard',
           labelKey: 'nav.home',
           icon: this.svgIcon('<path d="M3 9.5L12 4l9 5.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>'),
+          exact: true,
         },
       ],
     },
@@ -150,6 +168,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         path: item.path,
         label: this.i18n.t(item.labelKey),
         icon: item.icon,
+        exact: item.exact ?? false,
       })),
     }));
   });

@@ -1,35 +1,58 @@
 <div class="explorer-page">
   <header class="page-header">
     <div>
-      <h1>Explorador de datos</h1>
-      <p class="page-subtitle">Explorador visual del Data Warehouse — capa Gold & DuckDB</p>
+      <h1>{{ 'explorer.title' | t }}</h1>
+      <p class="page-subtitle">{{ 'explorer.subtitle' | t }}</p>
     </div>
-    <span class="badge-live">Datos en vivo desde DuckDB</span>
+    <div class="source-badges">
+      <app-data-source-badge kind="live" />
+      <app-data-source-badge kind="mixed" />
+    </div>
   </header>
 
+  @if (accessDenied()) {
+    <section class="panel access-denied-panel">
+      <h2>{{ 'explorer.restricted' | t }}</h2>
+      <p class="error-msg">{{ errorMessage() }}</p>
+      <p class="empty-msg">{{ 'explorer.restrictedHint' | t }}</p>
+    </section>
+  } @else if (hasError()) {
+    <section class="panel error-panel">
+      <h2>{{ 'explorer.errorTitle' | t }}</h2>
+      <p class="error-msg">{{ errorMessage() }}</p>
+      <button type="button" class="retry-btn" (click)="retry()">{{ 'common.retry' | t }}</button>
+    </section>
+  } @else {
   <!-- KPIs -->
   <section class="kpi-grid">
-    <app-kpi-card label="Total tablas" [value]="kindCounts().total" iconKey="grid" color="primary" subtitle="Gold + aggs" />
-    <app-kpi-card label="Dimensiones" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
-    <app-kpi-card label="Hechos" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
-    <app-kpi-card label="Agregaciones" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
+    <app-kpi-card [label]="'explorer.kpi.total' | t" [value]="kindCounts().total" iconKey="grid" color="primary" [subtitle]="'explorer.kpi.totalSub' | t" />
+    <app-kpi-card [label]="'explorer.kpi.dimensions' | t" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
+    <app-kpi-card [label]="'explorer.kpi.facts' | t" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
+    <app-kpi-card [label]="'explorer.kpi.aggregations' | t" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
   </section>
 
   <div class="explorer-layout">
     <!-- Table selector -->
     <aside class="table-sidebar panel">
       <div class="sidebar-header">
-        <h2>Tablas</h2>
+        <h2>{{ 'explorer.tables' | t }}</h2>
         <input
           type="search"
           class="search-input"
-          placeholder="Filtrar tablas..."
+          [placeholder]="'explorer.filter' | t"
           [ngModel]="searchFilter()"
           (ngModelChange)="onFilterChange($event)"
         />
       </div>
       <nav class="table-list">
-        @for (t of filteredTables(); track t.name) {
+        @if (isLoadingTables()) {
+          <div class="skeleton-rows compact">
+            @for (s of [1,2,3,4,5]; track s) {
+              <div class="skeleton-row"></div>
+            }
+          </div>
+        } @else if (filteredTables().length) {
+          @for (t of filteredTables(); track t.name) {
           <button
             type="button"
             class="table-item"
@@ -38,8 +61,11 @@
           >
             <span class="table-name">{{ t.name }}</span>
             <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
-            <span class="table-rows">{{ fmt(t.row_count) }} filas</span>
+            <span class="table-rows">{{ 'explorer.rows' | t:{ count: fmt(t.row_count) } }}</span>
           </button>
+          }
+        } @else {
+          <p class="empty-msg sidebar-empty">{{ 'explorer.noTablesFilter' | t }}</p>
         }
       </nav>
     </aside>
@@ -53,8 +79,8 @@
             <h2>{{ tbl.name }}</h2>
             <div class="table-meta">
               <span class="kind-badge lg" [class]="kindClass(tbl.kind)">{{ kindLabel(tbl.kind) }}</span>
-              <span class="meta-item">{{ fmt(tbl.row_count) }} registros</span>
-              <span class="meta-item">Capa: {{ tbl.layer }}</span>
+              <span class="meta-item">{{ 'explorer.records' | t:{ count: fmt(tbl.row_count) } }}</span>
+              <span class="meta-item">{{ 'explorer.layer' | t:{ layer: tbl.layer } }}</span>
             </div>
           </div>
         </div>
@@ -62,12 +88,12 @@
         <div class="sql-client">
           <div class="sql-bar">
             <span class="sql-dot"></span>
-            <span>Consulta ejecutada en DuckDB</span>
+            <span>{{ 'explorer.query' | t }}</span>
           </div>
           <pre class="sql-code">{{ sqlQuery() }}</pre>
         </div>
 
-        <h3 class="section-label">Esquema</h3>
+        <h3 class="section-label">{{ 'explorer.schema' | t }}</h3>
         <div class="schema-grid">
           @for (col of tbl.columns; track col.name) {
             <div class="schema-col">
@@ -78,37 +104,63 @@
         </div>
 
         <!-- Data preview -->
-        <h3 class="section-label">Preview de datos</h3>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                @for (col of previewColumns(); track col) {
-                  <th>{{ col }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of pagedRows(); track $index) {
+        <h3 class="section-label">{{ 'explorer.preview' | t }}</h3>
+        @if (isLoadingPreview()) {
+          <div class="skeleton-rows">
+            @for (s of [1,2,3]; track s) {
+              <div class="skeleton-row"></div>
+            }
+          </div>
+        } @else if (previewError()) {
+          <div class="inline-error">
+            <p class="error-msg">{{ previewError() }}</p>
+            <button type="button" class="retry-btn" (click)="loadPreview(tbl.name, page())">{{ 'explorer.retryPreview' | t }}</button>
+          </div>
+        } @else if (previewColumns().length) {
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
                 <tr>
                   @for (col of previewColumns(); track col) {
-                    <td>{{ cellValue(row, col) }}</td>
+                    <th>{{ col }}</th>
                   }
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (row of pagedRows(); track $index) {
+                  <tr>
+                    @for (col of previewColumns(); track col) {
+                      <td>{{ cellValue(row, col) }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-msg">{{ 'explorer.selectTable' | t }}</p>
+        }
 
         <!-- Pagination -->
-        <div class="pagination">
-          <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">← Anterior</button>
-          <span class="page-info">Página {{ page() }} de {{ totalPages() }}</span>
-          <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">Siguiente →</button>
-        </div>
+        @if (!isLoadingPreview() && previewColumns().length) {
+          <div class="pagination">
+            <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">{{ 'explorer.prev' | t }}</button>
+            <span class="page-info">{{ 'explorer.page' | t:{ page: page(), total: totalPages() } }}</span>
+            <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">{{ 'explorer.next' | t }}</button>
+          </div>
+        }
       </section>
       } @else if (isLoadingTables()) {
-        <div class="panel"><p>Cargando tablas del warehouse...</p></div>
+        <div class="panel">
+          <p class="empty-msg">{{ 'explorer.loadingTables' | t }}</p>
+          <div class="skeleton-rows">
+            @for (s of [1,2,3]; track s) {
+              <div class="skeleton-row"></div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="panel"><p class="empty-msg">{{ 'explorer.noTables' | t }}</p></div>
       }
     </main>
   </div>
@@ -116,8 +168,8 @@
   <!-- Load history (real data if available) -->
   <section class="panel loads-panel">
     <div class="panel-header">
-      <h2>Historial de cargas ELT</h2>
-      <span class="panel-meta">Datos reales vía /stats/loads</span>
+      <h2>{{ 'explorer.loadsTitle' | t }}</h2>
+      <span class="panel-meta">{{ 'explorer.loadsMeta' | t }}</span>
     </div>
 
     @if (isLoadingLoads()) {
@@ -132,11 +184,11 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>Fecha</th>
-              <th>Modo</th>
-              <th>Registros nuevos</th>
+              <th>{{ 'explorer.date' | t }}</th>
+              <th>{{ 'explorer.mode' | t }}</th>
+              <th>{{ 'explorer.newRecords' | t }}</th>
               <th>Total raw</th>
-              <th>Estado</th>
+              <th>{{ 'explorer.state' | t }}</th>
             </tr>
           </thead>
           <tbody>
@@ -155,10 +207,14 @@
           </tbody>
         </table>
       </div>
-    } @else if (hasError()) {
-      <p class="error-msg">No se pudo conectar con el backend. Verifica que FastAPI esté en localhost:8000.</p>
+    } @else if (loadsError()) {
+      <div class="inline-error">
+        <p class="error-msg">{{ loadsError() }}</p>
+        <button type="button" class="retry-btn" (click)="loadLoads()">{{ 'explorer.retryLoads' | t }}</button>
+      </div>
     } @else {
-      <p class="empty-msg">No hay registros de carga en el warehouse.</p>
+      <p class="empty-msg">{{ 'explorer.emptyLoads' | t }}</p>
     }
   </section>
+  }
 </div>

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import duckdb
 
 from .base_service import count_rows, fetch_rows
+from .display_text import clean_catalog_row, clean_catalog_rows
 
 # Expande colaboraciones "Artista A;Artista B" en artistas individuales
 _SPLIT_EXPR = "TRIM(unnest(string_split(REPLACE(nombre_artista, ',', ';'), ';')))"
@@ -38,12 +39,12 @@ def _query_individuals(
     {_INDIVIDUALS_CTE}
     SELECT id_artista, nombre_artista FROM individuals
     {where}
-    ORDER BY nombre_artista
+    ORDER BY id_artista
     LIMIT ? OFFSET ?
     """
     params.extend([limit, offset])
     rows = conn.execute(sql, params).fetchall()
-    return [{"id_artista": r[0], "nombre_artista": r[1]} for r in rows]
+    return clean_catalog_rows([{"id_artista": r[0], "nombre_artista": r[1]} for r in rows])
 
 
 def _count_individuals(
@@ -109,52 +110,78 @@ def get_artist_stats(
     """
     result = conn.execute(sql, [primary]).fetchone()
     if not result:
+        track_count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM dim_track dt
+            JOIN dim_artista da ON da.id_artista = dt.id_artista
+            WHERE LOWER(TRIM(SPLIT_PART(REPLACE(da.nombre_artista, ',', ';'), ';', 1))) = LOWER(?)
+               OR LOWER(da.nombre_artista) LIKE LOWER(?)
+            """,
+            [primary, f"%{primary}%"],
+        ).fetchone()[0]
         rows, _ = fetch_rows(
             conn, "agg_top_artistas",
             columns=["id_artista", "nombre_artista", "promedio_popularidad", "total_tracks"],
             where="id_artista = ?",
             params=[artist_id],
         )
-        return rows[0] if rows else None
-    return {
+        if rows:
+            return clean_catalog_row(rows[0])
+        return clean_catalog_row({
+            "id_artista": artist_id,
+            "nombre_artista": primary,
+            "promedio_popularidad": 0.0,
+            "total_tracks": int(track_count or 0),
+        })
+    return clean_catalog_row({
         "id_artista": artist_id,
         "nombre_artista": result[0],
         "promedio_popularidad": float(result[1] or 0),
         "total_tracks": int(result[2] or 0),
-    }
+    })
 
 
 def get_top_artists(
     conn: duckdb.DuckDBPyConnection, limit: int = 10
 ) -> List[Dict[str, Any]]:
     sql = f"""
-    WITH track_artists AS (
+    {_INDIVIDUALS_CTE},
+    track_artists AS (
       SELECT dt.popularity,
              TRIM(unnest(string_split(REPLACE(da.nombre_artista, ',', ';'), ';'))) AS nombre_artista
       FROM dim_track dt
       JOIN dim_artista da ON da.id_artista = dt.id_artista
       WHERE da.nombre_artista IS NOT NULL
+    ),
+    aggregated AS (
+      SELECT nombre_artista,
+             ROUND(AVG(popularity), 1) AS promedio_popularidad,
+             COUNT(*) AS total_tracks
+      FROM track_artists
+      WHERE nombre_artista != ''
+      GROUP BY nombre_artista
     )
-    SELECT nombre_artista,
-           ROUND(AVG(popularity), 1) AS promedio_popularidad,
-           COUNT(*) AS total_tracks
-    FROM track_artists
-    WHERE nombre_artista != ''
-    GROUP BY nombre_artista
-    ORDER BY promedio_popularidad DESC
+    SELECT ind.id_artista,
+           agg.nombre_artista,
+           agg.promedio_popularidad,
+           agg.total_tracks
+    FROM aggregated agg
+    JOIN individuals ind ON ind.nombre_artista = agg.nombre_artista
+    ORDER BY agg.promedio_popularidad DESC NULLS LAST, agg.total_tracks DESC
     LIMIT ?
     """
     try:
         rows = conn.execute(sql, [limit]).fetchall()
-        return [
+        return clean_catalog_rows([
             {
-                "id_artista": i + 1,
-                "nombre_artista": r[0],
-                "promedio_popularidad": float(r[1] or 0),
-                "total_tracks": int(r[2] or 0),
+                "id_artista": int(r[0]),
+                "nombre_artista": r[1],
+                "promedio_popularidad": float(r[2] or 0),
+                "total_tracks": int(r[3] or 0),
             }
-            for i, r in enumerate(rows)
-        ]
+            for r in rows
+        ])
     except Exception:
         rows, _ = fetch_rows(
             conn, "agg_top_artistas",
@@ -168,13 +195,28 @@ def get_top_artists(
 def create_artist(
     conn: duckdb.DuckDBPyConnection, nombre_artista: str
 ) -> Dict[str, Any]:
+    name = nombre_artista.strip()
+    existing = conn.execute(
+        """
+        SELECT id_artista, nombre_artista FROM dim_artista
+        WHERE LOWER(TRIM(nombre_artista)) = LOWER(?)
+        LIMIT 1
+        """,
+        [name],
+    ).fetchone()
+    if existing:
+        return {
+            "duplicate": True,
+            "id_artista": int(existing[0]),
+            "nombre_artista": existing[1],
+        }
     row = conn.execute("SELECT COALESCE(MAX(id_artista), 0) + 1 FROM dim_artista").fetchone()
     new_id = row[0]
     conn.execute(
         "INSERT INTO dim_artista (id_artista, nombre_artista) VALUES (?, ?)",
-        [new_id, nombre_artista.strip()]
+        [new_id, name]
     )
-    return {"id_artista": new_id, "nombre_artista": nombre_artista.strip()}
+    return {"id_artista": new_id, "nombre_artista": name, "duplicate": False}
 
 
 def update_artist(
@@ -183,11 +225,23 @@ def update_artist(
     existing = get_artist_by_id(conn, artist_id)
     if not existing:
         return None
+    name = nombre_artista.strip()
+    dup = conn.execute(
+        """
+        SELECT id_artista FROM dim_artista
+        WHERE LOWER(TRIM(nombre_artista)) = LOWER(?)
+          AND id_artista != ?
+        LIMIT 1
+        """,
+        [name, artist_id],
+    ).fetchone()
+    if dup:
+        return {"duplicate": True, "id_artista": int(dup[0]), "nombre_artista": name}
     conn.execute(
         "UPDATE dim_artista SET nombre_artista = ? WHERE id_artista = ?",
-        [nombre_artista.strip(), artist_id]
+        [name, artist_id]
     )
-    return {"id_artista": artist_id, "nombre_artista": nombre_artista.strip()}
+    return {"id_artista": artist_id, "nombre_artista": name, "duplicate": False}
 
 
 def delete_artist(

@@ -1,39 +1,37 @@
 <div class="de-page">
   <header class="page-header">
     <div class="header-text">
-      <h1>Pipeline ELT</h1>
-      <p class="page-subtitle">Extracción → Carga → Transformación · datos sintéticos desde warehouse</p>
+      <h1>{{ 'elt.title' | t }}</h1>
+      <p class="page-subtitle">{{ 'elt.subtitle' | t }}</p>
     </div>
     <div class="header-actions">
       <span class="badge" [class.badge-live]="apiConnected()" [class.badge-sim]="!apiConnected()">
-        {{ apiConnected() ? 'Warehouse conectado' : 'Sin conexión API' }}
+        {{ apiConnected() ? ('elt.connected' | t) : ('elt.disconnected' | t) }}
       </span>
       @if (summary()) {
-        <span class="badge badge-count">{{ fmt(summary()!.total_tracks) }} canciones</span>
+        <span class="badge badge-count">{{ 'tracks.count' | t:{ count: fmt(summary()!.total_tracks) } }}</span>
       }
     </div>
   </header>
 
   <section class="kpi-grid compact-kpis">
     <div class="metric-card">
-      <span class="metric-label">Estado</span>
+      <span class="metric-label">{{ 'elt.status' | t }}</span>
       <span class="metric-value status-text" [class]="'state-' + pipelineState()">{{ pipelineStatusLabel() }}</span>
     </div>
-    <app-kpi-card label="Base warehouse" [value]="baseTrackCount()" iconKey="database" color="info" subtitle="canciones actuales" />
-    <app-kpi-card label="Objetivo total" [value]="targetTrackCount()" iconKey="music" color="primary" subtitle="en BD" />
-    <app-kpi-card label="A generar" [value]="tracksToCreate()" iconKey="zap" color="warning" subtitle="sintéticos nuevos" />
+    <app-kpi-card [label]="'elt.base' | t" [value]="baseTrackCount()" iconKey="database" color="info" [subtitle]="'elt.baseSub' | t" />
+    <app-kpi-card [label]="'elt.target' | t" [value]="targetTrackCount()" iconKey="music" color="primary" [subtitle]="'elt.targetSub' | t" />
+    <app-kpi-card [label]="'elt.expand' | t" [value]="tracksToCreate()" iconKey="zap" color="warning" [subtitle]="'elt.expandSub' | t" />
   </section>
 
   <div class="elt-compact-row">
     <section class="panel panel-controls">
       <div class="panel-header">
-        <h2>Generar sintéticos</h2>
-        <span class="panel-meta">Desde datos existentes en DuckDB</span>
+        <h2>{{ 'elt.fullPipeline' | t }}</h2>
+        <span class="panel-meta">{{ 'elt.stepsMeta' | t }}</span>
       </div>
-      <p class="control-desc">
-        Indica cuántos registros quieres en total. Si hay <strong>{{ fmt(baseTrackCount()) }}</strong> y pides
-        <strong>{{ fmt(targetTrackCount()) }}</strong>, se generan <strong>+{{ fmt(tracksToCreate()) }}</strong>.
-      </p>
+      <p class="control-desc">{{ 'elt.desc' | t }}</p>
+      <p class="control-note">{{ 'elt.note' | t }}</p>
 
       @if (volumeValidation().message) {
         <div class="validation-banner" [class]="'val-' + volumeValidation().level">
@@ -50,17 +48,17 @@
           (click)="applyIncrement(100000)">
           +100K
         </button>
-        <span class="increment-hint">→ total {{ fmt(baseTrackCount() + 100000) }}</span>
+        <span class="increment-hint">→ {{ fmt(baseTrackCount() + 100000) }} {{ 'elt.totalSuffix' | t }}</span>
       </div>
 
       <div class="mode-row">
         <button type="button" class="mode-btn" [class.active]="volumeMode() === 'multiplier'"
           [disabled]="pipelineState() === 'running'" (click)="setVolumeMode('multiplier')">
-          Multiplicador
+          {{ 'elt.multiplier' | t }}
         </button>
         <button type="button" class="mode-btn" [class.active]="volumeMode() === 'custom'"
           [disabled]="pipelineState() === 'running'" (click)="setVolumeMode('custom')">
-          Personalizado
+          {{ 'elt.custom' | t }}
         </button>
       </div>
 
@@ -70,36 +68,41 @@
             <button type="button" class="preset-btn" [class.active]="selectedMultiplier() === p.key"
               [disabled]="pipelineState() === 'running'" (click)="selectMultiplier(p.key)">
               <span class="preset-label">{{ p.label }}</span>
-              <span class="preset-sub">{{ fmt(baseTrackCount() * p.key) }} total</span>
+              <span class="preset-sub">{{ fmt(baseTrackCount() * p.key) }} {{ 'elt.totalSuffix' | t }}</span>
             </button>
           }
         </div>
       } @else {
         <div class="custom-target-row">
-          <label class="custom-label" for="customTarget">Total deseado en BD</label>
+          <label class="custom-label" for="customTarget">{{ 'elt.customTarget' | t }}</label>
           <input id="customTarget" class="custom-input" type="number" min="1"
             [max]="limits()?.max_target_total ?? 5000000" step="1000"
             [value]="customTarget()" [disabled]="pipelineState() === 'running'"
             (input)="onCustomTargetInput($event)" />
-          <span class="delta-hint">Generará <strong>+{{ fmt(tracksToCreate()) }}</strong></span>
+          <span class="delta-hint">{{ 'elt.generate' | t:{ count: fmt(tracksToCreate()) } }}</span>
         </div>
         <div class="quick-targets">
           <button type="button" class="quick-btn" [class.active]="customTarget() === 1_600_000"
             [disabled]="pipelineState() === 'running'" (click)="applyQuickTarget(1600000)">
-            Meta 1.6M
+            {{ 'elt.quickTarget' | t }}
           </button>
         </div>
       }
       <div class="btn-row">
         <button type="button" class="btn-primary" [disabled]="!canRunPipeline()" (click)="runPipeline()">
           @if (pipelineState() === 'running') {
-            <span class="spinner"></span> Generando...
+            <span class="spinner"></span> {{ 'elt.running' | t }}
           } @else {
-            ▶ Ejecutar ELT
+            ▶ {{ 'elt.run' | t }}
           }
         </button>
+        <button type="button" class="btn-ghost"
+          [disabled]="pipelineState() === 'running' || !apiConnected()"
+          (click)="importFromPocketBaseOnly()">
+          {{ 'elt.pocketbaseOnly' | t }}
+        </button>
         <button type="button" class="btn-ghost" [disabled]="pipelineState() === 'running'" (click)="resetPipeline()">
-          Resetear
+          {{ 'elt.reset' | t }}
         </button>
       </div>
       @if (runProgress() > 0) {
@@ -112,7 +115,7 @@
 
     <section class="panel panel-steps">
       <div class="panel-header">
-        <h2>Flujo ELT</h2>
+        <h2>{{ 'elt.flow' | t }}</h2>
         <span class="panel-meta">{{ estimatedDuration() }}</span>
       </div>
       <div class="steps-inline">
@@ -126,17 +129,18 @@
         }
       </div>
       <div class="wh-mini">
-        <span><strong>{{ fmt(summary()?.total_artistas) }}</strong> artistas</span>
-        <span><strong>{{ fmt(summary()?.total_generos) }}</strong> géneros</span>
-        <span><strong>{{ fmt(summary()?.total_albumes) }}</strong> álbumes</span>
-        <span class="wh-health" [style.color]="healthColor(warehouseHealth())">{{ warehouseHealth() }}% salud</span>
+        <span><strong>{{ fmt(summary()?.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
+        <span><strong>{{ fmt(summary()?.total_generos) }}</strong> {{ 'home.rail.genres' | t }}</span>
+        <span><strong>{{ fmt(summary()?.total_albumes) }}</strong> {{ 'home.rail.albums' | t }}</span>
+        <span class="wh-health" [style.color]="healthColor(warehouseHealth())">{{ warehouseHealth() }}% {{ 'elt.health' | t }}</span>
       </div>
+      <p class="steps-note">{{ 'elt.stepsNote' | t }}</p>
     </section>
   </div>
 
   <section class="panel terminal-panel compact-terminal">
     <div class="panel-header">
-      <h2>Terminal</h2>
+      <h2>{{ 'elt.terminal' | t }}</h2>
       <span class="panel-meta">{{ logs().length }} líneas · {{ lastExecutionLabel() }}</span>
     </div>
     <div class="terminal">
@@ -146,7 +150,7 @@
       </div>
       <div class="terminal-body">
         @if (!logs().length) {
-          <div class="terminal-empty">$ listo — elige objetivo total y ejecuta ELT</div>
+          <div class="terminal-empty">{{ 'elt.terminalEmpty' | t }}</div>
         }
         @for (entry of logs(); track $index) {
           <div class="terminal-line">

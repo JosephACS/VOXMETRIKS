@@ -91,10 +91,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS — allow all origins and methods for full CRUD support
+# CORS — restrict origins via CORS_ORIGINS (comma-separated; use * for dev only)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origin_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -154,9 +154,9 @@ def health():
     if not db_path.exists():
         return HealthResponse(
             status="degraded",
-            database=str(db_path),
-            tables=[],
             version="2.0.0",
+            table_count=0,
+            database=str(db_path) if settings.health_verbose else None,
         )
     try:
         conn   = duckdb.connect(str(db_path))
@@ -165,17 +165,18 @@ def health():
         conn.close()
         return HealthResponse(
             status="ok",
-            database=str(db_path),
-            tables=tables,
             version=ver,
+            table_count=len(tables),
+            database=str(db_path) if settings.health_verbose else None,
+            tables=tables if settings.health_verbose else [],
         )
     except Exception as exc:
         logger.error(f"Health check error: {exc}")
         return HealthResponse(
             status="error",
-            database=str(db_path),
-            tables=[],
             version="2.0.0",
+            table_count=0,
+            database=str(db_path) if settings.health_verbose else None,
         )
 
 

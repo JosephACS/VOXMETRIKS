@@ -29,6 +29,7 @@ import { MusicPlayerService } from '../../shared/services/music-player.service';
 import { primaryArtistName } from '../../shared/utils/artist.util';
 
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
 
 import { PlayableTrack } from '../../shared/models/player.models';
 
@@ -63,6 +64,8 @@ type RecTrack = NonNullable<RecommendationPayload['for_you']>[number];
     FavoriteBtnComponent,
 
     TranslatePipe,
+
+    DataSourceBadgeComponent,
 
   ],
 
@@ -194,6 +197,10 @@ export class RecommendationsComponent implements OnInit {
 
   }
 
+  retryRecommendations() {
+    this.loadRecommendations(this.selectedMood() ?? undefined);
+  }
+
 
 
   private loadRecommendations(mood?: string, moodOnly = false) {
@@ -204,6 +211,8 @@ export class RecommendationsComponent implements OnInit {
 
     else this.isLoading.set(true);
 
+    this.hasError.set(false);
+
 
 
     this.stats.getRecommendations(12, mood).subscribe({
@@ -211,6 +220,7 @@ export class RecommendationsComponent implements OnInit {
       next: (d) => {
 
         this.data.set(d);
+        this.hasError.set(false);
 
         this.isLoading.set(false);
 

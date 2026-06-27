@@ -1,0 +1,20 @@
+@startuml voxmetriks-packages
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+title Voxmetriks — Paquetes PKG-01..07
+
+component users as PKG01
+component streaming as PKG02
+component listening as PKG03
+component discovery as PKG04
+component admin as PKG05
+component analytics as PKG06
+component dataeng as PKG07
+
+PKG01 --> PKG02
+PKG02 --> PKG03
+PKG06 --> PKG03
+PKG07 --> PKG06
+
+@enduml

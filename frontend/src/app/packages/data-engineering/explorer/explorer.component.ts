@@ -1,16 +1,20 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { StatsService } from '../../analytics/services/stats.service';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
 import { LoadRecord, WarehouseTableMeta, TablePreview } from '../../../shared/models/api.models';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 type TableKind = 'dimension' | 'fact' | 'aggregation' | 'control' | 'application' | 'other';
 
 @Component({
   selector: 'app-explorer',
   standalone: true,
-  imports: [CommonModule, FormsModule, KpiCardComponent],
+  imports: [CommonModule, FormsModule, KpiCardComponent, DataSourceBadgeComponent, TranslatePipe],
   templateUrl: './explorer.component.html',
   styleUrls: ['./explorer.component.css'],
 })
@@ -19,6 +23,10 @@ export class ExplorerComponent implements OnInit {
   isLoadingPreview = signal(false);
   isLoadingLoads = signal(true);
   hasError = signal(false);
+  accessDenied = signal(false);
+  errorMessage = signal('');
+  previewError = signal('');
+  loadsError = signal('');
   loads = signal<LoadRecord[]>([]);
   tables = signal<WarehouseTableMeta[]>([]);
   preview = signal<TablePreview | null>(null);
@@ -58,9 +66,18 @@ export class ExplorerComponent implements OnInit {
     total: this.tables().length,
   }));
 
-  constructor(private stats: StatsService) {}
+  constructor(private stats: StatsService, private i18n: I18nService) {}
 
   ngOnInit() {
+    this.loadTables();
+    this.loadLoads();
+  }
+
+  loadTables() {
+    this.isLoadingTables.set(true);
+    this.hasError.set(false);
+    this.accessDenied.set(false);
+    this.errorMessage.set('');
     this.stats.getExplorerTables().subscribe({
       next: (d) => {
         this.tables.set(d ?? []);
@@ -71,16 +88,55 @@ export class ExplorerComponent implements OnInit {
           this.loadPreview(first, 1);
         }
       },
-      error: () => {
-        this.hasError.set(true);
-        this.isLoadingTables.set(false);
-      },
+      error: (err) => this.handleRequestError(err, 'No se pudieron cargar las tablas del warehouse.'),
     });
+  }
 
+  loadLoads() {
+    this.isLoadingLoads.set(true);
+    this.loadsError.set('');
     this.stats.getLastLoads(10).subscribe({
       next: (d) => { this.loads.set(d ?? []); this.isLoadingLoads.set(false); },
-      error: () => { this.hasError.set(true); this.isLoadingLoads.set(false); },
+      error: (err) => {
+        this.isLoadingLoads.set(false);
+        this.loadsError.set(this.errorDetail(err, 'No se pudo cargar el historial de cargas.'));
+      },
     });
+  }
+
+  retry() {
+    this.loadTables();
+    this.loadLoads();
+  }
+
+  private handleRequestError(err: unknown, fallback: string): void {
+    this.isLoadingTables.set(false);
+    this.isLoadingPreview.set(false);
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 403) {
+        this.accessDenied.set(true);
+        this.errorMessage.set(
+          typeof err.error?.detail === 'string'
+            ? err.error.detail
+            : 'Acceso restringido: se requiere cuenta admin (ingeniero).',
+        );
+        return;
+      }
+      if (err.status === 401) {
+        this.accessDenied.set(true);
+        this.errorMessage.set('Sesión expirada o no autenticado. Vuelve a iniciar sesión.');
+        return;
+      }
+    }
+    this.hasError.set(true);
+    this.errorMessage.set(fallback);
+  }
+
+  private errorDetail(err: unknown, fallback: string): string {
+    if (err instanceof HttpErrorResponse && typeof err.error?.detail === 'string') {
+      return err.error.detail;
+    }
+    return fallback;
   }
 
   selectTable(name: string) {
@@ -91,9 +147,18 @@ export class ExplorerComponent implements OnInit {
 
   loadPreview(name: string, page: number) {
     this.isLoadingPreview.set(true);
+    this.previewError.set('');
     this.stats.getTablePreview(name, page, this.pageSize).subscribe({
       next: (d) => { this.preview.set(d); this.isLoadingPreview.set(false); },
-      error: () => { this.preview.set(null); this.isLoadingPreview.set(false); },
+      error: (err) => {
+        this.preview.set(null);
+        this.isLoadingPreview.set(false);
+        if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
+          this.handleRequestError(err, 'No se pudo cargar el preview de la tabla.');
+          return;
+        }
+        this.previewError.set(this.errorDetail(err, 'No se pudo cargar el preview de la tabla.'));
+      },
     });
   }
 
@@ -102,9 +167,14 @@ export class ExplorerComponent implements OnInit {
   }
 
   kindLabel(kind: string): string {
+    this.i18n.tick();
     const map: Record<string, string> = {
-      dimension: 'Dimensión', fact: 'Hecho', aggregation: 'Agregación',
-      control: 'Control', application: 'App', other: 'Otro',
+      dimension: this.i18n.t('explorer.kpi.dimensions'),
+      fact: this.i18n.t('explorer.kpi.facts'),
+      aggregation: this.i18n.t('explorer.kpi.aggregations'),
+      control: 'Control',
+      application: 'App',
+      other: 'Other',
     };
     return map[kind] ?? kind;
   }

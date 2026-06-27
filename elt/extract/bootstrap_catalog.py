@@ -28,39 +28,70 @@ SECOND = [
     "Circuit", "Ember", "Cascade", "Nebula", "Rhythm", "Silhouette", "Aura",
 ]
 
-ARTIST_PREFIX = [
-    "The", "DJ", "Lil", "MC", "Saint", "Nova", "Echo", "Blue", "Red", "Dark",
-]
-ARTIST_SUFFIX = [
-    "Collective", "Wave", "Theory", "Project", "Syndicate", "Pulse", "Unit",
-    "Society", "Machine", "Children",
-]
 
-
-def _artist_names(n: int, rng: random.Random) -> List[str]:
-    names = set()
+def _unique_artist_names(n: int, rng: random.Random) -> List[str]:
+    """Globally unique artist names — avoids repetitive prefix clusters (Blue *, DJ *, etc.)."""
+    names: List[str] = []
+    seen: set[str] = set()
+    i = 0
     while len(names) < n:
-        if rng.random() < 0.4:
-            name = f"{rng.choice(ARTIST_PREFIX)} {rng.choice(ARTIST_SUFFIX)}"
-        else:
-            name = f"{rng.choice(FIRST)} {rng.choice(SECOND)}"
-        names.add(name)
-    return sorted(names)
+        i += 1
+        base = f"{rng.choice(FIRST)} {rng.choice(SECOND)}"
+        name = f"{base} #{i:05d}"
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    return names
 
 
-def _album_name(rng: random.Random) -> str:
-    return f"{rng.choice(FIRST)} {rng.choice(SECOND)}"
+DEMO_TRACK_TITLES = [
+    "Vámonos a Marte",
+    "Despacito",
+    "Bailando",
+    "La Bicicleta",
+    "Titi Me Preguntó",
+    "Monaco",
+    "Die for You",
+    "Blinding Lights",
+    "Shape of You",
+    "Bad Guy",
+    "Levitating",
+    "Flowers",
+    "As It Was",
+    "Peaches",
+    "Dákiti",
+    "Ella Baila Sola",
+    "Columbia",
+    "Where She Goes",
+    "TQG",
+    "Shakira: Bzrp Music Sessions, Vol. 53",
+]
+
+
+def _track_name(i: int, rng: random.Random) -> str:
+    if i < len(DEMO_TRACK_TITLES):
+        return DEMO_TRACK_TITLES[i]
+    return f"{rng.choice(FIRST)} {rng.choice(SECOND)} #{i + 1:05d}"
+
+
+def _unique_album_name(i: int, rng: random.Random) -> str:
+    """One distinct album title per source track row."""
+    base = f"{rng.choice(FIRST)} {rng.choice(SECOND)}"
+    return f"{base} #A{i:05d}"
 
 
 def generate_bronze_dataframe(n_tracks: int = 8_500, seed: int = 42) -> pd.DataFrame:
     rng = random.Random(seed)
     n_artists = max(400, n_tracks // 18)
-    artists = _artist_names(n_artists, rng)
+    artists = _unique_artist_names(n_artists, rng)
     rows = []
 
     for i in range(n_tracks):
         genre = rng.choice(GENRES)
         artist = rng.choice(artists)
+        album = _unique_album_name(i + 1, rng)
         pop = int(rng.gauss(52, 22))
         pop = max(0, min(100, pop))
         energy = round(max(0.05, min(0.99, rng.gauss(0.55, 0.22))), 4)
@@ -71,9 +102,9 @@ def generate_bronze_dataframe(n_tracks: int = 8_500, seed: int = 42) -> pd.DataF
 
         rows.append({
             "track_id": f"boot_{i+1:06d}",
-            "track_name": f"{rng.choice(FIRST)} {rng.choice(SECOND)}",
+            "track_name": _track_name(i, rng),
             "artists": artist,
-            "album_name": _album_name(rng),
+            "album_name": album,
             "popularity": pop,
             "duration_ms": dur,
             "explicit": rng.random() < 0.12,

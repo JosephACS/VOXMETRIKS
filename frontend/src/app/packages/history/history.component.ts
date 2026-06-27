@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../shared/services/icon-render.service';
 import { StatsService } from '../analytics/services/stats.service';
@@ -10,18 +11,24 @@ import { MusicPlayerService } from '../../shared/services/music-player.service';
 import { CoverArtService } from '../../shared/services/cover-art.service';
 import { HistoryHub, HistoryEntry, SearchHistoryEntry } from '../../shared/models/api.models';
 import { primaryArtistName } from '../../shared/utils/artist.util';
+import { displayTrackTitle } from '../../shared/utils/track-display.util';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
 
 type HistoryTab = 'music' | 'user' | 'search';
 
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './history.component.html',
   styleUrls: ['./history.component.css'],
 })
-export class HistoryComponent implements OnInit {
+export class HistoryComponent implements OnInit, OnDestroy {
   private iconRender = inject(IconRenderService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private tabSub?: Subscription;
   private stats = inject(StatsService);
   private localMusic = inject(HistoryService);
   private localSearch = inject(SearchHistoryService);
@@ -44,6 +51,12 @@ export class HistoryComponent implements OnInit {
   searchCount = computed(() => this.localSearchEntries().length + this.warehouseSearches().length);
 
   ngOnInit() {
+    this.tabSub = this.route.queryParamMap.subscribe((params) => {
+      const tab = params.get('tab');
+      if (tab === 'user' || tab === 'search' || tab === 'music') {
+        this.activeTab.set(tab);
+      }
+    });
     this.localMusic.history$.subscribe((h) => this.localMusicEntries.set(h));
     this.localMusic.reload();
     this.localSearch.history$.subscribe((h) => this.localSearchEntries.set(h));
@@ -53,6 +66,16 @@ export class HistoryComponent implements OnInit {
 
   selectTab(tab: HistoryTab) {
     this.activeTab.set(tab);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  ngOnDestroy() {
+    this.tabSub?.unsubscribe();
   }
 
   loadHub() {
@@ -96,6 +119,10 @@ export class HistoryComponent implements OnInit {
     return primaryArtistName(raw);
   }
 
+  trackTitle(raw?: string | null): string {
+    return displayTrackTitle(raw);
+  }
+
   formatDate(iso?: string | null): string {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -121,14 +148,14 @@ export class HistoryComponent implements OnInit {
 
   eventIcon(type?: string): string {
     const map: Record<string, string> = {
-      login: 'log-in',
+      login: 'user',
       favorite: 'heart',
       play: 'play',
-      pause: 'pause',
-      skip: 'skip-forward',
+      pause: 'music',
+      skip: 'music',
       like: 'heart',
-      share: 'share',
-      add_playlist: 'list',
+      share: 'link',
+      add_playlist: 'playlist',
     };
     return map[type ?? ''] ?? 'activity';
   }

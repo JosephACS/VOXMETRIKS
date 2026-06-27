@@ -187,7 +187,7 @@ Subconjunto de [`TRACEABILITY-MASTER.md`](../TRACEABILITY-MASTER.md) (Constituci
 | **ID** | CU-PM02 |
 | **Actor principal** | Usuario Engineer |
 | **Precondición** | CU-PM01; limits cargados |
-| **Flujo principal** | 1. Engineer selecciona modo multiplier (1×–4×) o custom target → 2. UI calcula `targetTrackCount`, `tracksToCreate`, estimación MB → 3. `volumeValidation` evalúa contra limits → 4. Botón ejecutar habilitado/deshabilitado según validación |
+| **Flujo principal** | 1. Engineer selecciona modo multiplier (1×–4×) o custom target → 2. UI calcula objetivo de eventos, delta de actividad y estimación MB → 3. `volumeValidation` evalúa contra limits → 4. Botón ejecutar habilitado/deshabilitado según validación |
 | **Postcondición** | Configuración volumen lista o mensaje error/info |
 | **Flujo alternativo** | 3a. Target > max_target_total → error, run deshabilitado |
 | **Flujo alternativo** | 3a. Delta > max_create_per_run → error, run deshabilitado |
@@ -201,8 +201,8 @@ Subconjunto de [`TRACEABILITY-MASTER.md`](../TRACEABILITY-MASTER.md) (Constituci
 | **ID** | CU-PM03 |
 | **Actor principal** | Usuario Engineer |
 | **Precondición** | CU-PM02 válido; `canRunPipeline=true` |
-| **Flujo principal** | 1. Engineer pulsa ejecutar → 2. UI inicia timeline simulada Medallion (extract→bronze→silver→gold→warehouse) con logs → 3. Al completar pasos simulados UI invoca `POST /stats/synthetic` con `target_total` → 4. API genera tracks y registra ctl_carga_dataset → 5. UI actualiza summary, last load, estado completed |
-| **Postcondición** | dim_track expandido; registro carga; logs SUCCESS |
+| **Flujo principal** | 1. Engineer pulsa ejecutar → 2. UI importa catálogo real PocketBase → 3. UI invoca `POST /stats/synthetic` con `target_total` de eventos → 4. API genera actividad sintética (streams, búsquedas, favoritos, playlists, sesiones) sobre tracks reales y registra ctl_carga_dataset → 5. UI actualiza summary, last load, estado completed |
+| **Postcondición** | Catálogo musical permanece real; facts de actividad expandidos; registro carga; logs SUCCESS |
 | **Flujo alternativo** | 3a. POST falla → estado `failed`, log WARN con detail API |
 | **Flujo alternativo** | 3a. Delta=0 antes POST → complete sin API |
 | **Reglas de negocio** | RB-PM01, RB-PM02, RB-PM05, RB-PM09 |
@@ -477,7 +477,7 @@ Como **DevOps**, quiero **ejecutar pipeline medallion fuera de SPA**, para **pob
 - **RB-PM02**: Full medallion ELT MUST execute only via Docker Compose service `pipeline` or direct CLI invocation (CU-PM08).
 - **RB-PM03**: Route `/elt-pipeline` MUST require engineer role on frontend (`engineerGuard` per **001** RB-015).
 - **RB-PM04**: Synthetic volume MUST validate against limits (`max_target_total`, `max_create_per_run`, `warn_create_above`) before POST in UI; server MUST re-validate on POST.
-- **RB-PM05**: POST synthetic MUST mutate warehouse `dim_track` only within documented synthetic rules (P10 boundary).
+- **RB-PM05**: POST synthetic MUST NOT create fake tracks/artists/albums/genres; it MUST generate activity facts over the real catalog and may purge legacy `syn_%` track clones.
 - **RB-PM06**: Settings pipeline preferences (`defaultRecords`, `loadMode`, `autoRefresh`) MUST NOT trigger ELT or synthetic APIs automatically in current implementation.
 - **RB-PM07**: Settings warehouse tab content MUST be treated as static operational reference, not live warehouse API mirror.
 - **RB-PM08**: Preference `autoRefresh` MUST NOT activate automatic warehouse refresh on ELT page in current implementation (no consumer outside settings).

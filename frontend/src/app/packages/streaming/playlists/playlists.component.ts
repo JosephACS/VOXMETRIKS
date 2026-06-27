@@ -3,7 +3,9 @@ import { IconRenderService } from '../../../shared/services/icon-render.service'
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { PlaylistsService } from '../services/playlists.service';
 import { PlaylistSummary, PlaylistDetail, PlaylistTrackItem } from '../../../shared/models/api.models';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
@@ -23,7 +25,7 @@ const COVERS = [
 @Component({
   selector: 'app-playlists',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './playlists.component.html',
   styleUrls: ['./playlists.component.css'],
 })
@@ -35,6 +37,7 @@ export class PlaylistsComponent implements OnInit {
   playlists = signal<PlaylistSummary[]>([]);
   selected = signal<PlaylistDetail | null>(null);
   isLoading = signal(true);
+  hasError = signal(false);
   showCreate = signal(false);
   showEdit = signal(false);
   showDetail = signal(false);
@@ -44,17 +47,26 @@ export class PlaylistsComponent implements OnInit {
   saving = signal(false);
   editingId = signal<number | null>(null);
 
-  constructor(private svc: PlaylistsService) {}
+  constructor(
+    private svc: PlaylistsService,
+    private route: ActivatedRoute,
+    private router: Router,
+  ) {}
 
   ngOnInit() {
     this.load();
+    this.route.paramMap.subscribe((pm) => {
+      const raw = pm.get('id');
+      if (raw) this.openDetailById(Number(raw));
+    });
   }
 
   load() {
     this.isLoading.set(true);
+    this.hasError.set(false);
     this.svc.list().subscribe({
       next: (d) => { this.playlists.set(d ?? []); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });
   }
 
@@ -120,14 +132,28 @@ export class PlaylistsComponent implements OnInit {
   }
 
   openDetail(pl: PlaylistSummary) {
-    this.svc.get(pl.id).subscribe({
+    this.router.navigate(['/playlists', pl.id]);
+  }
+
+  openDetailById(id: number) {
+    if (!Number.isFinite(id) || id <= 0) {
+      this.router.navigate(['/playlists']);
+      return;
+    }
+    this.svc.get(id).subscribe({
       next: (d) => { this.selected.set(d); this.showDetail.set(true); },
+      error: () => {
+        this.closeDetail(false);
+      },
     });
   }
 
-  closeDetail() {
+  closeDetail(navigate = true) {
     this.showDetail.set(false);
     this.selected.set(null);
+    if (navigate && this.route.snapshot.paramMap.has('id')) {
+      this.router.navigate(['/playlists']);
+    }
   }
 
   openEdit(det: PlaylistDetail) {

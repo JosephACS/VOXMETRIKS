@@ -31,13 +31,21 @@ export class AuthService {
   getUser = () => this.authState().user;
   userId = computed(() => this.authState().user?.id ?? null);
 
-  /** Acceso a ingeniería de datos (Pipeline ELT, Explorer). Usuario admin en demo. */
-  hasEngineerAccess(): boolean {
-    const u = this.getUser();
+  /**
+   * Catalog steward + data engineering.
+   * Normal listeners (demo, registered users) MUST NOT mutate warehouse catalog.
+   * Mirrors backend require_engineer_user.
+   */
+  readonly isCatalogSteward = computed(() => {
+    const u = this.authState().user;
     if (!u) return false;
-    const email = (u.email ?? '').toLowerCase();
-    const username = (u.username ?? '').toLowerCase();
-    return username === 'admin' || email.startsWith('admin@');
+    const role = (u.role ?? 'user').toLowerCase();
+    return role === 'admin' || role === 'engineer';
+  });
+
+  /** @deprecated use isCatalogSteward() — kept for engineerGuard / ELT routes */
+  hasEngineerAccess(): boolean {
+    return this.isCatalogSteward();
   }
 
   constructor() {
@@ -84,6 +92,15 @@ export class AuthService {
   }
 
   logout(): void {
+    const token = this.getStoredToken();
+    if (token) {
+      void firstValueFrom(this.http.post(`${this.API}/logout`, {})).catch(() => undefined);
+    }
+    this.clearSession();
+  }
+
+  /** Drop local credentials without calling the server (e.g. after 401). */
+  clearSession(): void {
     localStorage.removeItem(this.AUTH_KEY);
     localStorage.removeItem(this.USER_KEY);
     sessionStorage.removeItem(this.AUTH_KEY);

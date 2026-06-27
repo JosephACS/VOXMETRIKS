@@ -1,49 +1,66 @@
-
-# ── VOXMETRIK_V2 — docker-compose.yml ────────────────────────────────────────
+# ── Voxmetriks — docker-compose ───────────────────────────────────────────────
 #
-# Servicios:
-#   pipeline   → ejecuta elt_pipeline.py una sola vez y termina
-#   api        → FastAPI en puerto 8000, arranca cuando el pipeline termina
-#   pocketbase → PocketBase en puerto 8090 (opcional, fuente de datos)
+# Orden de arranque (primera vez):
+#   pocketbase  → sirve el dataset (~100k) desde ./pocketbase/pb_data
+#   pipeline    → espera a PocketBase, corre el ELT y construye el DuckDB
+#   api         → arranca cuando el pipeline termina con éxito (P7: ELT-before-API)
+#   frontend    → nginx sirve la SPA y hace proxy /api → api
 #
-# Uso rápido:
-#   docker compose up --build          # primera vez
-#   docker compose up api pocketbase   # solo API (pipeline ya corrió)
-#   docker compose run --rm pipeline   # re-ejecutar pipeline manualmente
+#   docker compose up --build               # primera vez (todo)
+#   docker compose up -d pocketbase api frontend   # sin re-correr el pipeline
+#   docker compose run --rm pipeline        # re-ejecutar el ELT manualmente
 
 services:
+
+  # ── PocketBase — fuente del dataset (100k) ──────────────────────────────────
+  pocketbase:
+    image: spectado/pocketbase:latest
+    ports:
+      - "8090:80"
+    volumes:
+      - ./pocketbase/pb_data:/pb/pb_data           # dataset + superuser ya creados
+      - ./pocketbase/pb_migrations:/pb/pb_migrations
+    networks: [voxmetrik]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ── ELT Pipeline (job de una sola corrida) ──────────────────────────────────
   pipeline:
     build:
       context: .
-      target: runtime           # usa el stage final del Dockerfile multi-stage
-    image: voxmetrik_v2:latest
+      target: runtime
+    image: voxmetrik:latest
+    working_dir: /app
     command: python elt/pipelines/elt_pipeline.py
     env_file: .env
     environment:
+      POCKETBASE_URL: http://pocketbase
       DB_PATH: /app/data/warehouse/voxmetrik.duckdb
       PYTHONPATH: /app
     volumes:
-      - duckdb_data:/app/data/warehouse
-      - parquet_data:/app/data
+      - voxmetrik_data:/app/data
     networks: [voxmetrik]
-    restart: "no"               # no reiniciar: es un job, no un servicio
-    # El pipeline sale con código 0 si tiene éxito, 1 si falla.
-    # El servicio 'api' espera service_completed_successfully (exit 0).
+    restart: "no"
+    depends_on:
+      pocketbase:
+        condition: service_healthy
 
   # ── FastAPI Backend ──────────────────────────────────────────────────────────
   api:
     build:
       context: .
       target: runtime
-    image: voxmetrik_v2:latest
-    working_dir: /app/backend
+    image: voxmetrik:latest
     command: >
       uvicorn app.main:app
       --host 0.0.0.0
       --port 8000
-      --workers 2
+      --workers 1
       --log-level info
     env_file: .env
     environment:
@@ -52,12 +69,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - duckdb_data:/app/data/warehouse   # DuckDB compartido con pipeline (read-only en API)
+      - voxmetrik_data:/app/data
     networks: [voxmetrik]
     restart: unless-stopped
     depends_on:
       pipeline:
-        condition: service_completed_successfully   # espera que el pipeline termine OK
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -66,29 +83,22 @@ services:
       retries: 3
       start_period: 15s
 
-  # ── PocketBase ───────────────────────────────────────────────────────────────
-  # Imagen oficial de PocketBase (reemplaza la imagen abandonada muchobien)
-  pocketbase:
-    image: spectado/pocketbase:latest   # imagen actualizada y mantenida
+  # ── Frontend (Angular + nginx con proxy /api) ───────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+    image: voxmetrik-frontend:latest
     ports:
-      - "8090:80"
-    volumes:
-      - pb_data:/pb/pb_data
+      - "8080:80"
     networks: [voxmetrik]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
-             "http://localhost/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
 
-# ── Volúmenes persistentes ────────────────────────────────────────────────────
+# ── Volúmenes ─────────────────────────────────────────────────────────────────
 volumes:
-  duckdb_data:    # DuckDB — compartido entre pipeline y api
-  parquet_data:   # Parquet raw — solo lo usa el pipeline
-  pb_data:        # PocketBase data
+  voxmetrik_data:   # DuckDB + parquet (pipeline escribe, api lee)
 
 # ── Red interna ───────────────────────────────────────────────────────────────
 networks:

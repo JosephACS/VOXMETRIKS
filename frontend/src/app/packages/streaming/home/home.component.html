@@ -21,6 +21,26 @@
       </div>
     }
 
+    <section class="home-catalog-note">
+      <app-data-source-badge kind="live" />
+      <app-data-source-badge kind="demo" />
+      <span>{{ 'home.catalogNote' | t }}</span>
+    </section>
+
+    @if (isLoading()) {
+      <div class="home-state home-state--loading" role="status">
+        <span class="home-state-spinner" aria-hidden="true"></span>
+        {{ 'home.loading' | t }}
+      </div>
+    } @else {
+      @if (hasError()) {
+        <div class="home-state home-state--error" role="alert">
+          <strong>{{ 'home.error' | t }}</strong>
+          <p>{{ 'home.errorHint' | t }}</p>
+          <a routerLink="/tracks" class="home-state-link">{{ 'home.viewCatalog' | t }}</a>
+        </div>
+      }
+
     <div class="home-feed">
       @if (history().length) {
         <app-horizontal-section [title]="'home.section.recent' | t" [subtitle]="'home.section.recentSub' | t">
@@ -76,7 +96,7 @@
               [title]="a.name"
               [subtitle]="'home.section.artistSub' | t"
               [gradient]="cover('artist-' + a.id)"
-              [link]="'/artists'"
+              [link]="'/artists/' + a.id"
               [round]="true"
             />
           }
@@ -90,7 +110,7 @@
               [title]="pl.name"
               [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
               [gradient]="cover('pl-' + pl.id)"
-              link="/playlists"
+              [link]="'/playlists/' + pl.id"
             />
           }
         </app-horizontal-section>
@@ -100,10 +120,10 @@
         <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
           @for (g of genres(); track g.id_genero) {
             <app-media-card
-              [title]="g.nombre_genero ?? 'Género'"
+              [title]="g.nombre_genero ?? ('home.genreFallback' | t)"
               [subtitle]="('home.section.genreSub' | t:{ score: g.popularidad_promedio?.toFixed(0) ?? '—' })"
               [gradient]="cover('genre-' + g.id_genero)"
-              link="/genres"
+              [link]="genreLink(g)"
             />
           }
         </app-horizontal-section>
@@ -129,7 +149,15 @@
           </div>
         </section>
       }
+
+      @if (feedEmpty()) {
+        <div class="home-state home-state--empty">
+          <p>{{ 'home.emptyFeed' | t }}</p>
+          <a routerLink="/search" class="home-state-link">{{ 'home.searchPlaceholder' | t }}</a>
+        </div>
+      }
     </div>
+    }
   </div>
 
   <aside class="analytics-rail glass-panel">
@@ -171,6 +199,6 @@
       }
     </div>
 
-    <a routerLink="/dashboard/analytics" class="rail-link">{{ 'home.rail.fullPanel' | t }}</a>
+    <a routerLink="/analytics" class="rail-link">{{ 'home.rail.fullPanel' | t }}</a>
   </aside>
 </div>

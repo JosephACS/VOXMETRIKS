@@ -34,7 +34,6 @@ _PROJECT_ROOT = _HERE.parent.parent                     # VOXMETRIK_V2/
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from elt.extract.bootstrap_catalog import ensure_bronze_parquet
 from elt.transform.enterprise_analytics import (
     build_enterprise_warehouse,
     ENTERPRISE_EXPORT_TABLES,
@@ -110,8 +109,10 @@ BRONZE_DIR = _PROJECT_ROOT / "data" / "bronze"
 SILVER_DIR = _PROJECT_ROOT / "data" / "silver"
 GOLD_DIR   = _PROJECT_ROOT / "data" / "gold"
 
-# Source parquet (Bronze input)
+# Source parquet (Bronze input — cache written after each PocketBase sync)
 BRONZE_PARQUET = BRONZE_DIR / "raw_spotify.parquet"
+
+MIN_POCKETBASE_ROWS = 50_000
 
 # Silver output (cleaned parquet)
 SILVER_PARQUET = SILVER_DIR / "silver_spotify.parquet"
@@ -262,37 +263,49 @@ def _bronze_from_parquet(path: Path) -> Optional[pd.DataFrame]:
 
 def bronze_extract(pb: Optional[PocketBaseClient]) -> pd.DataFrame:
     """
-    BRONZE LAYER — Extract raw data.
-    Priority: PocketBase CSV → local Bronze parquet.
-    Saves a copy to BRONZE_DIR as raw_spotify.parquet (immutable raw layer).
+    BRONZE LAYER — Extract raw data from PocketBase (authoritative source).
+
+    Priority: PocketBase CSV → cached bronze parquet (from a prior PocketBase sync).
+    No synthetic bootstrap — fail loudly if the real dataset is unavailable.
     """
     logger.info("══ BRONZE: Extract ══════════════════════════════════════════")
     df: Optional[pd.DataFrame] = None
+    source = "unknown"
 
     if pb is not None:
         df = _bronze_from_pocketbase(pb)
+        if df is not None and not df.empty:
+            source = "pocketbase"
 
     if df is None or df.empty:
         df = _bronze_from_parquet(BRONZE_PARQUET)
-
-    if df is None or df.empty:
-        logger.warning("[BRONZE] No source — bootstrapping demo catalog…")
-        BRONZE_DIR.mkdir(parents=True, exist_ok=True)
-        df = ensure_bronze_parquet(BRONZE_PARQUET, n_tracks=8_500)
-        logger.info(f"[BRONZE] Bootstrap catalog ✓  shape={df.shape}")
+        if df is not None and not df.empty:
+            source = "parquet_cache"
+            logger.warning(
+                "[BRONZE] Using cached parquet — PocketBase unavailable. "
+                "Run a fresh import when PocketBase is online."
+            )
 
     if df is None or df.empty:
         raise RuntimeError(
-            "BRONZE EXTRACT FAILED — no data source available.\n"
-            f"  • PocketBase : {POCKETBASE_URL}  (check credentials)\n"
-            f"  • Local Bronze: {BRONZE_PARQUET}  (file missing)"
+            "BRONZE EXTRACT FAILED — no Spotify dataset from PocketBase.\n"
+            f"  • PocketBase URL : {POCKETBASE_URL}\n"
+            f"  • Credentials    : POCKETBASE_EMAIL / POCKETBASE_PASSWORD in .env\n"
+            f"  • Collection     : {PB_COLLECTION} (upload dataset.csv ~100k rows)\n"
+            f"  • Cached bronze  : {BRONZE_PARQUET} (missing)\n"
+            "  → Start PocketBase, upload the CSV, configure .env, then re-run."
         )
 
-    # Persist raw copy to bronze (only if it came from PocketBase)
-    if pb is not None:
+    if source == "pocketbase" and len(df) < MIN_POCKETBASE_ROWS:
+        logger.warning(
+            f"[BRONZE] PocketBase CSV has only {len(df):,} rows "
+            f"(expected ~100k). Continuing anyway."
+        )
+
+    if source == "pocketbase":
         BRONZE_DIR.mkdir(parents=True, exist_ok=True)
         df.to_parquet(str(BRONZE_PARQUET), index=False)
-        logger.info(f"[BRONZE] Saved raw parquet → {BRONZE_PARQUET}")
+        logger.info(f"[BRONZE] Saved raw parquet → {BRONZE_PARQUET}  (source={source})")
 
     logger.info(f"[BRONZE] {len(df):,} rows, {len(df.columns)} columns")
     return df
@@ -771,13 +784,14 @@ def _build_dim_artista(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("""
         INSERT INTO dim_artista (id_artista, nombre_artista)
         SELECT
-            ROW_NUMBER() OVER (ORDER BY artists) AS id_artista,
+            ROW_NUMBER() OVER (ORDER BY HASH(artists)) AS id_artista,
             artists                              AS nombre_artista
         FROM (
-            SELECT DISTINCT TRIM(COALESCE(artists, '')) AS artists
+            SELECT MIN(TRIM(artists)) AS artists
             FROM raw_spotify
             WHERE artists IS NOT NULL
               AND NULLIF(TRIM(artists), '') IS NOT NULL
+            GROUP BY LOWER(TRIM(artists))
         ) t
     """)
     n = conn.execute("SELECT COUNT(*) FROM dim_artista").fetchone()[0]
@@ -792,10 +806,11 @@ def _build_dim_genero(conn: duckdb.DuckDBPyConnection) -> None:
             ROW_NUMBER() OVER (ORDER BY track_genre) AS id_genero,
             track_genre                              AS nombre_genero
         FROM (
-            SELECT DISTINCT TRIM(COALESCE(track_genre, '')) AS track_genre
+            SELECT MIN(TRIM(track_genre)) AS track_genre
             FROM raw_spotify
             WHERE track_genre IS NOT NULL
               AND NULLIF(TRIM(track_genre), '') IS NOT NULL
+            GROUP BY LOWER(TRIM(track_genre))
         ) t
     """)
     n = conn.execute("SELECT COUNT(*) FROM dim_genero").fetchone()[0]
@@ -811,14 +826,15 @@ def _build_dim_album(conn: duckdb.DuckDBPyConnection) -> None:
             t.album_name,
             da.id_artista
         FROM (
-            SELECT DISTINCT
-                TRIM(COALESCE(album_name, '')) AS album_name,
-                TRIM(COALESCE(artists,    '')) AS artists
+            SELECT
+                MIN(TRIM(album_name)) AS album_name,
+                MIN(TRIM(artists))    AS artists
             FROM raw_spotify
             WHERE album_name IS NOT NULL
               AND NULLIF(TRIM(album_name), '') IS NOT NULL
+            GROUP BY LOWER(TRIM(album_name))
         ) t
-        LEFT JOIN dim_artista da ON da.nombre_artista = t.artists
+        LEFT JOIN dim_artista da ON LOWER(TRIM(da.nombre_artista)) = LOWER(TRIM(t.artists))
     """)
     n = conn.execute("SELECT COUNT(*) FROM dim_album").fetchone()[0]
     logger.info(f"[GOLD] dim_album       → {n:,} rows")
@@ -866,10 +882,9 @@ def _build_dim_track(conn: duckdb.DuckDBPyConnection) -> None:
             WHERE track_name IS NOT NULL
               AND NULLIF(TRIM(track_name), '') IS NOT NULL
         ) rs
-        LEFT JOIN dim_artista da  ON da.nombre_artista = TRIM(COALESCE(rs.artists,    ''))
-        LEFT JOIN dim_album   dal ON dal.nombre_album  = TRIM(COALESCE(rs.album_name, ''))
-                                 AND dal.id_artista    = da.id_artista
-        LEFT JOIN dim_genero  dg  ON dg.nombre_genero  = TRIM(COALESCE(rs.track_genre,''))
+        LEFT JOIN dim_artista da  ON LOWER(TRIM(da.nombre_artista)) = LOWER(TRIM(COALESCE(rs.artists,    '')))
+        LEFT JOIN dim_album   dal ON LOWER(TRIM(dal.nombre_album))  = LOWER(TRIM(COALESCE(rs.album_name, '')))
+        LEFT JOIN dim_genero  dg  ON LOWER(TRIM(dg.nombre_genero))  = LOWER(TRIM(COALESCE(rs.track_genre,'')))
         WHERE rs.rn = 1
     """)
     n = conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0]
@@ -1147,7 +1162,7 @@ def verify_warehouse(conn: duckdb.DuckDBPyConnection) -> bool:
 #  MAIN PIPELINE
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def run_pipeline() -> None:
+def run_pipeline() -> Dict[str, Any]:
     start = datetime.now()
     logger.info("=" * 70)
     logger.info("  VOXMETRIK_V2 — ELT Pipeline (Medallion Architecture)")
@@ -1158,15 +1173,18 @@ def run_pipeline() -> None:
     logger.info(f"  Gold    : {GOLD_DIR}")
     logger.info("=" * 70)
 
-    # ── PocketBase (optional) ─────────────────────────────────────────────────
+    # ── PocketBase (required for fresh import) ───────────────────────────────
     pb: Optional[PocketBaseClient] = None
     if POCKETBASE_EMAIL and POCKETBASE_PASSWORD:
         pb = PocketBaseClient(POCKETBASE_URL, POCKETBASE_EMAIL, POCKETBASE_PASSWORD)
         if not pb.authenticate():
-            logger.warning("PocketBase unavailable — will use local parquet")
+            logger.warning("PocketBase auth failed — will try cached bronze parquet only")
             pb = None
     else:
-        logger.info("PocketBase credentials not set — using local parquet")
+        logger.warning(
+            "PocketBase credentials not set — will try cached bronze parquet only. "
+            "Set POCKETBASE_EMAIL and POCKETBASE_PASSWORD in .env for live import."
+        )
 
     # ── Open DuckDB ──────────────────────────────────────────────────────────
     conn = _open_connection(DB_PATH)
@@ -1216,10 +1234,19 @@ def run_pipeline() -> None:
 
         elapsed = (datetime.now() - start).total_seconds()
         logger.info("=" * 70)
-        logger.info(f"  Pipeline SUCCESS ✓  ({elapsed:.1f}s)")
+        logger.info(f"  Pipeline SUCCESS  ({elapsed:.1f}s)")
         logger.info(f"  Warehouse  : {DB_PATH}")
         logger.info(f"  Rows loaded: {total_raw:,}")
         logger.info("=" * 70)
+        return {
+            "status": "OK",
+            "rows_loaded": total_raw,
+            "rows_bronze": rows_bronze,
+            "rows_silver": rows_silver,
+            "elapsed_s": round(elapsed, 1),
+            "warehouse": str(DB_PATH),
+            "source": "pocketbase" if pb is not None else "parquet_cache",
+        }
 
     except Exception as exc:
         logger.error(f"Pipeline FAILED: {exc}", exc_info=True)
@@ -1229,7 +1256,7 @@ def run_pipeline() -> None:
             conn.commit()
         except Exception:
             pass
-        raise SystemExit(1)
+        raise RuntimeError(str(exc)) from exc
     finally:
         try:
             conn.close()
@@ -1238,4 +1265,7 @@ def run_pipeline() -> None:
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    try:
+        run_pipeline()
+    except RuntimeError as exc:
+        sys.exit(str(exc))

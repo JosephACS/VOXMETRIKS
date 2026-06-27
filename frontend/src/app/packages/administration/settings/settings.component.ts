@@ -62,11 +62,14 @@ export class SettingsComponent implements OnInit {
     'agg_distribucion_energia', 'agg_tracks_populares',
   ];
 
-  readonly audioQualityOptions = [
-    { value: 'high', label: 'Alta (320 kbps)' },
-    { value: 'normal', label: 'Normal (160 kbps)' },
-    { value: 'low', label: 'Baja (96 kbps)' },
-  ];
+  audioQualityOptions = computed(() => {
+    this.i18n.tick();
+    return [
+      { value: 'high', label: this.i18n.t('settings.audio.high') },
+      { value: 'normal', label: this.i18n.t('settings.audio.normal') },
+      { value: 'low', label: this.i18n.t('settings.audio.low') },
+    ];
+  });
 
   themeOptions = computed(() => {
     this.i18n.tick();
@@ -107,6 +110,32 @@ export class SettingsComponent implements OnInit {
     return this.ui.resolvedTheme() === 'dark'
       ? this.i18n.t('settings.theme.activeDark')
       : this.i18n.t('settings.theme.activeLight');
+  });
+
+  currentUser = computed(() => this.auth.state().user);
+
+  roleLabel = computed(() => {
+    this.i18n.tick();
+    const role = (this.currentUser()?.role ?? 'user').toLowerCase();
+    if (role === 'admin') return this.i18n.t('shell.role.admin');
+    if (role === 'engineer') return this.i18n.t('shell.role.engineer');
+    return this.i18n.t('shell.role.user');
+  });
+
+  accessScopeLabel = computed(() => {
+    this.i18n.tick();
+    return this.auth.hasEngineerAccess()
+      ? this.i18n.t('settings.scope.engineer')
+      : this.i18n.t('settings.scope.user');
+  });
+
+  healthVisibilityNote = computed(() => {
+    this.i18n.tick();
+    const h = this.health();
+    if (!h || this.healthError()) return '';
+    return h.database || h.tables?.length
+      ? this.i18n.t('settings.health.verbose')
+      : this.i18n.t('settings.health.public');
   });
 
   private readonly engineerTabs: SettingsTab[] = ['warehouse', 'pipeline'];
@@ -222,13 +251,14 @@ export class SettingsComponent implements OnInit {
   }
 
   healthStatusText(): string {
-    if (this.healthLoading()) return 'Comprobando estado del sistema…';
-    if (this.healthError()) return 'No se pudo contactar el backend en /health';
+    this.i18n.tick();
+    if (this.healthLoading()) return this.i18n.t('settings.health.checking');
+    if (this.healthError()) return this.i18n.t('settings.health.unreachable');
     const h = this.health();
-    if (!h) return 'Estado desconocido';
-    if (h.status === 'ok') return `Sistema operativo · ${h.tables.length} tablas en warehouse`;
-    if (h.status === 'degraded') return 'Sistema degradado · base de datos no encontrada';
-    return `Estado: ${h.status}`;
+    if (!h) return this.i18n.t('settings.health.unknown');
+    if (h.status === 'ok') return this.i18n.t('settings.health.ok', { count: h.table_count });
+    if (h.status === 'degraded') return this.i18n.t('settings.health.degraded');
+    return this.i18n.t('settings.health.status', { status: h.status });
   }
 
   icon(key: string, size = 18): SafeHtml {

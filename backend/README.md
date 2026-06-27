@@ -18,7 +18,12 @@ backend/
 │   └── shared/schemas/
 └── tests/
     ├── conftest.py             # DuckDB aislada para pytest
-    └── test_api.py             # 12 tests mínimos
+    ├── test_api.py             # health, login, playlists, favorites
+    ├── test_auth_security.py   # bcrypt, logout, health exposure
+    ├── test_analytics_security.py
+    ├── test_smoke_regression.py
+    ├── test_text_search.py
+    └── test_display_text.py
 ```
 
 ## Comandos
@@ -26,7 +31,9 @@ backend/
 ```bash
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
-pytest tests/test_api.py -v
+pytest tests/ -v
+python ../scripts/smoke_api.py --base-url http://localhost:8000
+python ../scripts/smoke_user_journey.py --base-url http://localhost:8000
 ```
 
 OpenAPI: http://localhost:8000/docs

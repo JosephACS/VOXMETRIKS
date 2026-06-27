@@ -176,6 +176,19 @@
   color: var(--shell-fg-muted);
 }
 
+.demo-chip {
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  color: #a78bfa;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
 .player-controls {
   display: flex;
   align-items: center;

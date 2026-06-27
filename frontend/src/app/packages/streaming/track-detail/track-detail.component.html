@@ -4,25 +4,34 @@
   } @else if (hasError() || !track()) {
     <div class="error glass-panel">
       <span [innerHTML]="icon('alert', 24)"></span>
-      <p>Canción no encontrada</p>
-      <a routerLink="/tracks" class="back-link">← Volver a canciones</a>
+      <p>{{ 'trackDetail.notFound' | t }}</p>
+      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backSongs' | t }}</a>
     </div>
   } @else {
     @if (track(); as t) {
       <section class="td-hero glass-panel">
         <div class="td-cover" [style.background]="coverGradient()">
-          <span class="cover-letter">{{ (t.nombre_track ?? '?').charAt(0) }}</span>
+          <span class="cover-letter">{{ title().charAt(0) }}</span>
         </div>
         <div class="td-info">
-          <span class="td-type">Canción</span>
-          <h1>{{ t.nombre_track }}</h1>
+          <span class="td-type">{{ 'trackDetail.type' | t }}</span>
+          <h1>{{ title() }}</h1>
           <p class="td-artist">{{ t.nombre_artista ?? '—' }}</p>
+          <div class="td-badges">
+            <app-data-source-badge kind="live" />
+            <app-data-source-badge kind="demo" />
+          </div>
+          <p class="td-note">{{ 'trackDetail.note' | t }}</p>
           <div class="td-chips">
             @if (t.nombre_genero) { <span class="chip">{{ t.nombre_genero }}</span> }
             <span class="chip">Pop {{ t.popularity ?? '—' }}</span>
             <span class="chip mono">{{ formatDuration(t.duration_ms) }}</span>
           </div>
           <div class="td-actions">
+            <button type="button" class="play-demo-btn" (click)="playDemo()">
+              <span [innerHTML]="icon('play', 14)"></span>
+              {{ 'trackDetail.playDemo' | t }}
+            </button>
             <app-favorite-btn [trackId]="t.id_track" />
             <app-add-to-playlist-btn [trackId]="t.id_track" variant="button" />
           </div>
@@ -31,7 +40,8 @@
 
       <div class="td-grid">
         <section class="glass-panel td-panel">
-          <h2>Características de audio</h2>
+          <h2>{{ 'trackDetail.features' | t }}</h2>
+          <p class="panel-note">{{ 'trackDetail.featuresNote' | t }}</p>
           <div class="feat-bars">
             @for (f of featureBars(); track f.label) {
               <div class="feat-row">
@@ -47,7 +57,8 @@
         </section>
 
         <section class="glass-panel td-panel">
-          <h2>Métricas</h2>
+          <h2>{{ 'trackDetail.metrics' | t }}</h2>
+          <p class="panel-note">{{ 'trackDetail.metricsNote' | t }}</p>
           <div class="metrics">
             <div class="metric"><span class="m-lbl">Tempo</span><span class="m-val mono">{{ t.tempo ?? '—' }} BPM</span></div>
             <div class="metric"><span class="m-lbl">Loudness</span><span class="m-val mono">{{ t.loudness ?? '—' }} dB</span></div>
@@ -58,7 +69,7 @@
         </section>
       </div>
 
-      <a routerLink="/tracks" class="back-link">← Volver al catálogo</a>
+      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backCatalog' | t }}</a>
     }
   }
 </div>

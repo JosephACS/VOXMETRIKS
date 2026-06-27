@@ -1,0 +1,20 @@
+@startuml voxmetriks-classes-warehouse
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 10
+left to right direction
+title Voxmetriks — Warehouse Medallion (Gold)
+
+class dim_track
+class dim_artist
+class dim_genre
+class agg_recomendaciones
+class ctl_pipeline_run
+
+dim_track --> dim_artist
+dim_track --> dim_genre
+agg_recomendaciones ..> dim_track
+ctl_pipeline_run ..> dim_track
+
+@enduml

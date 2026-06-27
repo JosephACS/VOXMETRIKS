@@ -6,22 +6,27 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { TracksService } from '../services/tracks.service';
 import { GenresService } from '../services/genres.service';
 import { ArtistsService } from '../services/artists.service';
 import { Track, PaginatedResponse, Genero, Artista } from '../../../shared/models/api.models';
+import { primaryArtistName } from '../../../shared/utils/artist.util';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 
 type ModalMode = 'create' | 'edit' | 'delete' | null;
 
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './tracks.component.html',
   styleUrls: ['./tracks.component.css'],
 })
 export class TracksComponent implements OnInit {
   private iconRender = inject(IconRenderService);
+  protected readonly auth = inject(AuthService);
   player = inject(MusicPlayerService);
 
   tracks      = signal<Track[]>([]);
@@ -34,7 +39,7 @@ export class TracksComponent implements OnInit {
   limit       = 50;
   serverTotal = signal(0);
   searchVal   = signal('');
-  private searchTimer: any;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   totalPages   = computed(() => Math.max(1, Math.ceil(this.serverTotal() / this.limit)));
   displayTotal = computed(() => this.serverTotal());
@@ -53,8 +58,10 @@ export class TracksComponent implements OnInit {
 
   ngOnInit() {
     this.loadTracks();
-    this.genresSvc.getGenres({ limit: 200 }).subscribe({ next: r => this.genres.set(r.items ?? []), error: () => {} });
-    this.artistsSvc.listArtists(1, 200).subscribe({ next: r => this.artists.set(r.items ?? []), error: () => {} });
+    if (this.auth.isCatalogSteward()) {
+      this.genresSvc.getGenres({ limit: 500 }).subscribe({ next: r => this.genres.set(r.items ?? []), error: () => {} });
+      this.artistsSvc.listArtists(1, 500).subscribe({ next: r => this.artists.set(r.items ?? []), error: () => {} });
+    }
   }
 
   loadTracks() {
@@ -75,7 +82,7 @@ export class TracksComponent implements OnInit {
   }
 
   onSearch(val: string) {
-    clearTimeout(this.searchTimer);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => { this.searchVal.set(val); this.page.set(1); this.loadTracks(); }, 350);
   }
   clearSearch() { this.searchVal.set(''); this.page.set(1); this.loadTracks(); }
@@ -91,19 +98,24 @@ export class TracksComponent implements OnInit {
     const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
-  getArtistName(id?: number): string { return this.artists().find(a => a.id_artista === id)?.nombre_artista ?? (id ? `#${id}` : '—'); }
-  getGenreName(id?: number): string { return this.genres().find(g => g.id_genero === id)?.nombre_genero ?? (id ? `#${id}` : '—'); }
+  trackArtistName(t: Track): string {
+    return primaryArtistName(t.nombre_artista) || (t.id_artista ? `#${t.id_artista}` : '—');
+  }
+  trackGenreName(t: Track): string {
+    return t.nombre_genero?.trim() || (t.id_genero ? `#${t.id_genero}` : '');
+  }
   trackQueue() {
-    return this.tracks().map((t) => this.player.fromTrack(t, this.getArtistName(t.id_artista)));
+    return this.tracks().map((t) => this.player.fromTrack(t));
   }
   skeletonRows = Array(12).fill(0);
 
-  openCreate() { this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }
-  openEdit(t: Track) { this.modalTrack.set(t); this.formName.set(t.nombre_track); this.formArtist.set(t.id_artista ?? null); this.formGenre.set(t.id_genero ?? null); this.formExplicit.set(t.explicit ?? false); this.formDuration.set(t.duration_ms ?? null); this.formError.set(''); this.modalMode.set('edit'); }
-  openDelete(t: Track) { this.modalTrack.set(t); this.formError.set(''); this.modalMode.set('delete'); }
+  openCreate() { if (!this.auth.isCatalogSteward()) return; this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }
+  openEdit(t: Track) { if (!this.auth.isCatalogSteward()) return; this.modalTrack.set(t); this.formName.set(t.nombre_track); this.formArtist.set(t.id_artista ?? null); this.formGenre.set(t.id_genero ?? null); this.formExplicit.set(t.explicit ?? false); this.formDuration.set(t.duration_ms ?? null); this.formError.set(''); this.modalMode.set('edit'); }
+  openDelete(t: Track) { if (!this.auth.isCatalogSteward()) return; this.modalTrack.set(t); this.formError.set(''); this.modalMode.set('delete'); }
   closeModal() { this.modalMode.set(null); this.formSaving.set(false); }
 
   saveCreate() {
+    if (!this.auth.isCatalogSteward()) return;
     const name = this.formName().trim();
     if (!name) { this.formError.set('El nombre no puede estar vacío'); return; }
     this.formSaving.set(true); this.formError.set('');
@@ -114,6 +126,7 @@ export class TracksComponent implements OnInit {
   }
 
   saveEdit() {
+    if (!this.auth.isCatalogSteward()) return;
     const name = this.formName().trim();
     const track = this.modalTrack();
     if (!name || !track) { this.formError.set('El nombre no puede estar vacío'); return; }
@@ -125,6 +138,7 @@ export class TracksComponent implements OnInit {
   }
 
   confirmDelete() {
+    if (!this.auth.isCatalogSteward()) return;
     const track = this.modalTrack(); if (!track) return;
     this.formSaving.set(true); this.formError.set('');
     this.svc.deleteTrack(track.id_track).subscribe({

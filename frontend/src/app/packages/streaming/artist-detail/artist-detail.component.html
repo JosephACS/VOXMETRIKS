@@ -1,0 +1,111 @@
+<div class="artist-page">
+  <div class="page-top-row">
+    <a routerLink="/artists" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      {{ 'artistDetail.back' | t }}
+    </a>
+    <div class="source-badges">
+      <app-data-source-badge kind="live" />
+      <app-data-source-badge kind="demo" />
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <section class="profile-hero glass-panel skel-hero"></section>
+  } @else if (hasError()) {
+    <div class="error-card glass-panel">
+      <span [innerHTML]="icon('alert', 24)"></span>
+      <div>
+        <strong>{{ 'artistDetail.notFound' | t }}</strong>
+        <p>{{ 'artistDetail.emptyTracks' | t }}</p>
+      </div>
+      <a routerLink="/artists" class="btn-secondary">{{ 'artistDetail.back' | t }}</a>
+    </div>
+  } @else {
+    <section class="profile-hero glass-panel">
+      <div class="hero-banner">
+        <div class="hero-glow" [style.background]="'radial-gradient(ellipse 60% 80% at 20% 100%, hsl(' + ((stats()?.id_artista ?? 0) * 37 % 360) + ', 65%, 45%, 0.35), transparent)'"></div>
+        <div class="hero-mesh"></div>
+      </div>
+      <div class="hero-body">
+        <div class="hero-avatar-wrap">
+          <div class="hero-avatar" [style.background]="avatarGradient()">{{ avatarInitial() }}</div>
+        </div>
+        <div class="hero-info">
+          <p class="hero-label">{{ 'artistDetail.type' | t }}</p>
+          <h1>{{ displayName() }}</h1>
+          <div class="hero-chips">
+            <span class="chip">
+              <span [innerHTML]="icon('star', 13)"></span>
+              {{ 'artistDetail.avgPop' | t }} {{ avgPopularity() | number:'1.0-1' }}
+            </span>
+            <span class="chip">
+              <span [innerHTML]="icon('music', 13)"></span>
+              {{ (stats()?.total_tracks ?? trackTotal()) | number }} {{ 'artistDetail.tracks' | t }}
+            </span>
+          </div>
+          @if (tracks().length) {
+            <button type="button" class="btn-play" (click)="playAll()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              {{ 'common.play' | t }}
+            </button>
+          }
+        </div>
+        <div class="hero-quick-stats">
+          <div class="quick-stat">
+            <span class="qs-value">{{ avgPopularity() | number:'1.0-1' }}</span>
+            <span class="qs-label">{{ 'artistDetail.popularity' | t }}</span>
+          </div>
+          <div class="quick-stat">
+            <span class="qs-value">{{ (stats()?.total_tracks ?? trackTotal()) | number }}</span>
+            <span class="qs-label">{{ 'tracks.title' | t }}</span>
+          </div>
+          <div class="quick-stat">
+            <span class="qs-value">#{{ stats()?.id_artista }}</span>
+            <span class="qs-label">{{ 'artistDetail.catalogId' | t }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    @if (partialError()) {
+      <p class="partial-warn">{{ partialError() }}</p>
+    }
+
+    <section class="stats-strip vx-kpi-grid">
+      <app-kpi-card [label]="'artistDetail.popularity' | t" [value]="avgPopularity()" iconKey="star" color="primary" [subtitle]="'artistDetail.popIndex' | t" />
+      <app-kpi-card [label]="'tracks.title' | t" [value]="stats()?.total_tracks ?? trackTotal()" iconKey="music" color="info" [subtitle]="'artistDetail.inCatalog' | t" />
+      <app-kpi-card [label]="'artistDetail.showing' | t" [value]="tracks().length" iconKey="list" color="warning" [subtitle]="('artistDetail.of' | t) + ' ' + (trackTotal() | number)" />
+    </section>
+
+    <section class="tracks-section glass-panel">
+      <div class="section-head">
+        <h2>{{ 'artistDetail.topTracks' | t }}</h2>
+        <span class="section-meta">{{ 'artistDetail.topTracksSub' | t }}</span>
+      </div>
+      @if (tracks().length === 0) {
+        <p class="empty">{{ 'artistDetail.emptyTracks' | t }}</p>
+      } @else {
+        <div class="tracks-list">
+          @for (t of tracks(); track t.id_track; let i = $index) {
+            <app-track-row
+              [track]="player.fromTrack(t)"
+              [index]="i + 1"
+              [queue]="trackQueue()"
+              [showPopularity]="true"
+              [popularity]="t.popularity"
+            />
+          }
+        </div>
+        @if (hasMoreTracks()) {
+          <div class="load-more-wrap">
+            <button type="button" class="btn-load-more" [disabled]="tracksLoading()" (click)="loadMoreTracks()">
+              @if (tracksLoading()) { {{ 'common.loading' | t }} } @else { {{ 'artistDetail.loadMore' | t }} }
+            </button>
+          </div>
+        }
+      }
+      <p class="catalog-note">{{ 'artistDetail.note' | t }}</p>
+    </section>
+  }
+</div>

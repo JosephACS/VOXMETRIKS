@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import duckdb
 
 from .base_service import count_rows, fetch_rows
+from .display_text import clean_catalog_row, clean_catalog_rows
+from .text_search import build_track_search_filter
 
 # All audio features are now stored directly in dim_track
 _TRACK_COLS = [
@@ -30,33 +32,58 @@ def get_tracks(
     genre_id: Optional[int] = None,
     artist_id: Optional[int] = None,
 ) -> Tuple[List[Dict[str, Any]], int]:
+    """List tracks with artist/genre names joined (same shape as search/detail)."""
     offset = (page - 1) * limit
-
     conditions: List[str] = []
     params: List[Any] = []
 
     if search:
-        conditions.append("LOWER(nombre_track) LIKE LOWER(?)")
-        params.append(f"%{search}%")
+        search_sql, search_params = build_track_search_filter(search.strip())
+        conditions.append(f"({search_sql})")
+        params.extend(search_params)
     if genre_id is not None:
-        conditions.append("id_genero = ?")
+        conditions.append("dt.id_genero = ?")
         params.append(genre_id)
     if artist_id is not None:
-        conditions.append("id_artista = ?")
-        params.append(artist_id)
+        from .artist_service import get_artist_by_id
+        artist = get_artist_by_id(conn, artist_id)
+        if artist:
+            primary = (artist.get("nombre_artista") or "").split(";")[0].strip()
+            conditions.append(
+                "(dt.id_artista = ? OR LOWER(da.nombre_artista) LIKE LOWER(?) "
+                "OR LOWER(TRIM(SPLIT_PART(REPLACE(da.nombre_artista, ',', ';'), ';', 1))) = LOWER(?))"
+            )
+            params.extend([artist_id, f"%{primary}%", primary])
+        else:
+            conditions.append("dt.id_artista = ?")
+            params.append(artist_id)
 
-    where = " AND ".join(conditions)
+    where = " AND ".join(conditions) if conditions else "1=1"
+    count_sql = f"""
+        SELECT COUNT(*)
+        FROM dim_track dt
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
+        LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
+        WHERE {where}
+    """
+    total = int(conn.execute(count_sql, params).fetchone()[0])
 
-    rows, _ = fetch_rows(
-        conn, "dim_track",
-        columns=_TRACK_COLS_BASIC,
-        where=where,
-        order_by="nombre_track",
-        limit=limit,
-        offset=offset,
-        params=params,
-    )
-    total = count_rows(conn, "dim_track", where=where, params=params)
+    data_sql = f"""
+        SELECT
+            dt.id_track, dt.spotify_track_id, dt.nombre_track,
+            dt.id_artista, dt.id_album, dt.id_genero,
+            dt.explicit, dt.duration_ms, dt.popularity,
+            da.nombre_artista, dg.nombre_genero
+        FROM dim_track dt
+        LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
+        LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
+        WHERE {where}
+        ORDER BY dt.popularity DESC NULLS LAST, dt.id_track
+        LIMIT ? OFFSET ?
+    """
+    rows_raw = conn.execute(data_sql, params + [limit, offset]).fetchall()
+    cols = _TRACK_COLS_BASIC + ["popularity", "nombre_artista", "nombre_genero"]
+    rows = clean_catalog_rows([dict(zip(cols, row)) for row in rows_raw])
     return rows, total
 
 
@@ -103,6 +130,30 @@ def create_track(
     explicit: Optional[bool] = None,
     duration_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
+    title = nombre_track.strip()
+    dup = conn.execute(
+        """
+        SELECT id_track FROM dim_track
+        WHERE LOWER(TRIM(nombre_track)) = LOWER(?)
+        LIMIT 1
+        """,
+        [title],
+    ).fetchone()
+    if dup:
+        return {"duplicate": True, "id_track": int(dup[0]), "nombre_track": title}
+    if spotify_track_id:
+        sid = spotify_track_id.strip()
+        dup_sid = conn.execute(
+            "SELECT id_track FROM dim_track WHERE spotify_track_id = ? LIMIT 1",
+            [sid],
+        ).fetchone()
+        if dup_sid:
+            return {
+                "duplicate": True,
+                "id_track": int(dup_sid[0]),
+                "spotify_track_id": sid,
+                "nombre_track": title,
+            }
     row = conn.execute("SELECT COALESCE(MAX(id_track), 0) + 1 FROM dim_track").fetchone()
     new_id = row[0]
     conn.execute(
@@ -110,18 +161,19 @@ def create_track(
            (id_track, spotify_track_id, nombre_track, id_artista, id_album,
             id_genero, explicit, duration_ms)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        [new_id, spotify_track_id, nombre_track.strip(),
+        [new_id, spotify_track_id, title,
          id_artista, id_album, id_genero, explicit, duration_ms]
     )
     return {
         "id_track":         new_id,
         "spotify_track_id": spotify_track_id,
-        "nombre_track":     nombre_track.strip(),
+        "nombre_track":     title,
         "id_artista":       id_artista,
         "id_album":         id_album,
         "id_genero":        id_genero,
         "explicit":         explicit,
         "duration_ms":      duration_ms,
+        "duplicate":        False,
     }
 
 
@@ -144,9 +196,33 @@ def update_track(
     params = []
 
     if nombre_track is not None:
+        title = nombre_track.strip()
+        dup = conn.execute(
+            """
+            SELECT id_track FROM dim_track
+            WHERE LOWER(TRIM(nombre_track)) = LOWER(?)
+              AND id_track != ?
+            LIMIT 1
+            """,
+            [title, track_id],
+        ).fetchone()
+        if dup:
+            return {"duplicate": True, "id_track": int(dup[0]), "nombre_track": title}
         updates.append("nombre_track = ?")
-        params.append(nombre_track.strip())
+        params.append(title)
     if spotify_track_id is not None:
+        sid = spotify_track_id.strip() if spotify_track_id else spotify_track_id
+        if sid:
+            dup_sid = conn.execute(
+                """
+                SELECT id_track FROM dim_track
+                WHERE spotify_track_id = ? AND id_track != ?
+                LIMIT 1
+                """,
+                [sid, track_id],
+            ).fetchone()
+            if dup_sid:
+                return {"duplicate": True, "id_track": int(dup_sid[0]), "spotify_track_id": sid}
         updates.append("spotify_track_id = ?")
         params.append(spotify_track_id)
     if id_artista is not None:
@@ -191,9 +267,9 @@ def search_tracks(
     q: str,
     limit: int = 50,
 ) -> List[Dict[str, Any]]:
-    """Search tracks by track name, artist name, or genre name."""
-    pattern = f"%{q.strip()}%"
-    rows = conn.execute("""
+    """Search tracks by tokens in track name, artist name, or genre (accent-insensitive)."""
+    search_sql, search_params = build_track_search_filter(q)
+    rows = conn.execute(f"""
         SELECT
             dt.id_track, dt.spotify_track_id, dt.nombre_track,
             dt.id_artista, dt.id_album, dt.id_genero,
@@ -202,19 +278,17 @@ def search_tracks(
         FROM dim_track dt
         LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
         LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
-        WHERE LOWER(dt.nombre_track) LIKE LOWER(?)
-           OR LOWER(da.nombre_artista) LIKE LOWER(?)
-           OR LOWER(dg.nombre_genero) LIKE LOWER(?)
+        WHERE {search_sql}
         ORDER BY dt.popularity DESC NULLS LAST, dt.nombre_track
         LIMIT ?
-    """, [pattern, pattern, pattern, limit]).fetchall()
+    """, search_params + [limit]).fetchall()
     cols = [
         "id_track", "spotify_track_id", "nombre_track",
         "id_artista", "id_album", "id_genero",
         "explicit", "duration_ms", "popularity",
         "nombre_artista", "nombre_genero",
     ]
-    return [dict(zip(cols, row)) for row in rows]
+    return clean_catalog_rows([dict(zip(cols, row)) for row in rows])
 
 
 def get_track_detail(
@@ -246,4 +320,4 @@ def get_track_detail(
         "liveness", "valence", "tempo",
         "nombre_artista", "nombre_genero",
     ]
-    return dict(zip(cols, rows[0]))
+    return clean_catalog_row(dict(zip(cols, rows[0])))

@@ -21,6 +21,17 @@ export interface Track {
   id_genero?: number;
   explicit?: boolean;
   duration_ms?: number;
+  popularity?: number;
+  nombre_artista?: string;
+  nombre_genero?: string;
+}
+
+export interface AudioSource {
+  track_id: number;
+  provider: string;
+  youtube_video_id?: string | null;
+  query?: string | null;
+  status: 'ok' | 'not_found' | 'disabled';
 }
 
 export interface AudioFeatures {
@@ -109,6 +120,7 @@ export interface StatsSummary {
   total_artistas: number;
   total_generos: number;
   total_albumes: number;
+  total_events?: number;
   total_streams?: number;
   total_audio_features?: number;
   active_users?: number;
@@ -178,12 +190,26 @@ export interface EngagementAnalytics {
   recommendation_avg?: number;
 }
 
+export interface ImportResult {
+  status: string;
+  rows_loaded: number;
+  rows_bronze: number;
+  rows_silver: number;
+  elapsed_s: number;
+  warehouse: string;
+  source: string;
+}
+
 export interface SyntheticResult {
   before: number;
   after: number;
   created: number;
   target_total: number;
   source_rows: number;
+  track_total?: number;
+  purged_synthetic_tracks?: number;
+  activity_counts?: Record<string, number>;
+  dimensions?: Record<string, number>;
   batches?: number;
   warning?: string | null;
 }
@@ -355,9 +381,10 @@ export interface RecommendationPayload {
 
 export interface HealthResponse {
   status: string;
-  database: string;
-  tables: string[];
   version: string;
+  table_count: number;
+  database?: string | null;
+  tables?: string[];
 }
 
 export interface FavoriteTrack extends PlaylistTrackItem {
@@ -481,6 +508,7 @@ export interface AppUser {
   id: number;
   username: string;
   email: string;
+  role?: 'user' | 'engineer' | 'admin' | string;
   plan: string;
   favorite_genre?: string;
   created_at?: string;

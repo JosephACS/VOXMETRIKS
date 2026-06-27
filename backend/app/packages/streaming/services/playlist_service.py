@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import duckdb
 
+from app.core.time_util import utc_now
 from .app_storage import ensure_app_tables
+from .display_text import clean_catalog_row, clean_catalog_rows
 
 
 def _next_id(conn: duckdb.DuckDBPyConnection, table: str) -> int:
@@ -40,7 +41,7 @@ def _enrich_tracks(conn: duckdb.DuckDBPyConnection, track_ids: List[int]) -> Lis
         "id_track", "nombre_track", "id_artista", "id_genero",
         "duration_ms", "popularity", "nombre_artista", "nombre_genero",
     ]
-    by_id = {r[0]: dict(zip(cols, r)) for r in rows}
+    by_id = {r[0]: clean_catalog_row(dict(zip(cols, r))) for r in rows}
     return [by_id[tid] for tid in track_ids if tid in by_id]
 
 
@@ -104,13 +105,13 @@ def create_playlist(
     new_id = _next_id(conn, "app_playlist")
     conn.execute(
         "INSERT INTO app_playlist (id, name, description, created_at, user_id) VALUES (?, ?, ?, ?, ?)",
-        [new_id, name.strip(), description, datetime.utcnow(), user_id],
+        [new_id, name.strip(), description, utc_now(), user_id],
     )
     return {
         "id": new_id,
         "name": name.strip(),
         "description": description,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": utc_now().isoformat(),
         "total_tracks": 0,
     }
 
@@ -133,7 +134,7 @@ def add_track_to_playlist(
         return True
     conn.execute(
         "INSERT INTO app_playlist_track (playlist_id, track_id, added_at) VALUES (?, ?, ?)",
-        [playlist_id, track_id, datetime.utcnow()],
+        [playlist_id, track_id, utc_now()],
     )
     return True
 

@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { StatsService } from '../../analytics/services/stats.service';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
 import { StatsSummary, LoadRecord, SyntheticLimits } from '../../../shared/models/api.models';
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 type LayerStatus = 'ready' | 'idle' | 'running' | 'success' | 'warning' | 'failed';
 type PipelineState = 'idle' | 'running' | 'completed' | 'failed';
@@ -43,12 +45,13 @@ type VolumeMode = 'multiplier' | 'custom';
 @Component({
   selector: 'app-elt-pipeline',
   standalone: true,
-  imports: [CommonModule, KpiCardComponent],
+  imports: [CommonModule, KpiCardComponent, TranslatePipe],
   templateUrl: './elt-pipeline.component.html',
   styleUrls: ['./elt-pipeline.component.css'],
 })
 export class EltPipelineComponent implements OnInit, OnDestroy {
   private iconRender = inject(IconRenderService);
+  private i18n = inject(I18nService);
 
   private runTimer: ReturnType<typeof setInterval> | null = null;
   private elapsedTimer: ReturnType<typeof setInterval> | null = null;
@@ -94,7 +97,8 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     { label: 'Agregaciones', value: 4, color: '#7c3aed' },
   ];
 
-  baseTrackCount = computed(() => this.summary()?.total_tracks ?? 0);
+  // Volumen operativo: eventos/facts sintéticos sobre catálogo musical real.
+  baseTrackCount = computed(() => this.summary()?.total_events ?? this.summary()?.total_streams ?? 0);
 
   targetTrackCount = computed(() => {
     if (this.volumeMode() === 'custom') return this.customTarget();
@@ -107,7 +111,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
 
   estimatedDbMb = computed(() => {
     const total = this.targetTrackCount();
-    return Math.max(1, Math.round((total * 0.8) / 1024));
+    return Math.max(1, Math.round((total * 0.25) / 1024));
   });
 
   volumeValidation = computed(() => {
@@ -143,7 +147,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       return {
         ok: true,
         level: 'warn' as const,
-        message: `Generación grande: +${this.fmt(delta)} (~${this.estimatedDbMb()} MB en DuckDB). Puede tardar varios minutos.`,
+        message: `Generación grande: +${this.fmt(delta)} eventos (~${this.estimatedDbMb()} MB en DuckDB). Puede tardar varios minutos.`,
       };
     }
     return { ok: true, level: 'ok' as const, message: '' };
@@ -152,8 +156,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   canRunPipeline = computed(() =>
     this.apiConnected() &&
     this.pipelineState() !== 'running' &&
-    this.volumeValidation().ok &&
-    this.volumeValidation().level !== 'info'
+    (this.volumeValidation().ok || this.volumeValidation().level === 'info')
   );
 
   selectedRecordCount = computed(() => this.targetTrackCount());
@@ -166,11 +169,12 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   });
 
   pipelineStatusLabel = computed(() => {
+    this.i18n.tick();
     switch (this.pipelineState()) {
-      case 'running': return 'En ejecución';
-      case 'completed': return 'Completado';
-      case 'failed': return 'Fallido';
-      default: return 'Listo';
+      case 'running': return this.i18n.t('elt.status.running');
+      case 'completed': return this.i18n.t('elt.status.completed');
+      case 'failed': return this.i18n.t('elt.status.failed');
+      default: return this.i18n.t('elt.status.idle');
     }
   });
 
@@ -224,7 +228,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       next: (d) => {
         this.summary.set(d);
         this.apiConnected.set(true);
-        this.refreshMetrics(d.total_tracks);
+        this.refreshMetrics(d.total_events ?? d.total_streams ?? d.total_tracks);
         done();
       },
       error: () => {
@@ -325,13 +329,9 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       this.addLog('WARN', 'Backend no disponible — conecta FastAPI en localhost:8000');
       return;
     }
-    if (this.baseTrackCount() === 0) {
-      this.addLog('WARN', 'Warehouse vacío — ejecuta elt_pipeline.py primero');
-      return;
-    }
 
     const validation = this.volumeValidation();
-    if (!validation.ok) {
+    if (!validation.ok && validation.level !== 'info') {
       this.addLog('WARN', validation.message);
       return;
     }
@@ -342,77 +342,102 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
 
     this.clearTimers();
     this.pipelineState.set('running');
-    this.runProgress.set(0);
+    this.runProgress.set(5);
     this.logs.set([]);
     this.elapsedSeconds.set(0);
     this.throughput.set(0);
     this.dataQuality.set(0);
     this.runStartMs = Date.now();
 
-    const base = this.baseTrackCount();
     const target = this.targetTrackCount();
-    const delta = this.tracksToCreate();
 
-    this.addLog('INFO', `ELT iniciado — actual ${this.fmt(base)} → objetivo ${this.fmt(target)} (+${this.fmt(delta)})`);
-    this.addLog('INFO', 'Extract → Load → Transform desde warehouse existente');
+    this.addLog('INFO', 'Paso 1/2 — PocketBase → Bronze → Silver → Gold → DuckDB');
+    this.addLog('INFO', 'Descargando dataset Spotify (~100k) desde PocketBase…');
 
-    this.timeline.update((s) => s.map((l) => ({ ...l, status: 'idle' as LayerStatus })));
+    this.timeline.update((s) => s.map((l) => ({
+      ...l,
+      status: l.id === 'extract' ? 'running' as LayerStatus : 'idle' as LayerStatus,
+    })));
 
     this.elapsedTimer = setInterval(() => {
       const sec = Math.floor((Date.now() - this.runStartMs) / 1000);
       this.elapsedSeconds.set(sec);
-      if (sec > 0) this.throughput.set(Math.round(target / sec));
     }, 500);
 
-    const steps = ['extract', 'bronze', 'silver', 'gold', 'warehouse'];
-    const logMessages: Record<string, { level: LogLevel; msg: string }[]> = {
-      extract: [
-        { level: 'INFO', msg: `Leyendo ${this.fmt(base)} tracks de dim_track...` },
-      ],
-      bronze: [
-        { level: 'INFO', msg: 'Load bronze — snapshot warehouse' },
-        { level: 'SUCCESS', msg: `${this.fmt(base)} filas fuente listas` },
-      ],
-      silver: [
-        { level: 'INFO', msg: 'Transform — clonado con variación de features' },
-        { level: 'SUCCESS', msg: 'Reglas de calidad OK' },
-      ],
-      gold: [
-        { level: 'INFO', msg: 'Model gold — asignando IDs sintéticos' },
-        { level: 'SUCCESS', msg: `Objetivo: ${this.fmt(target)} registros` },
-      ],
-      warehouse: [
-        { level: 'INFO', msg: 'Persistiendo en DuckDB (dim_track)...' },
-      ],
-    };
+    this.stats.importFromPocketBase().subscribe({
+      next: (res) => {
+        const loaded = res.rows_loaded ?? 0;
+        this.runProgress.set(55);
+        this.addLog('SUCCESS', `${this.fmt(loaded)} tracks reales cargados desde PocketBase (${res.source})`);
+        this.timeline.update((layers) =>
+          layers.map((l) => ({
+            ...l,
+            records: l.id === 'warehouse' ? loaded : l.records,
+            status: ['extract', 'bronze', 'silver', 'gold', 'warehouse'].includes(l.id)
+              ? 'success' as LayerStatus
+              : l.status,
+          }))
+        );
+        this.stats.getSummary().subscribe({
+          next: (fresh) => {
+            this.summary.set(fresh);
+            const baseEvents = fresh.total_events ?? fresh.total_streams ?? 0;
+            this.refreshMetrics(baseEvents);
+            const delta = Math.max(0, target - baseEvents);
+            if (delta > 0) {
+              this.addLog('INFO', `Paso 2/2 — Actividad sintética: ${this.fmt(baseEvents)} → ${this.fmt(target)} eventos (+${this.fmt(delta)})`);
+              this.persistSynthetic(target);
+            } else {
+              this.addLog('INFO', 'Sin expansión — el volumen de actividad ya cubre el objetivo');
+              this.completePipeline(baseEvents, 0);
+            }
+          },
+          error: () => this.failPipeline({}, 'lectura de KPIs post-importación'),
+        });
+      },
+      error: (err) => this.failPipeline(err, 'importación PocketBase'),
+    });
+  }
 
-    let stepIndex = 0;
-    let logIndex = 0;
+  importFromPocketBaseOnly() {
+    if (this.pipelineState() === 'running') return;
+    if (!this.apiConnected()) {
+      this.addLog('WARN', 'Backend no disponible');
+      return;
+    }
 
-    this.runTimer = setInterval(() => {
-      const currentId = steps[stepIndex];
-      const progress = Math.min(95, Math.round(((stepIndex + 0.5) / steps.length) * 100));
-      this.runProgress.set(progress);
+    this.clearTimers();
+    this.pipelineState.set('running');
+    this.runProgress.set(0);
+    this.logs.set([]);
+    this.runStartMs = Date.now();
+    this.addLog('INFO', 'Sincronizando solo desde PocketBase (sin expansión sintética)…');
 
-      this.timeline.update((layers) =>
-        layers.map((l) => {
-          const idx = steps.indexOf(l.id);
-          if (idx < stepIndex) return { ...l, status: 'success' as LayerStatus };
-          if (l.id === currentId) return { ...l, status: 'running' as LayerStatus };
-          return { ...l, status: 'idle' as LayerStatus };
-        })
-      );
+    this.stats.importFromPocketBase().subscribe({
+      next: (res) => {
+        const loaded = res.rows_loaded ?? 0;
+        this.stats.getSummary().subscribe({
+          next: (fresh) => {
+            this.summary.set(fresh);
+            this.completePipeline(fresh.total_events ?? fresh.total_streams ?? loaded, 0);
+          },
+        });
+        this.stats.getLastLoads(1).subscribe({
+          next: (loads) => this.lastLoad.set(loads?.[0] ?? null),
+        });
+      },
+      error: (err) => this.failPipeline(err, 'importación PocketBase'),
+    });
+  }
 
-      const msgs = logMessages[currentId];
-      if (logIndex < msgs.length) {
-        this.addLog(msgs[logIndex].level, msgs[logIndex].msg);
-        logIndex++;
-      } else {
-        stepIndex++;
-        logIndex = 0;
-        if (stepIndex >= steps.length) this.persistSynthetic(target);
-      }
-    }, 600);
+  private failPipeline(err: { error?: { detail?: unknown } }, phase: string) {
+    const detail = err?.error?.detail;
+    const msg = typeof detail === 'string' ? detail
+      : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg).join('; ')
+      : `Error en ${phase}`;
+    this.addLog('WARN', msg);
+    this.pipelineState.set('failed');
+    this.clearTimers();
   }
 
   private persistSynthetic(target: number) {
@@ -428,22 +453,21 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
 
     this.stats.generateSynthetic({ target_total: target }).subscribe({
       next: (res) => {
-        this.summary.update((s) => s ? { ...s, total_tracks: res.after } : s);
-        this.addLog('SUCCESS', `+${res.created.toLocaleString('es-ES')} tracks generados (${this.fmt(res.before)} → ${this.fmt(res.after)})`);
+        this.summary.update((s) => s ? {
+          ...s,
+          total_events: res.after,
+          total_tracks: res.track_total ?? s.total_tracks,
+        } : s);
+        if (res.purged_synthetic_tracks) {
+          this.addLog('WARN', `${this.fmt(res.purged_synthetic_tracks)} tracks sintéticos antiguos eliminados del catálogo`);
+        }
+        this.addLog('SUCCESS', `+${res.created.toLocaleString('es-ES')} eventos generados (${this.fmt(res.before)} → ${this.fmt(res.after)})`);
         this.completePipeline(res.after, res.created);
         this.stats.getLastLoads(1).subscribe({
           next: (loads) => this.lastLoad.set(loads?.[0] ?? null),
         });
       },
-      error: (err) => {
-        const detail = err?.error?.detail;
-        const msg = typeof detail === 'string' ? detail
-          : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg).join('; ')
-          : 'Error al persistir sintéticos';
-        this.addLog('WARN', msg);
-        this.pipelineState.set('failed');
-        this.clearTimers();
-      },
+      error: (err) => this.failPipeline(err, 'expansión sintética'),
     });
   }
 
@@ -455,11 +479,11 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     this.dataQuality.set(98);
     this.warehouseSizeMb.set(+(total / 1000 * 0.5).toFixed(1));
     this.timeline.update((l) => l.map((s) => ({ ...s, status: 'success' as LayerStatus })));
-    this.addLog('SUCCESS', `Pipeline ELT completado — ${this.fmt(total)} tracks en warehouse`);
+    this.addLog('SUCCESS', `Pipeline completado — ${this.fmt(total)} eventos de actividad en warehouse`);
     if (created > 0) {
       this.lastLoad.set({
         fecha_carga: new Date().toISOString(),
-        modo: `synthetic_target_${this.targetTrackCount()}`,
+        modo: `synthetic_activity_target_${this.targetTrackCount()}`,
         registros_nuevos: created,
         total_raw: total,
         estado: 'OK',

@@ -1,10 +1,14 @@
 <div class="trending-page">
   <header class="vx-page-header">
     <div>
-      <h1>Tendencias</h1>
-      <p class="page-subtitle">Rankings · Catálogo VOXMETRIK</p>
+      <h1>{{ 'trending.title' | t }}</h1>
+      <p class="page-subtitle">{{ 'trending.subtitle' | t }}</p>
     </div>
-    <span class="chart-badge">Top 25 global</span>
+    <div class="source-badges">
+      <span class="chart-badge">Top 25 global</span>
+      <app-data-source-badge kind="live" />
+      <app-data-source-badge kind="synthetic" />
+    </div>
   </header>
 
   @if (isLoading()) {
@@ -23,7 +27,7 @@
         <div class="hero-rank">#1</div>
         <div class="hero-cover" [style.background]="coverGradient(0)" (click)="playHero()" role="button" tabindex="0">
           <span class="cover-letter">{{ trackInitial(hero.nombre_track) }}</span>
-          <div class="hero-badge"><span [innerHTML]="icon('star', 14)"></span> Canción #1</div>
+          <div class="hero-badge"><span [innerHTML]="icon('star', 14)"></span> {{ 'trending.topBadge' | t }}</div>
         </div>
         <div class="hero-details">
           <span class="hero-label">Líder del ranking</span>
@@ -33,10 +37,10 @@
             <div class="pop-track-lg">
               <div class="pop-fill-lg" [style.width.%]="hero.popularity ?? 0"></div>
             </div>
-            <span class="pop-val">{{ hero.popularity ?? 0 }} popularidad</span>
+            <span class="pop-val">{{ hero.popularity ?? 0 }}/100 popularidad</span>
           </div>
           <div class="hero-trend up">
-            <span [innerHTML]="icon('trend-up', 14)"></span> Popularidad {{ hero.popularity ?? 0 }}
+            <span [innerHTML]="icon('trend-up', 14)"></span> Mayor popularidad del ranking
           </div>
           <div class="hero-actions">
             <button type="button" class="hero-play" (click)="playHero()">
@@ -57,10 +61,14 @@
       <!-- Weekly chart -->
       <section class="glass-panel chart-section">
         <div class="panel-head">
-          <h2>Chart semanal</h2>
-          <span class="panel-meta">Streams diarios (agg_daily_streams)</span>
+          <div>
+            <h2>Actividad reciente</h2>
+            <p class="panel-desc">Streams diarios normalizados contra el día con mayor volumen.</p>
+          </div>
+          <span class="panel-meta">Máx. {{ maxDailyStreams() | number }} streams</span>
         </div>
-        <svg viewBox="0 0 400 120" class="weekly-chart" aria-hidden="true">
+        @if (dailyStreams().length) {
+        <svg viewBox="0 0 400 120" class="weekly-chart" role="img" aria-label="Actividad reciente de streams">
           <defs>
             <linearGradient id="wkGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.3"/>
@@ -70,10 +78,14 @@
           <line x1="0" y1="100" x2="400" y2="100" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
           <polygon [attr.points]="weeklyArea()" fill="url(#wkGrad)"/>
           <polyline [attr.points]="weeklyLine()" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/>
-          @for (lbl of weekLabels; track lbl.x) {
+          @for (lbl of chartDateLabels(); track lbl.x) {
             <text [attr.x]="lbl.x" y="115" fill="rgba(255,255,255,0.3)" font-size="9">{{ lbl.label }}</text>
           }
         </svg>
+        <p class="chart-note">La línea muestra tendencia relativa; úsala para comparar forma, no valores absolutos.</p>
+        } @else {
+          <div class="chart-empty">Sin serie diaria disponible.</div>
+        }
       </section>
 
       <!-- Stats mini -->
@@ -108,8 +120,8 @@
     <!-- Ranking list -->
     <section class="glass-panel ranking-section">
       <div class="panel-head">
-        <h2>Top 25 Ranking</h2>
-        <span class="panel-meta">Actualizado en vivo</span>
+          <h2>Top 25 ranking</h2>
+          <span class="panel-meta">Ordenado por popularidad Spotify</span>
       </div>
       <div class="ranking-list">
         @for (t of tracks(); track t.nombre_track; let i = $index) {
@@ -141,14 +153,15 @@
   @if (!isLoading() && !tracks().length && !hasError()) {
     <div class="empty-state glass-panel">
       <span [innerHTML]="icon('music', 32)"></span>
-      <p>No hay datos de tendencias disponibles.</p>
+      <p>{{ 'trending.empty' | t }}</p>
     </div>
   }
 
   @if (hasError()) {
     <div class="error-state glass-panel">
       <span class="error-icon" [innerHTML]="icon('alert', 20)"></span>
-      <p>Error al cargar tendencias. Verifica que FastAPI esté corriendo.</p>
+      <p>{{ 'trending.error' | t }}</p>
+      <button type="button" class="retry-btn" (click)="loadTrending()">{{ 'trending.retry' | t }}</button>
     </div>
   }
 </div>

@@ -1,7 +1,8 @@
-# ── VOXMETRIK_V2 .gitignore ───────────────────────────────────────────────────
+# ── Voxmetriks .gitignore ─────────────────────────────────────────────────────
 .env
 *.duckdb
 *.duckdb.wal
+*.duckdb.bak
 *.bak_*.duckdb
 
 # Python
@@ -10,16 +11,27 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
-dist/
-build/
 .venv/
 venv/
 env/
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Generic build output
+dist/
+build/
 
 # Data
 data/processed/
 *.parquet
 *.csv
+
+# Test artifacts
+.pytest_cache/
+backend/tests/.pytest_db/
 
 # IDE
 .vscode/
@@ -29,5 +41,9 @@ VOXMETRIKS.git/
 .git-rewrite-clean.sh
 .git-purge-bare-clone.sh
 
-# Docker
+# Logs
 *.log
+
+# OS
+Thumbs.db
+Desktop.ini

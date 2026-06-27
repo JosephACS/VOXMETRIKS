@@ -45,9 +45,10 @@ except ImportError:
 class WarehouseAnalyzer:
     """Analizador de Data Warehouse DuckDB."""
     
-    def __init__(self, db_path: str = "duckdb/voxmetrik.duckdb"):
+    def __init__(self, db_path: str | None = None):
         """Inicializar conexión a DuckDB."""
-        self.db_path = Path(db_path)
+        root = Path(__file__).resolve().parents[1]
+        self.db_path = Path(db_path) if db_path else root / "data" / "warehouse" / "voxmetrik.duckdb"
         self.conn = None
         self.connect()
     

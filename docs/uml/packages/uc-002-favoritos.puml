@@ -1,0 +1,37 @@
+@startuml uc-002-favoritos
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle stickman
+skinparam defaultFontSize 10
+skinparam nodesep 20
+skinparam ranksep 24
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+left to right direction
+title 002 — Favoritos (PKG-02 | OT-02)
+
+actor "Usuario Registrado" as User
+
+rectangle "Biblioteca — Favoritos" {
+  usecase "CU-F01\nListar favoritos" as CU_F01
+  usecase "CU-F02\nAñadir favorito" as CU_F02
+  usecase "CU-F03\nQuitar favorito" as CU_F03
+  usecase "CU-F04\nToggle contextual" as CU_F04
+}
+User --> CU_F01
+User --> CU_F04
+CU_F04 ..> CU_F02 : <<extend>>
+CU_F04 ..> CU_F03 : <<extend>>
+
+@enduml

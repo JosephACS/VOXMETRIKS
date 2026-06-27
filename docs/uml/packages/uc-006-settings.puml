@@ -1,0 +1,41 @@
+@startuml uc-006-settings
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle stickman
+skinparam defaultFontSize 10
+skinparam nodesep 20
+skinparam ranksep 24
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+left to right direction
+title 006 — Configuración (PKG-05 | OT-06)
+
+actor "Usuario Registrado" as User
+actor "Usuario Ingeniero" as Eng
+
+rectangle "Autogestión — Settings" {
+  usecase "CU-ST01\nCambiar tema" as CU_ST01
+  usecase "CU-ST02\nCambiar idioma" as CU_ST02
+  usecase "CU-ST03\nPrefs negocio API" as CU_ST03
+  usecase "CU-ST04\nToggles KPI" as CU_ST04
+  usecase "CU-ST05\nVer health API" as CU_ST05
+  usecase "CU-ST06\nTabs engineer" as CU_ST06
+}
+User --> CU_ST01
+User --> CU_ST02
+User --> CU_ST03
+User --> CU_ST05
+Eng --> CU_ST06
+
+@enduml

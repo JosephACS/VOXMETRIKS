@@ -1,68 +1,80 @@
 <div class="hist-page">
   <header class="vx-page-header">
     <div>
-      <h1>Historial</h1>
-      <p class="page-subtitle">Música escuchada, actividad de usuario y búsquedas recientes</p>
+      <h1>{{ 'history.title' | t }}</h1>
+      <p class="page-subtitle">{{ 'history.subtitle' | t }}</p>
     </div>
     <button type="button" class="refresh-btn" (click)="loadHub()" [disabled]="isLoading()">
-      {{ isLoading() ? 'Actualizando…' : 'Actualizar' }}
+      {{ isLoading() ? ('history.refreshing' | t) : ('history.refresh' | t) }}
     </button>
   </header>
 
   <nav class="tab-bar">
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'music'" (click)="selectTab('music')">
       <span [innerHTML]="icon('music', 16)"></span>
-      Música
+      {{ 'history.tab.music' | t }}
       <span class="tab-count">{{ musicCount() }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'user'" (click)="selectTab('user')">
       <span [innerHTML]="icon('user', 16)"></span>
-      Usuario
+      {{ 'history.tab.user' | t }}
       <span class="tab-count">{{ userCount() }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'search'" (click)="selectTab('search')">
       <span [innerHTML]="icon('search', 16)"></span>
-      Búsquedas
+      {{ 'history.tab.search' | t }}
       <span class="tab-count">{{ searchCount() }}</span>
     </button>
   </nav>
 
+  <div class="source-note glass-panel">
+    <span [innerHTML]="icon('database', 16)"></span>
+    <p>{{ 'history.sourceNote' | t }}</p>
+    <div class="source-badges">
+      <app-data-source-badge kind="local" />
+      <app-data-source-badge kind="mixed" />
+      <app-data-source-badge kind="synthetic" />
+    </div>
+  </div>
+
   @if (hasError()) {
-    <div class="empty-panel glass-panel">
-      <p>No se pudo cargar datos del warehouse. Los historiales locales siguen disponibles.</p>
+    <div class="empty-panel glass-panel warn-panel">
+      <span [innerHTML]="icon('alert', 18)"></span>
+      <p>{{ 'history.error' | t }}</p>
+      <button type="button" class="ghost-btn" (click)="loadHub()">{{ 'history.retry' | t }}</button>
     </div>
   }
 
-  <!-- MÚSICA -->
   @if (activeTab() === 'music') {
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>Historial de música</h2>
-          <p class="section-desc">Canciones que has reproducido o visitado (guardado en tu navegador)</p>
+          <h2>{{ 'history.musicTitle' | t }}</h2>
+          <p class="section-desc">{{ 'history.musicDesc' | t }}</p>
         </div>
+        <app-data-source-badge kind="local" />
         @if (localMusicEntries().length) {
-          <button type="button" class="ghost-btn" (click)="clearLocalMusic()">Limpiar</button>
+          <button type="button" class="ghost-btn" (click)="clearLocalMusic()">{{ 'history.clear' | t }}</button>
         }
       </div>
 
       @if (!localMusicEntries().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('music', 28)"></span>
-          <p>Aún no hay canciones en tu historial.</p>
-          <p class="empty-hint">Reproduce o abre un track para que aparezca aquí.</p>
-          <a routerLink="/tracks" class="cta-link">Explorar canciones</a>
+          <p>{{ 'history.emptyMusic' | t }}</p>
+          <p class="empty-hint">{{ 'history.emptyMusicHint' | t }}</p>
+          <a routerLink="/tracks" class="cta-link">{{ 'history.exploreTracks' | t }}</a>
         </div>
       } @else {
         <div class="timeline-list">
           @for (item of localMusicEntries(); track item.id_track; let i = $index) {
             <div class="timeline-row interactive">
-              <button type="button" class="row-play-btn" (click)="playFromHistory(item, $event)" [attr.aria-label]="'Reproducir ' + item.nombre_track">
+              <button type="button" class="row-play-btn" (click)="playFromHistory(item, $event)" [attr.aria-label]="trackTitle(item.nombre_track)">
                 <span [innerHTML]="icon('play', 14)"></span>
               </button>
               <span class="row-rank">{{ i + 1 }}</span>
               <div class="row-main">
-                <a class="row-title link" [routerLink]="['/tracks', item.id_track]">{{ item.nombre_track }}</a>
+                <a class="row-title link" [routerLink]="['/tracks', item.id_track]">{{ trackTitle(item.nombre_track) }}</a>
                 <span class="row-sub">{{ artistName(item.nombre_artista) }}</span>
               </div>
               <span class="row-time mono">{{ formatRelative(item.viewed_at) }}</span>
@@ -78,18 +90,21 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>Historial de usuario</h2>
-          <p class="section-desc">Sesiones, favoritos y acciones en la plataforma — sin búsquedas</p>
+          <h2>{{ 'history.user.title' | t }}</h2>
+          <p class="section-desc">{{ 'history.user.desc' | t }}</p>
         </div>
+        <app-data-source-badge kind="mixed" />
+        <app-data-source-badge kind="synthetic" />
       </div>
 
       @if (isLoading()) {
-        <p class="loading-msg">Cargando actividad…</p>
+        <p class="loading-msg">{{ 'common.loading' | t }}</p>
       } @else if (!userTimeline().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('user', 28)"></span>
-          <p>No hay actividad registrada para tu cuenta.</p>
-          <p class="empty-hint">Inicia sesión, añade favoritos o reproduce música para ver eventos aquí.</p>
+          <p>{{ 'history.user.empty' | t }}</p>
+          <p class="empty-hint">{{ 'history.user.emptyHint' | t }}</p>
+          <p class="empty-hint">{{ 'history.user.badgeNote' | t }}</p>
         </div>
       } @else {
         <div class="timeline-list">
@@ -137,20 +152,21 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>Tus búsquedas recientes</h2>
-          <p class="section-desc">Consultas realizadas en la app (almacenadas localmente por usuario)</p>
+          <h2>{{ 'history.search.title' | t }}</h2>
+          <p class="section-desc">{{ 'history.search.desc' | t }}</p>
         </div>
+        <app-data-source-badge kind="local" />
         @if (localSearchEntries().length) {
-          <button type="button" class="ghost-btn" (click)="clearLocalSearch()">Limpiar</button>
+          <button type="button" class="ghost-btn" (click)="clearLocalSearch()">{{ 'history.clear' | t }}</button>
         }
       </div>
 
       @if (!localSearchEntries().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('search', 28)"></span>
-          <p>No hay búsquedas guardadas.</p>
-          <p class="empty-hint">Usa el buscador para que tus consultas aparezcan aquí.</p>
-          <a routerLink="/search" class="cta-link">Ir a buscar</a>
+          <p>{{ 'history.search.empty' | t }}</p>
+          <p class="empty-hint">{{ 'history.search.emptyHint' | t }}</p>
+          <a routerLink="/search" class="cta-link">{{ 'history.search.goSearch' | t }}</a>
         </div>
       } @else {
         <div class="timeline-list">
@@ -173,16 +189,18 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>Búsquedas en el warehouse</h2>
-          <p class="section-desc">Registros de <code>fact_searches</code> vinculados a tu usuario analítico</p>
+          <h2>{{ 'history.search.warehouseTitle' | t }}</h2>
+          <p class="section-desc">{{ 'history.search.warehouseDesc' | t }}</p>
         </div>
+        <app-data-source-badge kind="mixed" />
+        <app-data-source-badge kind="synthetic" />
         <span class="meta-badge">{{ warehouseSearches().length }}</span>
       </div>
 
       @if (isLoading()) {
-        <p class="loading-msg">Cargando búsquedas del warehouse…</p>
+        <p class="loading-msg">{{ 'common.loading' | t }}</p>
       } @else if (!warehouseSearches().length) {
-        <p class="empty-hint center">Sin búsquedas en el warehouse para tu usuario. Inicia sesión para ver datos analíticos.</p>
+        <p class="empty-hint center">{{ 'history.search.warehouseEmpty' | t }}</p>
       } @else {
         <div class="table-wrap">
           <table class="data-table">

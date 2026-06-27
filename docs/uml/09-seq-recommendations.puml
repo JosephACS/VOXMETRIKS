@@ -1,0 +1,18 @@
+@startuml voxmetriks-seq-recommendations
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+title Secuencia — Recomendaciones (CU-RC02)
+
+actor Usuario as U
+participant FE as FE
+participant API as API
+database agg_recomendaciones as AGG
+
+U -> FE : /recommendations
+FE -> API : GET + Bearer
+API -> AGG : scores user_id
+API --> FE : listas
+FE --> U : UI
+
+@enduml

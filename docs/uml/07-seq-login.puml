@@ -1,0 +1,19 @@
+@startuml voxmetriks-seq-login
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+title Secuencia — Inicio de sesión (CU-02)
+
+actor Usuario as U
+participant "Angular SPA" as FE
+participant "Users API" as API
+database DuckDB as DB
+
+U -> FE : credenciales
+FE -> API : POST /users/login
+API -> DB : validar
+DB --> API : usuario
+API --> FE : token
+FE --> U : dashboard
+
+@enduml

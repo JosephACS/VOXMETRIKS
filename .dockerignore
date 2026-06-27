@@ -1,52 +1,51 @@
-# ── Python ───────────────────────────────────────────────────
+# ── Contexto de build del backend/ELT — excluir lo que no necesita la imagen ──
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-*.egg
 *.egg-info/
 dist/
 build/
-.eggs/
-*.whl
 
-# ── Virtual environments ──────────────────────────────────────
+# Entornos
 .venv/
 venv/
 env/
-ENV/
-.env.local
 
-# ── IDE ───────────────────────────────────────────────────────
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+# Frontend completo (tiene su propio Dockerfile y contexto)
+frontend/
 
-# ── Git ───────────────────────────────────────────────────────
-.git/
-.gitignore
+# PocketBase (se monta como volumen, no va en la imagen)
+pocketbase/
 
-# ── DuckDB (mounted as volume, not baked into image) ─────────
+# Datos (el pipeline los genera en runtime sobre el volumen)
+data/
 *.duckdb
 *.duckdb.wal
-duckdb/
-
-# ── Data files ────────────────────────────────────────────────
-data/
 *.parquet
 *.csv
 *.zip
 
-# ── Docs / tests ─────────────────────────────────────────────
+# Specs / docs / entregas
+specs/
 docs/
-tests/
+.specify/
+.kiro/
+backend/tests/
+
+# Git / IDE / tests
+.git/
+.gitignore
+.pytest_cache/
+.vscode/
+.idea/
+
+# Docs sueltos
 *.md
 README*
 
-# ── OS ───────────────────────────────────────────────────────
+# OS
 .DS_Store
 Thumbs.db

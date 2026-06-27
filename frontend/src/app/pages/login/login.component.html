@@ -34,6 +34,7 @@
       <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t }}</button>
       <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t }}</button>
     </div>
+    <div class="auth-note">{{ 'login.authNote' | t }}</div>
 
     @if (mode() === 'login') {
       <h1 class="login-title">{{ 'login.welcomeTitle' | t }}</h1>
@@ -43,12 +44,15 @@
         <div class="field">
           <label class="field-label" for="loginId">{{ 'login.loginId' | t | uppercase }}</label>
           <div class="input-wrap" [class.invalid]="loginForm.controls.loginId.invalid && loginForm.controls.loginId.touched">
-            <input id="loginId" type="text" formControlName="loginId" placeholder="demo@voxmetrik.io o admin" class="field-input" autocomplete="username" />
+            <input id="loginId" type="text" formControlName="loginId" [placeholder]="'login.loginIdPlaceholder' | t" class="field-input" autocomplete="username" />
           </div>
+          @if (loginForm.controls.loginId.invalid && loginForm.controls.loginId.touched) {
+            <span class="field-error">{{ 'login.loginIdError' | t }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="password">{{ 'login.password' | t | uppercase }}</label>
-          <div class="input-wrap">
+          <div class="input-wrap" [class.invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched">
             <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="••••••••" class="field-input" autocomplete="current-password" />
             <button type="button" class="toggle-pw" (click)="togglePassword()" [attr.aria-label]="showPassword() ? ('login.hidePassword' | t) : ('login.showPassword' | t)">
               @if (showPassword()) {
@@ -58,6 +62,9 @@
               }
             </button>
           </div>
+          @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
+            <span class="field-error">{{ 'login.passwordError' | t }}</span>
+          }
         </div>
         <div class="form-options">
           <label class="checkbox-label">
@@ -79,21 +86,28 @@
       <form [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="login-form" novalidate>
         <div class="field">
           <label class="field-label" for="username">{{ 'login.username' | t | uppercase }}</label>
-          <div class="input-wrap">
+          <div class="input-wrap" [class.invalid]="registerForm.controls.username.invalid && registerForm.controls.username.touched">
             <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" />
           </div>
+          @if (registerForm.controls.username.invalid && registerForm.controls.username.touched) {
+            <span class="field-error">{{ 'login.usernameError' | t }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="reg-email">{{ 'login.email' | t | uppercase }}</label>
-          <div class="input-wrap">
+          <div class="input-wrap" [class.invalid]="registerForm.controls.email.invalid && registerForm.controls.email.touched">
             <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" />
           </div>
+          @if (registerForm.controls.email.invalid && registerForm.controls.email.touched) {
+            <span class="field-error">{{ 'login.emailError' | t }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="reg-password">{{ 'login.password' | t | uppercase }}</label>
-          <div class="input-wrap">
+          <div class="input-wrap" [class.invalid]="registerForm.controls.password.invalid && registerForm.controls.password.touched">
             <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" />
           </div>
+          <span class="field-help">{{ 'login.passwordHashHint' | t }}</span>
         </div>
         <div class="field">
           <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t | uppercase }}</label>
@@ -110,6 +124,9 @@
       </form>
     }
 
-    <p class="login-hint">{{ 'login.demoHint' | t }}</p>
+    <div class="demo-accounts">
+      <span>{{ 'login.listenerAccount' | t }}</span>
+      <span>{{ 'login.stewardAccount' | t }}</span>
+    </div>
   </div>
 </div>

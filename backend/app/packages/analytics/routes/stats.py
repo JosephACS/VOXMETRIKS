@@ -11,10 +11,12 @@ from app.shared.schemas.models import DistribucionEnergia
 from app.packages.analytics.services.stats_service import (
     get_summary, get_energia_distribution,
     get_top_tracks_by_popularity, get_last_loads,
-    generate_synthetic_tracks, get_synthetic_limits,
+    generate_synthetic_activity, get_synthetic_limits,
     get_catalog_growth,
     MAX_TARGET_TOTAL, MAX_CREATE_PER_RUN,
 )
+from app.packages.analytics.services.pipeline_service import run_pocketbase_import
+from app.packages.users.services.auth_deps import require_engineer_user
 
 router = APIRouter(prefix="/stats", tags=["Statistics"])
 
@@ -22,7 +24,7 @@ router = APIRouter(prefix="/stats", tags=["Statistics"])
 class SyntheticRequest(BaseModel):
     target_total: int | None = Field(
         None, ge=1, le=MAX_TARGET_TOTAL,
-        description=f"Desired total rows in dim_track (max {MAX_TARGET_TOTAL:,})",
+        description=f"Desired total synthetic activity rows across fact tables (max {MAX_TARGET_TOTAL:,})",
     )
     multiplier: int | None = Field(
         None, ge=1, le=1000,
@@ -54,13 +56,27 @@ def synthetic_limits():
     return get_synthetic_limits()
 
 
-@router.post("/synthetic", summary="Generate synthetic tracks from existing warehouse data")
+@router.post("/import", summary="Import ~100k Spotify tracks from PocketBase into DuckDB")
+def import_from_pocketbase(
+    _engineer: int = Depends(require_engineer_user),
+):
+    """Full ELT: PocketBase CSV → Bronze → Silver → Gold (dim_*, fact_*)."""
+    try:
+        return run_pocketbase_import()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/synthetic", summary="Generate synthetic activity over the real music catalog")
 def synthetic(
     body: SyntheticRequest,
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+    _engineer: int = Depends(require_engineer_user),
 ):
     try:
-        return generate_synthetic_tracks(
+        return generate_synthetic_activity(
             conn,
             target_total=body.target_total,
             multiplier=body.multiplier,

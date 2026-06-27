@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import duckdb
 
+from app.core.time_util import utc_now
 from app.packages.users.services.user_storage import ensure_user_tables, migrate_user_scoping
 
 
@@ -38,7 +37,7 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
             if not exists:
                 conn.execute(
                     "INSERT INTO app_favorite (user_id, track_id, added_at) VALUES (?, ?, ?)",
-                    [uid, int(tid), datetime.utcnow()],
+                    [uid, int(tid), utc_now()],
                 )
 
     pl_count = conn.execute(
@@ -74,7 +73,7 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
                 if not dup:
                     conn.execute(
                         "INSERT INTO app_playlist_track (playlist_id, track_id, added_at) VALUES (?, ?, ?)",
-                        [int(pl_id_row), tid, datetime.utcnow()],
+                        [int(pl_id_row), tid, utc_now()],
                     )
         return
 
@@ -94,7 +93,7 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
         pl_id = int(next_id) + i
         conn.execute(
             "INSERT INTO app_playlist (id, name, description, created_at, user_id) VALUES (?, ?, ?, ?, ?)",
-            [pl_id, name, desc, datetime.utcnow(), uid],
+            [pl_id, name, desc, utc_now(), uid],
         )
         subset = all_ids[i * 4:(i + 1) * 4] or all_ids[:4]
         for tid in subset:
@@ -105,7 +104,7 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
             if not dup:
                 conn.execute(
                     "INSERT INTO app_playlist_track (playlist_id, track_id, added_at) VALUES (?, ?, ?)",
-                    [pl_id, tid, datetime.utcnow()],
+                    [pl_id, tid, utc_now()],
                 )
 
 
@@ -134,6 +133,18 @@ def ensure_app_tables(conn: duckdb.DuckDBPyConnection) -> None:
             track_id INTEGER NOT NULL,
             added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (user_id, track_id)
+        )
+    """)
+    # Resolved YouTube video ids for real playback. Lives in an app_ table so
+    # it survives ELT pipeline rebuilds of dim_track.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_track_audio_source (
+            track_id         INTEGER PRIMARY KEY,
+            provider         VARCHAR NOT NULL DEFAULT 'youtube',
+            youtube_video_id VARCHAR,
+            query            VARCHAR,
+            status           VARCHAR NOT NULL DEFAULT 'ok',
+            resolved_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     _seed_demo_library(conn)

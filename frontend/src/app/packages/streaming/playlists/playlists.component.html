@@ -3,12 +3,15 @@
     <div class="hero-glow"></div>
     <div class="hero-content">
       <div>
-        <h1>Listas de reproducción</h1>
-        <p class="sub">Tus colecciones musicales</p>
+        <h1>{{ 'playlists.title' | t }}</h1>
+        <p class="sub">{{ 'playlists.subtitle' | t }}</p>
       </div>
-      <button type="button" class="btn-create" (click)="openCreate()">
-        <span [innerHTML]="icon('playlist', 16)"></span> Nueva playlist
-      </button>
+      <div class="hero-actions">
+        <app-data-source-badge kind="live" />
+        <button type="button" class="btn-create" (click)="openCreate()">
+          <span [innerHTML]="icon('playlist', 16)"></span> {{ 'playlists.new' | t }}
+        </button>
+      </div>
     </div>
   </section>
 
@@ -16,22 +19,30 @@
     <div class="pl-grid">
       @for (s of [1,2,3,4,5,6]; track s) { <div class="pl-card skel"></div> }
     </div>
+  } @else if (hasError()) {
+    <div class="empty glass-panel error-state">
+      <span [innerHTML]="icon('alert', 32)"></span>
+      <p>{{ 'playlists.loadError' | t }}</p>
+      <small>{{ 'playlists.loadErrorHint' | t }}</small>
+      <button type="button" class="btn-create" (click)="load()">{{ 'tracks.retry' | t }}</button>
+    </div>
   } @else if (!playlists().length) {
     <div class="empty glass-panel">
       <span [innerHTML]="icon('playlist', 32)"></span>
-      <p>No hay listas. Crea la primera.</p>
-      <button type="button" class="btn-create" (click)="openCreate()">Crear playlist</button>
+      <p>{{ 'playlists.empty' | t }}</p>
+      <small>{{ 'playlists.emptyHint' | t }}</small>
+      <button type="button" class="btn-create" (click)="openCreate()">{{ 'playlists.create' | t }}</button>
     </div>
   } @else {
     <div class="pl-grid">
       @for (pl of playlists(); track pl.id; let i = $index) {
-        <article class="pl-card glass-panel" (click)="openDetail(pl)">
+        <article class="pl-card glass-panel" [routerLink]="['/playlists', pl.id]">
           <div class="pl-cover" [style.background]="cover(i)">
             <span [innerHTML]="icon('music', 28)"></span>
           </div>
           <div class="pl-info">
             <h3>{{ pl.name }}</h3>
-            <p class="pl-meta">{{ pl.total_tracks }} canciones · {{ durationLabel(pl.total_tracks) }}</p>
+            <p class="pl-meta">{{ 'playlists.songs' | t: { count: pl.total_tracks } }} · {{ durationLabel(pl.total_tracks) }}</p>
             @if (pl.description) { <p class="pl-desc">{{ pl.description }}</p> }
           </div>
         </article>
@@ -42,13 +53,13 @@
   @if (showEdit()) {
     <div class="overlay" (click)="closeEdit()"></div>
     <div class="modal glass-panel">
-      <h2>Editar playlist</h2>
-      <label>Nombre<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" /></label>
-      <label>Descripción<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2"></textarea></label>
+      <h2>{{ 'playlists.edit' | t }}</h2>
+      <label>{{ 'playlists.name' | t }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" /></label>
+      <label>{{ 'playlists.description' | t }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2"></textarea></label>
       @if (formError()) { <p class="err">{{ formError() }}</p> }
       <div class="modal-actions">
-        <button type="button" class="btn-ghost" (click)="closeEdit()">Cancelar</button>
-        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveEdit()">Guardar</button>
+        <button type="button" class="btn-ghost" (click)="closeEdit()">{{ 'playlists.cancel' | t }}</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveEdit()">{{ 'playlists.save' | t }}</button>
       </div>
     </div>
   }
@@ -56,13 +67,14 @@
   @if (showCreate()) {
     <div class="overlay" (click)="closeCreate()"></div>
     <div class="modal glass-panel">
-      <h2>Nueva playlist</h2>
-      <label>Nombre<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" placeholder="Mi playlist" /></label>
-      <label>Descripción<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2" placeholder="Opcional"></textarea></label>
+      <h2>{{ 'playlists.createTitle' | t }}</h2>
+      <p class="modal-hint">{{ 'playlists.createHint' | t }}</p>
+      <label>{{ 'playlists.name' | t }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" [placeholder]="'playlists.namePlaceholder' | t" /></label>
+      <label>{{ 'playlists.description' | t }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2" [placeholder]="'playlists.optional' | t"></textarea></label>
       @if (formError()) { <p class="err">{{ formError() }}</p> }
       <div class="modal-actions">
-        <button type="button" class="btn-ghost" (click)="closeCreate()">Cancelar</button>
-        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveCreate()">Crear</button>
+        <button type="button" class="btn-ghost" (click)="closeCreate()">{{ 'playlists.cancel' | t }}</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveCreate()">{{ 'playlists.create' | t }}</button>
       </div>
     </div>
   }
@@ -77,17 +89,18 @@
           <span [innerHTML]="icon('music', 36)"></span>
         </div>
         <div class="detail-meta-block">
-          <span class="detail-type">Lista</span>
+          <span class="detail-type">{{ 'playlists.shareable' | t }}</span>
           <h2>{{ det.name }}</h2>
-          <p class="det-meta">{{ det.total_tracks }} canciones · {{ formatDuration(det.tracks) }}</p>
+          <p class="det-meta">{{ 'playlists.songs' | t: { count: det.total_tracks } }} · {{ formatDuration(det.tracks) }}</p>
           @if (det.description) { <p class="det-desc">{{ det.description }}</p> }
+          @if (!det.tracks.length) { <p class="det-desc">{{ 'playlists.emptyDetail' | t }}</p> }
           <div class="detail-actions">
-            <button type="button" class="btn-ghost-sm" (click)="openEdit(det)">Editar</button>
-            <button type="button" class="btn-danger-sm" (click)="deletePlaylist(det)">Eliminar</button>
+            <button type="button" class="btn-ghost-sm" (click)="openEdit(det)">{{ 'playlists.edit' | t }}</button>
+            <button type="button" class="btn-danger-sm" (click)="deletePlaylist(det)">{{ 'playlists.delete' | t }}</button>
           </div>
           <button type="button" class="btn-play-pl" (click)="playPlaylist()" [disabled]="!det.tracks.length">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Reproducir
+            {{ 'playlists.play' | t }}
           </button>
         </div>
       </div>
@@ -99,11 +112,11 @@
               [index]="i + 1"
               [queue]="playlistQueue(det.tracks)"
             />
-            <button type="button" class="btn-remove-track" title="Quitar de la playlist" (click)="removeTrack(t.id_track)">×</button>
+            <button type="button" class="btn-remove-track" [title]="'playlists.removeTrack' | t" (click)="removeTrack(t.id_track)">×</button>
           </div>
         }
         @if (!det.tracks.length) {
-          <p class="empty-tracks">Sin canciones — agrégalas desde el detalle de una canción.</p>
+          <p class="empty-tracks">{{ 'playlists.emptyTracks' | t }}</p>
         }
       </div>
     </aside>

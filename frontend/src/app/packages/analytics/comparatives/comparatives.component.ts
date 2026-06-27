@@ -4,13 +4,15 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GenresService } from '../../streaming/services/genres.service';
 import { GeneroPopularidad } from '../../../shared/models/api.models';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 const GENRE_COLORS = ['#1ed896', '#148f5e', '#38bdf8', '#b794f6', '#f472b6', '#fbbf24', '#6366f1', '#ef4444'];
 
 @Component({
   selector: 'app-comparatives',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DataSourceBadgeComponent, TranslatePipe],
   templateUrl: './comparatives.component.html',
   styleUrls: ['./comparatives.component.css'],
 })
@@ -41,8 +43,14 @@ export class ComparativesComponent implements OnInit {
   constructor(private genresSvc: GenresService) {}
 
   ngOnInit() {
-    this.genresSvc.getGenreStats(30).subscribe({
-      next: (d) => { this.genres.set(d ?? []); this.isLoading.set(false); },
+    this.loadComparatives();
+  }
+
+  loadComparatives() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.genresSvc.getGenreStats(1, 30).subscribe({
+      next: (r) => { this.genres.set(r.items ?? []); this.isLoading.set(false); },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });
   }
@@ -118,6 +126,11 @@ export class ComparativesComponent implements OnInit {
   compositeScore(g: GeneroPopularidad): string {
     const score = ((g.popularidad_promedio ?? 0) * 0.6 + (g.energia_promedio ?? 0) * 100 * 0.4);
     return score.toFixed(0);
+  }
+
+  percent(value?: number | null, max = 1): number {
+    const normalized = max === 100 ? (value ?? 0) : (value ?? 0) * 100;
+    return Math.max(0, Math.min(100, normalized));
   }
 
   icon(key: string, size = 18): SafeHtml {

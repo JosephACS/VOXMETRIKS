@@ -1,0 +1,39 @@
+@startuml voxmetriks-classes-core
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 10
+left to right direction
+title Voxmetriks — Modelo de dominio (núcleo)
+
+class Usuario {
+  +id_user: int
+  +username: string
+  +email: string
+  +preferences_json: json
+}
+
+class Track {
+  +id_track: int
+  +nombre_track: string
+  +energy: float
+  +danceability: float
+}
+
+class Playlist {
+  +id_playlist: int
+  +user_id: int
+  +nombre: string
+}
+
+class Favorito {
+  +user_id: int
+  +id_track: int
+}
+
+Usuario "1" -- "0..*" Playlist
+Usuario "1" -- "0..*" Favorito
+Playlist "1" -- "0..*" Track
+Favorito "*" -- "1" Track
+
+@enduml

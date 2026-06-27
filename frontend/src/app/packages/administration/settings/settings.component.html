@@ -1,15 +1,15 @@
 <div class="settings-page">
 
   <header class="page-header">
-
     <div>
-
       <h1>{{ 'settings.title' | t }}</h1>
-
       <p class="page-subtitle">{{ 'settings.subtitle' | t }}</p>
-
     </div>
-
+    <div class="settings-user-card">
+      <span class="user-role">{{ roleLabel() }}</span>
+      <span class="user-name">{{ currentUser()?.username ?? 'Usuario' }}</span>
+      <span class="user-scope">{{ accessScopeLabel() }}</span>
+    </div>
   </header>
 
 
@@ -57,6 +57,10 @@
             <h2>{{ 'settings.general.title' | t }}</h2>
 
             <p class="section-desc">{{ 'settings.general.desc' | t }}</p>
+            <div class="context-banner">
+              <span class="context-icon" [innerHTML]="icon('settings', 16)"></span>
+              <span>Estos cambios se guardan en tu perfil y se sincronizan con la sesión actual. El modo visual también se refleja en preferencias de usuario.</span>
+            </div>
 
 
 
@@ -265,6 +269,7 @@
               <div class="setting-info">
 
                 <span class="setting-title">{{ 'settings.business.audioQuality' | t }}</span>
+                <span class="setting-hint">Afectará al reproductor cuando se conecten fuentes de audio reales.</span>
 
               </div>
 
@@ -282,7 +287,7 @@
 
                 >
 
-                  @for (opt of audioQualityOptions; track opt.value) {
+                  @for (opt of audioQualityOptions(); track opt.value) {
 
                     <option [ngValue]="opt.value">{{ opt.label }}</option>
 
@@ -301,6 +306,7 @@
               <div class="setting-info">
 
                 <span class="setting-title">{{ 'settings.business.favoriteGenre' | t }}</span>
+                <span class="setting-hint">Ayuda a ordenar recomendaciones y se muestra en el perfil.</span>
 
               </div>
 
@@ -339,6 +345,10 @@
             <h2>{{ 'settings.api.title' | t }}</h2>
 
             <p class="section-desc">{{ 'settings.api.desc' | t }}</p>
+            <div class="context-banner api">
+              <span class="context-icon" [innerHTML]="icon('alert', 16)"></span>
+              <span>El endpoint público de health está reducido por seguridad. Los detalles internos solo aparecen si el backend habilita modo verbose.</span>
+            </div>
 
 
 
@@ -391,6 +401,9 @@
               }
 
             </div>
+            @if (healthVisibilityNote()) {
+              <p class="status-note">{{ healthVisibilityNote() }}</p>
+            }
 
             <button type="button" class="refresh-health-btn" (click)="refreshHealth()" [disabled]="healthLoading()">
               {{ healthLoading() ? 'Comprobando…' : 'Actualizar health check' }}
@@ -409,6 +422,10 @@
             <h2>{{ 'settings.wh.title' | t }}</h2>
 
             <p class="section-desc">{{ 'settings.wh.desc' | t }}</p>
+            <div class="context-banner warehouse">
+              <span class="context-icon" [innerHTML]="icon('database', 16)"></span>
+              <span>Esta sección es visible solo para roles con acceso de ingeniería. El explorador protege tablas sensibles y redacta columnas privadas.</span>
+            </div>
 
 
 
@@ -481,6 +498,10 @@
             <h2>{{ 'settings.pipeline.title' | t }}</h2>
 
             <p class="section-desc">{{ 'settings.pipeline.desc' | t }}</p>
+            <div class="context-banner pipeline">
+              <span class="context-icon" [innerHTML]="icon('zap', 16)"></span>
+              <span>Estos valores son preferencias de operación. La ejecución real del ELT se hace desde el módulo Pipeline, con límites del backend.</span>
+            </div>
 
 
 

@@ -1,0 +1,43 @@
+@startuml uc-008-pipeline
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle stickman
+skinparam defaultFontSize 10
+skinparam nodesep 20
+skinparam ranksep 24
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+left to right direction
+title 008 — Pipeline ELT (PKG-07 | OT-08)
+
+actor "Usuario Ingeniero" as Eng
+actor "DevOps" as Ops
+
+rectangle "Monitoreo pipeline" {
+  usecase "CU-PM01\nConsola ELT + KPIs" as CU_PM01
+  usecase "CU-PM02\nVolumen synthetic" as CU_PM02
+  usecase "CU-PM03\nFlujo UI pipeline" as CU_PM03
+  usecase "CU-PM04\nHistorial cargas" as CU_PM04
+  usecase "CU-PM05\nEstado warehouse" as CU_PM05
+  usecase "CU-PM07\nTabs engineer settings" as CU_PM07
+  usecase "CU-PM08\nELT CLI/Docker" as CU_PM08
+}
+Eng --> CU_PM01
+Eng --> CU_PM03
+Eng --> CU_PM04
+Eng --> CU_PM05
+Eng --> CU_PM07
+Ops --> CU_PM08
+
+@enduml

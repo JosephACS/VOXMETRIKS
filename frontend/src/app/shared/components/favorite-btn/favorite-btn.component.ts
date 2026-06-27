@@ -3,11 +3,13 @@ import { IconRenderService } from '../../services/icon-render.service';
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FavoritesService } from '../../../packages/streaming/services/favorites.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { TranslationKey } from '../../../core/i18n/translations';
 
 @Component({
   selector: 'app-favorite-btn',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <button
       type="button"
@@ -15,7 +17,9 @@ import { FavoritesService } from '../../../packages/streaming/services/favorites
       [class.active]="active"
       [class.sm]="size === 'sm'"
       (click)="onToggle($event)"
-      [title]="active ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+      [title]="labelKey | t"
+      [attr.aria-label]="labelKey | t"
+      [attr.aria-pressed]="active"
     >
       <span [innerHTML]="iconSvg" aria-hidden="true"></span>
     </button>
@@ -27,47 +31,42 @@ import { FavoritesService } from '../../../packages/streaming/services/favorites
       justify-content: center;
       width: 32px;
       height: 32px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
       border-radius: 50%;
-      background: rgba(255,255,255,0.04);
-      color: var(--text-muted);
+      background: transparent;
+      color: var(--text-muted, rgba(255,255,255,0.55));
       cursor: pointer;
-      transition: all 0.15s;
-      padding: 0;
+      transition: all 150ms;
     }
     .fav-btn.sm { width: 28px; height: 28px; }
-    .fav-btn:hover { border-color: rgba(239,68,68,0.4); color: #ef4444; background: rgba(239,68,68,0.08); }
-    .fav-btn.active { color: #ef4444; border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.12); }
-    .fav-btn :deep(svg) { width: 14px; height: 14px; }
-    .fav-btn.sm :deep(svg) { width: 12px; height: 12px; }
+    .fav-btn:hover { color: #ef4444; border-color: rgba(239,68,68,0.35); }
+    .fav-btn.active { color: #ef4444; border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.1); }
   `],
 })
 export class FavoriteBtnComponent implements OnInit {
-  private iconRender = inject(IconRenderService);
-
   @Input({ required: true }) trackId!: number;
   @Input() size: 'sm' | 'md' = 'md';
 
-  private favSvc = inject(FavoritesService);
+  private favs = inject(FavoritesService);
+  private icons = inject(IconRenderService);
+
   active = false;
+  iconSvg: SafeHtml = '';
+
+  get labelKey(): TranslationKey {
+    return this.active ? 'favorite.remove' : 'favorite.add';
+  }
 
   ngOnInit() {
-    this.active = this.favSvc.isFavorite(this.trackId);
-    this.favSvc.favoriteIds$.subscribe((ids) => {
+    this.iconSvg = this.icons.render('heart', 16);
+    this.favs.favoriteIds$.subscribe((ids) => {
       this.active = ids.has(this.trackId);
     });
   }
 
-  get iconSvg(): SafeHtml {
-    return this.iconRender.render('heart', this.size === 'sm' ? 12 : 14);
-  }
-
-  onToggle(e: Event) {
-    e.preventDefault();
-    e.stopPropagation();
-    this.favSvc.toggle(this.trackId).subscribe({
-      next: () => { this.active = this.favSvc.isFavorite(this.trackId); },
-      error: () => {},
-    });
+  onToggle(event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    this.favs.toggle(this.trackId).subscribe();
   }
 }

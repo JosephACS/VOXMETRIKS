@@ -1,83 +1,33 @@
-@startuml voxmetriks-architecture
-' Arquitectura despliegue — compatible PlantUML web / extension VS Code
-' Fuente: Constitucion secciones 3-4, docker-compose.yml, specs 001-011
-
-skinparam nodesep 30
-skinparam ranksep 35
-skinparam defaultFontSize 11
-top to bottom direction
-scale max 1100 width
-
-title Voxmetriks — Arquitectura (Medallion + SPA + API)
-
-actor "Usuario\n(navegador)" as Browser
-actor "Engineer" as Eng
-actor "DevOps" as Ops
-
-rectangle "Cliente" as Cliente #E8F4FC {
-  component "Angular SPA\nfrontend/ :4200\nauthGuard · engineerGuard" as SPA
-}
-
-rectangle "Docker Compose — red voxmetrik" as Compose #E8F8E8 {
-
-  component "pipeline (job one-shot)\nelt/pipelines/elt_pipeline.py" as Pipeline
-
-  component "api (servicio)\nuvicorn app.main:app :8000" as API
-
-  component "pocketbase (opcional)\n:8090" as PB
-
-  folder "Volumenes persistentes" as Vol {
-    database "duckdb_data\nvoxmetrik.duckdb" as VDB
-    component "parquet_data\nBronze / Silver" as VPQ
-    component "pb_data" as VPB
-  }
-}
-
-cloud "Scripts locales" as Local #FFF8E7 {
-  component "validate_warehouse.py\nanalyze_warehouse.py" as Scripts
-}
-
-rectangle "Capas Medallion en DuckDB" as Layers #FFF8DC {
-  component "Bronze\nraw_spotify · Parquet" as Bronze
-  component "Silver\nParquet limpio" as Silver
-  component "Gold\ndim_* · fact_* · agg_* · ctl_*" as Gold
-  component "App runtime\napp_user · app_playlist · app_favorite" as AppLayer
-
-  Bronze -down-> Silver : transform
-  Silver -down-> Gold : load + build
-  Gold -down-> AppLayer : API runtime
-}
-
-Browser -down-> SPA : UI / routing
-Eng -down-> SPA : /elt-pipeline · /explorer
-SPA -down-> API : REST /api/v1/*\nBearer token
-SPA -down-> API : GET /health
-
-Ops -down-> Pipeline : docker compose run pipeline
-Ops -down-> Scripts : post-ELT manual
-
-Pipeline -down-> PB : extract CSV (opc.)
-Pipeline -down-> VPQ : Bronze / Silver
-Pipeline -down-> VDB : Gold + ctl_*
-API -down-> VDB : read + write\nCRUD · synthetic
-PB -down-> VPB
-
-Pipeline ..> API : depends_on\npipeline OK (P7)
-VDB ..> Layers : capas en\nmismo archivo
-
-note right of API
-  Contratos publicos
-  GET / — metadata
-  GET /health
-  GET /docs — OpenAPI
-end note
-
-note left of SPA
-  Paquetes FE (P2)
-  PKG-01 users · PKG-02 streaming
-  PKG-03 player · PKG-04 discovery
-  PKG-05 settings · PKG-06 analytics
-  PKG-07 data-engineering
-end note
-
-@enduml
+@startuml voxmetriks-architecture
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+skinparam nodesep 28
+skinparam ranksep 32
+top to bottom direction
+title Voxmetriks — Despliegue (Medallion + SPA + API)
+
+actor Usuario as Browser
+actor Engineer as Eng
+actor DevOps as Ops
+
+rectangle Cliente {
+  component "Angular SPA\n:4200" as SPA
+}
+
+rectangle "Docker Compose" {
+  component "pipeline\nelt_pipeline.py" as Pipeline
+  component "api\nFastAPI :8000" as API
+  component "PocketBase\n(opcional)" as PB
+  database "DuckDB\nvoxmetrik.duckdb" as VDB
+}
+
+Browser --> SPA : UI
+Eng --> SPA : ELT / explorer
+SPA --> API : REST /api/v1
+Ops --> Pipeline : compose run
+Pipeline --> PB : extract
+Pipeline --> VDB : Bronze→Gold
+API --> VDB : read/write
+
+@enduml
