@@ -152,6 +152,21 @@ Re-ejecutar solo ELT:
 docker compose run --rm pipeline
 ```
 
+### Otra laptop/PC desde cero (cero configuración manual de datos)
+
+El dataset fuente (`pocketbase/pb_data`) viaja en git, así que el pipeline reconstruye el DuckDB solo. Tres pasos:
+
+```bash
+git clone <repo>
+cd voxmetriks
+cp .env.example .env          # Windows: copy .env.example .env
+docker compose up --build
+```
+
+- **`.env` no está en git:** créalo desde `.env.example` y completa `POCKETBASE_EMAIL` / `POCKETBASE_PASSWORD`.
+- **`YOUTUBE_API_KEY` opcional:** `yt-dlp` resuelve el audio sin cuota; la API de YouTube es solo respaldo.
+- El **warehouse DuckDB no se versiona** (está en `.gitignore`); se genera en el primer arranque. La caché de audio (`app_track_audio_source`) se llena al reproducir y no viaja entre máquinas; precalentarla es opcional con `python scripts/resolve_audio_youtube.py --limit 2000`.
+
 ---
 
 ## Endpoints de referencia (API v1)

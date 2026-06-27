@@ -114,6 +114,25 @@ docker compose up --build
 
 Orden de arranque: **pocketbase** (sirve el dataset ~100k desde `./pocketbase/pb_data`) → **pipeline** (corre el ELT y construye el DuckDB) → **api** (arranca al terminar el pipeline, P7) → **frontend** (nginx sirve la SPA y hace proxy `/api` → api).
 
+### Arrancar en otra laptop/PC (desde cero)
+
+Todo lo necesario viaja en git: código, `docker-compose.yml` y el dataset fuente (`pocketbase/pb_data`, ~20 MB). El warehouse DuckDB **no** se versiona (está en `.gitignore`); el pipeline lo reconstruye solo en el primer arranque. Tres pasos:
+
+```bash
+git clone <repo>
+cd voxmetriks
+cp .env.example .env          # Windows: copy .env.example .env  → completa credenciales PocketBase
+docker compose up --build
+```
+
+Listo: frontend en http://localhost:8080, API en http://localhost:8000.
+
+Notas:
+
+- **`.env` no está en git** (lleva credenciales). Hay que crearlo desde `.env.example` en cada máquina.
+- **`YOUTUBE_API_KEY` puede ir vacío:** la resolución de audio usa `yt-dlp` (sin cuota); la API de YouTube es solo respaldo.
+- El **audio se resuelve solo al primer play** de cada canción (1–2 s) y queda cacheado en el DuckDB de esa máquina. La caché no viaja entre PCs; si quieres pre-calentarla corre `python scripts/resolve_audio_youtube.py --limit 2000` (opcional, con el backend apagado).
+
 | Servicio | URL |
 |----------|-----|
 | Frontend | http://localhost:8080 |
