@@ -519,6 +519,13 @@ export interface AppUser {
   favorite_genre?: string;
   created_at?: string;
   preferences?: UserPreferences;
+  email_verified?: boolean;
+  auth_provider?: string;
+}
+
+export interface AuthConfig {
+  google_client_id: string;
+  email_verification_enabled: boolean;
 }
 
 export type UserPublic = AppUser;

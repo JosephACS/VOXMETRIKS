@@ -37,8 +37,39 @@ def ensure_user_tables(conn: duckdb.DuckDBPyConnection) -> None:
             expires_at  TIMESTAMP
         )
     """)
+    # Email verification codes for sign-up (one pending code per email).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_email_code (
+            email      VARCHAR PRIMARY KEY,
+            code_hash  VARCHAR NOT NULL,
+            purpose    VARCHAR DEFAULT 'verify',
+            expires_at TIMESTAMP,
+            attempts   INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     _migrate_user_role(conn)
+    _migrate_auth_columns(conn)
     _seed_demo_users(conn)
+
+
+def _migrate_auth_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add email_verified / auth_provider to app_user (idempotent).
+
+    Default TRUE keeps pre-existing and demo accounts usable; new local
+    sign-ups are inserted explicitly as unverified.
+    """
+    cols = get_table_columns(conn, "app_user")
+    if "email_verified" not in cols:
+        conn.execute(
+            "ALTER TABLE app_user ADD COLUMN email_verified BOOLEAN DEFAULT TRUE"
+        )
+        conn.execute("UPDATE app_user SET email_verified = TRUE WHERE email_verified IS NULL")
+    if "auth_provider" not in cols:
+        conn.execute(
+            "ALTER TABLE app_user ADD COLUMN auth_provider VARCHAR DEFAULT 'local'"
+        )
+        conn.execute("UPDATE app_user SET auth_provider = 'local' WHERE auth_provider IS NULL")
 
 
 def _migrate_user_role(conn: duckdb.DuckDBPyConnection) -> None:
@@ -172,3 +203,53 @@ def parse_preferences(raw: Optional[str]) -> Dict[str, Any]:
         return json.loads(raw)
     except json.JSONDecodeError:
         return {}
+
+
+# ── Email verification codes ────────────────────────────────────────────────
+
+def upsert_email_code(
+    conn: duckdb.DuckDBPyConnection,
+    email: str,
+    code_hash: str,
+    *,
+    purpose: str = "verify",
+    ttl_minutes: int = 15,
+) -> None:
+    ensure_user_tables(conn)
+    expires = utc_now() + timedelta(minutes=ttl_minutes)
+    conn.execute("DELETE FROM app_email_code WHERE LOWER(email) = ?", [email.lower()])
+    conn.execute(
+        """
+        INSERT INTO app_email_code (email, code_hash, purpose, expires_at, attempts, created_at)
+        VALUES (?, ?, ?, ?, 0, ?)
+        """,
+        [email.lower(), code_hash, purpose, expires, utc_now()],
+    )
+
+
+def get_email_code(conn: duckdb.DuckDBPyConnection, email: str) -> Optional[Dict[str, Any]]:
+    ensure_user_tables(conn)
+    row = conn.execute(
+        "SELECT email, code_hash, purpose, expires_at, attempts FROM app_email_code WHERE LOWER(email) = ?",
+        [email.lower()],
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "email": row[0],
+        "code_hash": row[1],
+        "purpose": row[2],
+        "expires_at": row[3],
+        "attempts": int(row[4]) if row[4] is not None else 0,
+    }
+
+
+def increment_email_code_attempts(conn: duckdb.DuckDBPyConnection, email: str) -> None:
+    conn.execute(
+        "UPDATE app_email_code SET attempts = attempts + 1 WHERE LOWER(email) = ?",
+        [email.lower()],
+    )
+
+
+def delete_email_code(conn: duckdb.DuckDBPyConnection, email: str) -> None:
+    conn.execute("DELETE FROM app_email_code WHERE LOWER(email) = ?", [email.lower()])

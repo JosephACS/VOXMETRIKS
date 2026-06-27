@@ -148,6 +148,16 @@ docker compose run --rm pipeline               # re-ejecutar el ELT
 
 ---
 
+## Cuentas, verificación por correo y Google
+
+- **Las cuentas son únicas:** el registro valida que el correo y el usuario no existan, y cada usuario tiene sus propios favoritos y playlists (`user_id`). El **nombre de usuario** es el que se muestra en el perfil.
+- **Registro con código:** al crear una cuenta se envía un **código de 6 dígitos** al correo. Hay que ingresarlo para activar la cuenta e iniciar sesión.
+  - Configura SMTP en `.env` (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`). Con Gmail usa una [contraseña de aplicación](https://myaccount.google.com/apppasswords).
+  - **Sin SMTP (modo desarrollo):** no se envía correo; el código se imprime en el log del backend y se devuelve en la respuesta para probar en localhost.
+- **Iniciar sesión con Google:** crea un **OAuth Client ID** (tipo *Web*) en [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), agrega `http://localhost:4200` (y tu dominio) como *Authorized JavaScript origins*, y pega el ID en `GOOGLE_CLIENT_ID` del `.env`. Si está vacío, el botón de Google no aparece.
+
+---
+
 ## Licencia
 
 Proyecto académico Voxmetriks — uso según indicaciones del curso o cliente.

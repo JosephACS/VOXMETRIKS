@@ -2,13 +2,27 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AppUser, AuthResponse } from '../../shared/models/api.models';
+import { AppUser, AuthResponse, AuthConfig } from '../../shared/models/api.models';
 import { UiPreferencesService } from './ui-preferences.service';
 
 export interface AuthState {
   isAuthenticated: boolean;
   user: AppUser | null;
   token: string | null;
+}
+
+export interface LoginResult {
+  ok: boolean;
+  verificationRequired?: boolean;
+  email?: string;
+}
+
+export interface RegisterResult {
+  ok: boolean;
+  verificationRequired?: boolean;
+  email?: string;
+  devCode?: string;
+  error?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,7 +66,7 @@ export class AuthService {
     this.syncFromStorage();
   }
 
-  async login(loginId: string, password: string, remember = true): Promise<boolean> {
+  async login(loginId: string, password: string, remember = true): Promise<LoginResult> {
     try {
       const res = await firstValueFrom(
         this.http.post<AuthResponse>(`${this.API}/login`, {
@@ -62,9 +76,14 @@ export class AuthService {
         })
       );
       this.persistSession(res, remember);
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (e: unknown) {
+      const err = e as { status?: number; error?: { detail?: { reason?: string; email?: string } | string } };
+      const detail = err?.error?.detail;
+      if (err?.status === 403 && typeof detail === 'object' && detail?.reason === 'email_not_verified') {
+        return { ok: false, verificationRequired: true, email: detail.email };
+      }
+      return { ok: false };
     }
   }
 
@@ -73,22 +92,67 @@ export class AuthService {
     email: string,
     password: string,
     favoriteGenre?: string,
-  ): Promise<{ ok: boolean; error?: string }> {
+  ): Promise<RegisterResult> {
     try {
       const res = await firstValueFrom(
-        this.http.post<AuthResponse>(`${this.API}/register`, {
-          username,
-          email,
-          password,
-          favorite_genre: favoriteGenre,
-        })
+        this.http.post<{ verification_required?: boolean; email?: string; dev_code?: string }>(
+          `${this.API}/register`,
+          { username, email, password, favorite_genre: favoriteGenre },
+        )
+      );
+      return {
+        ok: true,
+        verificationRequired: !!res.verification_required,
+        email: res.email ?? email,
+        devCode: res.dev_code,
+      };
+    } catch (e: unknown) {
+      const err = e as { error?: { detail?: string } };
+      return { ok: false, error: err?.error?.detail ?? 'Error al registrar' };
+    }
+  }
+
+  /** Confirm sign-up with the emailed code → persists the session on success. */
+  async verifyEmail(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<AuthResponse>(`${this.API}/verify-email`, { email, code })
       );
       this.persistSession(res, true);
       return { ok: true };
     } catch (e: unknown) {
       const err = e as { error?: { detail?: string } };
-      return { ok: false, error: err?.error?.detail ?? 'Error al registrar' };
+      return { ok: false, error: err?.error?.detail ?? 'Código inválido' };
     }
+  }
+
+  async resendCode(email: string): Promise<{ ok: boolean; devCode?: string; error?: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ dev_code?: string }>(`${this.API}/resend-code`, { email })
+      );
+      return { ok: true, devCode: res.dev_code };
+    } catch (e: unknown) {
+      const err = e as { error?: { detail?: string } };
+      return { ok: false, error: err?.error?.detail ?? 'No se pudo reenviar el código' };
+    }
+  }
+
+  /** Sign in (or auto-register) with a Google ID token credential. */
+  async loginWithGoogle(credential: string): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<AuthResponse>(`${this.API}/google`, { credential })
+      );
+      this.persistSession(res, true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  getAuthConfig(): Promise<AuthConfig> {
+    return firstValueFrom(this.http.get<AuthConfig>(`${this.API}/auth-config`));
   }
 
   logout(): void {

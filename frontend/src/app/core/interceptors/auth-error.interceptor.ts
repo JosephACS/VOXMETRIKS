@@ -12,7 +12,13 @@ export const authErrorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       const isApi = req.url.includes('/api/v1');
-      const isAuthRoute = req.url.includes('/users/login') || req.url.includes('/users/register');
+      const isAuthRoute =
+        req.url.includes('/users/login') ||
+        req.url.includes('/users/register') ||
+        req.url.includes('/users/verify-email') ||
+        req.url.includes('/users/resend-code') ||
+        req.url.includes('/users/google') ||
+        req.url.includes('/users/auth-config');
       if (err.status === 401 && isApi && !isAuthRoute) {
         auth.clearSession();
         void router.navigate(['/login']);

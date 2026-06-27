@@ -30,11 +30,13 @@
       </picture>
     </div>
 
-    <div class="auth-tabs">
-      <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t }}</button>
-      <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t }}</button>
-    </div>
-    <div class="auth-note">{{ 'login.authNote' | t }}</div>
+    @if (mode() !== 'verify') {
+      <div class="auth-tabs">
+        <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t }}</button>
+        <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t }}</button>
+      </div>
+      <div class="auth-note">{{ 'login.authNote' | t }}</div>
+    }
 
     @if (mode() === 'login') {
       <h1 class="login-title">{{ 'login.welcomeTitle' | t }}</h1>
@@ -79,7 +81,7 @@
           @if (isLoading()) { {{ 'login.submitting' | t }} } @else { {{ 'login.submit' | t }} }
         </button>
       </form>
-    } @else {
+    } @else if (mode() === 'register') {
       <h1 class="login-title">{{ 'login.registerTitle' | t }}</h1>
       <p class="login-subtitle">{{ 'login.registerSubtitle' | t }}</p>
 
@@ -124,6 +126,45 @@
           @if (isLoading()) { {{ 'login.registerSubmitting' | t }} } @else { {{ 'login.registerSubmit' | t }} }
         </button>
       </form>
+    } @else if (mode() === 'verify') {
+      <h1 class="login-title">{{ 'verify.title' | t }}</h1>
+      <p class="login-subtitle">{{ 'verify.subtitle' | t: { email: pendingEmail() } }}</p>
+
+      <form [formGroup]="verifyForm" (ngSubmit)="onVerifySubmit()" class="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="code">{{ 'verify.codeLabel' | t | uppercase }}</label>
+          <div class="input-wrap" [class.invalid]="verifyForm.controls.code.invalid && verifyForm.controls.code.touched">
+            <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                   formControlName="code" placeholder="••••••" class="field-input code-input" />
+          </div>
+          @if (verifyForm.controls.code.invalid && verifyForm.controls.code.touched) {
+            <span class="field-error">{{ 'verify.codeError' | t }}</span>
+          }
+        </div>
+        @if (devCode()) {
+          <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() } }}</div>
+        }
+        @if (infoMessage()) {
+          <div class="info-banner" role="status">{{ infoMessage() }}</div>
+        }
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+        }
+        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
+          @if (isLoading()) { {{ 'verify.submitting' | t }} } @else { {{ 'verify.submit' | t }} }
+        </button>
+        <div class="verify-actions">
+          <button type="button" class="link-btn" (click)="onResendCode()">{{ 'verify.resend' | t }}</button>
+          <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t }}</button>
+        </div>
+      </form>
+    }
+
+    @if (mode() !== 'verify' && googleClientId()) {
+      <div class="auth-divider"><span>{{ 'login.or' | t }}</span></div>
+      <div class="google-btn-wrap">
+        <div #googleBtn class="google-btn-host"></div>
+      </div>
     }
 
     <div class="demo-accounts">

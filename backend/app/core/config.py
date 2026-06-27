@@ -64,6 +64,34 @@ class Settings(BaseSettings):
     # playback via the official IFrame player). Leave blank to disable.
     youtube_api_key: str = ""
 
+    # ── Google Sign-In ───────────────────────────────────────────
+    # OAuth 2.0 Client ID (Web) from Google Cloud Console. Used to verify
+    # the ID token returned by Google Identity Services. Blank → button hidden.
+    google_client_id: str = ""
+
+    # ── Email (SMTP) for verification codes ──────────────────────
+    # Configure with a Gmail/Outlook/etc. account (use an app password).
+    # If smtp_host/smtp_user are blank, registration runs in dev mode:
+    # the code is logged server-side and returned in the API response so it
+    # can be tested on localhost without a real mailbox.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+    app_public_name: str = "VOXMETRIK"
+    email_code_ttl_min: int = 15
+    email_code_max_attempts: int = 5
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.smtp_host.strip() and self.smtp_user.strip())
+
+    @property
+    def email_from_address(self) -> str:
+        return self.smtp_from.strip() or self.smtp_user.strip()
+
     @property
     def cors_origin_list(self) -> list[str]:
         raw = self.cors_origins.strip()

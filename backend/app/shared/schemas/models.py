@@ -260,6 +260,8 @@ class UserPublic(BaseModel):
     favorite_genre: Optional[str] = None
     created_at: Optional[str] = None
     preferences: UserPreferences = UserPreferences()
+    email_verified: bool = True
+    auth_provider: str = "local"
 
 
 class UserLogin(BaseModel):
@@ -273,6 +275,24 @@ class UserRegister(BaseModel):
     email: str
     password: str
     favorite_genre: Optional[str] = None
+
+
+class VerifyEmailRequest(BaseModel):
+    email: str
+    code: str
+
+
+class ResendCodeRequest(BaseModel):
+    email: str
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
+
+class AuthConfig(BaseModel):
+    google_client_id: str = ""
+    email_verification_enabled: bool = True
 
 
 class UserStats(BaseModel):
