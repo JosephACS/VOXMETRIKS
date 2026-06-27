@@ -88,7 +88,45 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.discover-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: 1.25rem;
+}
+
+.discover-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.discover-chip:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.discover-chip--primary {
+  color: var(--text);
+  border-color: rgba(30, 216, 150, 0.35);
+  background: rgba(30, 216, 150, 0.08);
+}
+
+.discover-chip--primary:hover {
+  border-color: rgba(30, 216, 150, 0.55);
+  background: rgba(30, 216, 150, 0.12);
 }
 
 .stat-chip {

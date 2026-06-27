@@ -19,6 +19,11 @@
         <span class="stat-chip"><strong>{{ fmt(s.total_streams) }}</strong> {{ 'home.stat.streams' | t }}</span>
         <span class="stat-chip"><strong>{{ fmt(s.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
       </div>
+      <nav class="discover-shortcuts" [attr.aria-label]="'home.section.discover' | t">
+        <a routerLink="/tracks" class="discover-chip discover-chip--primary">{{ 'home.discover.catalog' | t }}</a>
+        <a routerLink="/search" class="discover-chip">{{ 'home.discover.search' | t }}</a>
+        <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t }}</a>
+      </nav>
     }
 
     @if (isLoading()) {
@@ -77,6 +82,26 @@
               [link]="'/tracks/' + t.id_track"
               [track]="player.fromTopTrack(t)"
               [queue]="trendingPlayable()"
+              [badge]="t.popularity"
+            />
+          }
+        </app-horizontal-section>
+      }
+
+      @if (discoverTracks().length) {
+        <app-horizontal-section
+          [title]="'home.section.discover' | t"
+          [subtitle]="discoverSubtitle()"
+          link="/tracks"
+        >
+          @for (t of discoverTracks(); track t.id_track) {
+            <app-media-card
+              [title]="cleanTitle(t.nombre_track)"
+              [subtitle]="t.nombre_artista ?? '—'"
+              [gradient]="cover('disc-' + t.id_track)"
+              [link]="'/tracks/' + t.id_track"
+              [track]="player.fromTrack(t)"
+              [queue]="discoverPlayable()"
               [badge]="t.popularity"
             />
           }

@@ -76,6 +76,7 @@ export class HomeComponent implements OnInit {
   summary = signal<StatsSummary | null>(null);
   topTracks = signal<TopTrack[]>([]);
   recentTracks = signal<Track[]>([]);
+  discoverTracks = signal<Track[]>([]);
   genres = signal<GeneroPopularidad[]>([]);
   artists = signal<{ id: number; name: string }[]>([]);
   playlists = signal<PlaylistSummary[]>([]);
@@ -96,12 +97,21 @@ export class HomeComponent implements OnInit {
 
   madeForYouPlayable = computed(() => this.madeForYou().map((t) => this.player.fromTopTrack(t)));
   trendingPlayable = computed(() => this.trending().map((t) => this.player.fromTopTrack(t)));
+  discoverPlayable = computed(() => this.discoverTracks().map((t) => this.player.fromTrack(t)));
+
+  discoverSubtitle = computed(() => {
+    this.i18n.tick();
+    const total = this.summary()?.total_tracks;
+    if (!total) return '';
+    return this.i18n.t('home.section.discoverSub', { total: this.fmt(total) });
+  });
 
   feedEmpty = computed(() =>
     !this.isLoading()
     && !this.history().length
     && !this.madeForYou().length
     && !this.trending().length
+    && !this.discoverTracks().length
     && !this.artists().length
     && !this.playlists().length
     && !this.genres().length
@@ -109,7 +119,7 @@ export class HomeComponent implements OnInit {
   );
 
   ngOnInit() {
-    let pending = 6;
+    let pending = 7;
     let failures = 0;
     const done = (ok = true) => {
       if (!ok) failures += 1;
@@ -142,6 +152,11 @@ export class HomeComponent implements OnInit {
     });
     this.tracksSvc.listTracks(1, 12).subscribe({
       next: (r) => { this.recentTracks.set(r.items ?? []); done(true); },
+      error: () => done(false),
+    });
+    const discoverPage = (Math.floor(Date.now() / 86_400_000) % 120) + 5;
+    this.tracksSvc.listTracks(discoverPage, 16).subscribe({
+      next: (r) => { this.discoverTracks.set(r.items ?? []); done(true); },
       error: () => done(false),
     });
     this.genresSvc.getGenreStats(1, 8).subscribe({
