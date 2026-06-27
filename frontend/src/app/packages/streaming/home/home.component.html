@@ -21,12 +21,6 @@
       </div>
     }
 
-    <section class="home-catalog-note">
-      <app-data-source-badge kind="live" />
-      <app-data-source-badge kind="demo" />
-      <span>{{ 'home.catalogNote' | t }}</span>
-    </section>
-
     @if (isLoading()) {
       <div class="home-state home-state--loading" role="status">
         <span class="home-state-spinner" aria-hidden="true"></span>
@@ -46,7 +40,7 @@
         <app-horizontal-section [title]="'home.section.recent' | t" [subtitle]="'home.section.recentSub' | t">
           @for (h of history(); track h.id_track) {
             <app-media-card
-              [title]="h.nombre_track"
+              [title]="cleanTitle(h.nombre_track)"
               [subtitle]="h.nombre_artista ?? '—'"
               [gradient]="cover(h.id_track)"
               [link]="'/tracks/' + h.id_track"
@@ -60,7 +54,7 @@
         <app-horizontal-section [title]="'home.section.forYou' | t" [subtitle]="'home.section.forYouSub' | t" link="/recommendations">
           @for (t of madeForYou(); track t.id_track) {
             <app-media-card
-              [title]="t.nombre_track ?? '—'"
+              [title]="cleanTitle(t.nombre_track)"
               [subtitle]="t.nombre_artista ?? '—'"
               [gradient]="cover(t.id_track)"
               [link]="'/tracks/' + t.id_track"
@@ -77,7 +71,7 @@
         <app-horizontal-section [title]="'home.section.trending' | t" link="/trending">
           @for (t of trending(); track t.id_track) {
             <app-media-card
-              [title]="t.nombre_track ?? '—'"
+              [title]="cleanTitle(t.nombre_track)"
               [subtitle]="t.nombre_artista ?? '—'"
               [gradient]="cover('trend-' + t.id_track)"
               [link]="'/tracks/' + t.id_track"
@@ -92,13 +86,13 @@
       @if (artists().length) {
         <app-horizontal-section [title]="'home.section.artists' | t" link="/artists">
           @for (a of artists(); track a.id) {
-            <app-media-card
-              [title]="a.name"
-              [subtitle]="'home.section.artistSub' | t"
-              [gradient]="cover('artist-' + a.id)"
-              [link]="'/artists/' + a.id"
-              [round]="true"
-            />
+            <a class="artist-chip" [routerLink]="'/artists/' + a.id">
+              <span class="artist-avatar" [style.background]="cover('artist-' + a.id)">
+                {{ initials(a.name) }}
+              </span>
+              <span class="artist-name">{{ a.name }}</span>
+              <span class="artist-role">{{ 'home.section.artistSub' | t }}</span>
+            </a>
           }
         </app-horizontal-section>
       }
@@ -119,12 +113,13 @@
       @if (genres().length) {
         <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
           @for (g of genres(); track g.id_genero) {
-            <app-media-card
-              [title]="g.nombre_genero ?? ('home.genreFallback' | t)"
-              [subtitle]="('home.section.genreSub' | t:{ score: g.popularidad_promedio?.toFixed(0) ?? '—' })"
-              [gradient]="cover('genre-' + g.id_genero)"
-              [link]="genreLink(g)"
-            />
+            <a class="genre-chip" [routerLink]="genreLink(g)">
+              <span class="genre-dot" [style.background]="cover('genre-' + g.id_genero)"></span>
+              <span class="genre-text">
+                <span class="genre-name">{{ g.nombre_genero ?? ('home.genreFallback' | t) }}</span>
+                <span class="genre-score">{{ ('home.section.genreSub' | t:{ score: g.popularidad_promedio?.toFixed(0) ?? '—' }) }}</span>
+              </span>
+            </a>
           }
         </app-horizontal-section>
       }
@@ -179,6 +174,23 @@
           <span><strong>{{ pop }}</strong> {{ 'home.rail.avgPopularity' | t }}</span>
         }
       </div>
+
+      @if (topGenre() || topArtist()) {
+        <div class="rail-highlights">
+          @if (topGenre(); as g) {
+            <a class="rail-pill" [routerLink]="['/genres']" [queryParams]="{ q: g }">
+              <span class="rail-pill-label">{{ 'home.rail.topGenre' | t }}</span>
+              <span class="rail-pill-value">{{ g }}</span>
+            </a>
+          }
+          @if (topArtist(); as a) {
+            <span class="rail-pill">
+              <span class="rail-pill-label">{{ 'home.rail.topArtist' | t }}</span>
+              <span class="rail-pill-value">{{ a }}</span>
+            </span>
+          }
+        </div>
+      }
     }
 
     <div class="rail-chart">

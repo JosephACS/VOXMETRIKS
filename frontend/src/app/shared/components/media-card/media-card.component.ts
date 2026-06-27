@@ -1,8 +1,12 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import {
+  Component, Input, Output, EventEmitter, inject, OnInit, DestroyRef, signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { CoverArtService } from '../../services/cover-art.service';
+import { TrackCoverService } from '../../services/track-cover.service';
 import { PlayableTrack } from '../../models/player.models';
 
 @Component({
@@ -12,9 +16,13 @@ import { PlayableTrack } from '../../models/player.models';
   template: `
     <article class="media-card" (click)="onCardClick()">
       <div class="media-cover" [class.round]="round" [style.background]="gradient">
-        <span class="cover-thumb cover-thumb--card">
-          <span class="cover-initial">{{ displayInitial }}</span>
-        </span>
+        @if (coverUrl()) {
+          <img class="cover-img" [src]="coverUrl()" [alt]="title" loading="lazy" (error)="coverUrl.set(null)" />
+        } @else {
+          <span class="cover-thumb cover-thumb--card">
+            <span class="cover-initial">{{ displayInitial }}</span>
+          </span>
+        }
         @if (badge != null) {
           <span class="media-badge">{{ badge }}</span>
         }
@@ -54,6 +62,16 @@ import { PlayableTrack } from '../../models/player.models';
     .media-cover.round {
       border-radius: 50%;
     }
+    .cover-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      animation: coverFade 0.3s ease;
+    }
+    @keyframes coverFade { from { opacity: 0; } to { opacity: 1; } }
     .media-card:hover .media-cover {
       transform: scale(1.03);
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
@@ -127,9 +145,11 @@ import { PlayableTrack } from '../../models/player.models';
     }
   `],
 })
-export class MediaCardComponent {
+export class MediaCardComponent implements OnInit {
   private player = inject(MusicPlayerService);
   private covers = inject(CoverArtService);
+  private coverSvc = inject(TrackCoverService);
+  private destroyRef = inject(DestroyRef);
 
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
@@ -144,7 +164,20 @@ export class MediaCardComponent {
   @Input() round = false;
   /** Badge numérico (p. ej. popularidad). */
   @Input() badge?: number | string | null;
+  /** Fuerza/limita la resolución de carátula real por id de track. */
+  @Input() coverTrackId?: number;
   @Output() played = new EventEmitter<PlayableTrack>();
+
+  coverUrl = signal<string | null>(null);
+
+  ngOnInit(): void {
+    // Carátula real solo para tracks (no para artistas/géneros/playlists).
+    const id = this.coverTrackId ?? (this.round ? undefined : this.track?.id);
+    if (id == null) return;
+    this.coverSvc.cover$(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((url) => this.coverUrl.set(url));
+  }
 
   get displayInitial(): string {
     const label = this.coverLabel ?? this.title;

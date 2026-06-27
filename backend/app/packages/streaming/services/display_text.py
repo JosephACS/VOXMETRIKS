@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 _SYN_SUFFIX = re.compile(r"\s*\[syn-\d+\]\s*$", re.IGNORECASE)
-_HASH_SUFFIX = re.compile(r"\s*[—–-]\s*#\d+\s*$")
+_HASH_SUFFIX = re.compile(r"\s*[—–·•∙‧-]\s*#\d+\s*$")
 _NUM_SUFFIX = re.compile(r"\s+#\d{4,}\s*$")
 
 

@@ -9,6 +9,7 @@ import { HistoryService } from '../../packages/streaming/services/history.servic
 import { Track, TopTrack } from '../models/api.models';
 import { TracksService } from '../../packages/streaming/services/tracks.service';
 import { YoutubeEngineService } from './youtube-engine.service';
+import { TrackCoverService } from './track-cover.service';
 
 const VOLUME_KEY = 'voxmetrik_volume';
 const TRACK_KEY = 'voxmetrik_last_track';
@@ -19,6 +20,7 @@ export class MusicPlayerService {
   private history = inject(HistoryService);
   private tracksApi = inject(TracksService);
   private yt = inject(YoutubeEngineService);
+  private coverSvc = inject(TrackCoverService);
   private audio = new Audio();
   private queueInternal: PlayableTrack[] = [];
   private queueIndex = 0;
@@ -43,6 +45,8 @@ export class MusicPlayerService {
   expandedOpen = signal(false);
   /** Active playback source for the current track. */
   audioMode = signal<'youtube' | 'demo' | 'loading'>('demo');
+  /** Real cover-art URL for the current track (null → gradient fallback). */
+  currentCover = signal<string | null>(null);
 
   progressPct = computed(() => {
     const d = this.duration();
@@ -73,9 +77,10 @@ export class MusicPlayerService {
       if (this.usingYt) this.onEnded();
     };
     this.yt.onError = () => {
-      // YouTube playback failed for this track → fall back to demo audio.
+      // YouTube playback failed (unembeddable/region-blocked/stale id).
+      // Try to re-resolve a fresh video once before falling back to demo.
       const t = this.currentTrack();
-      if (this.usingYt && t) this.startDemo(t, true);
+      if (this.usingYt && t) this.recoverFromYtError(t);
     };
 
     this.restoreLastTrack();
@@ -217,6 +222,8 @@ export class MusicPlayerService {
     this.expandedOpen.update((v) => !v);
   }
 
+  clearCover() { this.currentCover.set(null); }
+
   formatTime(sec: number): string {
     if (!Number.isFinite(sec)) return '0:00';
     const m = Math.floor(sec / 60);
@@ -236,6 +243,12 @@ export class MusicPlayerService {
     });
 
     const token = ++this.playbackToken;
+
+    this.currentCover.set(null);
+    this.coverSvc.cover$(track.id).subscribe((url) => {
+      if (token === this.playbackToken) this.currentCover.set(url);
+    });
+
     if (track.youtubeVideoId) {
       this.startYt(track, track.youtubeVideoId, autoplay);
       return;
@@ -255,8 +268,12 @@ export class MusicPlayerService {
           this.startDemo(track, autoplay);
         }
       },
-      error: () => {
-        if (token === this.playbackToken) this.startDemo(track, autoplay);
+      error: (err) => {
+        if (token !== this.playbackToken) return;
+        // 404 → track no longer exists (purged synthetic). Drop it from history
+        // so it stops polluting "recently played", then fall back to demo.
+        if (err?.status === 404) this.history.remove(track.id);
+        this.startDemo(track, autoplay);
       },
     });
   }
@@ -271,6 +288,32 @@ export class MusicPlayerService {
       this.isPlaying.set(true);
       this.state$.next({ playing: true });
     }
+  }
+
+  /** Track ids we already tried to re-resolve after a YT error (avoid loops). */
+  private ytRetried = new Set<number>();
+
+  private recoverFromYtError(track: PlayableTrack) {
+    if (this.ytRetried.has(track.id)) {
+      this.startDemo(track, true);
+      return;
+    }
+    this.ytRetried.add(track.id);
+    const token = this.playbackToken;
+    this.audioMode.set('loading');
+    this.tracksApi.getAudioSource(track.id, true).subscribe({
+      next: (src) => {
+        if (token !== this.playbackToken) return;
+        if (src.status === 'ok' && src.youtube_video_id && src.youtube_video_id !== track.youtubeVideoId) {
+          track.youtubeVideoId = src.youtube_video_id;
+          this.currentTrack.set({ ...track });
+          this.startYt(track, src.youtube_video_id, true);
+        } else {
+          this.startDemo(track, true);
+        }
+      },
+      error: () => { if (token === this.playbackToken) this.startDemo(track, true); },
+    });
   }
 
   private startDemo(track: PlayableTrack, autoplay: boolean) {

@@ -50,6 +50,24 @@ export class HistoryService {
     return this.read().slice(0, limit);
   }
 
+  /** Drop a single entry (e.g. a track that no longer exists in the catalog). */
+  remove(id_track: number): void {
+    const current = this.read();
+    const next = current.filter((e) => e.id_track !== id_track);
+    if (next.length !== current.length) this.persist(next);
+  }
+
+  /**
+   * Remove stale entries pointing to track ids beyond the real catalog
+   * (leftovers from purged synthetic tracks). Real ids are 1..maxId.
+   */
+  pruneAbove(maxId: number): void {
+    if (!maxId || maxId <= 0) return;
+    const current = this.read();
+    const next = current.filter((e) => e.id_track > 0 && e.id_track <= maxId);
+    if (next.length !== current.length) this.persist(next);
+  }
+
   clear(): void {
     this.persist([]);
   }

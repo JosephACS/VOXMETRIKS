@@ -6,7 +6,7 @@ import {
   Track, TrackCreate, TrackUpdate,
   AudioFeatures, PaginatedResponse,
   TrackSearchParams, DeleteResponse,
-  TrackSearchResult, TrackDetail, AudioSource,
+  TrackSearchResult, TrackDetail, AudioSource, CoverArt,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -59,7 +59,12 @@ export class TracksService {
     return this.http.get<TrackDetail>(`${this.API_URL}/${id}/detail`);
   }
 
-  getAudioSource(id: number): Observable<AudioSource> {
-    return this.http.get<AudioSource>(`${this.API_URL}/${id}/audio-source`);
+  getAudioSource(id: number, force = false): Observable<AudioSource> {
+    const params = force ? new HttpParams().set('force', 'true') : undefined;
+    return this.http.get<AudioSource>(`${this.API_URL}/${id}/audio-source`, { params });
+  }
+
+  getCover(id: number): Observable<CoverArt> {
+    return this.http.get<CoverArt>(`${this.API_URL}/${id}/cover`);
   }
 }

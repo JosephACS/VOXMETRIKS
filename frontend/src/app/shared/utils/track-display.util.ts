@@ -5,7 +5,7 @@ export function sanitizeDisplayText(value?: string | null): string {
   raw = raw
     .replace(/\uFFFD/g, '')
     .replace(/\s*\[syn-\d+\]\s*$/i, '')
-    .replace(/\s*[—–-]\s*#\d+\s*$/g, '')
+    .replace(/\s*[—–\-·•∙‧]\s*#\d+\s*$/g, '')
     .replace(/\s+#\d{4,}\s*$/g, '')
     .replace(/\s+/g, ' ')
     .trim();

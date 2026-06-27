@@ -30,6 +30,7 @@ _SEARCH_MAX_RESULTS = 12
 STATUS_OK = "ok"
 STATUS_NOT_FOUND = "not_found"
 STATUS_DISABLED = "disabled"  # no API key configured
+STATUS_ERROR = "error"  # transient API/quota failure — NOT cached, retried later
 
 # Reject obvious non-studio matches (covers, lyric videos, loops, etc.)
 _BAD_TITLE_RE = re.compile(
@@ -216,8 +217,12 @@ def _write_cache(
 
 def _fetch_video_details(
     video_ids: List[str], api_key: str
-) -> Dict[str, Dict[str, Any]]:
-    """Batch-fetch title + duration for candidate videos."""
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """Batch-fetch title + duration for candidate videos.
+
+    Returns ``None`` on a transient API/quota failure (so the caller can avoid
+    caching a false ``not_found``), or a (possibly empty) dict on success.
+    """
     if not video_ids:
         return {}
     try:
@@ -232,13 +237,13 @@ def _fetch_video_details(
         )
     except httpx.HTTPError as exc:
         logger.warning("YouTube videos.list failed: %s", exc)
-        return {}
+        return None
 
     if resp.status_code != 200:
         logger.warning(
             "YouTube videos.list returned %s: %s", resp.status_code, resp.text[:200]
         )
-        return {}
+        return None
 
     out: Dict[str, Dict[str, Any]] = {}
     for item in resp.json().get("items") or []:
@@ -259,8 +264,13 @@ def _search_youtube(
     query: str,
     api_key: str,
     track_duration_ms: Optional[int],
-) -> Optional[str]:
-    """Return the best embeddable YouTube video id for the query, or None."""
+) -> Tuple[Optional[str], bool]:
+    """Resolve the best embeddable YouTube video id for the query.
+
+    Returns ``(video_id, api_ok)``. ``api_ok`` is ``False`` when the API call
+    itself failed (network error, quota exceeded, non-200) so the caller can
+    avoid caching a false ``not_found`` and retry later.
+    """
     params = {
         "key": api_key,
         "q": query,
@@ -274,13 +284,13 @@ def _search_youtube(
         resp = httpx.get(_YT_SEARCH_URL, params=params, timeout=_REQUEST_TIMEOUT)
     except httpx.HTTPError as exc:
         logger.warning("YouTube search request failed: %s", exc)
-        return None
+        return None, False
 
     if resp.status_code != 200:
         logger.warning(
             "YouTube search returned %s: %s", resp.status_code, resp.text[:200]
         )
-        return None
+        return None, False
 
     items = resp.json().get("items") or []
     video_ids = [
@@ -289,11 +299,96 @@ def _search_youtube(
         if item.get("id", {}).get("videoId")
     ]
     if not video_ids:
-        return None
+        return None, True  # API worked, but genuinely nothing matched
 
     details = _fetch_video_details(video_ids, api_key)
+    if details is None:
+        return None, False  # transient failure on videos.list
     candidates = [details[vid] for vid in video_ids if vid in details]
-    return pick_best_youtube_candidate(candidates, track_duration_ms)
+    return pick_best_youtube_candidate(candidates, track_duration_ms), True
+
+
+def _search_youtube_ytdlp(
+    query: str,
+    track_duration_ms: Optional[int],
+) -> Tuple[Optional[str], bool]:
+    """Search YouTube via yt-dlp (no Google Cloud quota).
+
+    Returns ``(video_id, search_ok)``. ``search_ok`` is ``False`` only on a
+    transient failure (network, yt-dlp missing, rate limit).
+    """
+    try:
+        import yt_dlp
+    except ImportError:
+        logger.warning("yt-dlp not installed — pip install yt-dlp")
+        return None, False
+
+    opts: dict = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "extract_flat": True,
+        "socket_timeout": _REQUEST_TIMEOUT,
+    }
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(
+                f"ytsearch{_SEARCH_MAX_RESULTS}:{query}",
+                download=False,
+            )
+    except Exception as exc:
+        logger.warning("yt-dlp search failed for %r: %s", query, exc)
+        return None, False
+
+    entries = info.get("entries") if isinstance(info, dict) else None
+    if not entries:
+        return None, True
+
+    candidates: List[Dict[str, Any]] = []
+    for item in entries:
+        if not item:
+            continue
+        video_id = item.get("id")
+        if not video_id:
+            continue
+        candidates.append(
+            {
+                "video_id": video_id,
+                "title": item.get("title") or "",
+                "duration_sec": int(item.get("duration") or 0),
+            }
+        )
+    return pick_best_youtube_candidate(candidates, track_duration_ms), True
+
+
+def _resolve_video_id(
+    query: str,
+    api_key: str,
+    track_duration_ms: Optional[int],
+) -> Tuple[Optional[str], str]:
+    """Pick the best YouTube video id — yt-dlp first (no quota), API as backup.
+
+    Returns ``(video_id, outcome)`` where ``outcome`` is one of
+    ``STATUS_OK``, ``STATUS_NOT_FOUND``, or ``STATUS_ERROR``.
+    """
+    video_id, ytdlp_ok = _search_youtube_ytdlp(query, track_duration_ms)
+    if ytdlp_ok and video_id:
+        return video_id, STATUS_OK
+    if ytdlp_ok and not video_id:
+        # yt-dlp searched successfully but found no acceptable match.
+        if api_key:
+            api_id, api_ok = _search_youtube(query, api_key, track_duration_ms)
+            if api_ok:
+                return api_id, STATUS_OK if api_id else STATUS_NOT_FOUND
+        return None, STATUS_NOT_FOUND
+
+    # yt-dlp failed transiently — try API if available, else error.
+    if api_key:
+        api_id, api_ok = _search_youtube(query, api_key, track_duration_ms)
+        if api_ok:
+            return api_id, STATUS_OK if api_id else STATUS_NOT_FOUND
+
+    return None, STATUS_ERROR
 
 
 def resolve_audio_source(
@@ -320,17 +415,18 @@ def resolve_audio_source(
             return cached
 
     api_key = get_settings().youtube_api_key.strip()
-    if not api_key:
+    video_id, outcome = _resolve_video_id(query, api_key, duration_ms)
+
+    if outcome == STATUS_ERROR:
         return {
             "track_id": track_id,
             "provider": "youtube",
             "youtube_video_id": None,
             "query": query,
-            "status": STATUS_DISABLED,
+            "status": STATUS_ERROR,
         }
 
-    video_id = _search_youtube(query, api_key, duration_ms)
-    status = STATUS_OK if video_id else STATUS_NOT_FOUND
+    status = outcome
     _write_cache(conn, track_id, video_id, query, status)
     return {
         "track_id": track_id,

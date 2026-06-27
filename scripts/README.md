@@ -16,7 +16,8 @@ Utilidades de desarrollo, datos y verificación. Ejecutar desde la raíz del rep
 | `import_from_pocketbase.py` | Importa dataset Spotify real vía PocketBase → ELT |
 | `generate_activity.py` | Genera eventos sintéticos sobre el catálogo real (no crea tracks falsos) |
 | `upload_dataset_to_pocketbase.py` | Sube CSV a PocketBase (setup inicial) |
-| `seed_demo_search_titles.py` | Títulos demo reconocibles sin rebuild completo |
+| `clean_track_names.py` | Limpia nombres sucios (` · #id`, `[syn-N]`, caracteres rotos) sin rebuild |
+| `resolve_audio_youtube.py` | Pre-resuelve audio YouTube (API + fallback yt-dlp sin cuota diaria) |
 | `validate_warehouse.py` | Validación rápida post-ELT |
 | `analyze_warehouse.py` | Reporte de calidad y estadísticas del warehouse |
 

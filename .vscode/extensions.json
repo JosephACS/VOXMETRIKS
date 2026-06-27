@@ -1,0 +1,21 @@
+{
+  "recommendations": [
+    "Angular.ng-template",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "formulahendry.auto-rename-tag",
+    "formulahendry.auto-close-tag",
+    "ecmel.vscode-html-css",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "mtxr.sqltools",
+    "Evidence.sqltools-duckdb-driver",
+    "RandomFractalsInc.duckdb-sql-tools",
+    "humao.rest-client",
+    "ms-azuretools.vscode-docker",
+    "usernamehw.errorlens",
+    "eamodio.gitlens"
+  ],
+  "unwantedRecommendations": []
+}

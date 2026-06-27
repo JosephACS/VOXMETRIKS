@@ -147,4 +147,14 @@ def ensure_app_tables(conn: duckdb.DuckDBPyConnection) -> None:
             resolved_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # Resolved real cover-art image URLs (iTunes). Also app_ so it survives
+    # pipeline rebuilds.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_track_cover (
+            track_id    INTEGER PRIMARY KEY,
+            image_url   VARCHAR,
+            status      VARCHAR NOT NULL DEFAULT 'ok',
+            resolved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     _seed_demo_library(conn)

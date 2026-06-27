@@ -106,24 +106,100 @@
   margin-right: 0.2rem;
 }
 
-.home-catalog-note {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-  margin: -0.25rem 0 1.25rem;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid rgba(30,216,150,0.22);
-  border-radius: 0.75rem;
-  background: rgba(30,216,150,0.06);
-  color: var(--shell-fg-muted);
-  font-size: 0.78rem;
-}
-
 .home-feed {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+/* ── Artistas destacados (minimalista) ── */
+.artist-chip {
+  flex: 0 0 auto;
+  width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+.artist-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.artist-chip:hover .artist-avatar {
+  transform: translateY(-2px);
+  border-color: rgba(30, 216, 150, 0.55);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+}
+.artist-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.artist-role {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Géneros (chips minimalistas) ── */
+.genre-chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.95rem 0.6rem 0.7rem;
+  border-radius: 12px;
+  background: var(--section-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--shell-border, rgba(255, 255, 255, 0.07));
+  text-decoration: none;
+  scroll-snap-align: start;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+.genre-chip:hover {
+  border-color: rgba(30, 216, 150, 0.5);
+  transform: translateY(-1px);
+  background: rgba(30, 216, 150, 0.06);
+}
+.genre-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.genre-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.genre-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.genre-score {
+  font-size: 0.66rem;
+  color: var(--text-muted);
 }
 
 .home-state {
@@ -265,6 +341,46 @@
 }
 
 .rail-strip strong { color: var(--text); }
+
+.rail-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rail-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  border: 1px solid var(--shell-border);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+a.rail-pill:hover {
+  border-color: rgba(30,216,150,0.4);
+  background: var(--shell-hover);
+}
+
+.rail-pill-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--shell-fg-muted);
+}
+
+.rail-pill-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .rail-chart { margin-top: 0.25rem; }
 

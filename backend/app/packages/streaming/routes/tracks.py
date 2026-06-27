@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.database import get_conn, get_write_conn
 from app.packages.users.services.auth_deps import require_engineer_user
 from app.shared.schemas.models import (
-    AudioFeatures, AudioSource, PaginatedResponse, Track,
+    AudioFeatures, AudioSource, CoverArt, PaginatedResponse, Track,
     TrackCreate, TrackUpdate, DeleteResponse,
     TrackSearchResult, TrackDetail,
 )
@@ -20,6 +20,7 @@ from app.packages.streaming.services.track_service import (
     search_tracks, get_track_detail,
 )
 from app.packages.streaming.services.audio_source_service import resolve_audio_source
+from app.packages.streaming.services.cover_art_service import resolve_cover
 
 router = APIRouter(prefix="/tracks", tags=["Tracks"])
 
@@ -160,6 +161,22 @@ def track_audio_source(
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     row = resolve_audio_source(conn, track_id, force=force)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return row
+
+
+@router.get(
+    "/{track_id}/cover",
+    response_model=CoverArt,
+    summary="Resolve real cover-art image (iTunes) for a track",
+)
+def track_cover(
+    track_id: int,
+    force: bool = Query(False, description="Bypass cache and re-resolve"),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    row = resolve_cover(conn, track_id, force=force)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
     return row

@@ -86,6 +86,13 @@ class AudioSource(BaseModel):
     status:           str  # ok | not_found | disabled
 
 
+class CoverArt(BaseModel):
+    """Resolved real cover-art image URL for a track (iTunes)."""
+    track_id:  int
+    image_url: Optional[str] = None
+    status:    str  # ok | not_found
+
+
 # ── Fact ──────────────────────────────────────────────────────────────────────
 
 class AudioFeatures(BaseModel):

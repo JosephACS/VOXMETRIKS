@@ -15,18 +15,18 @@ import { HorizontalSectionComponent } from '../../../shared/components/horizonta
 import { MediaCardComponent } from '../../../shared/components/media-card/media-card.component';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
-import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import {
   StatsSummary, TopTrack, GeneroPopularidad, HistoryEntry, PlaylistSummary, Track,
 } from '../../../shared/models/api.models';
 import { PlayableTrack } from '../../../shared/models/player.models';
+import { displayTrackTitle } from '../../../shared/utils/track-display.util';
 
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [
     CommonModule, RouterModule, HorizontalSectionComponent, MediaCardComponent,
-    TrackRowComponent, KpiCardComponent, TranslatePipe, DataSourceBadgeComponent,
+    TrackRowComponent, KpiCardComponent, TranslatePipe,
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
@@ -47,6 +47,30 @@ export class HomeComponent implements OnInit {
     return this.i18n.greetingKey();
   });
 
+  /** Clean track name for display (strips warehouse noise like " · #12345"). */
+  cleanTitle(name?: string | null): string {
+    return displayTrackTitle(name);
+  }
+
+  /** Initials for artist avatars (minimalist, no real image needed). */
+  initials(name?: string | null): string {
+    return this.covers.initialsFor(name ?? '');
+  }
+
+  /** Collapse repeated titles in recently-played and cap to 8. */
+  private dedupeHistory(entries: HistoryEntry[]): HistoryEntry[] {
+    const seen = new Set<string>();
+    const out: HistoryEntry[] = [];
+    for (const e of entries) {
+      const key = displayTrackTitle(e.nombre_track).toLowerCase().trim();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(e);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }
+
   isLoading = signal(true);
   hasError = signal(false);
   summary = signal<StatsSummary | null>(null);
@@ -60,7 +84,15 @@ export class HomeComponent implements OnInit {
   growthValues = signal<number[]>([]);
 
   madeForYou = computed(() => this.topTracks().slice(0, 8));
-  trending = computed(() => this.topTracks().slice(0, 10));
+  // Distinct "next tier" so it doesn't mirror "Hecho para ti".
+  trending = computed(() => {
+    const all = this.topTracks();
+    const next = all.slice(8, 18);
+    return next.length >= 4 ? next : all.slice(0, 10);
+  });
+
+  topGenre = computed(() => this.genres()[0]?.nombre_genero?.trim() || null);
+  topArtist = computed(() => this.artists()[0]?.name?.trim() || null);
 
   madeForYouPlayable = computed(() => this.madeForYou().map((t) => this.player.fromTopTrack(t)));
   trendingPlayable = computed(() => this.trending().map((t) => this.player.fromTopTrack(t)));
@@ -88,10 +120,15 @@ export class HomeComponent implements OnInit {
     };
 
     this.stats.getSummary().subscribe({
-      next: (d) => { this.summary.set(d); done(true); },
+      next: (d) => {
+        this.summary.set(d);
+        // Drop stale local history pointing to purged synthetic track ids.
+        if (d?.total_tracks) this.historySvc.pruneAbove(d.total_tracks);
+        done(true);
+      },
       error: () => done(false),
     });
-    this.stats.getTopTracks(12).subscribe({
+    this.stats.getTopTracks(24).subscribe({
       next: (d) => { this.topTracks.set(d ?? []); done(true); },
       error: () => done(false),
     });
@@ -122,7 +159,7 @@ export class HomeComponent implements OnInit {
       next: (d) => { this.playlists.set((d ?? []).slice(0, 6)); done(true); },
       error: () => done(false),
     });
-    this.historySvc.history$.subscribe((h) => this.history.set(h.slice(0, 8)));
+    this.historySvc.history$.subscribe((h) => this.history.set(this.dedupeHistory(h)));
     this.historySvc.reload();
   }
 
@@ -133,7 +170,7 @@ export class HomeComponent implements OnInit {
   historyPlayable(h: HistoryEntry): PlayableTrack {
     return {
       id: h.id_track,
-      title: h.nombre_track,
+      title: displayTrackTitle(h.nombre_track),
       artist: h.nombre_artista ?? '—',
       audioUrl: `/assets/audio/demo-${String((h.id_track % 8) + 1).padStart(2, '0')}.wav`,
       coverGradient: this.cover(h.id_track),

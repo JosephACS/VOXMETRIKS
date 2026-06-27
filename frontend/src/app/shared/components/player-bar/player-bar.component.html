@@ -15,18 +15,19 @@
     >
       @if (player.currentTrack(); as t) {
         <div class="cover-btn" [style.background]="t.coverGradient">
-          <span class="cover-initial">{{ t.title.charAt(0).toUpperCase() }}</span>
+          @if (player.currentCover(); as img) {
+            <img class="cover-btn-img" [src]="img" [alt]="t.title" (error)="player.clearCover()" />
+          } @else {
+            <span class="cover-initial">{{ t.title.charAt(0).toUpperCase() }}</span>
+          }
           <span class="cover-expand-hint" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
           </span>
         </div>
         <div class="track-meta">
           <span class="track-title">{{ t.title }}</span>
-          <span class="track-artist">{{ t.artist }} · {{ sourceLabel() | t }}</span>
+          <span class="track-artist">{{ t.artist }}</span>
         </div>
-        @if (player.audioMode() === 'demo') {
-          <span class="demo-chip">{{ 'shell.demo' | t }}</span>
-        }
         @if (t.explicit) { <span class="explicit-badge">{{ 'common.explicit' | t }}</span> }
         <div class="track-actions" (click)="$event.stopPropagation()">
           <app-favorite-btn [trackId]="t.id" size="sm" />

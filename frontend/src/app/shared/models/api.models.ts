@@ -34,6 +34,12 @@ export interface AudioSource {
   status: 'ok' | 'not_found' | 'disabled';
 }
 
+export interface CoverArt {
+  track_id: number;
+  image_url?: string | null;
+  status: 'ok' | 'not_found';
+}
+
 export interface AudioFeatures {
   id_fact: number;
   id_track?: number;

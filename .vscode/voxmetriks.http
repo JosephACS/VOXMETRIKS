@@ -1,0 +1,17 @@
+### Voxmetriks — smoke API (backend en :8000)
+@baseUrl = http://localhost:8000/api/v1
+
+### Health
+GET {{baseUrl}}/../health
+
+### Stats summary
+GET {{baseUrl}}/stats/summary
+
+### Top tracks
+GET {{baseUrl}}/stats/top-tracks?limit=5
+
+### Me Porto Bonito — audio source (YouTube)
+GET {{baseUrl}}/tracks/57111/audio-source
+
+### Me Porto Bonito — cover (iTunes)
+GET {{baseUrl}}/tracks/57111/cover
