@@ -91,6 +91,8 @@
           </div>
           @if (registerForm.controls.username.invalid && registerForm.controls.username.touched) {
             <span class="field-error">{{ 'login.usernameError' | t }}</span>
+          } @else {
+            <span class="field-help">{{ 'login.usernameHelp' | t }}</span>
           }
         </div>
         <div class="field">

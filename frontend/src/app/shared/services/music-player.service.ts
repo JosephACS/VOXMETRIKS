@@ -224,6 +224,32 @@ export class MusicPlayerService {
 
   clearCover() { this.currentCover.set(null); }
 
+  /**
+   * Fully stop playback and clear the player (used on logout / session end).
+   * Halts both the HTML audio element and the YouTube engine, drops the queue
+   * and the restored-track marker so nothing keeps playing for the next user.
+   */
+  stopPlayback() {
+    this.playbackToken++; // invalidate any in-flight audio-source resolution
+    this.audio.pause();
+    try { this.audio.removeAttribute('src'); this.audio.load(); } catch { /* ignore */ }
+    this.yt.stop();
+    this.usingYt = false;
+    this.engineLoadedTrackId = null;
+    this.queueInternal = [];
+    this.queueIndex = 0;
+    this.queue.set([]);
+    this.currentTrack.set(null);
+    this.currentCover.set(null);
+    this.isPlaying.set(false);
+    this.currentTime.set(0);
+    this.duration.set(0);
+    this.audioMode.set('demo');
+    this.expandedOpen.set(false);
+    this.state$.next({ playing: false });
+    sessionStorage.removeItem(TRACK_KEY);
+  }
+
   formatTime(sec: number): string {
     if (!Number.isFinite(sec)) return '0:00';
     const m = Math.floor(sec / 60);

@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { LoadingService } from '../../shared/services/loading.service';
 import { FavoritesService } from '../../packages/streaming/services/favorites.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
+import { MusicPlayerService } from '../../shared/services/music-player.service';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UiPreferencesService } from '../../core/services/ui-preferences.service';
@@ -57,6 +58,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   router = inject(Router);
   private favorites = inject(FavoritesService);
   private history = inject(HistoryService);
+  private player = inject(MusicPlayerService);
 
   sidebarOpen = signal(false);
   sidebarCollapsed = signal(this.readCollapsedPref());
@@ -251,6 +253,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   logout() {
+    this.player.stopPlayback();
     this.auth.logout();
     this.router.navigate(['/login']);
   }
