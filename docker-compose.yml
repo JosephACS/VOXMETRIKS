@@ -43,7 +43,8 @@ services:
       DB_PATH: /app/data/warehouse/voxmetrik.duckdb
       PYTHONPATH: /app
     volumes:
-      - voxmetrik_data:/app/data
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
     networks: [voxmetrik]
     restart: "no"
     depends_on:
@@ -69,7 +70,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - voxmetrik_data:/app/data
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
     networks: [voxmetrik]
     restart: unless-stopped
     depends_on:
@@ -97,8 +99,7 @@ services:
         condition: service_healthy
 
 # ── Volúmenes ─────────────────────────────────────────────────────────────────
-volumes:
-  voxmetrik_data:   # DuckDB + parquet (pipeline escribe, api lee)
+# ./data se monta en pipeline y api (bronze/silver/gold + DuckDB del host).
 
 # ── Red interna ───────────────────────────────────────────────────────────────
 networks:
