@@ -164,7 +164,8 @@ def _issue_verification_code(conn: duckdb.DuckDBPyConnection, email: str) -> Dic
         "email_sent": sent,
     }
     # Dev mode (no SMTP configured): surface the code so localhost can test.
-    if not cfg.email_enabled:
+    # Never expose the code in production, even if SMTP is misconfigured.
+    if not cfg.email_enabled and not cfg.is_production:
         out["dev_code"] = code
     return out
 

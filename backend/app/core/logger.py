@@ -4,7 +4,6 @@ Professional, structured logging for production and development.
 """
 import logging
 import logging.config
-import sys
 from typing import Optional
 
 from app.core.config import get_settings

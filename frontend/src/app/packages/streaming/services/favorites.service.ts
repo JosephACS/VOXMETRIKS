@@ -56,6 +56,8 @@ export class FavoritesService {
   }
 
   refreshIds(): void {
-    this.loadFavorites().subscribe({ error: () => {} });
+    this.loadFavorites().subscribe({
+      error: (err) => console.error('[FavoritesService] loadFavorites failed', err),
+    });
   }
 }

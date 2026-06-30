@@ -9,13 +9,17 @@ from typing import Any, Dict, Optional
 
 import duckdb
 
-from app.core.time_util import utc_now
 from app.core.config import get_settings
 from app.core.database import get_table_columns, table_exists
+from app.core.schema_bootstrap import schema_ready
+from app.core.time_util import utc_now
+
 from .password_security import hash_password
 
 
 def ensure_user_tables(conn: duckdb.DuckDBPyConnection) -> None:
+    if schema_ready():
+        return
     conn.execute("""
         CREATE TABLE IF NOT EXISTS app_user (
             id              INTEGER PRIMARY KEY,
@@ -80,20 +84,25 @@ def _migrate_user_role(conn: duckdb.DuckDBPyConnection) -> None:
         """
         UPDATE app_user
         SET role = CASE
-            WHEN LOWER(username) = 'admin' THEN 'engineer'
+            WHEN LOWER(username) = 'admin' THEN 'admin'
+            WHEN LOWER(username) = 'engineer' THEN 'engineer'
             ELSE COALESCE(role, 'user')
         END
-        WHERE role IS NULL OR LOWER(username) = 'admin'
+        WHERE role IS NULL
+           OR LOWER(username) IN ('admin', 'engineer')
         """
     )
 
 
 def _seed_demo_users(conn: duckdb.DuckDBPyConnection) -> None:
-    if not get_settings().seed_demo_users:
+    # Demo accounts (demo/admin/engineer) are seeded only outside production.
+    # In production this is always disabled regardless of SEED_DEMO_USERS.
+    if not get_settings().seed_demo_users_enabled:
         return
     defaults = [
         ("demo", "demo@voxmetrik.io", "demo123", "user", "Premium", "Pop"),
-        ("admin", "admin@voxmetrik.io", "admin123", "engineer", "Premium", "Rock"),
+        ("admin", "admin@voxmetrik.io", "admin123", "admin", "Premium", "Rock"),
+        ("engineer", "engineer@voxmetrik.io", "engineer123", "engineer", "Premium", "Electronic"),
     ]
     for username, email, pwd, role, plan, genre in defaults:
         row = conn.execute(

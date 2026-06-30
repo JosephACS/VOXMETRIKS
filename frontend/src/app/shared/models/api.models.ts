@@ -31,7 +31,7 @@ export interface AudioSource {
   provider: string;
   youtube_video_id?: string | null;
   query?: string | null;
-  status: 'ok' | 'not_found' | 'disabled';
+  status: 'ok' | 'not_found' | 'disabled' | 'pending' | 'error';
 }
 
 export interface CoverArt {

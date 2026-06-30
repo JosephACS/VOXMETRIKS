@@ -37,6 +37,7 @@ const GIS_SCRIPT_ID = 'google-identity-services';
   styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -83,14 +84,14 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     this.stats.getSummary().subscribe({
       next: (data) => this.summary.set(data),
-      error: () => {},
+      error: (err) => console.error('[LoginComponent] getSummary failed', err),
     });
     this.auth.getAuthConfig().then((cfg) => {
       if (cfg?.google_client_id) {
         this.googleClientId.set(cfg.google_client_id);
         this.loadGoogleScript();
       }
-    }).catch(() => {});
+    }).catch((err) => console.error('[LoginComponent] getAuthConfig failed', err));
   }
 
   protected setLanguage(lang: AppLanguage): void {

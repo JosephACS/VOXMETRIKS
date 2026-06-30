@@ -1,6 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, computed, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -30,6 +30,7 @@ type SettingsTab = 'general' | 'api' | 'warehouse' | 'pipeline';
   styleUrls: ['./settings.component.css'],
 })
 export class SettingsComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);

@@ -50,9 +50,9 @@ export class TracksService {
     return this.http.delete<DeleteResponse>(`${this.API_URL}/${id}`);
   }
 
-  searchTracks(q: string, limit = 50): Observable<TrackSearchResult[]> {
-    const params = new HttpParams().set('q', q).set('limit', limit);
-    return this.http.get<TrackSearchResult[]>(`${this.API_URL}/search`, { params });
+  searchTracks(q: string, page = 1, limit = 20): Observable<PaginatedResponse<TrackSearchResult>> {
+    const params = new HttpParams().set('q', q).set('page', page).set('limit', limit);
+    return this.http.get<PaginatedResponse<TrackSearchResult>>(`${this.API_URL}/search`, { params });
   }
 
   getTrackDetail(id: number): Observable<TrackDetail> {

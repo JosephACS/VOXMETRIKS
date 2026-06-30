@@ -39,6 +39,12 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    # Runtime environment — "development" (default) or "production".
+    # Drives security hardening: demo-user seeding, dev_code exposure, API
+    # docs availability and CORS wildcard handling. Defaults to development so
+    # local/dev behaviour is unchanged unless ENVIRONMENT=production is set.
+    environment: str = "development"
+
     # DuckDB — leave empty to use auto-resolved default
     db_path: str = ""
 
@@ -85,6 +91,31 @@ class Settings(BaseSettings):
     email_code_max_attempts: int = 5
 
     @property
+    def is_production(self) -> bool:
+        """True when ENVIRONMENT denotes a production deployment."""
+        return self.environment.strip().lower() in {"production", "prod"}
+
+    @property
+    def is_development(self) -> bool:
+        return not self.is_production
+
+    @property
+    def seed_demo_users_enabled(self) -> bool:
+        """Demo accounts are seeded only outside production.
+
+        In production they are never created regardless of SEED_DEMO_USERS;
+        in development the existing SEED_DEMO_USERS flag still applies.
+        """
+        if self.is_production:
+            return False
+        return self.seed_demo_users
+
+    @property
+    def docs_enabled(self) -> bool:
+        """Interactive API docs (/docs, /redoc, /openapi.json) — off in production."""
+        return not self.is_production
+
+    @property
     def email_enabled(self) -> bool:
         return bool(self.smtp_host.strip() and self.smtp_user.strip())
 
@@ -96,7 +127,11 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         raw = self.cors_origins.strip()
         if raw == "*":
-            return ["*"]
+            # Wildcard origins are permitted only outside production. In
+            # production a "*" config is treated as "no explicit allow-list"
+            # and collapses to an empty list so no cross-origin is granted
+            # until real origins are configured via CORS_ORIGINS.
+            return [] if self.is_production else ["*"]
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property

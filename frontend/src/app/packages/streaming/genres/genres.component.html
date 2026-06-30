@@ -3,20 +3,20 @@
     <div class="page-header-main">
       <h1 class="page-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-        {{ 'genres.title' | t }}
+        {{ 'genres.title' | t:lang() }}
       </h1>
       <p class="page-subtitle">
-        {{ 'genres.subtitle' | t }}
-        @if (!auth.isCatalogSteward()) { <span class="readonly-tag">{{ 'genres.readonly' | t }}</span> }
+        {{ 'genres.subtitle' | t:lang() }}
+        @if (!auth.isCatalogSteward()) { <span class="readonly-tag">{{ 'genres.readonly' | t:lang() }}</span> }
       </p>
     </div>
     <div class="page-header-actions">
       <app-data-source-badge kind="live" />
-      @if (!isLoading() && !hasError()) { <div class="page-meta">{{ 'genres.count' | t: { count: (displayTotal() | number) ?? 0 } }}</div> }
+      @if (!isLoading() && !hasError()) { <div class="page-meta">{{ 'genres.count' | t: { count: (displayTotal() | number) ?? 0 }:lang() }}</div> }
       @if (auth.isCatalogSteward()) {
       <button class="btn-primary" (click)="openCreate()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        {{ 'genres.new' | t }}
+        {{ 'genres.new' | t:lang() }}
       </button>
       }
     </div>
@@ -24,10 +24,10 @@
 
   @if (!isLoading() && !hasError() && serverTotal() > 0) {
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon kpi-primary" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ displayTotal() | number }}</span><span class="kpi-label">{{ 'genres.kpi.total' | t }}</span><span class="kpi-sub">{{ 'genres.kpi.totalSub' | t }}</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-info" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">{{ 'genres.kpi.topTracks' | t }}</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-warning" [innerHTML]="icon('target', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPopularity() ?? '—' }}</span><span class="kpi-label">{{ 'genres.kpi.avgPop' | t }}</span><span class="kpi-sub">{{ 'genres.kpi.avgPopSub' | t }}</span></div></div>
-      <div class="kpi-card"><div class="kpi-icon kpi-secondary" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() != null ? ((avgEnergy()! * 100) | number:'1.0-1') + '%' : '—' }}</span><span class="kpi-label">{{ 'genres.kpi.avgEnergy' | t }}</span><span class="kpi-sub">{{ 'genres.kpi.avgEnergySub' | t }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-primary" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ displayTotal() | number }}</span><span class="kpi-label">{{ 'genres.kpi.total' | t:lang() }}</span><span class="kpi-sub">{{ 'genres.kpi.totalSub' | t:lang() }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-info" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ topGenre().total_tracks ?? 0 | number }}</span><span class="kpi-label">{{ 'genres.kpi.topTracks' | t:lang() }}</span><span class="kpi-sub">{{ topGenre().nombre_genero ?? '' }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-warning" [innerHTML]="icon('target', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPopularity() ?? '—' }}</span><span class="kpi-label">{{ 'genres.kpi.avgPop' | t:lang() }}</span><span class="kpi-sub">{{ 'genres.kpi.avgPopSub' | t:lang() }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-secondary" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() != null ? ((avgEnergy()! * 100) | number:'1.0-1') + '%' : '—' }}</span><span class="kpi-label">{{ 'genres.kpi.avgEnergy' | t:lang() }}</span><span class="kpi-sub">{{ 'genres.kpi.avgEnergySub' | t:lang() }}</span></div></div>
     </div>
   }
 
@@ -37,88 +37,98 @@
       <input class="search-input" type="text" [placeholder]="'genres.searchPlaceholder' | t" [value]="searchVal()" (input)="onSearch($any($event.target).value)"/>
       @if (searchVal()) { <button class="search-clear" (click)="clearSearch()">✕</button> }
     </div>
-    @if (!isLoading() && !hasError()) { <span class="search-count">{{ 'genres.count' | t: { count: (displayTotal() | number) ?? 0 } }}</span> }
+    @if (!isLoading() && !hasError()) { <span class="search-count">{{ 'genres.count' | t: { count: (displayTotal() | number) ?? 0 }:lang() }}</span> }
   </div>
 
   @if (!isLoading() && !hasError() && genres().length) {
     <section class="metric-note">
       <span class="note-icon" [innerHTML]="icon('layers', 16)"></span>
-      <p>{{ 'genres.metricNote' | t }}</p>
+      <p>{{ 'genres.metricNote' | t:lang() }}</p>
     </section>
   }
 
   @if (hasError()) {
-    <div class="error-card"><div class="error-icon" [innerHTML]="icon('alert', 20)"></div><div><strong>{{ 'genres.connectionError' | t }}</strong><p>{{ errorMsg() }}</p></div><button class="btn-retry" (click)="loadGenres()">{{ 'genres.retry' | t }}</button></div>
+    <div class="error-card"><div class="error-icon" [innerHTML]="icon('alert', 20)"></div><div><strong>{{ 'genres.connectionError' | t:lang() }}</strong><p>{{ errorMsg() }}</p></div><button class="btn-retry" (click)="loadGenres()">{{ 'genres.retry' | t:lang() }}</button></div>
   }
 
   @if (!hasError()) {
-    <div class="table-card">
+    <div class="table-card" [class.vm-content-ready]="!isLoading()">
       <div class="table-scroll">
         <table class="data-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
-              <th class="col-name">{{ 'genres.title' | t }}</th>
-              <th class="col-tracks">{{ 'tracks.title' | t }}</th>
-              <th class="col-artists">{{ 'nav.artists' | t }}</th>
-              <th class="col-pop">{{ 'artistDetail.popularity' | t }}</th>
-              <th class="col-energy">{{ 'artistDetail.energy' | t }}</th>
-              <th class="col-bar"></th>
+              <th class="col-name">{{ 'genres.title' | t:lang() }}</th>
+              <th class="col-tracks">{{ 'tracks.title' | t:lang() }}</th>
+              <th class="col-artists">{{ 'nav.artists' | t:lang() }}</th>
+              <th class="col-pop">{{ 'artistDetail.popularity' | t:lang() }}</th>
+              <th class="col-energy">{{ 'artistDetail.energy' | t:lang() }}</th>
+              <th class="col-bar">{{ 'genres.col.distribution' | t:lang() }}</th>
               @if (auth.isCatalogSteward()) { <th class="col-actions"></th> }
             </tr>
           </thead>
-          <tbody>
-            @if (isLoading()) {
-              @for (s of skeletonRows; track $index) {
-                <tr class="skeleton-row">
-                  <td><div class="skel skel-xs"></div></td><td><div class="skel skel-xl"></div></td><td><div class="skel skel-sm"></div></td>
-                  <td><div class="skel skel-sm"></div></td><td><div class="skel skel-md"></div></td><td><div class="skel skel-md"></div></td>
-                  <td><div class="skel skel-xl"></div></td>
-                  @if (auth.isCatalogSteward()) { <td><div class="skel skel-sm"></div></td> }
-                </tr>
-              }
-            } @else if (genres().length === 0) {
-              <tr><td [attr.colspan]="auth.isCatalogSteward() ? 8 : 7" class="empty-cell"><div class="empty-state"><div class="empty-icon" [innerHTML]="icon('music', 24)"></div><p>{{ 'genres.empty' | t: { query: searchVal() ? ' para "' + searchVal() + '"' : '' } }}</p><small>{{ 'genres.emptyHint' | t }}</small></div></td></tr>
-            } @else {
-              @for (genre of genres(); track genre.id_genero; let i = $index) {
-                <tr class="data-row">
-                  <td class="col-rank mono text-muted">{{ rowIndex(i) }}</td>
-                  <td class="col-name">
-                    <div class="genre-cell">
-                      <div class="genre-dot" [style.background]="'hsl(' + (i * 37 % 360) + ',65%,55%)'"></div>
-                      <span class="genre-name">{{ genre.nombre_genero ?? '—' }}</span>
-                    </div>
-                  </td>
-                  <td class="col-tracks mono">{{ (genre.total_tracks ?? 0) | number }}</td>
-                  <td class="col-artists mono text-secondary">{{ (genre.total_artistas ?? 0) | number }}</td>
-                  <td class="col-pop">
-                    <div class="metric-wrap">
-                      <div class="metric-bar"><div class="metric-fill fill-pop" [style.width.%]="genre.popularidad_promedio ?? 0"></div></div>
-                      <span class="metric-val mono">{{ (genre.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
-                    </div>
-                  </td>
-                  <td class="col-energy">
-                    <div class="metric-wrap">
-                      <div class="metric-bar"><div class="metric-fill fill-energy" [style.width.%]="(genre.energia_promedio ?? 0) * 100"></div></div>
-                      <span class="metric-val mono">{{ ((genre.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
-                    </div>
-                  </td>
-                  <td class="col-bar">
-                    <div class="track-bar-wrap"><div class="track-bar"><div class="track-bar-fill" [style.width.%]="trackBar(genre.total_tracks ?? 0)"></div></div></div>
-                  </td>
-                  @if (auth.isCatalogSteward()) {
-                  <td class="col-actions">
-                    <div class="action-btns">
-                      <button class="btn-icon btn-edit" (click)="openEdit(genre)" [title]="'common.edit' | t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                      <button class="btn-icon btn-delete" (click)="openDelete(genre)" [title]="'common.delete' | t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-                    </div>
-                  </td>
-                  }
-                </tr>
-              }
-            }
-          </tbody>
         </table>
+        @if (isLoading()) {
+          <div class="virtual-skeleton">
+            @for (s of skeletonRows; track $index) {
+              <div class="virtual-row genres-row skeleton-row">
+                <span><div class="skel skel-xs"></div></span>
+                <span><div class="skel skel-xl"></div></span>
+                <span><div class="skel skel-sm"></div></span>
+                <span><div class="skel skel-sm"></div></span>
+                <span><div class="skel skel-md"></div></span>
+                <span><div class="skel skel-md"></div></span>
+                <span><div class="skel skel-xl"></div></span>
+                @if (auth.isCatalogSteward()) { <span><div class="skel skel-sm"></div></span> }
+              </div>
+            }
+          </div>
+        } @else if (genres().length === 0) {
+          <div class="empty-cell"><div class="empty-state"><div class="empty-icon" [innerHTML]="icon('music', 24)"></div><p>{{ 'genres.empty' | t: { query: searchVal() ? ' para "' + searchVal() + '"' : '' }:lang() }}</p><small>{{ 'genres.emptyHint' | t:lang() }}</small></div></div>
+        } @else {
+          <cdk-virtual-scroll-viewport itemSize="53" class="table-viewport">
+            <div
+              class="virtual-row genres-row data-row data-row--clickable"
+              [class.genres-row--steward]="auth.isCatalogSteward()"
+              *cdkVirtualFor="let genre of genres(); trackBy: trackGenre; let i = index"
+              (click)="openGenreTracks(genre)"
+              [title]="'genres.viewTracks' | t:lang()"
+            >
+              <span class="col-rank mono text-muted">{{ rowIndex(i) }}</span>
+              <span class="col-name">
+                <div class="genre-cell">
+                  <div class="genre-dot" [style.background]="'hsl(' + (i * 37 % 360) + ',65%,55%)'"></div>
+                  <span class="genre-name">{{ genre.nombre_genero ?? '—' }}</span>
+                </div>
+              </span>
+              <span class="col-tracks mono">{{ (genre.total_tracks ?? 0) | number }}</span>
+              <span class="col-artists mono text-secondary">{{ (genre.total_artistas ?? 0) | number }}</span>
+              <span class="col-pop">
+                <div class="metric-wrap">
+                  <div class="metric-bar"><div class="metric-fill fill-pop" [style.width.%]="genre.popularidad_promedio ?? 0"></div></div>
+                  <span class="metric-val mono">{{ (genre.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+                </div>
+              </span>
+              <span class="col-energy">
+                <div class="metric-wrap">
+                  <div class="metric-bar"><div class="metric-fill fill-energy" [style.width.%]="(genre.energia_promedio ?? 0) * 100"></div></div>
+                  <span class="metric-val mono">{{ ((genre.energia_promedio ?? 0) * 100) | number:'1.0-1' }}%</span>
+                </div>
+              </span>
+              <span class="col-bar">
+                <div class="track-bar-wrap"><div class="track-bar"><div class="track-bar-fill" [style.width.%]="trackBar(genre.total_tracks ?? 0)"></div></div></div>
+              </span>
+              @if (auth.isCatalogSteward()) {
+                <span class="col-actions" (click)="$event.stopPropagation()">
+                  <div class="action-btns">
+                    <button class="btn-icon btn-edit" (click)="openEdit(genre)" [title]="'common.edit' | t:lang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button class="btn-icon btn-delete" (click)="openDelete(genre)" [title]="'common.delete' | t:lang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                </span>
+              }
+            </div>
+          </cdk-virtual-scroll-viewport>
+        }
       </div>
     </div>
 
@@ -145,13 +155,13 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">{{ 'genres.modal.nameLabel' | t }}</label>
+            <label class="form-label">{{ 'genres.modal.nameLabel' | t:lang() }}</label>
             <input class="form-input" type="text" [placeholder]="'genres.modal.namePlaceholder' | t" [value]="formName()" (input)="formName.set($any($event.target).value)" (keydown.enter)="modalMode() === 'create' ? saveCreate() : saveEdit()"/>
           </div>
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">{{ 'genres.modal.cancel' | t }}</button>
+          <button class="btn-secondary" (click)="closeModal()">{{ 'genres.modal.cancel' | t:lang() }}</button>
           <button class="btn-primary" [disabled]="formSaving()" (click)="modalMode() === 'create' ? saveCreate() : saveEdit()">
             @if (formSaving()) { <span class="spinner"></span> } {{ modalMode() === 'create' ? ('genres.modal.createBtn' | t) : ('genres.modal.save' | t) }}
           </button>
@@ -159,16 +169,16 @@
       }
       @if (modalMode() === 'delete') {
         <div class="modal-header">
-          <h3 class="modal-title modal-title-danger">{{ 'genres.modal.delete' | t }}</h3>
+          <h3 class="modal-title modal-title-danger">{{ 'genres.modal.delete' | t:lang() }}</h3>
           <button class="modal-close" (click)="closeModal()">✕</button>
         </div>
         <div class="modal-body">
-          <p class="delete-confirm-text">{{ 'genres.modal.deleteConfirm' | t: { name: modalGenre()?.nombre_genero ?? '' } }}<br><span class="delete-warn">{{ 'genres.modal.deleteWarn' | t }}</span></p>
+          <p class="delete-confirm-text">{{ 'genres.modal.deleteConfirm' | t: { name: modalGenre()?.nombre_genero ?? '' }:lang() }}<br><span class="delete-warn">{{ 'genres.modal.deleteWarn' | t:lang() }}</span></p>
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">{{ 'genres.modal.cancel' | t }}</button>
-          <button class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">@if (formSaving()) { <span class="spinner"></span> } {{ 'genres.modal.deleteBtn' | t }}</button>
+          <button class="btn-secondary" (click)="closeModal()">{{ 'genres.modal.cancel' | t:lang() }}</button>
+          <button class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">@if (formSaving()) { <span class="spinner"></span> } {{ 'genres.modal.deleteBtn' | t:lang() }}</button>
         </div>
       }
     </div>

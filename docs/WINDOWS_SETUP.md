@@ -21,7 +21,6 @@ node --version
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install --upgrade pip
-pip install -r requirements.txt
 pip install -r backend\requirements.txt
 ```
 
@@ -90,6 +89,6 @@ docker compose up --build
 | Síntoma | Solución |
 |---------|----------|
 | `python no se reconoce` | Reinstala Python marcando "Add to PATH" y reinicia la terminal |
-| `No module named duckdb` | Activa el venv y reinstala: `pip install -r requirements.txt` |
+| `No module named duckdb` | Activa el venv y reinstala: `pip install -r backend\requirements.txt` |
 | `BRONZE EXTRACT FAILED` | PocketBase no está arriba o `.env` mal configurado |
 | API no conecta desde el front | Revisa `CORS_ORIGINS` en `.env` (incluir `http://localhost:4200`) |

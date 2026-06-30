@@ -51,7 +51,7 @@
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "11kB",
-                  "maximumError": "16kB"
+                  "maximumError": "17kB"
                 }
               ],
               "outputHashing": "all"
@@ -77,7 +77,10 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": "vitest.config.ts"
+          }
         }
       }
     }

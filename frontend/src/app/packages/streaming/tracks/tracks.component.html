@@ -3,29 +3,23 @@
     <div class="page-header-main">
       <h1 class="page-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        {{ 'tracks.title' | t }}
+        {{ 'tracks.title' | t:lang() }}
       </h1>
       <p class="page-subtitle">
-        {{ 'tracks.subtitle' | t }}
-        @if (!auth.isCatalogSteward()) { <span class="readonly-tag">{{ 'tracks.readonly' | t }}</span> }
+        {{ 'tracks.subtitle' | t:lang() }}
+        @if (!auth.isCatalogSteward()) { <span class="readonly-tag">{{ 'tracks.readonly' | t:lang() }}</span> }
       </p>
     </div>
     <div class="page-header-actions">
       <app-data-source-badge kind="live" />
-      @if (!isLoading() && !hasError()) { <div class="page-meta">{{ 'tracks.count' | t: { count: (displayTotal() | number) ?? 0 } }}</div> }
-      @if (auth.isCatalogSteward()) {
-      <button class="btn-primary" (click)="openCreate()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        {{ 'tracks.new' | t }}
-      </button>
-      }
+      @if (!isLoading() && !hasError()) { <div class="page-meta">{{ 'tracks.count' | t: { count: (displayTotal() | number) ?? 0 }:lang() }}</div> }
     </div>
   </div>
 
   @if (!isLoading() && !hasError()) {
     <section class="catalog-note">
       <span class="note-icon" [innerHTML]="icon('music', 16)"></span>
-      <p>{{ 'tracks.note' | t }}</p>
+      <p>{{ 'tracks.note' | t:lang() }}</p>
     </section>
   }
 
@@ -35,19 +29,34 @@
       <input class="search-input" type="text" [placeholder]="'tracks.searchPlaceholder' | t" [value]="searchVal()" (input)="onSearch($any($event.target).value)"/>
       @if (searchVal()) { <button class="search-clear" (click)="clearSearch()">✕</button> }
     </div>
-    @if (!isLoading() && !hasError()) { <span class="search-count">{{ 'tracks.count' | t: { count: (displayTotal() | number) ?? 0 } }}</span> }
+    @if (!isLoading() && !hasError()) { <span class="search-count">{{ 'tracks.count' | t: { count: (displayTotal() | number) ?? 0 }:lang() }}</span> }
   </div>
+
+  @if (hasActiveFilter()) {
+    <div class="filter-bar">
+      <span class="filter-chip">
+        @if (genreFilterId() != null) {
+          <span class="filter-chip-label">{{ 'tracks.filterByGenre' | t:lang() }}</span>
+          <strong>{{ genreFilterName() || ('#' + genreFilterId()) }}</strong>
+        } @else if (artistFilterId() != null) {
+          <span class="filter-chip-label">{{ 'tracks.filterByArtist' | t:lang() }}</span>
+          <strong>{{ artistFilterName() || ('#' + artistFilterId()) }}</strong>
+        }
+        <button type="button" class="filter-clear" (click)="clearFilters()" [attr.aria-label]="'tracks.clearFilter' | t">✕</button>
+      </span>
+    </div>
+  }
 
   @if (hasError()) {
     <div class="error-card">
       <div class="error-icon" [innerHTML]="icon('alert', 20)"></div>
-      <div><strong>{{ 'tracks.connectionError' | t }}</strong><p>{{ errorMsg() }}</p></div>
-      <button class="btn-retry" (click)="loadTracks()">{{ 'tracks.retry' | t }}</button>
+      <div><strong>{{ 'tracks.connectionError' | t:lang() }}</strong><p>{{ errorMsg() }}</p></div>
+      <button class="btn-retry" (click)="loadTracks()">{{ 'tracks.retry' | t:lang() }}</button>
     </div>
   }
 
   @if (!hasError()) {
-    <div class="tracks-list glass-panel">
+    <div class="tracks-list glass-panel" [class.vm-content-ready]="!isLoading()">
       @if (isLoading()) {
         @for (s of skeletonRows; track $index) {
           <div class="track-skel"></div>
@@ -55,12 +64,12 @@
       } @else if (tracks().length === 0) {
         <div class="empty-state">
           <div class="empty-icon" [innerHTML]="icon('music', 24)"></div>
-          <p>{{ 'tracks.empty' | t: { query: searchVal() ? ' para "' + searchVal() + '"' : '' } }}</p>
-          <small>{{ 'tracks.emptyHint' | t }}</small>
+          <p>{{ 'tracks.empty' | t: { query: searchVal() ? ' para "' + searchVal() + '"' : '' }:lang() }}</p>
+          <small>{{ 'tracks.emptyHint' | t:lang() }}</small>
         </div>
       } @else {
-        @for (track of tracks(); track track.id_track; let i = $index) {
-          <div class="track-row-wrap">
+        <cdk-virtual-scroll-viewport itemSize="56" class="tracks-viewport">
+          <div class="track-row-wrap" *cdkVirtualFor="let track of tracks(); trackBy: trackById; let i = index">
             <app-track-row
               [track]="player.fromTrack(track)"
               [index]="rowIndex(i)"
@@ -70,16 +79,16 @@
             />
             @if (auth.isCatalogSteward()) {
             <div class="row-admin">
-              <button class="btn-icon btn-edit" (click)="openEdit(track)" title="Editar">
+              <button class="btn-icon btn-edit" (click)="openEdit(track)" [title]="'common.edit' | t:lang()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
-              <button class="btn-icon btn-delete" (click)="openDelete(track)" title="Eliminar">
+              <button class="btn-icon btn-delete" (click)="openDelete(track)" [title]="'common.delete' | t:lang()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
               </button>
             </div>
             }
           </div>
-        }
+        </cdk-virtual-scroll-viewport>
       }
     </div>
 
@@ -90,72 +99,87 @@
         @for (p of pageNumbers; track p) { <button class="page-btn" [class.active]="p === page()" (click)="goTo(p)">{{ p }}</button> }
         @if (page() < totalPages() - 2) { @if (page() < totalPages() - 3) { <span class="page-ellipsis">…</span> } <button class="page-btn" (click)="goTo(totalPages())">{{ totalPages() }}</button> }
         <button class="page-btn" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-        <span class="page-info">Pág. {{ page() }} / {{ totalPages() }}</span>
+        <span class="page-info">{{ 'common.pageInfo' | t: { page: page(), total: totalPages() }:lang() }}</span>
       </div>
     }
   }
 </div>
 
 @if (modalMode() !== null && auth.isCatalogSteward()) {
-  <div class="modal-backdrop" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-backdrop" role="presentation" (click)="closeModal()">
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="modalMode() === 'delete' ? 'tracks-modal-delete-title' : 'tracks-modal-form-title'"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="closeModal()"
+    >
       @if (modalMode() === 'create' || modalMode() === 'edit') {
         <div class="modal-header">
-          <h3 class="modal-title">{{ modalMode() === 'create' ? 'Nueva canción' : 'Editar canción' }}</h3>
-          <button class="modal-close" (click)="closeModal()">✕</button>
+          <h3 id="tracks-modal-form-title" class="modal-title">{{ modalMode() === 'create' ? ('tracks.modal.create' | t:lang()) : ('tracks.modal.edit' | t:lang()) }}</h3>
+          <button type="button" class="modal-close" (click)="closeModal()" [attr.aria-label]="'common.close' | t:lang()">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group form-full">
-              <label class="form-label">Nombre de la canción *</label>
-              <input class="form-input" type="text" placeholder="Ej: Bohemian Rhapsody" [value]="formName()" (input)="formName.set($any($event.target).value)"/>
+              <label class="form-label">{{ 'tracks.modal.nameLabel' | t:lang() }}</label>
+              <input class="form-input" type="text" [placeholder]="'tracks.modal.namePlaceholder' | t" [value]="formName()" (input)="formName.set($any($event.target).value)"/>
             </div>
             <div class="form-group">
-              <label class="form-label">Artista</label>
+              <label class="form-label">{{ 'tracks.modal.artistLabel' | t:lang() }}</label>
               <select class="form-select" [value]="formArtist() ?? ''" (change)="formArtist.set($any($event.target).value ? +$any($event.target).value : null)">
-                <option value="">Sin artista</option>
+                <option value="">{{ 'tracks.modal.noArtist' | t:lang() }}</option>
                 @for (a of artists(); track a.id_artista) { <option [value]="a.id_artista">{{ a.nombre_artista }}</option> }
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Género</label>
+              <label class="form-label">{{ 'tracks.modal.genreLabel' | t:lang() }}</label>
               <select class="form-select" [value]="formGenre() ?? ''" (change)="formGenre.set($any($event.target).value ? +$any($event.target).value : null)">
-                <option value="">Sin género</option>
+                <option value="">{{ 'tracks.modal.noGenre' | t:lang() }}</option>
                 @for (g of genres(); track g.id_genero) { <option [value]="g.id_genero">{{ g.nombre_genero }}</option> }
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Duración (ms)</label>
-              <input class="form-input" type="number" placeholder="Ej: 214000" [value]="formDuration() ?? ''" (input)="formDuration.set($any($event.target).value ? +$any($event.target).value : null)"/>
+              <label class="form-label">{{ 'tracks.modal.durationLabel' | t:lang() }}</label>
+              <input class="form-input" type="number" [placeholder]="'tracks.modal.durationPlaceholder' | t" [value]="formDuration() ?? ''" (input)="formDuration.set($any($event.target).value ? +$any($event.target).value : null)"/>
             </div>
             <div class="form-group form-check-group">
               <label class="form-check">
                 <input type="checkbox" [checked]="formExplicit()" (change)="formExplicit.set($any($event.target).checked)"/>
-                <span>Contenido explícito</span>
+                <span>{{ 'tracks.modal.explicit' | t:lang() }}</span>
               </label>
             </div>
           </div>
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button class="btn-primary" [disabled]="formSaving()" (click)="modalMode() === 'create' ? saveCreate() : saveEdit()">
-            @if (formSaving()) { <span class="spinner"></span> } {{ modalMode() === 'create' ? 'Crear' : 'Guardar' }}
+          <button type="button" class="btn-secondary" (click)="closeModal()">{{ 'common.cancel' | t:lang() }}</button>
+          <button type="button" class="btn-primary" [disabled]="formSaving()" (click)="modalMode() === 'create' ? saveCreate() : saveEdit()">
+            @if (formSaving()) { <span class="spinner"></span> }
+            {{ modalMode() === 'create' ? ('common.create' | t:lang()) : ('common.save' | t:lang()) }}
           </button>
         </div>
       }
       @if (modalMode() === 'delete') {
         <div class="modal-header">
-          <h3 class="modal-title modal-title-danger">Eliminar canción</h3>
-          <button class="modal-close" (click)="closeModal()">✕</button>
+          <h3 id="tracks-modal-delete-title" class="modal-title modal-title-danger">{{ 'tracks.modal.delete' | t:lang() }}</h3>
+          <button type="button" class="modal-close" (click)="closeModal()" [attr.aria-label]="'common.close' | t:lang()">✕</button>
         </div>
         <div class="modal-body">
-          <p class="delete-confirm-text">¿Eliminar <strong>{{ modalTrack()?.nombre_track }}</strong>?<br><span class="delete-warn">Esta acción no se puede deshacer.</span></p>
+          <p class="delete-confirm-text">
+            {{ 'tracks.modal.deleteConfirm' | t: { name: modalTrack()?.nombre_track ?? '' }:lang() }}<br>
+            <span class="delete-warn">{{ 'tracks.modal.deleteWarn' | t:lang() }}</span>
+          </p>
           @if (formError()) { <div class="form-error">{{ formError() }}</div> }
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
-          <button class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">@if (formSaving()) { <span class="spinner"></span> } Eliminar</button>
+          <button type="button" class="btn-secondary" (click)="closeModal()">{{ 'common.cancel' | t:lang() }}</button>
+          <button type="button" class="btn-danger" [disabled]="formSaving()" (click)="confirmDelete()">
+            @if (formSaving()) { <span class="spinner"></span> }
+            {{ 'common.delete' | t:lang() }}
+          </button>
         </div>
       }
     </div>

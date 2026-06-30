@@ -1,5 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GenresService } from '../../streaming/services/genres.service';
@@ -17,6 +18,7 @@ const GENRE_COLORS = ['#1ed896', '#148f5e', '#38bdf8', '#b794f6', '#f472b6', '#f
   styleUrls: ['./comparatives.component.css'],
 })
 export class ComparativesComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
 
   isLoading = signal(true);

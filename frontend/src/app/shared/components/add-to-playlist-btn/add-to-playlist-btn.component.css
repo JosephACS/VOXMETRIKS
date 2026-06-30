@@ -15,7 +15,7 @@
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-muted, rgba(255, 255, 255, 0.55));
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--motion-transition-interactive);
   padding: 0;
 }
 
@@ -89,7 +89,7 @@
   font-size: 0.8rem;
   text-align: left;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .atp-opt:hover {

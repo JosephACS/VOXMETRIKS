@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 import httpx
 
 from app.core.config import get_settings
+from app.core.database import using_write_conn
 from app.core.time_util import utc_now
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,10 @@ STATUS_OK = "ok"
 STATUS_NOT_FOUND = "not_found"
 STATUS_DISABLED = "disabled"  # no API key configured
 STATUS_ERROR = "error"  # transient API/quota failure — NOT cached, retried later
+STATUS_PENDING = "pending"  # resolution scheduled in background
+
+_scheduled_lock = threading.Lock()
+_scheduled_ids: set[int] = set()
 
 # Reject obvious non-studio matches (covers, lyric videos, loops, etc.)
 _BAD_TITLE_RE = re.compile(
@@ -389,6 +395,66 @@ def _resolve_video_id(
             return api_id, STATUS_OK if api_id else STATUS_NOT_FOUND
 
     return None, STATUS_ERROR
+
+
+def _schedule_resolve(track_id: int) -> None:
+    with _scheduled_lock:
+        if track_id in _scheduled_ids:
+            return
+        _scheduled_ids.add(track_id)
+
+    def _job() -> None:
+        try:
+            with using_write_conn() as conn:
+                resolve_audio_source(conn, track_id, force=False)
+        finally:
+            with _scheduled_lock:
+                _scheduled_ids.discard(track_id)
+
+    threading.Thread(target=_job, daemon=True, name=f"audio-resolve-{track_id}").start()
+
+
+def get_audio_source_response(
+    conn: duckdb.DuckDBPyConnection,
+    track_id: int,
+    *,
+    force: bool = False,
+    async_resolve: bool = True,
+) -> Optional[Dict[str, Any]]:
+    """Return cached audio source or schedule background resolution on miss."""
+    info = _track_info(conn, track_id)
+    if info is None:
+        return None
+    track_name, artist_name, duration_ms = info
+    query = _build_search_query(track_name, artist_name)
+
+    if not force:
+        cached = _read_cache(conn, track_id)
+        if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND, STATUS_DISABLED):
+            return cached
+
+    api_key = get_settings().youtube_api_key.strip()
+    if not api_key:
+        return {
+            "track_id": track_id,
+            "provider": "youtube",
+            "youtube_video_id": None,
+            "query": query,
+            "status": STATUS_DISABLED,
+        }
+
+    if async_resolve and not force:
+        _schedule_resolve(track_id)
+        return {
+            "track_id": track_id,
+            "provider": "youtube",
+            "youtube_video_id": None,
+            "query": query,
+            "status": STATUS_PENDING,
+        }
+
+    with using_write_conn() as write_conn:
+        return resolve_audio_source(write_conn, track_id, force=force)
 
 
 def resolve_audio_source(

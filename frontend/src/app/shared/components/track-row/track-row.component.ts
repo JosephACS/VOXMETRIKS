@@ -1,8 +1,9 @@
-import { Component, Input, OnInit, DestroyRef, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, DestroyRef, inject, signal, ChangeDetectionStrategy, effect, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FavoriteBtnComponent } from '../favorite-btn/favorite-btn.component';
+import { DeferVisibleDirective } from '../../directives/defer-visible.directive';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { CoverArtService } from '../../services/cover-art.service';
 import { TrackCoverService } from '../../services/track-cover.service';
@@ -11,10 +12,10 @@ import { PlayableTrack } from '../../models/player.models';
 @Component({
   selector: 'app-track-row',
   standalone: true,
-  imports: [CommonModule, RouterModule, FavoriteBtnComponent],
+  imports: [CommonModule, RouterModule, FavoriteBtnComponent, DeferVisibleDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="track-row" [class.playing]="player.currentTrack()?.id === track.id" (click)="play()">
+    <div class="track-row" appDeferVisible [class.playing]="player.currentTrack()?.id === track.id" (click)="play()">
       <span class="tr-index">{{ index }}</span>
       <button type="button" class="tr-cover" [style.background]="track.coverGradient" (click)="play($event)">
         @if (coverUrl()) {
@@ -37,7 +38,7 @@ import { PlayableTrack } from '../../models/player.models';
           <span class="tr-meta">Energía {{ energyPct }}%</span>
         }
       </div>
-      @if (track.explicit) { <span class="tr-explicit">E</span> }
+      @if (track.explicit) { <span class="tr-explicit" title="Contenido explícito" aria-label="Contenido explícito">E</span> }
       @if (showPopularity && popularity != null) {
         <div class="tr-pop">
           <div class="pop-bar"><div class="pop-fill" [style.width.%]="popularity"></div></div>
@@ -193,11 +194,13 @@ import { PlayableTrack } from '../../models/player.models';
     }
   `],
 })
-export class TrackRowComponent implements OnInit {
+export class TrackRowComponent {
   player = inject(MusicPlayerService);
   coverArt = inject(CoverArtService);
   private coverSvc = inject(TrackCoverService);
   private destroyRef = inject(DestroyRef);
+  private defer = viewChild(DeferVisibleDirective);
+  private coverRequested = false;
 
   @Input({ required: true }) track!: PlayableTrack;
   @Input() index = 1;
@@ -208,18 +211,24 @@ export class TrackRowComponent implements OnInit {
 
   coverUrl = signal<string | null>(null);
 
+  constructor() {
+    effect(() => {
+      const dir = this.defer();
+      if (!dir?.visible() || this.coverRequested) return;
+      const id = this.track?.id;
+      if (id == null || id < 0) return;
+      this.coverRequested = true;
+      this.coverSvc.cover$(id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((url) => this.coverUrl.set(url));
+    });
+  }
+
   /** Energy llega en escala 0-1 (Spotify); lo normalizamos a porcentaje 0-100. */
   get energyPct(): number | null {
     if (this.energy == null) return null;
     const pct = this.energy <= 1 ? this.energy * 100 : this.energy;
     return Math.round(pct);
-  }
-
-  ngOnInit(): void {
-    if (this.track?.id == null || this.track.id < 0) return;
-    this.coverSvc.cover$(this.track.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((url) => this.coverUrl.set(url));
   }
 
   get durationLabel(): string {

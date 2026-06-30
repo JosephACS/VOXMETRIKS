@@ -17,9 +17,9 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should have title VOXMETRIK_V2', () => {
+  it('should have title VOXMETRIK', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('VOXMETRIK_V2');
+    expect(app.title).toEqual('VOXMETRIK');
   });
 });

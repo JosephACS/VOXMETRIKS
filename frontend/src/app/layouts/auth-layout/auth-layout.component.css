@@ -12,7 +12,7 @@
   background: var(--bg-base);
   overflow: hidden;
   padding: 1.5rem;
-  transition: background 0.35s ease;
+  transition: background var(--motion-duration-slow) var(--motion-ease-standard);
 }
 
 /* ── Background: gradiente radial sutil ── */

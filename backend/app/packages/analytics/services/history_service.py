@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import duckdb
+
+logger = logging.getLogger(__name__)
 
 def _warehouse_user_id(app_user_id: int) -> int:
     """Mapea app_user.id → id_usuario del warehouse (datos sintéticos)."""
@@ -30,6 +33,7 @@ def get_search_history(
             [wh_user, limit],
         ).fetchall()
     except Exception:
+        logger.exception("get_search_history: fact_searches query failed for user_id=%s", user_id)
         return []
 
     return [
@@ -71,7 +75,7 @@ def get_user_history(
                 "detalle": "Sesión activa en VOXMETRIK",
             })
     except Exception:
-        pass
+        logger.exception("get_user_history: app_session query failed for user_id=%s", user_id)
 
     favorites: List[Dict[str, Any]] = []
     try:
@@ -99,7 +103,7 @@ def get_user_history(
                 "nombre_artista": primary,
             })
     except Exception:
-        pass
+        logger.exception("get_user_history: app_favorite query failed for user_id=%s", user_id)
 
     activity: List[Dict[str, Any]] = []
     try:
@@ -141,7 +145,7 @@ def get_user_history(
                 "nombre_artista": primary,
             })
     except Exception:
-        pass
+        logger.exception("get_user_history: fact_user_activity query failed for user_id=%s", user_id)
 
     merged = sessions + favorites + activity
     merged.sort(key=lambda x: x.get("fecha_evento") or "", reverse=True)

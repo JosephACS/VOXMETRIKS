@@ -1,5 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
-import { Component, HostListener, Input, inject, signal } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, inject, HostListener, Input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { IconRenderService } from '../../services/icon-render.service';
@@ -15,6 +16,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   styleUrls: ['./add-to-playlist-btn.component.css'],
 })
 export class AddToPlaylistBtnComponent {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private playlistsSvc = inject(PlaylistsService);
 
@@ -40,7 +42,10 @@ export class AddToPlaylistBtnComponent {
           this.playlists.set(d ?? []);
           this.loaded.set(true);
         },
-        error: () => this.playlists.set([]),
+        error: (err) => {
+          console.error('[AddToPlaylistBtnComponent] playlists.list failed', err);
+          this.playlists.set([]);
+        },
       });
     }
   }

@@ -20,19 +20,19 @@
             <span class="profile-badge" [class.badge-premium]="b === 'Premium'">{{ b }}</span>
           }
         </div>
-        <p class="profile-context">{{ 'profile.context' | t }}</p>
+        <p class="profile-context">{{ 'profile.context' | t:lang() }}</p>
         <div class="profile-nav">
           <a routerLink="/history" class="profile-nav-card glass-panel">
-            <strong>{{ 'profile.linkHistory' | t }}</strong>
-            <span>{{ 'profile.linkHistoryDesc' | t }}</span>
+            <strong>{{ 'profile.linkHistory' | t:lang() }}</strong>
+            <span>{{ 'profile.linkHistoryDesc' | t:lang() }}</span>
           </a>
           <a routerLink="/settings" class="profile-nav-card glass-panel">
-            <strong>{{ 'profile.linkSettings' | t }}</strong>
-            <span>{{ 'profile.linkSettingsDesc' | t }}</span>
+            <strong>{{ 'profile.linkSettings' | t:lang() }}</strong>
+            <span>{{ 'profile.linkSettingsDesc' | t:lang() }}</span>
           </a>
           <a routerLink="/playlists" class="profile-nav-card glass-panel">
-            <strong>{{ 'profile.linkPlaylists' | t }}</strong>
-            <span>{{ 'profile.linkPlaylistsDesc' | t }}</span>
+            <strong>{{ 'profile.linkPlaylists' | t:lang() }}</strong>
+            <span>{{ 'profile.linkPlaylistsDesc' | t:lang() }}</span>
           </a>
         </div>
         <div class="hero-meta">
@@ -46,19 +46,19 @@
       <div class="hero-quick-stats">
         <div class="quick-stat">
           <span class="qs-value">{{ listenHistory().length }}</span>
-          <span class="qs-label">{{ 'profile.kpi.recent' | t }}</span>
+          <span class="qs-label">{{ 'profile.kpi.recent' | t:lang() }}</span>
         </div>
         <div class="quick-stat">
           <span class="qs-value">{{ stats().favorites }}</span>
-          <span class="qs-label">{{ 'profile.kpi.favorites' | t }}</span>
+          <span class="qs-label">{{ 'profile.kpi.favorites' | t:lang() }}</span>
         </div>
         <div class="quick-stat">
           <span class="qs-value">{{ stats().playlists }}</span>
-          <span class="qs-label">{{ 'profile.kpi.playlists' | t }}</span>
+          <span class="qs-label">{{ 'profile.kpi.playlists' | t:lang() }}</span>
         </div>
         <div class="quick-stat">
           <span class="qs-value">{{ topArtists().length }}</span>
-          <span class="qs-label">{{ 'profile.kpi.artists' | t }}</span>
+          <span class="qs-label">{{ 'profile.kpi.artists' | t:lang() }}</span>
         </div>
       </div>
     </div>
@@ -77,10 +77,10 @@
       <!-- Recently played carousel -->
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>{{ 'profile.recentPreview' | t }}</h2>
+          <h2>{{ 'profile.recentPreview' | t:lang() }}</h2>
           <div class="section-head-actions">
             <app-data-source-badge kind="local" />
-            <a routerLink="/history" class="section-link">{{ 'profile.viewHistory' | t }}</a>
+            <a routerLink="/history" class="section-link">{{ 'profile.viewHistory' | t:lang() }}</a>
           </div>
         </div>
         <div class="recent-scroll">
@@ -96,7 +96,7 @@
             </article>
           }
           @if (!recentCarousel().length) {
-            <p class="empty-msg">{{ 'profile.recentEmpty' | t }}</p>
+            <p class="empty-msg">{{ 'profile.recentEmpty' | t:lang() }}</p>
           }
         </div>
       </section>
@@ -105,12 +105,12 @@
       <div class="dual-row">
         <section class="glass-panel section-panel chart-panel">
           <div class="section-head">
-            <h2>{{ 'profile.sections.activity' | t }}</h2>
+            <h2>{{ 'profile.sections.activity' | t:lang() }}</h2>
             <div class="section-head-actions">
               <span class="section-meta">Serie normalizada</span>
             </div>
           </div>
-          <svg viewBox="0 0 360 100" class="activity-chart" aria-hidden="true">
+          <svg viewBox="0 0 360 100" class="activity-chart vm-chart" aria-hidden="true">
             <defs>
               <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
@@ -132,7 +132,7 @@
 
         <section class="glass-panel section-panel">
           <div class="section-head">
-            <h2>{{ 'profile.sections.genres' | t }}</h2>
+            <h2>{{ 'profile.sections.genres' | t:lang() }}</h2>
             <span class="section-meta">Preferencia del perfil</span>
           </div>
           <div class="genre-cards">
@@ -151,7 +151,7 @@
       <!-- Favorite playlists -->
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>{{ 'profile.sections.playlists' | t }}</h2>
+          <h2>{{ 'profile.sections.playlists' | t:lang() }}</h2>
           <span class="section-meta">{{ favoritePlaylists().length }} listas</span>
         </div>
         <div class="playlist-grid">
@@ -165,7 +165,7 @@
             </article>
           }
           @if (!favoritePlaylists().length) {
-            <p class="empty-msg">{{ 'profile.playlistsEmpty' | t }}</p>
+            <p class="empty-msg">{{ 'profile.playlistsEmpty' | t:lang() }}</p>
           }
         </div>
       </section>
@@ -173,7 +173,7 @@
       <!-- Top artists visual -->
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>{{ 'profile.sections.topArtists' | t }}</h2>
+          <h2>{{ 'profile.sections.topArtists' | t:lang() }}</h2>
           <span class="section-meta">Ranking personal</span>
         </div>
         <div class="artist-rank-list">
@@ -189,7 +189,7 @@
             </div>
           }
           @if (!topArtists().length) {
-            <p class="empty-msg">{{ 'profile.artistsEmpty' | t }}</p>
+            <p class="empty-msg">{{ 'profile.artistsEmpty' | t:lang() }}</p>
           }
         </div>
       </section>
@@ -198,27 +198,27 @@
     <aside class="profile-sidebar">
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>{{ 'profile.sections.preferences' | t }}</h2>
-          <a routerLink="/settings" class="section-link">{{ 'profile.editSettings' | t }}</a>
+          <h2>{{ 'profile.sections.preferences' | t:lang() }}</h2>
+          <a routerLink="/settings" class="section-link">{{ 'profile.editSettings' | t:lang() }}</a>
         </div>
-        <p class="pref-readonly-note">{{ 'profile.preferencesReadonly' | t }}</p>
+        <p class="pref-readonly-note">{{ 'profile.preferencesReadonly' | t:lang() }}</p>
         <div class="pref-list">
           <div class="pref-row">
-            <div><span class="pref-label">{{ 'profile.prefFavoriteGenre' | t }}</span><span class="pref-value">{{ preferences().favoriteGenre }}</span></div>
+            <div><span class="pref-label">{{ 'profile.prefFavoriteGenre' | t:lang() }}</span><span class="pref-value">{{ preferences().favoriteGenre }}</span></div>
           </div>
           <div class="pref-row">
-            <div><span class="pref-label">{{ 'profile.prefQuality' | t }}</span><span class="pref-value">{{ preferences().audioQuality }}</span></div>
+            <div><span class="pref-label">{{ 'profile.prefQuality' | t:lang() }}</span><span class="pref-value">{{ preferences().audioQuality }}</span></div>
           </div>
           <div class="pref-row">
-            <div><span class="pref-label">{{ 'profile.prefRecs' | t }}</span></div>
+            <div><span class="pref-label">{{ 'profile.prefRecs' | t:lang() }}</span></div>
             <span class="pref-status" [class.pref-status--on]="preferences().personalizedRecs">{{ preferences().personalizedRecs ? ('profile.on' | t) : ('profile.off' | t) }}</span>
           </div>
           <div class="pref-row">
-            <div><span class="pref-label">{{ 'profile.prefDarkMode' | t }}</span></div>
+            <div><span class="pref-label">{{ 'profile.prefDarkMode' | t:lang() }}</span></div>
             <span class="pref-status" [class.pref-status--on]="preferences().darkMode">{{ preferences().darkMode ? ('profile.on' | t) : ('profile.off' | t) }}</span>
           </div>
           <div class="pref-row">
-            <div><span class="pref-label">{{ 'profile.prefPrivacy' | t }}</span></div>
+            <div><span class="pref-label">{{ 'profile.prefPrivacy' | t:lang() }}</span></div>
             <span class="pref-status" [class.pref-status--on]="preferences().privacyPublic">{{ preferences().privacyPublic ? ('profile.on' | t) : ('profile.off' | t) }}</span>
           </div>
         </div>
@@ -226,7 +226,7 @@
 
       <section class="glass-panel section-panel">
         <div class="section-head">
-          <h2>{{ 'profile.sections.activityTimeline' | t }}</h2>
+          <h2>{{ 'profile.sections.activityTimeline' | t:lang() }}</h2>
         </div>
         <div class="timeline">
           @for (act of activities(); track act.id; let last = $last) {
@@ -244,7 +244,7 @@
       </section>
 
       <section class="glass-panel section-panel">
-        <div class="section-head"><h2>{{ 'profile.sections.devices' | t }}</h2></div>
+        <div class="section-head"><h2>{{ 'profile.sections.devices' | t:lang() }}</h2></div>
         <div class="devices-grid">
           @for (dev of devices(); track dev.id) {
             <div class="device-card">

@@ -1,6 +1,6 @@
 # Specs operativas — Voxmetriks
 
-Índice canónico de la capa SDD (specs **001–011**). Constitución: [`.specify/memory/constitution.md`](../.specify/memory/constitution.md).
+Índice canónico de la capa SDD (specs **001–012**). Constitución: [`.specify/memory/constitution.md`](../.specify/memory/constitution.md).
 
 ---
 
@@ -19,8 +19,9 @@
 | 009 | [data-explorer](009-data-explorer/spec.md) | OT-09 Explorer | PKG-07 |
 | 010 | [catalog-steward](010-catalog-steward/spec.md) | OT-09 Steward CRUD | PKG-02 |
 | 011 | [health-operations](011-health-operations/spec.md) | OT-10 Health / ops | PKG-05 |
+| 012 | [auto-quality-gates](012-auto-quality-gates/spec.md) | OT-11 Calidad / CI | Transversal |
 
-Cada carpeta incluye `spec.md`, `checklists/requirements.md` y, en 001–007, `traceability-appendix.md`.
+Cada carpeta incluye `spec.md`, `checklists/requirements.md` y, en 001–007 y **012**, apéndice de trazabilidad (`traceability-appendix.md` en 012).
 
 ---
 

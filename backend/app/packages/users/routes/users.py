@@ -7,17 +7,30 @@ from typing import Optional
 import duckdb
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
-from app.core.database import get_conn, get_write_conn
 from app.core.config import get_settings
+from app.core.database import get_conn, get_write_conn
 from app.core.rate_limit import check_auth_rate_limit
-from app.shared.schemas.models import (
-    UserLogin, UserRegister, UserProfile, UserPublic, UserPreferencesUpdate,
-    VerifyEmailRequest, ResendCodeRequest, GoogleLoginRequest, AuthConfig,
-)
-from app.packages.users.services.auth_deps import require_user_id, extract_token
+from app.packages.users.services.auth_deps import extract_token, require_user_id
 from app.packages.users.services.user_service import (
-    login, register, get_me, update_preferences, logout,
-    verify_email, resend_verification, google_login,
+    get_me,
+    google_login,
+    login,
+    logout,
+    register,
+    resend_verification,
+    update_preferences,
+    verify_email,
+)
+from app.shared.schemas.models import (
+    AuthConfig,
+    GoogleLoginRequest,
+    ResendCodeRequest,
+    UserLogin,
+    UserPreferencesUpdate,
+    UserProfile,
+    UserPublic,
+    UserRegister,
+    VerifyEmailRequest,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])

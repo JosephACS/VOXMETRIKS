@@ -56,6 +56,7 @@ def build_track_search_filter(
     track_col: str = "dt.nombre_track",
     artist_col: str = "da.nombre_artista",
     genre_col: str = "dg.nombre_genero",
+    search_fold_col: str | None = None,
 ) -> Tuple[str, List[str]]:
     """
     Build WHERE fragment: every token must appear in track, artist, or genre
@@ -65,10 +66,13 @@ def build_track_search_filter(
     if not tokens:
         return "1=0", []
 
-    track_f = duckdb_fold_expr(track_col)
-    artist_f = duckdb_fold_expr(f"COALESCE({artist_col}, '')")
-    genre_f = duckdb_fold_expr(f"COALESCE({genre_col}, '')")
-    haystack = f"({track_f} || ' ' || {artist_f} || ' ' || {genre_f})"
+    if search_fold_col:
+        haystack = search_fold_col
+    else:
+        track_f = duckdb_fold_expr(track_col)
+        artist_f = duckdb_fold_expr(f"COALESCE({artist_col}, '')")
+        genre_f = duckdb_fold_expr(f"COALESCE({genre_col}, '')")
+        haystack = f"({track_f} || ' ' || {artist_f} || ' ' || {genre_f})"
 
     parts: List[str] = []
     params: List[str] = []

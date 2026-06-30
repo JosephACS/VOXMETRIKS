@@ -48,7 +48,7 @@
   left: 1rem;
   font-size: 3rem;
   font-weight: 900;
-  color: rgba(30, 216, 150, 0.12);
+  color: rgba(30, 216, 150, 0.22);
   line-height: 1;
   pointer-events: none;
 }
@@ -61,6 +61,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 32px rgba(30, 216, 150, 0.2);
   flex-shrink: 0;
   z-index: 1;
@@ -82,13 +83,15 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  background: rgba(0, 0, 0, 0.6);
+  padding: 0.22rem 0.55rem;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid rgba(30, 216, 150, 0.4);
   border-radius: 2rem;
   font-size: 0.6rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .hero-details { z-index: 1; min-width: 0; }
@@ -142,11 +145,15 @@
   align-items: center;
   gap: 0.3rem;
   margin-top: 0.5rem;
+  max-width: 100%;
   font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.3;
   padding: 0.2rem 0.6rem;
   border-radius: 2rem;
 }
+
+.hero-trend span { flex-shrink: 0; }
 
 .hero-trend.up {
   background: rgba(16, 185, 129, 0.12);
@@ -210,6 +217,14 @@
 
 .chart-section, .stats-mini { padding: 0.875rem 1rem; }
 
+/* Divisor sutil que separa el panel de estadísticas del gráfico principal */
+.stats-mini {
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+}
+@media (max-width: 768px) {
+  .stats-mini { border-left: none; border-top: 2px solid rgba(255, 255, 255, 0.1); }
+}
+
 .panel-head {
   display: flex;
   align-items: center;
@@ -239,6 +254,11 @@
 }
 
 .weekly-chart { width: 100%; height: auto; display: block; }
+
+/* Línea de tendencia nítida: leve glow para que el borde superior del área sea claramente legible */
+.weekly-chart .weekly-line {
+  filter: drop-shadow(0 1px 2px rgba(124, 58, 237, 0.45));
+}
 
 .chart-note,
 .chart-empty {
@@ -280,9 +300,10 @@
 }
 
 .ms-lbl {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
@@ -320,14 +341,19 @@
   color: inherit;
 }
 
-.rank-card:hover { background: rgba(255, 255, 255, 0.03); }
+.rank-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 2px 0 0 rgba(30, 216, 150, 0.4);
+}
 .rank-card.top3 { background: rgba(255, 255, 255, 0.02); }
+.rank-card.top3:hover { background: rgba(255, 255, 255, 0.06); }
 
 .rank-num {
   width: 1.75rem;
   font-family: var(--font-mono);
   font-size: 0.875rem;
   font-weight: 700;
+  line-height: 1;
   color: var(--text-muted);
   text-align: center;
   flex-shrink: 0;
@@ -385,7 +411,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 100px;
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .pop-track {
@@ -453,5 +480,5 @@
 
 @media (max-width: 480px) {
   .rank-trend { display: none; }
-  .rank-pop { min-width: 70px; }
+  .rank-pop { width: 72px; }
 }

@@ -40,7 +40,7 @@
           <span class="nav-section-label">
             {{ section.title }}
             @if (section.id === 'data' && isEngineerRole()) {
-              <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t }}</span>
+              <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t:lang() }}</span>
             }
           </span>
           @for (item of section.items; track item.path) {
@@ -77,15 +77,13 @@
         </svg>
       </button>
 
-      <p class="topbar-context" aria-hidden="true">{{ 'shell.contextNote' | t }}</p>
-
       <div class="topbar-profile">
         <div class="user-menu-wrap">
           <button type="button" class="topbar-user-btn" (click)="toggleUserMenu($event)">
             <div class="topbar-user-avatar" [style.background]="avatarGradient()">{{ userInitial() }}</div>
             <span class="topbar-user-name">{{ userName() }}</span>
             @if (isDemoUser()) {
-              <span class="demo-badge">{{ 'shell.demo' | t }}</span>
+              <span class="demo-badge">{{ 'shell.demo' | t:lang() }}</span>
             } @else if (isEngineerRole()) {
               <span class="role-badge role-badge--engineer">{{ roleLabel() }}</span>
             }
@@ -102,19 +100,19 @@
               </div>
               <a routerLink="/users" class="ud-item" (click)="userMenuOpen.set(false)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                {{ 'shell.myProfile' | t }}
+                {{ 'shell.myProfile' | t:lang() }}
               </a>
               <a routerLink="/liked" class="ud-item" (click)="userMenuOpen.set(false)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                {{ 'nav.liked' | t }}
+                {{ 'nav.liked' | t:lang() }}
               </a>
               <a routerLink="/settings" class="ud-item" (click)="userMenuOpen.set(false)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                {{ 'nav.settings' | t }}
+                {{ 'nav.settings' | t:lang() }}
               </a>
               <button type="button" class="ud-item ud-logout" (click)="logout()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                {{ 'shell.logout' | t }}
+                {{ 'shell.logout' | t:lang() }}
               </button>
             </div>
           }

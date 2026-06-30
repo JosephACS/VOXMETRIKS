@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
-
 
 EXPLORER_TABLES = "/api/v1/analytics/explorer/tables"
 EXPLORER_PREVIEW = "/api/v1/analytics/explorer/preview/dim_track"
@@ -116,10 +114,32 @@ class TestRoleBasedAccessControl:
         assert response.status_code == 200
         assert response.json()["user"]["role"] == "user"
 
-    def test_admin_login_returns_engineer_role(self, client: TestClient) -> None:
+    def test_admin_login_returns_admin_role(self, client: TestClient) -> None:
         response = client.post(
             "/api/v1/users/login",
             json={"login": "admin", "password": "admin123", "remember": True},
         )
         assert response.status_code == 200
+        assert response.json()["user"]["role"] == "admin"
+
+    def test_engineer_login_returns_engineer_role(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/v1/users/login",
+            json={"login": "engineer", "password": "engineer123", "remember": True},
+        )
+        assert response.status_code == 200
         assert response.json()["user"]["role"] == "engineer"
+
+    def test_engineer_cannot_mutate_catalog(self, client: TestClient) -> None:
+        login = client.post(
+            "/api/v1/users/login",
+            json={"login": "engineer", "password": "engineer123", "remember": True},
+        )
+        token = login.json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = client.post(
+            "/api/v1/artists",
+            json={"nombre_artista": "Engineer Should Fail"},
+            headers=headers,
+        )
+        assert resp.status_code == 403

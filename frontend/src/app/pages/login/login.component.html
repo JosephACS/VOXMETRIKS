@@ -2,14 +2,14 @@
   <aside class="login-cover" aria-hidden="true">
     <div class="cover-glow"></div>
     <div class="cover-content">
-      <h2>{{ 'login.coverTitle' | t }}</h2>
-      <p>{{ 'login.coverSub' | t }}</p>
+      <h2>{{ 'login.coverTitle' | t:lang() }}</h2>
+      <p>{{ 'login.coverSub' | t:lang() }}</p>
       <div class="cover-stats">
         @if (summary()?.total_tracks != null) {
-          <span>{{ 'login.statTracks' | t: { count: formatStat(summary()?.total_tracks) } }}</span>
+          <span>{{ 'login.statTracks' | t: { count: formatStat(summary()?.total_tracks) }:lang() }}</span>
         }
         @if (summary()?.total_artistas != null) {
-          <span>{{ 'login.statArtists' | t: { count: formatStat(summary()?.total_artistas) } }}</span>
+          <span>{{ 'login.statArtists' | t: { count: formatStat(summary()?.total_artistas) }:lang() }}</span>
         }
       </div>
     </div>
@@ -18,8 +18,8 @@
   <div class="login-card glass" role="main">
     <div class="login-toolbar">
       <div class="lang-toggle" role="group" [attr.aria-label]="'settings.language' | t">
-        <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t }}</button>
-        <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t }}</button>
+        <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t:lang() }}</button>
+        <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t:lang() }}</button>
       </div>
     </div>
 
@@ -32,15 +32,15 @@
 
     @if (mode() !== 'verify') {
       <div class="auth-tabs">
-        <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t }}</button>
-        <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t }}</button>
+        <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t:lang() }}</button>
+        <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t:lang() }}</button>
       </div>
-      <div class="auth-note">{{ 'login.authNote' | t }}</div>
+      <div class="auth-note">{{ 'login.authNote' | t:lang() }}</div>
     }
 
     @if (mode() === 'login') {
-      <h1 class="login-title">{{ 'login.welcomeTitle' | t }}</h1>
-      <p class="login-subtitle">{{ 'login.subtitle' | t }}</p>
+      <h1 class="login-title">{{ 'login.welcomeTitle' | t:lang() }}</h1>
+      <p class="login-subtitle">{{ 'login.subtitle' | t:lang() }}</p>
 
       <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
         <div class="field">
@@ -49,7 +49,7 @@
             <input id="loginId" type="text" formControlName="loginId" [placeholder]="'login.loginIdPlaceholder' | t" class="field-input" autocomplete="username" />
           </div>
           @if (loginForm.controls.loginId.invalid && loginForm.controls.loginId.touched) {
-            <span class="field-error">{{ 'login.loginIdError' | t }}</span>
+            <span class="field-error">{{ 'login.loginIdError' | t:lang() }}</span>
           }
         </div>
         <div class="field">
@@ -65,25 +65,25 @@
             </button>
           </div>
           @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
-            <span class="field-error">{{ 'login.passwordError' | t }}</span>
+            <span class="field-error">{{ 'login.passwordError' | t:lang() }}</span>
           }
         </div>
         <div class="form-options">
           <label class="checkbox-label">
             <input type="checkbox" formControlName="remember" />
-            {{ 'login.remember' | t }}
+            {{ 'login.remember' | t:lang() }}
           </label>
         </div>
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
         <button type="submit" class="submit-btn" [disabled]="isLoading()" [class.loading]="isLoading()">
-          @if (isLoading()) { {{ 'login.submitting' | t }} } @else { {{ 'login.submit' | t }} }
+          @if (isLoading()) { {{ 'login.submitting' | t:lang() }} } @else { {{ 'login.submit' | t:lang() }} }
         </button>
       </form>
     } @else if (mode() === 'register') {
-      <h1 class="login-title">{{ 'login.registerTitle' | t }}</h1>
-      <p class="login-subtitle">{{ 'login.registerSubtitle' | t }}</p>
+      <h1 class="login-title">{{ 'login.registerTitle' | t:lang() }}</h1>
+      <p class="login-subtitle">{{ 'login.registerSubtitle' | t:lang() }}</p>
 
       <form [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="login-form" novalidate>
         <div class="field">
@@ -92,9 +92,9 @@
             <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" />
           </div>
           @if (registerForm.controls.username.invalid && registerForm.controls.username.touched) {
-            <span class="field-error">{{ 'login.usernameError' | t }}</span>
+            <span class="field-error">{{ 'login.usernameError' | t:lang() }}</span>
           } @else {
-            <span class="field-help">{{ 'login.usernameHelp' | t }}</span>
+            <span class="field-help">{{ 'login.usernameHelp' | t:lang() }}</span>
           }
         </div>
         <div class="field">
@@ -103,7 +103,7 @@
             <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" />
           </div>
           @if (registerForm.controls.email.invalid && registerForm.controls.email.touched) {
-            <span class="field-error">{{ 'login.emailError' | t }}</span>
+            <span class="field-error">{{ 'login.emailError' | t:lang() }}</span>
           }
         </div>
         <div class="field">
@@ -111,7 +111,7 @@
           <div class="input-wrap" [class.invalid]="registerForm.controls.password.invalid && registerForm.controls.password.touched">
             <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" />
           </div>
-          <span class="field-help">{{ 'login.passwordHashHint' | t }}</span>
+          <span class="field-help">{{ 'login.passwordHashHint' | t:lang() }}</span>
         </div>
         <div class="field">
           <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t | uppercase }}</label>
@@ -123,12 +123,12 @@
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
         <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
-          @if (isLoading()) { {{ 'login.registerSubmitting' | t }} } @else { {{ 'login.registerSubmit' | t }} }
+          @if (isLoading()) { {{ 'login.registerSubmitting' | t:lang() }} } @else { {{ 'login.registerSubmit' | t:lang() }} }
         </button>
       </form>
     } @else if (mode() === 'verify') {
-      <h1 class="login-title">{{ 'verify.title' | t }}</h1>
-      <p class="login-subtitle">{{ 'verify.subtitle' | t: { email: pendingEmail() } }}</p>
+      <h1 class="login-title">{{ 'verify.title' | t:lang() }}</h1>
+      <p class="login-subtitle">{{ 'verify.subtitle' | t: { email: pendingEmail() }:lang() }}</p>
 
       <form [formGroup]="verifyForm" (ngSubmit)="onVerifySubmit()" class="login-form" novalidate>
         <div class="field">
@@ -138,11 +138,11 @@
                    formControlName="code" placeholder="••••••" class="field-input code-input" />
           </div>
           @if (verifyForm.controls.code.invalid && verifyForm.controls.code.touched) {
-            <span class="field-error">{{ 'verify.codeError' | t }}</span>
+            <span class="field-error">{{ 'verify.codeError' | t:lang() }}</span>
           }
         </div>
         @if (devCode()) {
-          <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() } }}</div>
+          <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() }:lang() }}</div>
         }
         @if (infoMessage()) {
           <div class="info-banner" role="status">{{ infoMessage() }}</div>
@@ -151,25 +151,25 @@
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
         <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
-          @if (isLoading()) { {{ 'verify.submitting' | t }} } @else { {{ 'verify.submit' | t }} }
+          @if (isLoading()) { {{ 'verify.submitting' | t:lang() }} } @else { {{ 'verify.submit' | t:lang() }} }
         </button>
         <div class="verify-actions">
-          <button type="button" class="link-btn" (click)="onResendCode()">{{ 'verify.resend' | t }}</button>
-          <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t }}</button>
+          <button type="button" class="link-btn" (click)="onResendCode()">{{ 'verify.resend' | t:lang() }}</button>
+          <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t:lang() }}</button>
         </div>
       </form>
     }
 
     @if (mode() !== 'verify' && googleClientId()) {
-      <div class="auth-divider"><span>{{ 'login.or' | t }}</span></div>
+      <div class="auth-divider"><span>{{ 'login.or' | t:lang() }}</span></div>
       <div class="google-btn-wrap">
         <div #googleBtn class="google-btn-host"></div>
       </div>
     }
 
     <div class="demo-accounts">
-      <span>{{ 'login.listenerAccount' | t }}</span>
-      <span>{{ 'login.stewardAccount' | t }}</span>
+      <span>{{ 'login.listenerAccount' | t:lang() }}</span>
+      <span>{{ 'login.stewardAccount' | t:lang() }}</span>
     </div>
   </div>
 </div>

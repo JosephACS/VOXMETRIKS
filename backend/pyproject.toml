@@ -1,0 +1,57 @@
+# ============================================================
+# VOXMETRIKS_V2 - Backend tooling (Ruff + Pytest)
+# Single source of truth for lint + test configuration.
+# ============================================================
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    ".pytest_cache",
+    ".pytest_db",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+# High-signal rule set for a long-lived codebase:
+# E/W pycodestyle, F pyflakes, I isort, B bugbear, C4 comprehensions, SIM simplify.
+# pyupgrade (UP) is intentionally left out to avoid churning every legacy module's
+# typing annotations; enable it later as a dedicated modernization pass.
+select = ["E", "W", "F", "I", "B", "C4", "SIM"]
+ignore = [
+    "E501",   # line length is handled by the formatter, not hard-failed
+    "B008",   # FastAPI uses function calls (Depends/Query) in defaults by design
+    "B905",   # zip(...) without strict= is fine on equal-length warehouse rows
+    "SIM105", # contextlib.suppress is not always clearer than try/except
+    "SIM108", # ternary is not always more readable than if/else
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011", "E402", "SIM112"]   # asserts, late imports, lowercase db_path env are intentional
+"**/__init__.py" = ["F401"]               # re-exports
+"app/main.py" = ["E402"]                  # imports follow the logging/env bootstrap by design
+"scripts/**" = ["E402", "F841", "W291"]   # one-off maintenance scripts (whitespace lives inside SQL literals)
+# Pre-existing debt — NOT fixed here to respect "no modificar lógica". Flagged for follow-up:
+#   * mutations.py:125 references `id_genre` (typo for `id_genero`) -> latent NameError on genre update.
+#   * user_service.py uses a redundant comprehension and an unused `favorite_genre` local.
+"app/packages/streaming/services/tracks/mutations.py" = ["F821"]
+"app/packages/users/services/user_service.py" = ["C416", "F841"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]

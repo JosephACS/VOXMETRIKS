@@ -53,6 +53,13 @@
   --transition-fast: var(--motion-duration-fast) var(--motion-ease-standard);
   --ease-smooth: var(--motion-ease-standard);
   --ease-out-soft: var(--motion-ease-out);
+
+  /* Material/Spotify standard easing (reutilizable en componentes) */
+  --easing-standard: var(--motion-ease-in-out); /* cubic-bezier(0.4, 0, 0.2, 1) */
+  --transition-base: var(--motion-duration-normal) var(--motion-ease-in-out); /* ~220ms */
+  --transition-smooth: var(--motion-duration-slow) var(--motion-ease-in-out); /* ~320ms */
+  /* Carga de barras de progreso/medidores (0 → valor real) */
+  --transition-meter: width var(--motion-duration-slower) var(--motion-ease-out);
 }
 
 /* ── Keyframes (fuente única) ── */
@@ -116,9 +123,51 @@
   100% { background-position: -200% 0; }
 }
 
+/* Barras-medidor: crecen de 0 → valor real al aparecer (scaleX = GPU-friendly,
+   no toca el width inline que define el valor). */
+@keyframes vm-meter-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Variante vertical (gráficos de columnas): crecen desde la base. */
+@keyframes vm-meter-grow-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 @keyframes vm-chart-draw {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes vm-chart-stroke {
+  from {
+    stroke-dashoffset: var(--motion-chart-length, 600);
+    opacity: 0.35;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes vm-fav-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes vm-success-pop {
+  0% { transform: scale(0.92); opacity: 0; }
+  60% { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Cambio de icono play ⇄ pausa: micro-pop al alternar (el @if recrea el svg). */
+@keyframes vm-icon-swap {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* ── Utilidades opt-in ── */
@@ -136,6 +185,10 @@
 }
 
 .vm-animate-reveal {
+  animation: vm-reveal var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.pl-card.vm-animate-reveal {
   animation: vm-reveal var(--motion-duration-normal) var(--motion-ease-standard) both;
 }
 
@@ -166,6 +219,12 @@ button.preset-btn {
 button.btn-primary:active:not(:disabled),
 button.btn-ghost:active:not(:disabled) {
   transform: scale(var(--motion-scale-press));
+}
+
+/* Botón principal del reproductor: icono play/pausa con transición fluida. */
+.play-btn svg,
+.np-ctrl.play svg {
+  animation: vm-icon-swap var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 /* ── Cards ── */
@@ -226,7 +285,8 @@ select {
 
 .user-dropdown,
 .pl-picker,
-.shell-dropdown {
+.shell-dropdown,
+.atp-menu {
   animation: vm-slide-down var(--motion-duration-fast) var(--motion-ease-standard) both;
   transform-origin: top center;
 }
@@ -253,9 +313,38 @@ app-kpi-card .kpi-value-num {
 
 .mini-chart,
 .vm-chart,
-svg.mini-chart polyline,
-svg.vm-chart polyline {
+.vx-mini-chart {
   animation: vm-chart-draw var(--motion-duration-slow) var(--motion-ease-standard) both;
+}
+
+.mini-chart polyline,
+.vm-chart polyline,
+.vx-mini-chart polyline {
+  stroke-dasharray: var(--motion-chart-length, 600);
+  stroke-dashoffset: var(--motion-chart-length, 600);
+  animation: vm-chart-stroke var(--motion-duration-slower) var(--motion-ease-standard) forwards;
+}
+
+/* ── Favoritos & playlist feedback ── */
+
+.fav-btn.pop {
+  animation: vm-fav-pop var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+.fav-btn {
+  transition: var(--motion-transition-interactive);
+}
+
+.atp-msg.ok {
+  animation: vm-success-pop var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+/* ── Barras de progreso ── */
+
+.pop-fill,
+.player-progress-fill,
+.tr-pop .pop-fill {
+  transition: width var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 /* ── Listas & filas ── */
@@ -328,7 +417,9 @@ svg.vm-chart polyline {
   .vm-animate-chart,
   .modal-backdrop,
   .modal-backdrop > .modal,
-  .user-dropdown {
+  .user-dropdown,
+  .play-btn svg,
+  .np-ctrl.play svg {
     animation: none !important;
   }
 

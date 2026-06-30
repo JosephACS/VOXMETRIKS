@@ -159,7 +159,7 @@
   color: var(--shell-fg-muted);
   font-size: 0.875rem;
   font-weight: 500;
-  transition: color 150ms, background 150ms;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard), background var(--motion-duration-fast) var(--motion-ease-standard);
   position: relative;
 }
 
@@ -204,7 +204,7 @@
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  transition: opacity 200ms ease, max-width 200ms ease;
+  transition: opacity var(--motion-duration-normal) var(--motion-ease-standard), max-width var(--motion-duration-normal) var(--motion-ease-standard);
   max-width: 12rem;
 }
 
@@ -214,8 +214,8 @@
   flex-direction: column;
   margin-left: 0;
   will-change: margin-left;
-  transition: margin-left 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.35s ease;
+  transition: margin-left var(--motion-duration-slow) var(--motion-ease-standard),
+    background-color var(--motion-duration-slow) var(--motion-ease-standard);
   min-height: 100vh;
   overflow: hidden;
   background: var(--vx-bg);

@@ -8,11 +8,11 @@
 
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="title-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 
-        {{ 'analytics.title' | t }}
+        {{ 'analytics.title' | t:lang() }}
 
       </h1>
 
-      <p class="page-subtitle">{{ 'analytics.subtitle' | t }}</p>
+      <p class="page-subtitle">{{ 'analytics.subtitle' | t:lang() }}</p>
 
     </div>
 
@@ -32,13 +32,13 @@
 
       <div>
 
-        <strong>{{ 'analytics.partialError' | t }}</strong>
+        <strong>{{ 'analytics.partialError' | t:lang() }}</strong>
 
-        <p>{{ 'analytics.partialErrorHint' | t }}</p>
+        <p>{{ 'analytics.partialErrorHint' | t:lang() }}</p>
 
       </div>
 
-      <button type="button" class="retry-btn" (click)="loadAnalytics()">{{ 'analytics.retry' | t }}</button>
+      <button type="button" class="retry-btn" (click)="loadAnalytics()">{{ 'analytics.retry' | t:lang() }}</button>
 
     </section>
 
@@ -50,21 +50,21 @@
 
     <div class="kpi-row">
 
-      <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">{{ 'analytics.kpi.tracks' | t }}</span></div></div>
+      <div class="kpi-card" [title]="'analytics.kpi.tracksTip' | t"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">{{ 'analytics.kpi.tracks' | t:lang() }}</span></div></div>
 
-      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">{{ 'analytics.kpi.avgPop' | t }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">{{ 'analytics.kpi.avgPop' | t:lang() }}</span></div></div>
 
-      <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">{{ 'analytics.kpi.avgEnergy' | t }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">{{ 'analytics.kpi.avgEnergy' | t:lang() }}</span></div></div>
 
-      <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">{{ 'analytics.kpi.genres' | t }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-green" [innerHTML]="icon('layers', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ genreStats().length }}</span><span class="kpi-label">{{ 'analytics.kpi.genres' | t:lang() }}</span></div></div>
 
       @if (engagement(); as e) {
 
-        <div class="kpi-card"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">{{ 'analytics.kpi.engagement' | t }}</span></div></div>
+        <div class="kpi-card" [title]="'analytics.kpi.engagementTip' | t"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">{{ 'analytics.kpi.engagement' | t:lang() }}</span></div></div>
 
-        <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">{{ 'analytics.kpi.completion' | t }}</span></div></div>
+        <div class="kpi-card" [title]="'analytics.kpi.completionTip' | t"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">{{ 'analytics.kpi.completion' | t:lang() }}</span></div></div>
 
-        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">{{ 'analytics.kpi.session' | t }}</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">{{ 'analytics.kpi.session' | t:lang() }}</span></div></div>
 
       }
 
@@ -80,15 +80,15 @@
 
       <div class="chart-head">
 
-        <h3 class="chart-title">{{ 'analytics.chart.energyTitle' | t }}</h3>
+        <h3 class="chart-title">{{ 'analytics.chart.energyTitle' | t:lang() }}</h3>
 
-        <p class="chart-subtitle">{{ 'analytics.chart.energySub' | t }}</p>
+        <p class="chart-subtitle">{{ 'analytics.chart.energySub' | t:lang() }}</p>
 
       </div>
 
       @if (isLoading()) { <div class="skel-chart"></div> }
 
-      @else if (energyDist().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+      @else if (energyDist().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t:lang() }}</div> }
 
       @else {
 
@@ -106,11 +106,11 @@
 
               <span class="e-val-out">{{ e.cantidad_tracks ?? 0 | number }}</span>
 
-              <span class="e-label">{{ e.rango_energia }}</span>
+              <span class="e-label">{{ energyLabel(e.rango_energia) }}</span>
 
               <div class="e-stats">
 
-                <span class="e-stat" [title]="'analytics.chart.popShort' | t">{{ 'analytics.chart.popShort' | t }} {{ (e.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
+                <span class="e-stat" [title]="'analytics.chart.popShort' | t">{{ 'analytics.chart.popShort' | t:lang() }} {{ (e.popularidad_promedio ?? 0) | number:'1.0-1' }}</span>
 
               </div>
 
@@ -120,7 +120,7 @@
 
         </div>
 
-        <div class="chart-note">{{ 'analytics.chart.energyNote' | t }}</div>
+        <div class="chart-note">{{ 'analytics.chart.energyNote' | t:lang() }}</div>
 
       }
 
@@ -132,15 +132,15 @@
 
       <div class="chart-head">
 
-        <h3 class="chart-title">{{ 'analytics.chart.genresTitle' | t }}</h3>
+        <h3 class="chart-title">{{ 'analytics.chart.genresTitle' | t:lang() }}</h3>
 
-        <p class="chart-subtitle">{{ 'analytics.chart.genresSub' | t }}</p>
+        <p class="chart-subtitle">{{ 'analytics.chart.genresSub' | t:lang() }}</p>
 
       </div>
 
       @if (isLoading()) { <div class="skel-chart"></div> }
 
-      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t:lang() }}</div> }
 
       @else {
 
@@ -164,7 +164,7 @@
 
         </div>
 
-        <div class="chart-note">{{ 'analytics.chart.genresNote' | t }}</div>
+        <div class="chart-note">{{ 'analytics.chart.genresNote' | t:lang() }}</div>
 
       }
 
@@ -176,15 +176,15 @@
 
       <div class="chart-head">
 
-        <h3 class="chart-title">{{ 'analytics.chart.popEnergyTitle' | t }}</h3>
+        <h3 class="chart-title">{{ 'analytics.chart.popEnergyTitle' | t:lang() }}</h3>
 
-        <p class="chart-subtitle">{{ 'analytics.chart.popEnergySub' | t }}</p>
+        <p class="chart-subtitle">{{ 'analytics.chart.popEnergySub' | t:lang() }}</p>
 
         <div class="legend-row">
 
-          <span><i class="legend-dot pop"></i>{{ 'analytics.chart.popLegend' | t }}</span>
+          <span><i class="legend-dot pop"></i>{{ 'analytics.chart.popLegend' | t:lang() }}</span>
 
-          <span><i class="legend-dot energy"></i>{{ 'analytics.chart.energyLegend' | t }}</span>
+          <span><i class="legend-dot energy"></i>{{ 'analytics.chart.energyLegend' | t:lang() }}</span>
 
         </div>
 
@@ -192,7 +192,7 @@
 
       @if (isLoading()) { <div class="skel-chart"></div> }
 
-      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t }}</div> }
+      @else if (topGenres().length === 0) { <div class="empty">{{ 'analytics.chart.empty' | t:lang() }}</div> }
 
       @else {
 
@@ -210,7 +210,7 @@
 
                   <div class="bubble-bar-wrap">
 
-                    <span class="bubble-bar-label">{{ 'analytics.chart.popShort' | t }}</span>
+                    <span class="bubble-bar-label">{{ 'analytics.chart.popShort' | t:lang() }}</span>
 
                     <div class="bubble-bar"><div class="b-fill b-pop" [style.width.%]="popWidth(g.popularidad_promedio)"></div></div>
 
@@ -220,7 +220,7 @@
 
                   <div class="bubble-bar-wrap">
 
-                    <span class="bubble-bar-label">{{ 'analytics.chart.energyShort' | t }}</span>
+                    <span class="bubble-bar-label">{{ 'analytics.chart.energyShort' | t:lang() }}</span>
 
                     <div class="bubble-bar"><div class="b-fill b-energy" [style.width.%]="energyWidth(g.energia_promedio)"></div></div>
 

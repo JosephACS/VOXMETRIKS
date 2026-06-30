@@ -1,6 +1,8 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -12,6 +14,8 @@ import { TrackRowComponent } from '../../../shared/components/track-row/track-ro
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { PlayableTrack } from '../../../shared/models/player.models';
+import { apiFormError } from '../../../shared/utils/catalog-list.util';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 const COVERS = [
   'linear-gradient(135deg, #1ed896, #148f5e)',
@@ -27,20 +31,29 @@ const COVERS = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './playlists.component.html',
-  styleUrls: ['./playlists.component.css'],
+  styleUrls: [
+    '../../../shared/styles/catalog-page-shared.css',
+    './playlists.component.css',
+  ],
 })
 export class PlaylistsComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
+  private confirm = inject(ConfirmDialogService);
   private iconRender = inject(IconRenderService);
   private player = inject(MusicPlayerService);
   private covers = inject(CoverArtService);
+  private destroyRef = inject(DestroyRef);
 
   playlists = signal<PlaylistSummary[]>([]);
   selected = signal<PlaylistDetail | null>(null);
+  detailId = signal<number | null>(null);
   isLoading = signal(true);
+  detailLoading = signal(false);
   hasError = signal(false);
+  detailError = signal(false);
   showCreate = signal(false);
   showEdit = signal(false);
-  showDetail = signal(false);
   formName = signal('');
   formDesc = signal('');
   formError = signal('');
@@ -54,10 +67,19 @@ export class PlaylistsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.load();
-    this.route.paramMap.subscribe((pm) => {
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pm) => {
       const raw = pm.get('id');
-      if (raw) this.openDetailById(Number(raw));
+      if (raw) {
+        this.detailId.set(Number(raw));
+        this.openDetailById(Number(raw));
+      } else {
+        this.detailId.set(null);
+        this.selected.set(null);
+        this.detailError.set(false);
+        this.load();
+      }
     });
   }
 
@@ -127,7 +149,7 @@ export class PlaylistsComponent implements OnInit {
     this.saving.set(true);
     this.svc.create({ name, description: this.formDesc().trim() || undefined }).subscribe({
       next: () => { this.closeCreate(); this.load(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al crear'); this.saving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al crear')); this.saving.set(false); },
     });
   }
 
@@ -140,20 +162,24 @@ export class PlaylistsComponent implements OnInit {
       this.router.navigate(['/playlists']);
       return;
     }
+    this.detailLoading.set(true);
+    this.detailError.set(false);
+    this.selected.set(null);
     this.svc.get(id).subscribe({
-      next: (d) => { this.selected.set(d); this.showDetail.set(true); },
+      next: (d) => {
+        this.selected.set(d);
+        this.detailLoading.set(false);
+      },
       error: () => {
-        this.closeDetail(false);
+        this.detailLoading.set(false);
+        this.detailError.set(true);
+        this.selected.set(null);
       },
     });
   }
 
-  closeDetail(navigate = true) {
-    this.showDetail.set(false);
-    this.selected.set(null);
-    if (navigate && this.route.snapshot.paramMap.has('id')) {
-      this.router.navigate(['/playlists']);
-    }
+  backToList() {
+    this.router.navigate(['/playlists']);
   }
 
   openEdit(det: PlaylistDetail) {
@@ -184,14 +210,22 @@ export class PlaylistsComponent implements OnInit {
           this.selected.set({ ...det, name: updated.name, description: updated.description });
         }
       },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al guardar'); this.saving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al guardar')); this.saving.set(false); },
     });
   }
 
   deletePlaylist(det: PlaylistDetail) {
-    if (!confirm(`¿Eliminar la playlist "${det.name}"?`)) return;
-    this.svc.delete(det.id).subscribe({
-      next: () => { this.closeDetail(); this.load(); },
+    void this.confirm.open({
+      title: this.i18n.t('confirm.deleteTitle'),
+      message: `${this.i18n.t('playlists.deleteConfirm', { name: det.name })}\n\n${this.i18n.t('playlists.deleteWarn')}`,
+      confirmLabel: this.i18n.t('common.delete'),
+      cancelLabel: this.i18n.t('common.cancel'),
+      danger: true,
+    }).then((ok) => {
+      if (!ok) return;
+      this.svc.delete(det.id).subscribe({
+        next: () => { this.backToList(); },
+      });
     });
   }
 

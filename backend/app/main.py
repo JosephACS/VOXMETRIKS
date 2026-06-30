@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import duckdb
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -29,15 +29,23 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
-from app.core import get_settings, get_conn, list_tables
-from app.packages.streaming.services.app_storage import ensure_app_tables
-from app.packages.users.services.user_storage import ensure_user_tables
+from app.core import get_settings, list_tables
+from app.core.database import close_read_pool, open_read_pool
+from app.core.indexes import ensure_secondary_indexes
+from app.core.schema_bootstrap import mark_schema_ready
+from app.core.search_fold import ensure_search_fold
+from app.packages.analytics.routes import analytics_router, stats_router
 from app.packages.streaming.routes import (
-    artists_router, genres_router, tracks_router,
-    playlists_router, favorites_router,
+    artists_router,
+    dashboard_router,
+    favorites_router,
+    genres_router,
+    playlists_router,
+    tracks_router,
 )
-from app.packages.analytics.routes import stats_router, analytics_router
+from app.packages.streaming.services.app_storage import ensure_app_tables
 from app.packages.users.routes import users_router
+from app.packages.users.services.user_storage import ensure_user_tables
 from app.shared.schemas.models import HealthResponse
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -56,7 +64,12 @@ logger = logging.getLogger("voxmetrik.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db_path = settings.db_path_resolved
-    logger.info(f"VOXMETRIK_V2 API starting up — DuckDB: {db_path}")
+    logger.info(
+        "VOXMETRIK_V2 API starting up — environment=%s, docs=%s, DuckDB: %s",
+        settings.environment,
+        "enabled" if settings.docs_enabled else "disabled",
+        db_path,
+    )
 
     if not db_path.exists():
         logger.error(
@@ -69,16 +82,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             tables = list_tables(conn)
             ensure_user_tables(conn)
             ensure_app_tables(conn)
+            ensure_secondary_indexes(conn)
+            ensure_search_fold(conn)
+            mark_schema_ready()
             conn.close()
+            open_read_pool(db_path)
             logger.info(f"Database OK — {len(tables)} tables")
         except Exception as exc:
             logger.error(f"Database check failed: {exc}")
 
     yield
+    close_read_pool()
     logger.info("VOXMETRIK_V2 API shutting down")
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
+# Interactive docs (/docs, /redoc, /openapi.json) are served in development and
+# disabled in production to avoid exposing the API surface publicly.
+_docs_enabled = settings.docs_enabled
+
 app = FastAPI(
     title="VOXMETRIK_V2 API",
     description=(
@@ -87,14 +109,23 @@ app = FastAPI(
     ),
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
 )
 
-# CORS — restrict origins via CORS_ORIGINS (comma-separated; use * for dev only)
+# CORS — restrict origins via CORS_ORIGINS (comma-separated; "*" allowed only
+# outside production). In production an empty allow-list means no cross-origin
+# is granted until real origins are configured.
+_cors_origins = settings.cors_origin_list
+if settings.is_production and ("*" in _cors_origins or not _cors_origins):
+    logger.warning(
+        "CORS: production requires an explicit origin allow-list. "
+        "Set CORS_ORIGINS to your frontend domain(s); wildcard/empty is rejected."
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -105,6 +136,7 @@ app.include_router(genres_router,  prefix="/api/v1")
 app.include_router(tracks_router,  prefix="/api/v1")
 app.include_router(playlists_router, prefix="/api/v1")
 app.include_router(favorites_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(stats_router,   prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(users_router,   prefix="/api/v1")

@@ -1,8 +1,8 @@
 <div class="hist-page">
   <header class="vx-page-header">
     <div>
-      <h1>{{ 'history.title' | t }}</h1>
-      <p class="page-subtitle">{{ 'history.subtitle' | t }}</p>
+      <h1>{{ 'history.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'history.subtitle' | t:lang() }}</p>
     </div>
     <button type="button" class="refresh-btn" (click)="loadHub()" [disabled]="isLoading()">
       {{ isLoading() ? ('history.refreshing' | t) : ('history.refresh' | t) }}
@@ -12,24 +12,24 @@
   <nav class="tab-bar">
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'music'" (click)="selectTab('music')">
       <span [innerHTML]="icon('music', 16)"></span>
-      {{ 'history.tab.music' | t }}
+      {{ 'history.tab.music' | t:lang() }}
       <span class="tab-count">{{ musicCount() }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'user'" (click)="selectTab('user')">
       <span [innerHTML]="icon('user', 16)"></span>
-      {{ 'history.tab.user' | t }}
+      {{ 'history.tab.user' | t:lang() }}
       <span class="tab-count">{{ userCount() }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTab() === 'search'" (click)="selectTab('search')">
       <span [innerHTML]="icon('search', 16)"></span>
-      {{ 'history.tab.search' | t }}
+      {{ 'history.tab.search' | t:lang() }}
       <span class="tab-count">{{ searchCount() }}</span>
     </button>
   </nav>
 
   <div class="source-note glass-panel">
     <span [innerHTML]="icon('database', 16)"></span>
-    <p>{{ 'history.sourceNote' | t }}</p>
+    <p>{{ 'history.sourceNote' | t:lang() }}</p>
     <div class="source-badges">
       <app-data-source-badge kind="local" />
       <app-data-source-badge kind="mixed" />
@@ -39,8 +39,8 @@
   @if (hasError()) {
     <div class="empty-panel glass-panel warn-panel">
       <span [innerHTML]="icon('alert', 18)"></span>
-      <p>{{ 'history.error' | t }}</p>
-      <button type="button" class="ghost-btn" (click)="loadHub()">{{ 'history.retry' | t }}</button>
+      <p>{{ 'history.error' | t:lang() }}</p>
+      <button type="button" class="ghost-btn" (click)="loadHub()">{{ 'history.retry' | t:lang() }}</button>
     </div>
   }
 
@@ -48,21 +48,21 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>{{ 'history.musicTitle' | t }}</h2>
-          <p class="section-desc">{{ 'history.musicDesc' | t }}</p>
+          <h2>{{ 'history.musicTitle' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.musicDesc' | t:lang() }}</p>
         </div>
         <app-data-source-badge kind="local" />
         @if (localMusicEntries().length) {
-          <button type="button" class="ghost-btn" (click)="clearLocalMusic()">{{ 'history.clear' | t }}</button>
+          <button type="button" class="ghost-btn ghost-btn--warn" (click)="clearLocalMusic()" [title]="'history.clearWarn' | t">{{ 'history.clear' | t:lang() }}</button>
         }
       </div>
 
       @if (!localMusicEntries().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('music', 28)"></span>
-          <p>{{ 'history.emptyMusic' | t }}</p>
-          <p class="empty-hint">{{ 'history.emptyMusicHint' | t }}</p>
-          <a routerLink="/tracks" class="cta-link">{{ 'history.exploreTracks' | t }}</a>
+          <p>{{ 'history.emptyMusic' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.emptyMusicHint' | t:lang() }}</p>
+          <a routerLink="/tracks" class="cta-link">{{ 'history.exploreTracks' | t:lang() }}</a>
         </div>
       } @else {
         <div class="timeline-list">
@@ -89,20 +89,20 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>{{ 'history.user.title' | t }}</h2>
-          <p class="section-desc">{{ 'history.user.desc' | t }}</p>
+          <h2>{{ 'history.user.title' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.user.desc' | t:lang() }}</p>
         </div>
         <app-data-source-badge kind="mixed" />
       </div>
 
       @if (isLoading()) {
-        <p class="loading-msg">{{ 'common.loading' | t }}</p>
+        <p class="loading-msg">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!userTimeline().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('user', 28)"></span>
-          <p>{{ 'history.user.empty' | t }}</p>
-          <p class="empty-hint">{{ 'history.user.emptyHint' | t }}</p>
-          <p class="empty-hint">{{ 'history.user.badgeNote' | t }}</p>
+          <p>{{ 'history.user.empty' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.user.emptyHint' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.user.badgeNote' | t:lang() }}</p>
         </div>
       } @else {
         <div class="timeline-list">
@@ -150,21 +150,21 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>{{ 'history.search.title' | t }}</h2>
-          <p class="section-desc">{{ 'history.search.desc' | t }}</p>
+          <h2>{{ 'history.search.title' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.search.desc' | t:lang() }}</p>
         </div>
         <app-data-source-badge kind="local" />
         @if (localSearchEntries().length) {
-          <button type="button" class="ghost-btn" (click)="clearLocalSearch()">{{ 'history.clear' | t }}</button>
+          <button type="button" class="ghost-btn ghost-btn--warn" (click)="clearLocalSearch()" [title]="'history.clearWarn' | t">{{ 'history.clear' | t:lang() }}</button>
         }
       </div>
 
       @if (!localSearchEntries().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('search', 28)"></span>
-          <p>{{ 'history.search.empty' | t }}</p>
-          <p class="empty-hint">{{ 'history.search.emptyHint' | t }}</p>
-          <a routerLink="/search" class="cta-link">{{ 'history.search.goSearch' | t }}</a>
+          <p>{{ 'history.search.empty' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.search.emptyHint' | t:lang() }}</p>
+          <a routerLink="/search" class="cta-link">{{ 'history.search.goSearch' | t:lang() }}</a>
         </div>
       } @else {
         <div class="timeline-list">
@@ -187,17 +187,17 @@
     <section class="glass-panel section">
       <div class="section-head">
         <div>
-          <h2>{{ 'history.search.warehouseTitle' | t }}</h2>
-          <p class="section-desc">{{ 'history.search.warehouseDesc' | t }}</p>
+          <h2>{{ 'history.search.warehouseTitle' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.search.warehouseDesc' | t:lang() }}</p>
         </div>
         <app-data-source-badge kind="mixed" />
         <span class="meta-badge">{{ warehouseSearches().length }}</span>
       </div>
 
       @if (isLoading()) {
-        <p class="loading-msg">{{ 'common.loading' | t }}</p>
+        <p class="loading-msg">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!warehouseSearches().length) {
-        <p class="empty-hint center">{{ 'history.search.warehouseEmpty' | t }}</p>
+        <p class="empty-hint center">{{ 'history.search.warehouseEmpty' | t:lang() }}</p>
       } @else {
         <div class="table-wrap">
           <table class="data-table">

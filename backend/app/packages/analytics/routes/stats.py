@@ -7,16 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.database import get_conn
-from app.shared.schemas.models import DistribucionEnergia
-from app.packages.analytics.services.stats_service import (
-    get_summary, get_energia_distribution,
-    get_top_tracks_by_popularity, get_last_loads,
-    generate_synthetic_activity, get_synthetic_limits,
-    get_catalog_growth,
-    MAX_TARGET_TOTAL, MAX_CREATE_PER_RUN,
-)
 from app.packages.analytics.services.pipeline_service import run_pocketbase_import
+from app.packages.analytics.services.stats_service import (
+    MAX_TARGET_TOTAL,
+    generate_synthetic_activity,
+    get_catalog_growth,
+    get_energia_distribution,
+    get_last_loads,
+    get_summary,
+    get_synthetic_limits,
+    get_top_tracks_by_popularity,
+)
 from app.packages.users.services.auth_deps import require_engineer_user
+from app.shared.schemas.models import DistribucionEnergia
 
 router = APIRouter(prefix="/stats", tags=["Statistics"])
 

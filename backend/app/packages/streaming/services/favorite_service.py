@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 import duckdb
 
 from app.core.time_util import utc_now
+
 from .app_storage import ensure_app_tables
 from .display_text import clean_catalog_rows
 

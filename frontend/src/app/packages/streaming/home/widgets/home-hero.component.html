@@ -1,0 +1,61 @@
+<header class="home-hero">
+  <div class="hero-glow"></div>
+  <div class="hero-top">
+    <div class="hero-text">
+      <p class="hero-greet">{{ greetingKey() | t:lang() }}, <span class="hero-user">{{ userName() }}</span></p>
+      <h1>{{ 'home.title' | t:lang() }}</h1>
+      <p class="hero-sub">{{ 'home.subtitle' | t:lang() }}</p>
+    </div>
+    @if (summary(); as s) {
+      <div class="hero-stats">
+        <div class="hero-stat hero-stat--accent">
+          <strong>{{ fmt(s.total_events ?? s.total_streams ?? s.total_tracks) }}</strong>
+          <span>{{ 'home.stat.events' | t:lang() }}</span>
+        </div>
+        <div class="hero-stat">
+          <strong>{{ fmt(s.total_tracks) }}</strong>
+          <span>{{ 'home.stat.tracks' | t:lang() }}</span>
+        </div>
+        <div class="hero-stat">
+          <strong>{{ fmt(s.total_artistas) }}</strong>
+          <span>{{ 'home.stat.artists' | t:lang() }}</span>
+        </div>
+        <div class="hero-stat">
+          <strong>{{ fmt(s.total_albumes) }}</strong>
+          <span>{{ 'home.stat.albums' | t:lang() }}</span>
+        </div>
+        <div class="hero-stat">
+          <strong>{{ fmt(playlistCount()) }}</strong>
+          <span>{{ 'home.stat.playlists' | t:lang() }}</span>
+        </div>
+      </div>
+    } @else if (summaryLoading()) {
+      <div class="hero-stats hero-stats--loading" aria-hidden="true">
+        @for (i of heroStatSkels(); track i) {
+          <div class="skel home-skel--stat"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="hero-chips">
+    <span class="hero-chip hero-chip--accent">{{ userPlan() }}</span>
+    @if (listenStreak() > 0) {
+      <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ (listenStreak() === 1 ? 'home.chip.streakOne' : 'home.chip.streak') | t: { count: listenStreak() }:lang() }}</span>
+    }
+    <span class="hero-chip" [attr.title]="'home.tip.estimated' | t">{{ 'home.chip.today' | t: { min: listenMinutesToday() }:lang() }}</span>
+    <span class="hero-chip" [attr.title]="'home.tip.demoSample' | t">{{ 'home.chip.weeklyGoal' | t: { pct: weeklyGoalPct() }:lang() }}</span>
+    <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ 'home.chip.explorer' | t: { level: explorerLevel() }:lang() }}</span>
+  </div>
+
+  <div class="hero-toolbar">
+    <a routerLink="/search" class="hero-search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      {{ 'home.searchPlaceholder' | t:lang() }}
+    </a>
+    <nav class="discover-shortcuts" [attr.aria-label]="'home.section.discover' | t">
+      <a routerLink="/tracks" class="discover-chip discover-chip--primary">{{ 'home.discover.catalog' | t:lang() }}</a>
+      <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t:lang() }}</a>
+    </nav>
+  </div>
+</header>

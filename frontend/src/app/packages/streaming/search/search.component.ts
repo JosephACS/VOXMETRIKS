@@ -1,10 +1,12 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { TracksService } from '../services/tracks.service';
 import { ArtistsService } from '../services/artists.service';
@@ -18,14 +20,20 @@ import { SearchHistoryService } from '../services/search-history.service';
 import { Subject, combineLatest, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 
+const TRACK_PAGE_SIZE = 20;
+
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FavoriteBtnComponent, DataSourceBadgeComponent, TranslatePipe],
+  imports: [
+    CommonModule, FormsModule, RouterModule, ScrollingModule,
+    FavoriteBtnComponent, DataSourceBadgeComponent, TranslatePipe,
+  ],
   templateUrl: './search.component.html',
   styleUrls: ['./search.component.css'],
 })
 export class SearchComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private covers = inject(CoverArtService);
   private destroyRef = inject(DestroyRef);
@@ -33,11 +41,17 @@ export class SearchComponent implements OnInit {
 
   query = signal('');
   trackResults = signal<TrackSearchResult[]>([]);
+  trackTotal = signal(0);
+  trackPage = signal(1);
   artistResults = signal<Artista[]>([]);
   isLoading = signal(false);
   searched = signal(false);
   hasError = signal(false);
   errorMessage = signal('');
+  readonly trackPageSize = TRACK_PAGE_SIZE;
+  trackTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.trackTotal() / this.trackPageSize)),
+  );
 
   constructor(
     private route: ActivatedRoute,
@@ -54,6 +68,8 @@ export class SearchComponent implements OnInit {
         const term = q.trim();
         if (!term) {
           this.trackResults.set([]);
+          this.trackTotal.set(0);
+          this.trackPage.set(1);
           this.artistResults.set([]);
           this.searched.set(false);
           this.hasError.set(false);
@@ -68,10 +84,11 @@ export class SearchComponent implements OnInit {
         this.searched.set(true);
         this.hasError.set(false);
         this.errorMessage.set('');
+        this.trackPage.set(1);
         return combineLatest([
-          this.tracksSvc.searchTracks(term, 100).pipe(
-            map((d) => ({ ok: true as const, items: d ?? [] })),
-            catchError(() => of({ ok: false as const, items: [] as TrackSearchResult[] })),
+          this.tracksSvc.searchTracks(term, 1, TRACK_PAGE_SIZE).pipe(
+            map((res) => ({ ok: true as const, items: res.items ?? [], total: res.total ?? 0 })),
+            catchError(() => of({ ok: false as const, items: [] as TrackSearchResult[], total: 0 })),
           ),
           this.artistsSvc.listArtists(1, 20, term).pipe(
             map((res) => ({ ok: true as const, items: res.items ?? [] })),
@@ -84,6 +101,7 @@ export class SearchComponent implements OnInit {
       if (!result) return;
       const { term, tracks, artists } = result;
       this.trackResults.set(tracks.items);
+      this.trackTotal.set(tracks.total);
       this.artistResults.set(artists.items);
       this.isLoading.set(false);
       const failed = (tracks.ok ? 0 : 1) + (artists.ok ? 0 : 1);
@@ -95,7 +113,7 @@ export class SearchComponent implements OnInit {
             : 'Algunos resultados no se pudieron cargar. Intenta nuevamente.',
         );
       } else {
-        this.searchHistory.add(term, tracks.items.length, artists.items.length);
+        this.searchHistory.add(term, tracks.total, artists.items.length);
       }
     });
 
@@ -114,6 +132,21 @@ export class SearchComponent implements OnInit {
   runSearch(q: string) {
     this.query.set(q);
     this.search$.next(q);
+  }
+
+  loadTrackPage(page: number) {
+    const term = this.query().trim();
+    if (!term || page < 1 || page > this.trackTotalPages()) return;
+    this.isLoading.set(true);
+    this.tracksSvc.searchTracks(term, page, TRACK_PAGE_SIZE).subscribe({
+      next: (res) => {
+        this.trackResults.set(res.items ?? []);
+        this.trackTotal.set(res.total ?? 0);
+        this.trackPage.set(page);
+        this.isLoading.set(false);
+      },
+      error: () => this.isLoading.set(false),
+    });
   }
 
   retrySearch() {
@@ -139,4 +172,6 @@ export class SearchComponent implements OnInit {
   displayTitle(name?: string | null): string {
     return displayTrackTitle(name);
   }
+
+  trackId = (_: number, r: TrackSearchResult) => r.id_track;
 }

@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import logging
 import threading
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Generator, List
+from typing import Generator, List
 
 import duckdb
 
@@ -25,21 +26,50 @@ logger = logging.getLogger("voxmetrik.database")
 
 # Global write lock to serialize write operations
 _write_lock = threading.Lock()
+_read_lock = threading.Lock()
+_read_conn: duckdb.DuckDBPyConnection | None = None
+
+
+def open_read_pool(db_path: Path) -> None:
+    """Open a shared read-only DuckDB connection for the process lifetime."""
+    global _read_conn
+    if _read_conn is not None:
+        return
+    _read_conn = duckdb.connect(str(db_path))
+    logger.info("Read pool opened (shared read connection)")
+
+
+def close_read_pool() -> None:
+    """Close the shared read connection on shutdown."""
+    global _read_conn
+    if _read_conn is None:
+        return
+    try:
+        _read_conn.close()
+    except Exception:
+        logger.warning("close_read_pool: failed to close shared read connection", exc_info=True)
+    _read_conn = None
+    logger.info("Read pool closed")
 
 
 def get_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
-    FastAPI dependency: yields a per-request DuckDB connection.
-    Opens a fresh connection for each request and closes it after.
+    FastAPI dependency: yields the shared read-only connection when available,
+    otherwise opens a short-lived connection (tests / fallback).
     """
     settings = get_settings()
-    db_path  = settings.db_path_resolved
+    db_path = settings.db_path_resolved
 
     if not db_path.exists():
         raise FileNotFoundError(
             f"DuckDB database not found: {db_path}\n"
             "  → Run python elt_pipeline.py first to create the database."
         )
+
+    if _read_conn is not None:
+        with _read_lock:
+            yield _read_conn
+        return
 
     conn = duckdb.connect(str(db_path))
     try:
@@ -50,7 +80,28 @@ def get_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
         try:
             conn.close()
         except Exception:
-            pass
+            logger.warning("get_conn: failed to close connection", exc_info=True)
+
+
+@contextmanager
+def using_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
+    """Open a short-lived write connection (serialized via global lock)."""
+    settings = get_settings()
+    db_path = settings.db_path_resolved
+    if not db_path.exists():
+        raise FileNotFoundError(
+            f"DuckDB database not found: {db_path}\n"
+            "  → Run python elt_pipeline.py first to create the database."
+        )
+    with _write_lock:
+        conn = duckdb.connect(str(db_path))
+        try:
+            yield conn
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                logger.warning("using_write_conn: failed to close connection", exc_info=True)
 
 
 def get_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
@@ -59,7 +110,7 @@ def get_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
     Uses a write lock to prevent concurrent writes.
     """
     settings = get_settings()
-    db_path  = settings.db_path_resolved
+    db_path = settings.db_path_resolved
 
     if not db_path.exists():
         raise FileNotFoundError(
@@ -77,7 +128,7 @@ def get_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
             try:
                 conn.close()
             except Exception:
-                pass
+                logger.warning("get_write_conn: failed to close connection", exc_info=True)
 
 
 # ── Schema introspection ──────────────────────────────────────────────────────

@@ -6,11 +6,13 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import get_conn, get_write_conn
-from app.shared.schemas.models import FavoriteTrack
-from app.packages.users.services.auth_deps import require_user_id
 from app.packages.streaming.services.favorite_service import (
-    list_favorites, add_favorite, remove_favorite,
+    add_favorite,
+    list_favorites,
+    remove_favorite,
 )
+from app.packages.users.services.auth_deps import require_user_id
+from app.shared.schemas.models import FavoriteTrack
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 

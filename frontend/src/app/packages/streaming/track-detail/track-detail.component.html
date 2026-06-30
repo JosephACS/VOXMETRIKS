@@ -4,23 +4,27 @@
   } @else if (hasError() || !track()) {
     <div class="error glass-panel">
       <span [innerHTML]="icon('alert', 24)"></span>
-      <p>{{ 'trackDetail.notFound' | t }}</p>
-      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backSongs' | t }}</a>
+      <p>{{ 'trackDetail.notFound' | t:lang() }}</p>
+      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backSongs' | t:lang() }}</a>
     </div>
   } @else {
     @if (track(); as t) {
       <section class="td-hero glass-panel">
         <div class="td-cover" [style.background]="coverGradient()">
-          <span class="cover-letter">{{ title().charAt(0) }}</span>
+          @if (coverUrl()) {
+            <img class="td-cover-img" [src]="coverUrl()" [alt]="title()" loading="lazy" (error)="coverUrl.set(null)" />
+          } @else {
+            <span class="cover-letter">{{ title().charAt(0) }}</span>
+          }
         </div>
         <div class="td-info">
-          <span class="td-type">{{ 'trackDetail.type' | t }}</span>
+          <span class="td-type">{{ 'trackDetail.type' | t:lang() }}</span>
           <h1>{{ title() }}</h1>
           <p class="td-artist">{{ t.nombre_artista ?? '—' }}</p>
           <div class="td-badges">
             <app-data-source-badge kind="live" />
           </div>
-          <p class="td-note">{{ 'trackDetail.note' | t }}</p>
+          <p class="td-note">{{ 'trackDetail.note' | t:lang() }}</p>
           <div class="td-chips">
             @if (t.nombre_genero) { <span class="chip">{{ t.nombre_genero }}</span> }
             <span class="chip">Pop {{ t.popularity ?? '—' }}</span>
@@ -29,7 +33,7 @@
           <div class="td-actions">
             <button type="button" class="play-demo-btn" (click)="playTrack()">
               <span [innerHTML]="icon('play', 14)"></span>
-              {{ 'trackDetail.play' | t }}
+              {{ 'trackDetail.play' | t:lang() }}
             </button>
             <app-favorite-btn [trackId]="t.id_track" />
             <app-add-to-playlist-btn [trackId]="t.id_track" variant="button" />
@@ -39,8 +43,8 @@
 
       <div class="td-grid">
         <section class="glass-panel td-panel">
-          <h2>{{ 'trackDetail.features' | t }}</h2>
-          <p class="panel-note">{{ 'trackDetail.featuresNote' | t }}</p>
+          <h2>{{ 'trackDetail.features' | t:lang() }}</h2>
+          <p class="panel-note">{{ 'trackDetail.featuresNote' | t:lang() }}</p>
           <div class="feat-bars">
             @for (f of featureBars(); track f.label) {
               <div class="feat-row">
@@ -50,14 +54,14 @@
               </div>
             }
           </div>
-          <svg viewBox="0 0 280 100" class="mini-chart" aria-hidden="true">
+          <svg viewBox="0 0 280 100" class="mini-chart vm-chart" aria-hidden="true">
             <polyline [attr.points]="sparkPoints()" fill="none" stroke="#1ed896" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </section>
 
         <section class="glass-panel td-panel">
-          <h2>{{ 'trackDetail.metrics' | t }}</h2>
-          <p class="panel-note">{{ 'trackDetail.metricsNote' | t }}</p>
+          <h2>{{ 'trackDetail.metrics' | t:lang() }}</h2>
+          <p class="panel-note">{{ 'trackDetail.metricsNote' | t:lang() }}</p>
           <div class="metrics">
             <div class="metric"><span class="m-lbl">Tempo</span><span class="m-val mono">{{ t.tempo ?? '—' }} BPM</span></div>
             <div class="metric"><span class="m-lbl">Loudness</span><span class="m-val mono">{{ t.loudness ?? '—' }} dB</span></div>
@@ -68,7 +72,7 @@
         </section>
       </div>
 
-      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backCatalog' | t }}</a>
+      <a routerLink="/tracks" class="back-link">← {{ 'trackDetail.backCatalog' | t:lang() }}</a>
     }
   }
 </div>

@@ -1,9 +1,10 @@
 import {
-  Component, Input, Output, EventEmitter, inject, OnInit, DestroyRef, signal,
+  Component, Input, Output, EventEmitter, inject, DestroyRef, signal, effect, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { DeferVisibleDirective } from '../../directives/defer-visible.directive';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { CoverArtService } from '../../services/cover-art.service';
 import { TrackCoverService } from '../../services/track-cover.service';
@@ -12,10 +13,10 @@ import { PlayableTrack } from '../../models/player.models';
 @Component({
   selector: 'app-media-card',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, DeferVisibleDirective],
   template: `
     <article class="media-card" (click)="onCardClick()">
-      <div class="media-cover" [class.round]="round" [style.background]="gradient">
+      <div class="media-cover" appDeferVisible [class.round]="round" [style.background]="gradient">
         @if (coverUrl()) {
           <img class="cover-img" [src]="coverUrl()" [alt]="title" loading="lazy" (error)="coverUrl.set(null)" />
         } @else {
@@ -25,6 +26,9 @@ import { PlayableTrack } from '../../models/player.models';
         }
         @if (badge != null) {
           <span class="media-badge">{{ badge }}</span>
+        }
+        @if (tag) {
+          <span class="media-tag">{{ tag }}</span>
         }
         <button type="button" class="play-overlay" (click)="onPlay($event)" [attr.aria-label]="'Reproducir ' + title">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -42,19 +46,34 @@ import { PlayableTrack } from '../../models/player.models';
     </article>
   `,
   styles: [`
-    .media-card {
-      flex: 0 0 150px;
+    :host {
+      display: block;
+      flex: 0 0 184px;
+      min-width: 0;
+      max-width: 184px;
       scroll-snap-align: start;
+    }
+    .media-card {
+      width: 100%;
+      box-sizing: border-box;
       cursor: pointer;
+      padding: 0.7rem;
+      border-radius: 10px;
+      background: transparent;
+      transition: var(--motion-transition-interactive);
+    }
+    .media-card:hover {
+      background: var(--shell-hover, rgba(255,255,255,0.055));
     }
     .media-cover {
       position: relative;
-      aspect-ratio: 1;
-      border-radius: 8px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      height: auto;
+      border-radius: 7px;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-      will-change: transform;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -73,13 +92,12 @@ import { PlayableTrack } from '../../models/player.models';
     }
     @keyframes coverFade { from { opacity: 0; } to { opacity: 1; } }
     .media-card:hover .media-cover {
-      transform: scale(1.03);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
     }
     .media-badge {
       position: absolute;
       top: 0.45rem;
-      left: 0.45rem;
+      right: 0.45rem;
       font-size: 0.625rem;
       font-weight: 700;
       font-family: var(--font-mono, monospace);
@@ -89,6 +107,27 @@ import { PlayableTrack } from '../../models/player.models';
       color: #1ed896;
       backdrop-filter: blur(4px);
       z-index: 1;
+    }
+    .media-tag {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      right: auto;
+      max-width: calc(100% - 1rem);
+      font-size: 0.625rem;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #1ed896;
+      color: #06150f;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      z-index: 2;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .play-overlay {
       position: absolute;
@@ -115,7 +154,7 @@ import { PlayableTrack } from '../../models/player.models';
       transform: translateY(0);
     }
     .play-overlay:hover { transform: scale(1.08); background: #fff; }
-    .media-info { padding: 0.65rem 0.15rem 0; min-width: 0; }
+    .media-info { padding: 0.65rem 0.1rem 0; min-width: 0; }
     .media-title {
       display: block;
       font-size: 0.875rem;
@@ -125,16 +164,19 @@ import { PlayableTrack } from '../../models/player.models';
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.3;
     }
     .media-title:hover { text-decoration: underline; }
     .media-sub {
       display: block;
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin-top: 0.2rem;
+      margin-top: 0.15rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.3;
+      min-height: 1.0125rem;
     }
     .media-meta {
       display: block;
@@ -145,11 +187,13 @@ import { PlayableTrack } from '../../models/player.models';
     }
   `],
 })
-export class MediaCardComponent implements OnInit {
+export class MediaCardComponent {
   private player = inject(MusicPlayerService);
   private covers = inject(CoverArtService);
   private coverSvc = inject(TrackCoverService);
   private destroyRef = inject(DestroyRef);
+  private defer = viewChild(DeferVisibleDirective);
+  private coverRequested = false;
 
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
@@ -164,19 +208,25 @@ export class MediaCardComponent implements OnInit {
   @Input() round = false;
   /** Badge numérico (p. ej. popularidad). */
   @Input() badge?: number | string | null;
+  /** Small pill badge (e.g. Trending, Hit). */
+  @Input() tag?: string;
   /** Fuerza/limita la resolución de carátula real por id de track. */
   @Input() coverTrackId?: number;
   @Output() played = new EventEmitter<PlayableTrack>();
 
   coverUrl = signal<string | null>(null);
 
-  ngOnInit(): void {
-    // Carátula real solo para tracks (no para artistas/géneros/playlists).
-    const id = this.coverTrackId ?? (this.round ? undefined : this.track?.id);
-    if (id == null) return;
-    this.coverSvc.cover$(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((url) => this.coverUrl.set(url));
+  constructor() {
+    effect(() => {
+      const dir = this.defer();
+      if (!dir?.visible() || this.coverRequested) return;
+      const id = this.coverTrackId ?? (this.round ? undefined : this.track?.id);
+      if (id == null) return;
+      this.coverRequested = true;
+      this.coverSvc.cover$(id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((url) => this.coverUrl.set(url));
+    });
   }
 
   get displayInitial(): string {

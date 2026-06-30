@@ -7,13 +7,13 @@ from fastapi import APIRouter, Depends, Query
 
 from app.core.database import get_conn
 from app.packages.analytics.services.analytics_service import (
-    get_warehouse_status,
-    get_trending_analytics,
-    get_platform_analytics,
     get_engagement_analytics,
-    get_warehouse_tables,
-    get_table_preview,
+    get_platform_analytics,
     get_recommendations,
+    get_table_preview,
+    get_trending_analytics,
+    get_warehouse_status,
+    get_warehouse_tables,
 )
 from app.packages.analytics.services.history_service import get_history_hub
 from app.packages.users.services.auth_deps import get_optional_user_id, require_engineer_user

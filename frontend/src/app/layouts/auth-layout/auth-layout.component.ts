@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { I18nService } from '../../core/services/i18n.service';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
@@ -13,4 +14,5 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
   templateUrl: './auth-layout.component.html',
   styleUrl: './auth-layout.component.css',
 })
-export class AuthLayoutComponent {}
+export class AuthLayoutComponent {
+  readonly lang = inject(I18nService).lang;}

@@ -8,14 +8,23 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_conn, get_write_conn
-from app.packages.users.services.auth_deps import require_engineer_user
-from app.shared.schemas.models import (
-    Artista, ArtistaCreate, ArtistaUpdate,
-    PaginatedResponse, TopArtista, DeleteResponse,
-)
 from app.packages.streaming.services.artist_service import (
-    get_artists, get_artist_by_id, get_artist_stats, get_top_artists,
-    create_artist, update_artist, delete_artist,
+    create_artist,
+    delete_artist,
+    get_artist_by_id,
+    get_artist_stats,
+    get_artists,
+    get_top_artists,
+    update_artist,
+)
+from app.packages.users.services.auth_deps import require_admin_user
+from app.shared.schemas.models import (
+    Artista,
+    ArtistaCreate,
+    ArtistaUpdate,
+    DeleteResponse,
+    PaginatedResponse,
+    TopArtista,
 )
 
 router = APIRouter(prefix="/artists", tags=["Artists"])
@@ -35,7 +44,7 @@ def list_artists(
 @router.post("", response_model=Artista, status_code=201, summary="Create artist")
 def create_artist_route(
     body: ArtistaCreate,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_artista.strip():
@@ -72,7 +81,7 @@ def get_artist(
 def update_artist_route(
     artist_id: int,
     body: ArtistaUpdate,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_artista.strip():
@@ -91,7 +100,7 @@ def update_artist_route(
 @router.delete("/{artist_id}", response_model=DeleteResponse, summary="Delete artist")
 def delete_artist_route(
     artist_id: int,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     ok = delete_artist(conn, artist_id)

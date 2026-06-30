@@ -32,6 +32,8 @@ data/processed/
 # Test artifacts
 .pytest_cache/
 backend/tests/.pytest_db/
+.ruff_cache/
+.coverage
 
 # IDE
 .vscode/

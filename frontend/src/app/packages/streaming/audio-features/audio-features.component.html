@@ -1,70 +1,65 @@
 <div class="af-page">
   <header class="page-header">
     <div>
-      <h1>Características de audio</h1>
-      <p class="page-subtitle">Perfil acústico de canciones del catálogo. Las métricas Spotify van de 0 a 100%.</p>
+      <h1>{{ 'audioFeatures.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'audioFeatures.subtitle' | t:lang() }}</p>
     </div>
-    <span class="live-badge">Datos desde DuckDB</span>
+    <app-data-source-badge kind="live" />
   </header>
 
-  <!-- KPIs -->
   @if (!hasError()) {
   <section class="kpi-grid">
     <div class="kpi-card">
-      <span class="kpi-label">Canciones analizadas</span>
+      <span class="kpi-label">{{ 'audioFeatures.kpi.analyzed' | t:lang() }}</span>
       <span class="kpi-value">{{ tracks().length }}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Energía promedio</span>
+      <span class="kpi-label">{{ 'audioFeatures.kpi.avgEnergy' | t:lang() }}</span>
       <span class="kpi-value kpi-purple">{{ avgEnergy() * 100 | number:'1.0-0' }}%</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Bailabilidad promedio</span>
+      <span class="kpi-label">{{ 'audioFeatures.kpi.avgDance' | t:lang() }}</span>
       <span class="kpi-value">{{ avgDanceability() * 100 | number:'1.0-0' }}%</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Valencia promedio</span>
+      <span class="kpi-label">{{ 'audioFeatures.kpi.avgValence' | t:lang() }}</span>
       <span class="kpi-value kpi-green">{{ avgValence() * 100 | number:'1.0-0' }}%</span>
     </div>
   </section>
   }
 
   <div class="content-grid">
-    <!-- Tabla -->
     <section class="panel table-panel">
       <div class="panel-header">
         <div>
-          <h2>Catálogo con features</h2>
-          <p class="panel-desc">Selecciona una canción para comparar su perfil acústico en el radar.</p>
+          <h2>{{ 'audioFeatures.table.title' | t:lang() }}</h2>
+          <p class="panel-desc">{{ 'audioFeatures.table.subtitle' | t:lang() }}</p>
         </div>
-        <span class="panel-meta">Muestra inicial</span>
+        <span class="panel-meta">{{ 'audioFeatures.table.sample' | t:lang() }}</span>
       </div>
 
       <div class="table-wrap">
+        @if (isLoading()) {
+          <app-empty-state type="loading" />
+        } @else if (hasError()) {
+          <app-empty-state
+            type="error"
+            [customDescription]="'audioFeatures.error' | t:lang()"
+            (retry)="loadFeatures()"
+          />
+        } @else {
         <table class="data-table">
           <thead>
             <tr>
-              <th>Canción</th>
-              <th>Artista</th>
-              <th>Pop.</th>
-              <th>Energía</th>
-              <th>Bailab.</th>
-              <th>Valencia</th>
+              <th>{{ 'audioFeatures.table.track' | t:lang() }}</th>
+              <th>{{ 'audioFeatures.table.artist' | t:lang() }}</th>
+              <th>{{ 'audioFeatures.table.pop' | t:lang() }}</th>
+              <th>{{ 'audioFeatures.table.energy' | t:lang() }}</th>
+              <th>{{ 'audioFeatures.table.dance' | t:lang() }}</th>
+              <th>{{ 'audioFeatures.table.valence' | t:lang() }}</th>
             </tr>
           </thead>
           <tbody>
-            @if (isLoading()) {
-              <tr><td colspan="6">Cargando características...</td></tr>
-            } @else if (hasError()) {
-              <tr>
-                <td colspan="6">
-                  <div class="inline-error">
-                    <span>No hay datos disponibles. Verifica el backend o el warehouse.</span>
-                    <button type="button" class="retry-btn" (click)="loadFeatures()">Reintentar</button>
-                  </div>
-                </td>
-              </tr>
-            }
             @for (track of tracks(); track track.id_track) {
               <tr
                 [class.selected]="selectedId() === track.id_track"
@@ -88,22 +83,21 @@
             }
           </tbody>
         </table>
+        }
       </div>
     </section>
 
-    <!-- Radar -->
     <section class="panel radar-panel">
       <div class="panel-header">
         <div>
-          <h2>Perfil acústico</h2>
-          <p class="panel-desc">Más lejos del centro significa mayor intensidad de la característica.</p>
+          <h2>{{ 'audioFeatures.radar.title' | t:lang() }}</h2>
+          <p class="panel-desc">{{ 'audioFeatures.radar.subtitle' | t:lang() }}</p>
         </div>
         <span class="panel-meta">{{ selectedTrackTitle() }}</span>
       </div>
 
       <div class="radar-wrap">
-        <svg viewBox="0 0 200 200" class="radar-chart">
-          <!-- Grid rings -->
+        <svg viewBox="0 0 200 200" class="radar-chart" aria-hidden="true">
           @for (ring of gridRings; track ring) {
             <polygon
               [attr.points]="radarPoints({
@@ -117,7 +111,6 @@
             />
           }
 
-          <!-- Axes -->
           @for (axis of radarAxisPoints(); track axis.label) {
             <line x1="100" y1="100" [attr.x2]="axis.x" [attr.y2]="axis.y" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
             <text
@@ -129,7 +122,6 @@
             >{{ axis.label }}</text>
           }
 
-          <!-- Data polygon -->
           @if (selectedTrack(); as sel) {
           <polygon
             [attr.points]="radarPoints(sel)"
@@ -138,7 +130,6 @@
             stroke-width="2"
           />
 
-          <!-- Data points -->
           @for (f of featureDefs; track f.key; let i = $index) {
             <circle
               [attr.cx]="radarPoint(sel, i).x"
@@ -158,8 +149,8 @@
             <span class="feature-label">
               <span class="feature-dot" [style.background]="f.color"></span>
                 <span>
-                  {{ f.label }}
-                  <small>{{ f.help }}</small>
+                  {{ featureLabel(f) }}
+                  <small>{{ featureHelp(f) }}</small>
                 </span>
             </span>
             <div class="feature-bar-track">

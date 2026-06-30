@@ -1,6 +1,10 @@
 <footer class="player-bar" [class.has-track]="player.currentTrack()" [class.expanded]="player.expandedOpen()">
   <div class="player-progress-wrap" (click)="onProgressClick($event)">
-    <div class="player-progress-fill" [style.width.%]="player.progressPct()"></div>
+    <div class="player-progress-track">
+      <div class="player-progress-fill" [style.width.%]="player.progressPct()">
+        <span class="player-progress-thumb" aria-hidden="true"></span>
+      </div>
+    </div>
   </div>
 
   <div class="player-inner">
@@ -28,7 +32,7 @@
           <span class="track-title">{{ t.title }}</span>
           <span class="track-artist">{{ t.artist }}</span>
         </div>
-        @if (t.explicit) { <span class="explicit-badge">{{ 'common.explicit' | t }}</span> }
+        @if (t.explicit) { <span class="explicit-badge">{{ 'common.explicit' | t:lang() }}</span> }
         <div class="track-actions" (click)="$event.stopPropagation()">
           <app-favorite-btn [trackId]="t.id" size="sm" />
           <app-add-to-playlist-btn [trackId]="t.id" size="sm" [dropUp]="true" />
@@ -44,8 +48,8 @@
         </button>
       } @else {
         <div class="track-meta muted">
-          <span class="track-title">{{ 'player.selectTrack' | t }}</span>
-          <span class="track-artist">{{ 'player.browseCatalog' | t }}</span>
+          <span class="track-title">{{ 'player.selectTrack' | t:lang() }}</span>
+          <span class="track-artist">{{ 'player.browseCatalog' | t:lang() }}</span>
         </div>
       }
     </div>

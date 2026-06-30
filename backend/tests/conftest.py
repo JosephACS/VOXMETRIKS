@@ -93,8 +93,8 @@ def _init_test_database(db_path: Path) -> None:
         VALUES (1, 1, 1, CURRENT_TIMESTAMP, 180000)
     """)
 
-    from app.packages.users.services.user_storage import ensure_user_tables
     from app.packages.streaming.services.app_storage import ensure_app_tables
+    from app.packages.users.services.user_storage import ensure_user_tables
 
     ensure_user_tables(conn)
     ensure_app_tables(conn)
@@ -103,7 +103,7 @@ def _init_test_database(db_path: Path) -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def _configure_test_database() -> None:
-    os.environ["DB_PATH"] = str(_TEST_DB_PATH)
+    os.environ["db_path"] = str(_TEST_DB_PATH)
     from app.core.config import get_settings
 
     get_settings.cache_clear()

@@ -1,5 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -22,6 +23,7 @@ const COVER = 'linear-gradient(135deg, #1db954 0%, #065f46 50%, #064e3b 100%)';
   styleUrls: ['./liked.component.css'],
 })
 export class LikedComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private player = inject(MusicPlayerService);
   private covers = inject(CoverArtService);

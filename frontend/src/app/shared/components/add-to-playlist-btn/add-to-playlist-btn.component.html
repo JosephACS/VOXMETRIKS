@@ -15,16 +15,16 @@
   >
     <span [innerHTML]="icon(size === 'sm' ? 12 : 14)" aria-hidden="true"></span>
     @if (variant === 'button') {
-      <span class="atp-label">{{ 'player.addToPlaylist' | t }}</span>
+      <span class="atp-label">{{ 'player.addToPlaylist' | t:lang() }}</span>
     }
   </button>
 
   @if (open()) {
     <div class="atp-menu" role="menu">
-      <p class="atp-menu-title">{{ 'player.pickPlaylist' | t }}</p>
+      <p class="atp-menu-title">{{ 'player.pickPlaylist' | t:lang() }}</p>
       @if (!playlists().length) {
         <a routerLink="/playlists" class="atp-empty" (click)="open.set(false)">
-          {{ 'player.createPlaylistFirst' | t }}
+          {{ 'player.createPlaylistFirst' | t:lang() }}
         </a>
       } @else {
         @for (pl of playlists(); track pl.id) {
@@ -35,9 +35,9 @@
         }
       }
       @if (msg() === 'ok') {
-        <span class="atp-msg ok">{{ 'player.addedToPlaylist' | t }}</span>
+        <span class="atp-msg ok">{{ 'player.addedToPlaylist' | t:lang() }}</span>
       } @else if (msg() === 'err') {
-        <span class="atp-msg err">{{ 'player.addPlaylistError' | t }}</span>
+        <span class="atp-msg err">{{ 'player.addPlaylistError' | t:lang() }}</span>
       }
     </div>
   }

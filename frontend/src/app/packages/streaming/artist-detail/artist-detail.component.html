@@ -2,7 +2,7 @@
   <div class="page-top-row">
     <a routerLink="/artists" class="back-link">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      {{ 'artistDetail.back' | t }}
+      {{ 'artistDetail.back' | t:lang() }}
     </a>
     <div class="source-badges">
       <app-data-source-badge kind="live" />
@@ -15,10 +15,10 @@
     <div class="error-card glass-panel">
       <span [innerHTML]="icon('alert', 24)"></span>
       <div>
-        <strong>{{ 'artistDetail.notFound' | t }}</strong>
-        <p>{{ 'artistDetail.emptyTracks' | t }}</p>
+        <strong>{{ 'artistDetail.notFound' | t:lang() }}</strong>
+        <p>{{ 'artistDetail.emptyTracks' | t:lang() }}</p>
       </div>
-      <a routerLink="/artists" class="btn-secondary">{{ 'artistDetail.back' | t }}</a>
+      <a routerLink="/artists" class="btn-secondary">{{ 'artistDetail.back' | t:lang() }}</a>
     </div>
   } @else {
     <section class="profile-hero glass-panel">
@@ -31,37 +31,37 @@
           <div class="hero-avatar" [style.background]="avatarGradient()">{{ avatarInitial() }}</div>
         </div>
         <div class="hero-info">
-          <p class="hero-label">{{ 'artistDetail.type' | t }}</p>
+          <p class="hero-label">{{ 'artistDetail.type' | t:lang() }}</p>
           <h1>{{ displayName() }}</h1>
           <div class="hero-chips">
             <span class="chip">
               <span [innerHTML]="icon('star', 13)"></span>
-              {{ 'artistDetail.avgPop' | t }} {{ avgPopularity() | number:'1.0-1' }}
+              {{ 'artistDetail.avgPop' | t:lang() }} {{ avgPopularity() | number:'1.0-1' }}
             </span>
             <span class="chip">
               <span [innerHTML]="icon('music', 13)"></span>
-              {{ (stats()?.total_tracks ?? trackTotal()) | number }} {{ 'artistDetail.tracks' | t }}
+              {{ (stats()?.total_tracks ?? trackTotal()) | number }} {{ 'artistDetail.tracks' | t:lang() }}
             </span>
           </div>
           @if (tracks().length) {
             <button type="button" class="btn-play" (click)="playAll()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              {{ 'common.play' | t }}
+              {{ 'common.play' | t:lang() }}
             </button>
           }
         </div>
         <div class="hero-quick-stats">
           <div class="quick-stat">
             <span class="qs-value">{{ avgPopularity() | number:'1.0-1' }}</span>
-            <span class="qs-label">{{ 'artistDetail.popularity' | t }}</span>
+            <span class="qs-label">{{ 'artistDetail.popularity' | t:lang() }}</span>
           </div>
           <div class="quick-stat">
             <span class="qs-value">{{ (stats()?.total_tracks ?? trackTotal()) | number }}</span>
-            <span class="qs-label">{{ 'tracks.title' | t }}</span>
+            <span class="qs-label">{{ 'tracks.title' | t:lang() }}</span>
           </div>
           <div class="quick-stat">
             <span class="qs-value">#{{ stats()?.id_artista }}</span>
-            <span class="qs-label">{{ 'artistDetail.catalogId' | t }}</span>
+            <span class="qs-label">{{ 'artistDetail.catalogId' | t:lang() }}</span>
           </div>
         </div>
       </div>
@@ -79,11 +79,11 @@
 
     <section class="tracks-section glass-panel">
       <div class="section-head">
-        <h2>{{ 'artistDetail.topTracks' | t }}</h2>
-        <span class="section-meta">{{ 'artistDetail.topTracksSub' | t }}</span>
+        <h2>{{ 'artistDetail.topTracks' | t:lang() }}</h2>
+        <span class="section-meta">{{ 'artistDetail.topTracksSub' | t:lang() }}</span>
       </div>
       @if (tracks().length === 0) {
-        <p class="empty">{{ 'artistDetail.emptyTracks' | t }}</p>
+        <p class="empty">{{ 'artistDetail.emptyTracks' | t:lang() }}</p>
       } @else {
         <div class="tracks-list">
           @for (t of tracks(); track t.id_track; let i = $index) {
@@ -99,12 +99,12 @@
         @if (hasMoreTracks()) {
           <div class="load-more-wrap">
             <button type="button" class="btn-load-more" [disabled]="tracksLoading()" (click)="loadMoreTracks()">
-              @if (tracksLoading()) { {{ 'common.loading' | t }} } @else { {{ 'artistDetail.loadMore' | t }} }
+              @if (tracksLoading()) { {{ 'common.loading' | t:lang() }} } @else { {{ 'artistDetail.loadMore' | t:lang() }} }
             </button>
           </div>
         }
       }
-      <p class="catalog-note">{{ 'artistDetail.note' | t }}</p>
+      <p class="catalog-note">{{ 'artistDetail.note' | t:lang() }}</p>
     </section>
   }
 </div>

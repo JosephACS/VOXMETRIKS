@@ -30,7 +30,7 @@ docs/QUICKSTART.md
 
 Resumen mínimo (local):
 
-1. `pip install -r requirements.txt` y `pip install -r backend/requirements.txt`
+1. `pip install -r backend/requirements.txt`
 2. `cp .env.example .env`
 3. `python elt/pipelines/elt_pipeline.py`
 4. `cd backend && uvicorn app.main:app --reload`
@@ -47,6 +47,8 @@ voxmetriks/
 ├── frontend/              # SPA Angular (PKG-01..07)
 ├── backend/
 │   ├── app/               # FastAPI — main.py, packages/
+│   ├── db/schema.sql      # DDL legacy (referencia; canónico en elt/)
+│   ├── requirements.txt   # Dependencias Python (API + ELT + tests)
 │   └── tests/             # pytest (health, login, playlists, favorites)
 ├── elt/                   # Extract / transform / pipelines
 ├── data/warehouse/        # DuckDB canónico (generado por ELT)
@@ -88,7 +90,7 @@ Prefijo REST: `/api/v1`. Autenticación: header `Authorization: Bearer <token>` 
 
 ```bash
 cd backend
-pip install -r requirements.txt
+pip install -r requirements.txt   # desde backend/
 pytest tests/ -v
 ```
 

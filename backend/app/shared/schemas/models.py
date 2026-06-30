@@ -8,6 +8,7 @@ All fields match the DuckDB warehouse schema exactly.
 from __future__ import annotations
 
 from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -145,6 +146,16 @@ class PaginatedResponse(BaseModel):
     page:   int
     limit:  int
     items:  list
+
+
+class CursorPaginatedResponse(BaseModel):
+    """Keyset pagination — stable for deep pages (no OFFSET scan)."""
+    limit:        int
+    items:        list
+    next_cursor:  Optional[str] = None
+    has_more:     bool = False
+    total:        Optional[int] = None
+    page:         Optional[int] = None
 
 
 # ── Delete response ───────────────────────────────────────────────────────────

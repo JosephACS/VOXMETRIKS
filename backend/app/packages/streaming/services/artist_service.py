@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 
-from .base_service import count_rows, fetch_rows
+from app.core.query_helpers import fetch_rows
+
 from .display_text import clean_catalog_row, clean_catalog_rows
+
+logger = logging.getLogger(__name__)
 
 # Expande colaboraciones "Artista A;Artista B" en artistas individuales
 _SPLIT_EXPR = "TRIM(unnest(string_split(REPLACE(nombre_artista, ',', ';'), ';')))"
@@ -183,6 +187,7 @@ def get_top_artists(
             for r in rows
         ])
     except Exception:
+        logger.exception("get_top_artists: individual-artist query failed; using agg_top_artistas fallback")
         rows, _ = fetch_rows(
             conn, "agg_top_artistas",
             columns=["id_artista", "nombre_artista", "promedio_popularidad", "total_tracks"],

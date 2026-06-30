@@ -6,14 +6,23 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import get_conn, get_write_conn
-from app.shared.schemas.models import (
-    PlaylistCreate, PlaylistUpdate, PlaylistDetail, PlaylistSummary,
-    PlaylistTrackAdd, DeleteResponse,
+from app.packages.streaming.services.playlist_service import (
+    add_track_to_playlist,
+    create_playlist,
+    delete_playlist,
+    get_playlist,
+    list_playlists,
+    remove_track_from_playlist,
+    update_playlist,
 )
 from app.packages.users.services.auth_deps import require_user_id
-from app.packages.streaming.services.playlist_service import (
-    list_playlists, get_playlist, create_playlist, update_playlist,
-    delete_playlist, add_track_to_playlist, remove_track_from_playlist,
+from app.shared.schemas.models import (
+    DeleteResponse,
+    PlaylistCreate,
+    PlaylistDetail,
+    PlaylistSummary,
+    PlaylistTrackAdd,
+    PlaylistUpdate,
 )
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])

@@ -45,21 +45,26 @@ export class AuthService {
   getUser = () => this.authState().user;
   userId = computed(() => this.authState().user?.id ?? null);
 
-  /**
-   * Catalog steward + data engineering.
-   * Normal listeners (demo, registered users) MUST NOT mutate warehouse catalog.
-   * Mirrors backend require_engineer_user.
-   */
-  readonly isCatalogSteward = computed(() => {
-    const u = this.authState().user;
-    if (!u) return false;
-    const role = (u.role ?? 'user').toLowerCase();
-    return role === 'admin' || role === 'engineer';
-  });
+  /** Current normalized role. */
+  readonly role = computed(() => (this.authState().user?.role ?? 'user').toLowerCase());
 
-  /** @deprecated use isCatalogSteward() — kept for engineerGuard / ELT routes */
+  /**
+   * Catalog steward = ONLY the administrator can create/edit/delete artists,
+   * tracks and genres. Data engineers manage the ELT pipeline + analytics, but
+   * never mutate the catalog by hand. Mirrors backend require_admin_user.
+   */
+  readonly isCatalogSteward = computed(() => this.role() === 'admin');
+
+  /** True for the administrator. */
+  readonly isAdmin = computed(() => this.role() === 'admin');
+
+  /**
+   * Engineering access = admin OR data engineer. Gates the ELT pipeline and
+   * analytics-only routes (engineerGuard), NOT the catalog CRUD.
+   */
   hasEngineerAccess(): boolean {
-    return this.isCatalogSteward();
+    const r = this.role();
+    return r === 'admin' || r === 'engineer';
   }
 
   constructor() {

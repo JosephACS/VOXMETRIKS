@@ -1,6 +1,8 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -12,24 +14,39 @@ import { GenresService } from '../services/genres.service';
 import { ArtistsService } from '../services/artists.service';
 import { Track, PaginatedResponse, Genero, Artista } from '../../../shared/models/api.models';
 import { primaryArtistName } from '../../../shared/utils/artist.util';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import {
+  apiFormError,
+  createSearchDebouncer,
+  pageWindow,
+  paginatedRowIndex,
+} from '../../../shared/utils/catalog-list.util';
 
 type ModalMode = 'create' | 'edit' | 'delete' | null;
 
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ScrollingModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './tracks.component.html',
-  styleUrls: ['./tracks.component.css'],
+  styleUrls: [
+    '../../../shared/styles/catalog-page-shared.css',
+    '../../../shared/styles/catalog-crud-modal.css',
+    './tracks.component.css',
+  ],
 })
 export class TracksComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
   private iconRender = inject(IconRenderService);
   protected readonly auth = inject(AuthService);
   player = inject(MusicPlayerService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  private readonly searchDebouncer = createSearchDebouncer(this.destroyRef);
 
   tracks      = signal<Track[]>([]);
   genres      = signal<Genero[]>([]);
@@ -45,7 +62,6 @@ export class TracksComponent implements OnInit {
   genreFilterName = signal<string>('');
   artistFilterId   = signal<number | null>(null);
   artistFilterName = signal<string>('');
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   totalPages   = computed(() => Math.max(1, Math.ceil(this.serverTotal() / this.limit)));
   displayTotal = computed(() => this.serverTotal());
@@ -63,7 +79,9 @@ export class TracksComponent implements OnInit {
   constructor(private svc: TracksService, private genresSvc: GenresService, private artistsSvc: ArtistsService) {}
 
   ngOnInit() {
-    this.route.queryParamMap.subscribe((pm) => {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pm) => {
       const gid = pm.get('genre_id');
       const aid = pm.get('artist_id');
       this.genreFilterId.set(gid ? Number(gid) : null);
@@ -74,8 +92,14 @@ export class TracksComponent implements OnInit {
       this.loadTracks();
     });
     if (this.auth.isCatalogSteward()) {
-      this.genresSvc.getGenres({ limit: 500 }).subscribe({ next: r => this.genres.set(r.items ?? []), error: () => {} });
-      this.artistsSvc.listArtists(1, 500).subscribe({ next: r => this.artists.set(r.items ?? []), error: () => {} });
+      this.genresSvc.getGenres({ limit: 500 }).subscribe({
+        next: r => this.genres.set(r.items ?? []),
+        error: (err) => console.error('[TracksComponent] getGenres failed', err),
+      });
+      this.artistsSvc.listArtists(1, 500).subscribe({
+        next: r => this.artists.set(r.items ?? []),
+        error: (err) => console.error('[TracksComponent] listArtists failed', err),
+      });
     }
   }
 
@@ -101,24 +125,19 @@ export class TracksComponent implements OnInit {
       },
       error: () => {
         this.hasError.set(true);
-        this.errorMsg.set('Error al conectar con el backend. Verifica que FastAPI esté corriendo en http://localhost:8000');
+        this.errorMsg.set(this.i18n.t('errors.backendConnection'));
         this.isLoading.set(false);
       },
     });
   }
 
   onSearch(val: string) {
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => { this.searchVal.set(val); this.page.set(1); this.loadTracks(); }, 350);
+    this.searchDebouncer.schedule(() => { this.searchVal.set(val); this.page.set(1); this.loadTracks(); });
   }
   clearSearch() { this.searchVal.set(''); this.page.set(1); this.loadTracks(); }
   goTo(p: number) { if (p < 1 || p > this.totalPages()) return; this.page.set(p); this.loadTracks(); }
-  get pageNumbers(): number[] {
-    const total = this.totalPages(), current = this.page(), delta = 2, range: number[] = [];
-    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) range.push(i);
-    return range;
-  }
-  rowIndex(i: number): number { return (this.page() - 1) * this.limit + i + 1; }
+  get pageNumbers(): number[] { return pageWindow(this.page(), this.totalPages()); }
+  rowIndex(i: number): number { return paginatedRowIndex(this.page(), this.limit, i); }
   formatDuration(ms?: number): string {
     if (!ms) return '—';
     const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
@@ -131,6 +150,7 @@ export class TracksComponent implements OnInit {
     return t.nombre_genero?.trim() || (t.id_genero ? `#${t.id_genero}` : '');
   }
   trackQueue = computed(() => this.tracks().map((t) => this.player.fromTrack(t)));
+  trackById = (_: number, t: Track) => t.id_track;
   skeletonRows = Array(12).fill(0);
 
   openCreate() { if (!this.auth.isCatalogSteward()) return; this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }
@@ -141,11 +161,11 @@ export class TracksComponent implements OnInit {
   saveCreate() {
     if (!this.auth.isCatalogSteward()) return;
     const name = this.formName().trim();
-    if (!name) { this.formError.set('El nombre no puede estar vacío'); return; }
+    if (!name) { this.formError.set(this.i18n.t('form.nameRequired')); return; }
     this.formSaving.set(true); this.formError.set('');
     this.svc.createTrack({ nombre_track: name, id_artista: this.formArtist() ?? undefined, id_genero: this.formGenre() ?? undefined, explicit: this.formExplicit(), duration_ms: this.formDuration() ?? undefined }).subscribe({
       next: () => { this.closeModal(); this.loadTracks(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al crear track'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, this.i18n.t('tracks.form.createError'))); this.formSaving.set(false); },
     });
   }
 
@@ -153,11 +173,11 @@ export class TracksComponent implements OnInit {
     if (!this.auth.isCatalogSteward()) return;
     const name = this.formName().trim();
     const track = this.modalTrack();
-    if (!name || !track) { this.formError.set('El nombre no puede estar vacío'); return; }
+    if (!name || !track) { this.formError.set(this.i18n.t('form.nameRequired')); return; }
     this.formSaving.set(true); this.formError.set('');
     this.svc.updateTrack(track.id_track, { nombre_track: name, id_artista: this.formArtist() ?? undefined, id_genero: this.formGenre() ?? undefined, explicit: this.formExplicit(), duration_ms: this.formDuration() ?? undefined }).subscribe({
       next: () => { this.closeModal(); this.loadTracks(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al actualizar'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, this.i18n.t('tracks.form.updateError'))); this.formSaving.set(false); },
     });
   }
 
@@ -167,7 +187,7 @@ export class TracksComponent implements OnInit {
     this.formSaving.set(true); this.formError.set('');
     this.svc.deleteTrack(track.id_track).subscribe({
       next: () => { this.closeModal(); this.loadTracks(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, this.i18n.t('tracks.form.deleteError'))); this.formSaving.set(false); },
     });
   }
 

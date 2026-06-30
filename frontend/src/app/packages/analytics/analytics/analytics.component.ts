@@ -1,5 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatsService } from '../services/stats.service';
@@ -16,6 +17,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrls: ['./analytics.component.css'],
 })
 export class AnalyticsComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
 
   isLoading    = signal(true);
@@ -56,12 +58,25 @@ export class AnalyticsComponent implements OnInit {
       }
     };
 
-    this.stats.getEnergyDistribution().subscribe({ next: d => { this.energyDist.set(d ?? []); done(true); }, error: () => done(false) });
-    this.genres.getGenreStats(1, 50).subscribe({ next: r => { this.genreStats.set(r.items ?? []); done(true); }, error: () => done(false) });
+    this.stats.getEnergyDistribution().subscribe({
+      next: d => { this.energyDist.set(d ?? []); done(true); },
+      error: (err) => { console.error('[AnalyticsComponent] getEnergyDistribution failed', err); done(false); },
+    });
+    this.genres.getGenreStats(1, 50).subscribe({
+      next: r => { this.genreStats.set(r.items ?? []); done(true); },
+      error: (err) => { console.error('[AnalyticsComponent] getGenreStats failed', err); done(false); },
+    });
     this.stats.getEngagementAnalytics().subscribe({
       next: d => { this.engagement.set(d); done(true); },
-      error: () => done(false),
+      error: (err) => { console.error('[AnalyticsComponent] getEngagementAnalytics failed', err); done(false); },
     });
+  }
+
+  /** Formatea "1_muy_baja" → "Muy baja" para el eje del gráfico (solo presentación). */
+  energyLabel(raw?: string | null): string {
+    if (!raw) return '—';
+    const clean = raw.replace(/^\d+_/, '').replace(/_/g, ' ').trim();
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
   }
 
   energyBarH(count: number): number { return Math.round((count / this.maxEnergy()) * 100); }

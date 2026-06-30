@@ -1,3 +1,4 @@
+import { I18nService } from '../../../core/services/i18n.service';
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MusicPlayerService } from '../../services/music-player.service';
@@ -13,6 +14,7 @@ import { AddToPlaylistBtnComponent } from '../add-to-playlist-btn/add-to-playlis
   styleUrls: ['./player-bar.component.css'],
 })
 export class PlayerBarComponent {
+  readonly lang = inject(I18nService).lang;
   player = inject(MusicPlayerService);
 
   onProgressClick(e: MouseEvent) {

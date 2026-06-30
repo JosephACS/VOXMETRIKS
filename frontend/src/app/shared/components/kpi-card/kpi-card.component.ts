@@ -5,7 +5,8 @@
 
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../services/icon-render.service';
-import { Component, inject, Input } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, inject, input, effect, signal } from '@angular/core';
 import { DecimalPipe }      from '@angular/common';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 
@@ -16,10 +17,10 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   template: `
     <div
       class="kpi-card"
-      [class]="'kpi-card kpi-color-' + color"
+      [class]="'kpi-card kpi-color-' + color()"
       [attr.role]="'figure'"
-      [attr.title]="tooltip || null"
-      [attr.aria-label]="(tooltip || label) + ': ' + (value !== null && value !== undefined ? value : ('common.loading' | t))"
+      [attr.title]="tooltip() || null"
+      [attr.aria-label]="(tooltip() || label()) + ': ' + (value() !== null && value() !== undefined ? value() : ('common.loading' | t))"
     >
       <!-- Accent line top -->
       <div class="kpi-accent" aria-hidden="true"></div>
@@ -27,35 +28,35 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       <!-- Header -->
       <div class="kpi-header">
         <span class="kpi-icon icon-wrap-md" [innerHTML]="iconSvg" aria-hidden="true"></span>
-        <span class="kpi-label">{{ label }}</span>
-        @if (note) {
-          <span class="kpi-note" [attr.title]="noteTip || null">{{ note }}</span>
+        <span class="kpi-label">{{ label() }}</span>
+        @if (note()) {
+          <span class="kpi-note" [attr.title]="noteTip() || null">{{ note() }}</span>
         }
       </div>
 
       <!-- Value (or skeleton) -->
       <div class="kpi-value" [attr.aria-live]="'polite'">
-        @if (value !== null && value !== undefined) {
-          <span class="kpi-value-num">{{ value | number }}</span>
+        @if (displayValue() !== null && displayValue() !== undefined) {
+          <span class="kpi-value-num">{{ displayValue() | number }}</span>
         } @else {
           <span class="kpi-skeleton" [attr.aria-label]="'common.loading' | t" aria-busy="true"></span>
         }
       </div>
 
       <!-- Subtitle -->
-      @if (subtitle) {
-        <div class="kpi-subtitle" aria-label="Fuente: {{ subtitle }}">{{ subtitle }}</div>
+      @if (subtitle()) {
+        <div class="kpi-subtitle" aria-label="Fuente: {{ subtitle() }}">{{ subtitle() }}</div>
       }
 
       <!-- Trend -->
-      @if (trend) {
+      @if (trend()) {
         <div class="kpi-trend" [class]="trendClass">
-          <span class="trend-value">{{ trend }}</span>
-          @if (trendLabel) {
-            <span class="trend-label">{{ trendLabel }}</span>
+          <span class="trend-value">{{ trend() }}</span>
+          @if (trendLabel()) {
+            <span class="trend-label">{{ trendLabel() }}</span>
           }
-          @if (trendNote) {
-            <span class="trend-note" [attr.title]="trendNoteTip || null">{{ trendNote }}</span>
+          @if (trendNote()) {
+            <span class="trend-note" [attr.title]="trendNoteTip() || null">{{ trendNote() }}</span>
           }
         </div>
       }
@@ -187,6 +188,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
     .kpi-value-num {
       display: block;
       transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+      font-variant-numeric: tabular-nums;
     }
 
     /* ── Skeleton ── */
@@ -261,32 +263,56 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   `],
 })
 export class KpiCardComponent {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
 
-  @Input() label = '';
-  @Input() value: number | null = null;
-  @Input() iconKey = 'chart';
-  @Input() subtitle = '';
-  @Input() color: 'primary' | 'secondary' | 'info' | 'warning' = 'primary';
-  @Input() trend: string | null = null;
-  @Input() trendLabel: string | null = null;
-  @Input() trendPositive: boolean | null = null;
-  /** Explicación al pasar el mouse (qué representa la métrica). */
-  @Input() tooltip = '';
-  /** Etiqueta discreta de origen del dato en la cabecera (ej: "Tu actividad"). */
-  @Input() note: string | null = null;
-  @Input() noteTip: string | null = null;
-  /** Etiqueta discreta de origen junto a la tendencia (ej: "Demo"). */
-  @Input() trendNote: string | null = null;
-  @Input() trendNoteTip: string | null = null;
+  displayValue = signal<number | null>(null);
+
+  constructor() {
+    effect((onCleanup) => {
+      const target = this.value();
+      if (target == null) {
+        this.displayValue.set(null);
+        return;
+      }
+      const from = this.displayValue() ?? 0;
+      const start = performance.now();
+      const duration = 480;
+      let frame = 0;
+      const step = (now: number) => {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        this.displayValue.set(Math.round(from + (target - from) * eased));
+        if (progress < 1) {
+          frame = requestAnimationFrame(step);
+        }
+      };
+      frame = requestAnimationFrame(step);
+      onCleanup(() => cancelAnimationFrame(frame));
+    });
+  }
+
+  readonly label = input('');
+  readonly value = input<number | null>(null);
+  readonly iconKey = input('chart');
+  readonly subtitle = input('');
+  readonly color = input<'primary' | 'secondary' | 'info' | 'warning'>('primary');
+  readonly trend = input<string | null>(null);
+  readonly trendLabel = input<string | null>(null);
+  readonly trendPositive = input<boolean | null>(null);
+  readonly tooltip = input('');
+  readonly note = input<string | null>(null);
+  readonly noteTip = input<string | null>(null);
+  readonly trendNote = input<string | null>(null);
+  readonly trendNoteTip = input<string | null>(null);
 
   get iconSvg(): SafeHtml {
-    return this.iconRender.render(this.iconKey, 16);
+    return this.iconRender.render(this.iconKey(), 16);
   }
 
   get trendClass(): string {
-    if (this.trendPositive === true)  return 'kpi-trend trend-positive';
-    if (this.trendPositive === false) return 'kpi-trend trend-negative';
+    if (this.trendPositive() === true)  return 'kpi-trend trend-positive';
+    if (this.trendPositive() === false) return 'kpi-trend trend-negative';
     return 'kpi-trend';
   }
 }

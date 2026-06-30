@@ -1,402 +1,345 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, finalize, map, of, share } from 'rxjs';
 import { PlayableTrack } from '../models/player.models';
 import { CoverArtService } from './cover-art.service';
-import { demoAudioUrlForTrack } from '../config/demo-audio.config';
-import { primaryArtistName } from '../utils/artist.util';
-import { displayTrackTitle, displayTrackSubtitle } from '../utils/track-display.util';
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { Track, TopTrack } from '../models/api.models';
 import { TracksService } from '../../packages/streaming/services/tracks.service';
 import { YoutubeEngineService } from './youtube-engine.service';
 import { TrackCoverService } from './track-cover.service';
-
-const VOLUME_KEY = 'voxmetrik_volume';
-const TRACK_KEY = 'voxmetrik_last_track';
-
+import { StatsService } from '../../packages/analytics/services/stats.service';
+import { formatPlaybackTime, playableFromTopTrack, playableFromTrack } from './player/player-track.factory';
+import { PlayerQueue } from './player/player-queue';
+import { PlayerPlaybackEngine } from './player/player-playback.engine';
+import { PlayerSourceResolver } from './player/player-source.resolver';
+import {
+  clearPersistedTrack,
+  persistCurrentTrack,
+  readStoredVolume,
+  restorePersistedTrack,
+  storeVolume,
+} from './player/player-session.storage';
 @Injectable({ providedIn: 'root' })
 export class MusicPlayerService {
+  private static readonly AUTOPLAY_MIN_UPCOMING = 5;
+  private static readonly AUTOPLAY_FETCH_SIZE = 24;
+
   private coverArt = inject(CoverArtService);
   private history = inject(HistoryService);
-  private tracksApi = inject(TracksService);
+  private stats = inject(StatsService);
+  private tracksSvc = inject(TracksService);
   private yt = inject(YoutubeEngineService);
   private coverSvc = inject(TrackCoverService);
-  private audio = new Audio();
-  private queueInternal: PlayableTrack[] = [];
-  private queueIndex = 0;
-
-  /** True when playback is currently driven by the YouTube engine. */
-  private usingYt = false;
-  /** Track id currently loaded into an engine (guards restore + resume). */
-  private engineLoadedTrackId: number | null = null;
-  /** Monotonic token to drop stale async audio-source resolutions. */
+  private readonly queueState = new PlayerQueue();
+  private readonly sourceResolver = new PlayerSourceResolver(this.tracksSvc, this.history);
   private playbackToken = 0;
-
-  private tickTimer: ReturnType<typeof setInterval> | null = null;
-
+  private autoplayFetch$: Observable<PlayableTrack[]> | null = null;
+  /** Cursor para recorrer el catálogo página a página y traer temas frescos. */
+  private autoplayPage = 1;
+  private readonly engine = new PlayerPlaybackEngine(this.yt, {
+    onEnded: () => this.onEnded(),
+    onYtPlay: () => this.setPlaying(true),
+    onYtPause: () => this.setPlaying(false),
+    onYtEnded: () => this.onEnded(),
+    onYtError: () => {
+      const t = this.currentTrack();
+      if (this.engine.isYoutube && t) this.recoverFromYtError(t);
+    },
+    onDemoMetadata: (d) => this.duration.set(d),
+  });
   currentTrack = signal<PlayableTrack | null>(null);
   isPlaying = signal(false);
   currentTime = signal(0);
   duration = signal(0);
-  volume = signal(this.readVolume());
+  volume = signal(readStoredVolume());
   shuffle = signal(false);
   repeat = signal(false);
+  /** Autoplay continuo (estilo Spotify): rellena la cola y sigue al terminar. */
+  autoplay = signal(true);
+  autoplayLoading = signal(false);
   queue = signal<PlayableTrack[]>([]);
+  queueIndex = signal(0);
   expandedOpen = signal(false);
-  /** Active playback source for the current track. */
   audioMode = signal<'youtube' | 'demo' | 'loading'>('demo');
-  /** Real cover-art URL for the current track (null → gradient fallback). */
   currentCover = signal<string | null>(null);
-
+  /** Pistas que vienen después de la actual (lo que muestra "En cola"). */
+  upcomingQueue = computed(() => {
+    const q = this.queue();
+    const idx = this.queueIndex();
+    if (!q.length || idx >= q.length - 1) return [];
+    return q.slice(idx + 1);
+  });
   progressPct = computed(() => {
     const d = this.duration();
     return d > 0 ? Math.min(100, (this.currentTime() / d) * 100) : 0;
   });
-
   /** @deprecated use signals — kept for optional subscriptions */
   state$ = new BehaviorSubject({ playing: false });
-
   constructor() {
-    this.audio.volume = this.volume();
-    this.audio.preload = 'metadata';
-    this.audio.addEventListener('ended', () => {
-      if (!this.usingYt) this.onEnded();
-    });
-    this.audio.addEventListener('loadedmetadata', () => {
-      if (!this.usingYt) this.duration.set(this.audio.duration || 0);
-    });
-
-    this.yt.setVolume(this.volume() * 100);
-    this.yt.onPlay = () => {
-      if (this.usingYt) { this.isPlaying.set(true); this.state$.next({ playing: true }); }
-    };
-    this.yt.onPause = () => {
-      if (this.usingYt) { this.isPlaying.set(false); this.state$.next({ playing: false }); }
-    };
-    this.yt.onEnded = () => {
-      if (this.usingYt) this.onEnded();
-    };
-    this.yt.onError = () => {
-      // YouTube playback failed (unembeddable/region-blocked/stale id).
-      // Try to re-resolve a fresh video once before falling back to demo.
-      const t = this.currentTrack();
-      if (this.usingYt && t) this.recoverFromYtError(t);
-    };
-
+    this.engine.setVolume(this.volume());
     this.restoreLastTrack();
-    this.startTick();
+    this.engine.startTick(() => {
+      if (!this.isPlaying()) return;
+      this.currentTime.set(this.engine.getCurrentTime());
+      const d = this.engine.getDuration(this.duration());
+      if (d && Math.abs(d - this.duration()) > 1) this.duration.set(d);
+    });
   }
-
   fromTrack(t: Track, artistName?: string): PlayableTrack {
-    const artist = t.nombre_artista?.trim()
-      ? primaryArtistName(t.nombre_artista)
-      : (artistName?.trim() || '—');
-    return {
-      id: t.id_track,
-      title: displayTrackTitle(t.nombre_track),
-      artist: displayTrackSubtitle(artist, t.nombre_genero, t.id_track),
-      durationMs: t.duration_ms,
-      audioUrl: demoAudioUrlForTrack(t.id_track),
-      coverGradient: this.coverArt.gradientFor(t.id_track),
-      explicit: t.explicit,
-    };
+    return playableFromTrack(this.coverArt, t, artistName);
   }
-
   fromTopTrack(t: TopTrack): PlayableTrack {
-    return {
-      id: t.id_track,
-      title: displayTrackTitle(t.nombre_track),
-      artist: displayTrackSubtitle(t.nombre_artista, undefined, t.id_track),
-      audioUrl: demoAudioUrlForTrack(t.id_track),
-      coverGradient: this.coverArt.gradientFor(t.id_track),
-    };
+    return playableFromTopTrack(this.coverArt, t);
   }
-
   setQueue(tracks: PlayableTrack[], startIndex = 0) {
-    this.queueInternal = tracks;
-    this.queueIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
-    this.queue.set([...tracks]);
-    if (tracks.length) this.loadTrack(tracks[this.queueIndex], true);
+    this.queueState.setAll(tracks, startIndex);
+    this.syncQueueSignal();
+    const track = this.queueState.current;
+    if (track) this.loadTrack(track, true);
   }
-
   playTrack(track: PlayableTrack, queue?: PlayableTrack[]) {
     if (queue?.length) {
       const idx = queue.findIndex((q) => q.id === track.id);
       this.setQueue(queue, idx >= 0 ? idx : 0);
       return;
     }
-    this.queueInternal = [track];
-    this.queueIndex = 0;
-    this.queue.set([track]);
+    this.queueState.setSingle(track);
+    this.syncQueueSignal();
     this.loadTrack(track, true);
   }
-
   toggle() {
     if (!this.currentTrack()) return;
     if (this.isPlaying()) this.pause();
     else this.resume();
   }
-
   pause() {
-    if (this.usingYt) this.yt.pause();
-    else this.audio.pause();
-    this.isPlaying.set(false);
-    this.state$.next({ playing: false });
+    this.engine.pause();
+    this.setPlaying(false);
   }
-
   resume() {
     const track = this.currentTrack();
     if (!track) return;
-    // After a session restore nothing is loaded into an engine yet → reload.
-    if (this.engineLoadedTrackId !== track.id) {
+    if (this.engine.loadedId !== track.id) {
       this.loadTrack(track, true);
       return;
     }
-    if (this.usingYt) {
-      this.yt.play();
-    } else {
-      this.audio.play().catch(() => this.isPlaying.set(false));
-    }
-    this.isPlaying.set(true);
-    this.state$.next({ playing: true });
+    if (this.engine.isYoutube) this.engine.playYoutube();
+    else this.engine.playDemo().then(() => this.setPlaying(true));
+    this.setPlaying(true);
   }
-
   next() {
-    if (!this.queueInternal.length) return;
-    if (this.shuffle()) {
-      this.queueIndex = Math.floor(Math.random() * this.queueInternal.length);
-    } else {
-      this.queueIndex = (this.queueIndex + 1) % this.queueInternal.length;
+    const nextTrack = this.queueState.advance(this.shuffle());
+    if (nextTrack) {
+      this.syncQueueSignal();
+      this.loadTrack(nextTrack, true);
     }
-    this.loadTrack(this.queueInternal[this.queueIndex], true);
   }
-
   previous() {
     if (this.currentTime() > 3) {
       this.seek(0);
       return;
     }
-    if (!this.queueInternal.length) return;
-    this.queueIndex = (this.queueIndex - 1 + this.queueInternal.length) % this.queueInternal.length;
-    this.loadTrack(this.queueInternal[this.queueIndex], true);
-  }
-
-  seek(seconds: number) {
-    const target = Math.max(0, seconds);
-    if (this.usingYt) {
-      this.yt.seekTo(target);
-      this.currentTime.set(target);
-    } else {
-      this.audio.currentTime = target;
-      this.currentTime.set(this.audio.currentTime);
+    const prev = this.queueState.retreat();
+    if (prev) {
+      this.syncQueueSignal();
+      this.loadTrack(prev, true);
     }
   }
-
+  seek(seconds: number) {
+    this.currentTime.set(this.engine.seek(seconds));
+  }
   seekPct(pct: number) {
     const d = this.duration();
     if (d > 0) this.seek((pct / 100) * d);
   }
-
   setVolume(v: number) {
     const vol = Math.max(0, Math.min(1, v));
     this.volume.set(vol);
-    this.audio.volume = vol;
-    this.yt.setVolume(vol * 100);
-    localStorage.setItem(VOLUME_KEY, String(vol));
+    this.engine.setVolume(vol);
+    storeVolume(vol);
   }
-
   toggleShuffle() { this.shuffle.update((v) => !v); }
   toggleRepeat() { this.repeat.update((v) => !v); }
-
+  toggleAutoplay() { this.autoplay.update((v) => !v); }
   openExpandedView() {
     if (!this.currentTrack()) return;
     this.expandedOpen.set(true);
   }
-
-  closeExpandedView() {
-    this.expandedOpen.set(false);
-  }
-
+  closeExpandedView() { this.expandedOpen.set(false); }
   toggleExpandedView() {
     if (!this.currentTrack()) return;
     this.expandedOpen.update((v) => !v);
   }
-
   clearCover() { this.currentCover.set(null); }
-
-  /**
-   * Fully stop playback and clear the player (used on logout / session end).
-   * Halts both the HTML audio element and the YouTube engine, drops the queue
-   * and the restored-track marker so nothing keeps playing for the next user.
-   */
   stopPlayback() {
-    this.playbackToken++; // invalidate any in-flight audio-source resolution
-    this.audio.pause();
-    try { this.audio.removeAttribute('src'); this.audio.load(); } catch { /* ignore */ }
-    this.yt.stop();
-    this.usingYt = false;
-    this.engineLoadedTrackId = null;
-    this.queueInternal = [];
-    this.queueIndex = 0;
-    this.queue.set([]);
+    this.playbackToken++;
+    this.sourceResolver.resetRetries();
+    this.engine.stopAll();
+    this.queueState.clear();
+    this.syncQueueSignal();
     this.currentTrack.set(null);
     this.currentCover.set(null);
-    this.isPlaying.set(false);
+    this.setPlaying(false);
     this.currentTime.set(0);
     this.duration.set(0);
     this.audioMode.set('demo');
     this.expandedOpen.set(false);
-    this.state$.next({ playing: false });
-    sessionStorage.removeItem(TRACK_KEY);
+    clearPersistedTrack();
   }
-
   formatTime(sec: number): string {
-    if (!Number.isFinite(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return formatPlaybackTime(sec);
   }
-
+  private setPlaying(playing: boolean) {
+    this.isPlaying.set(playing);
+    this.state$.next({ playing });
+  }
   private loadTrack(track: PlayableTrack, autoplay: boolean) {
     this.currentTrack.set(track);
     this.currentTime.set(0);
     this.duration.set(track.durationMs ? track.durationMs / 1000 : 0);
-    sessionStorage.setItem(TRACK_KEY, JSON.stringify(track));
+    persistCurrentTrack(track);
     this.history.add({
       id_track: track.id,
       nombre_track: track.title,
       nombre_artista: track.artist,
     });
-
     const token = ++this.playbackToken;
-
     this.currentCover.set(null);
     this.coverSvc.cover$(track.id).subscribe((url) => {
       if (token === this.playbackToken) this.currentCover.set(url);
     });
-
-    if (track.youtubeVideoId) {
-      this.startYt(track, track.youtubeVideoId, autoplay);
-      return;
-    }
-    this.audioMode.set('loading');
-    // Resolve the real (YouTube) source lazily, then play it. Until it
-    // resolves we keep the UI responsive; on failure we fall back to demo.
-    this.tracksApi.getAudioSource(track.id).subscribe({
-      next: (src) => {
-        if (token !== this.playbackToken) return; // user moved on
-        if (src.status === 'ok' && src.youtube_video_id) {
-          track.youtubeVideoId = src.youtube_video_id;
-          this.currentTrack.set({ ...track });
-          sessionStorage.setItem(TRACK_KEY, JSON.stringify(track));
-          this.startYt(track, src.youtube_video_id, autoplay);
-        } else {
-          this.startDemo(track, autoplay);
-        }
-      },
-      error: (err) => {
-        if (token !== this.playbackToken) return;
-        // 404 → track no longer exists (purged synthetic). Drop it from history
-        // so it stops polluting "recently played", then fall back to demo.
-        if (err?.status === 404) this.history.remove(track.id);
-        this.startDemo(track, autoplay);
+    this.sourceResolver.resolve(track, {
+      isStale: () => token !== this.playbackToken,
+      onLoading: () => this.audioMode.set('loading'),
+      onYoutube: (videoId) => this.startYt(track, videoId, autoplay),
+      onDemo: () => this.startDemo(track, autoplay),
+      onTrackUpdated: (updated) => {
+        this.currentTrack.set(updated);
+        persistCurrentTrack(updated);
       },
     });
+    if (this.autoplay()) this.scheduleAutoplayFill();
   }
-
   private startYt(track: PlayableTrack, videoId: string, autoplay: boolean) {
-    this.usingYt = true;
     this.audioMode.set('youtube');
-    this.engineLoadedTrackId = track.id;
-    this.audio.pause();
-    this.yt.load(videoId, autoplay);
-    if (autoplay) {
-      this.isPlaying.set(true);
-      this.state$.next({ playing: true });
-    }
+    this.engine.markLoaded(track.id, true);
+    this.engine.startYoutube(videoId, autoplay);
+    if (autoplay) this.setPlaying(true);
   }
-
-  /** Track ids we already tried to re-resolve after a YT error (avoid loops). */
-  private ytRetried = new Set<number>();
-
   private recoverFromYtError(track: PlayableTrack) {
-    if (this.ytRetried.has(track.id)) {
-      this.startDemo(track, true);
-      return;
-    }
-    this.ytRetried.add(track.id);
     const token = this.playbackToken;
-    this.audioMode.set('loading');
-    this.tracksApi.getAudioSource(track.id, true).subscribe({
-      next: (src) => {
-        if (token !== this.playbackToken) return;
-        if (src.status === 'ok' && src.youtube_video_id && src.youtube_video_id !== track.youtubeVideoId) {
-          track.youtubeVideoId = src.youtube_video_id;
-          this.currentTrack.set({ ...track });
-          this.startYt(track, src.youtube_video_id, true);
-        } else {
-          this.startDemo(track, true);
-        }
+    this.sourceResolver.recoverFromYoutubeError(track, {
+      isStale: () => token !== this.playbackToken,
+      onLoading: () => this.audioMode.set('loading'),
+      onYoutube: (videoId) => this.startYt(track, videoId, true),
+      onDemo: () => this.startDemo(track, true),
+      onTrackUpdated: (updated) => {
+        this.currentTrack.set(updated);
+        persistCurrentTrack(updated);
       },
-      error: () => { if (token === this.playbackToken) this.startDemo(track, true); },
     });
   }
-
   private startDemo(track: PlayableTrack, autoplay: boolean) {
-    this.usingYt = false;
     this.audioMode.set('demo');
-    this.engineLoadedTrackId = track.id;
-    this.yt.stop();
-    this.audio.src = track.audioUrl;
-    if (autoplay) {
-      this.audio.play().then(() => {
-        this.isPlaying.set(true);
-        this.state$.next({ playing: true });
-      }).catch(() => this.isPlaying.set(false));
-    }
+    this.engine.startDemo(track.audioUrl, track.id, autoplay).then(() => {
+      if (autoplay) this.setPlaying(true);
+    });
   }
-
   private onEnded() {
     if (this.repeat()) {
       this.seek(0);
       this.resume();
       return;
     }
-    this.next();
+    if (this.queueState.hasNext(this.shuffle())) {
+      this.next();
+      return;
+    }
+    if (this.autoplay()) {
+      this.continueWithAutoplay();
+      return;
+    }
+    this.stopAtQueueEnd();
   }
-
-  private startTick() {
-    if (this.tickTimer) clearInterval(this.tickTimer);
-    this.tickTimer = setInterval(() => {
-      if (!this.isPlaying()) return;
-      if (this.usingYt) {
-        this.currentTime.set(this.yt.getCurrentTime() || 0);
-        const d = this.yt.getDuration();
-        if (d && Math.abs(d - this.duration()) > 1) this.duration.set(d);
-      } else {
-        this.currentTime.set(this.audio.currentTime || 0);
-        if (this.audio.duration && !this.duration()) {
-          this.duration.set(this.audio.duration);
-        }
-      }
-    }, 250);
+  private stopAtQueueEnd() {
+    this.engine.pause();
+    this.setPlaying(false);
+    this.currentTime.set(0);
+    this.engine.seek(0);
   }
-
-  private readVolume(): number {
-    const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? '0.85');
-    return Number.isFinite(v) ? v : 0.85;
+  private syncQueueSignal() {
+    this.queue.set([...this.queueState.items]);
+    this.queueIndex.set(this.queueState.currentIndex);
   }
-
+  private scheduleAutoplayFill() {
+    if (!this.autoplay()) return;
+    if (this.queueState.upcomingCount() >= MusicPlayerService.AUTOPLAY_MIN_UPCOMING) return;
+    this.fetchAutoplayCandidates().subscribe((tracks) => {
+      if (!tracks.length) return;
+      const added = this.queueState.appendUnique(tracks);
+      if (added.length) this.syncQueueSignal();
+    });
+  }
+  private continueWithAutoplay() {
+    this.autoplayLoading.set(true);
+    this.fetchAutoplayCandidates().subscribe({
+      next: (tracks) => {
+        // Intentamos sumar temas nuevos; si no hay (catálogo corto), seguimos
+        // en bucle por la cola existente. Como Spotify: nunca se queda en silencio.
+        const added = this.queueState.appendUnique(tracks);
+        if (added.length) this.syncQueueSignal();
+        this.advanceWrapping();
+      },
+      // Aunque falle la red, continuamos con lo que ya hay en la cola.
+      error: () => this.advanceWrapping(),
+      complete: () => this.autoplayLoading.set(false),
+    });
+  }
+  /** Avanza a la siguiente pista; al llegar al final, vuelve al inicio. */
+  private advanceWrapping() {
+    const nextTrack = this.queueState.advance(this.shuffle());
+    if (nextTrack) {
+      this.syncQueueSignal();
+      this.loadTrack(nextTrack, true);
+    } else {
+      this.stopAtQueueEnd();
+    }
+  }
+  /**
+   * Trae temas frescos recorriendo el catálogo página a página (cada llamada
+   * avanza el cursor y vuelve al inicio al final). Así siempre entran canciones
+   * nuevas en vez de repetir el mismo set de recomendaciones. Si la API de
+   * catálogo falla, cae a top tracks.
+   */
+  private fetchAutoplayCandidates(): Observable<PlayableTrack[]> {
+    if (this.autoplayFetch$) return this.autoplayFetch$;
+    const size = MusicPlayerService.AUTOPLAY_FETCH_SIZE;
+    const page = this.autoplayPage;
+    this.autoplayFetch$ = this.tracksSvc.listTracks(page, size).pipe(
+      map((res) => {
+        const total = res?.total ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / size));
+        this.autoplayPage = page >= totalPages ? 1 : page + 1;
+        return (res?.items ?? []).map((t) => this.fromTrack(t));
+      }),
+      catchError(() =>
+        this.stats.getTopTracks(size).pipe(
+          map((rows) => (rows ?? []).map((t) => this.fromTopTrack(t))),
+          catchError(() => of([] as PlayableTrack[])),
+        ),
+      ),
+      finalize(() => { this.autoplayFetch$ = null; }),
+      share(),
+    );
+    return this.autoplayFetch$;
+  }
   private restoreLastTrack() {
-    try {
-      const raw = sessionStorage.getItem(TRACK_KEY);
-      if (!raw) return;
-      const track = JSON.parse(raw) as PlayableTrack;
-      this.currentTrack.set(track);
-      this.queueInternal = [track];
-      this.queue.set([track]);
-      this.audioMode.set(track.youtubeVideoId ? 'youtube' : 'demo');
-      if (!track.youtubeVideoId) this.audio.src = track.audioUrl;
-    } catch { /* ignore */ }
+    const track = restorePersistedTrack();
+    if (!track) return;
+    this.currentTrack.set(track);
+    this.queueState.setSingle(track);
+    this.syncQueueSignal();
+    this.audioMode.set(track.youtubeVideoId ? 'youtube' : 'demo');
+    if (!track.youtubeVideoId) this.engine.primeDemo(track.audioUrl);
   }
 }

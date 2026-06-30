@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 
-from .base_service import count_rows, fetch_rows
+from app.core.database import get_table_columns, table_exists
+from app.core.query_helpers import count_rows, fetch_rows
 
 
 def get_genres(
@@ -57,6 +58,41 @@ def get_genre_stats(
         conditions.append("LOWER(nombre_genero) LIKE LOWER(?)")
         params.append(f"%{search.strip()}%")
     where = " AND ".join(conditions) if conditions else "1=1"
+
+    if not table_exists(conn, "agg_genero_popularidad"):
+        track_cols = set(get_table_columns(conn, "dim_track"))
+        energy_expr = (
+            "ROUND(AVG(dt.energy), 4)"
+            if "energy" in track_cols
+            else "CAST(NULL AS DOUBLE)"
+        )
+        total = int(
+            conn.execute(
+                f"SELECT COUNT(*) FROM dim_genero WHERE {where}",
+                params,
+            ).fetchone()[0]
+        )
+        rows_raw = conn.execute(
+            f"""
+            SELECT g.id_genero, g.nombre_genero,
+                   ROUND(AVG(dt.popularity), 1) AS popularidad_promedio,
+                   {energy_expr} AS energia_promedio,
+                   COUNT(dt.id_track) AS total_tracks,
+                   COUNT(DISTINCT dt.id_artista) AS total_artistas
+            FROM dim_genero g
+            LEFT JOIN dim_track dt ON dt.id_genero = g.id_genero
+            WHERE {where}
+            GROUP BY g.id_genero, g.nombre_genero
+            ORDER BY popularidad_promedio DESC NULLS LAST, g.nombre_genero
+            LIMIT ? OFFSET ?
+            """,
+            params + [limit, offset],
+        ).fetchall()
+        cols = [
+            "id_genero", "nombre_genero", "popularidad_promedio", "energia_promedio",
+            "total_tracks", "total_artistas",
+        ]
+        return [dict(zip(cols, row)) for row in rows_raw], total
 
     total = int(
         conn.execute(

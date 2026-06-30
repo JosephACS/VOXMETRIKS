@@ -1,8 +1,8 @@
 <div class="explorer-page">
   <header class="page-header">
     <div>
-      <h1>{{ 'explorer.title' | t }}</h1>
-      <p class="page-subtitle">{{ 'explorer.subtitle' | t }}</p>
+      <h1>{{ 'explorer.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'explorer.subtitle' | t:lang() }}</p>
     </div>
     <div class="source-badges">
       <app-data-source-badge kind="live" />
@@ -12,15 +12,15 @@
 
   @if (accessDenied()) {
     <section class="panel access-denied-panel">
-      <h2>{{ 'explorer.restricted' | t }}</h2>
+      <h2>{{ 'explorer.restricted' | t:lang() }}</h2>
       <p class="error-msg">{{ errorMessage() }}</p>
-      <p class="empty-msg">{{ 'explorer.restrictedHint' | t }}</p>
+      <p class="empty-msg">{{ 'explorer.restrictedHint' | t:lang() }}</p>
     </section>
   } @else if (hasError()) {
     <section class="panel error-panel">
-      <h2>{{ 'explorer.errorTitle' | t }}</h2>
+      <h2>{{ 'explorer.errorTitle' | t:lang() }}</h2>
       <p class="error-msg">{{ errorMessage() }}</p>
-      <button type="button" class="retry-btn" (click)="retry()">{{ 'common.retry' | t }}</button>
+      <button type="button" class="retry-btn" (click)="retry()">{{ 'common.retry' | t:lang() }}</button>
     </section>
   } @else {
   <!-- KPIs -->
@@ -35,7 +35,7 @@
     <!-- Table selector -->
     <aside class="table-sidebar panel">
       <div class="sidebar-header">
-        <h2>{{ 'explorer.tables' | t }}</h2>
+        <h2>{{ 'explorer.tables' | t:lang() }}</h2>
         <input
           type="search"
           class="search-input"
@@ -61,11 +61,11 @@
           >
             <span class="table-name">{{ t.name }}</span>
             <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
-            <span class="table-rows">{{ 'explorer.rows' | t:{ count: fmt(t.row_count) } }}</span>
+            <span class="table-rows">{{ 'explorer.rows' | t: { count: fmt(t.row_count) }:lang() }}</span>
           </button>
           }
         } @else {
-          <p class="empty-msg sidebar-empty">{{ 'explorer.noTablesFilter' | t }}</p>
+          <p class="empty-msg sidebar-empty">{{ 'explorer.noTablesFilter' | t:lang() }}</p>
         }
       </nav>
     </aside>
@@ -79,8 +79,8 @@
             <h2>{{ tbl.name }}</h2>
             <div class="table-meta">
               <span class="kind-badge lg" [class]="kindClass(tbl.kind)">{{ kindLabel(tbl.kind) }}</span>
-              <span class="meta-item">{{ 'explorer.records' | t:{ count: fmt(tbl.row_count) } }}</span>
-              <span class="meta-item">{{ 'explorer.layer' | t:{ layer: tbl.layer } }}</span>
+              <span class="meta-item">{{ 'explorer.records' | t: { count: fmt(tbl.row_count) }:lang() }}</span>
+              <span class="meta-item">{{ 'explorer.layer' | t: { layer: tbl.layer }:lang() }}</span>
             </div>
           </div>
         </div>
@@ -88,12 +88,12 @@
         <div class="sql-client">
           <div class="sql-bar">
             <span class="sql-dot"></span>
-            <span>{{ 'explorer.query' | t }}</span>
+            <span>{{ 'explorer.query' | t:lang() }}</span>
           </div>
           <pre class="sql-code">{{ sqlQuery() }}</pre>
         </div>
 
-        <h3 class="section-label">{{ 'explorer.schema' | t }}</h3>
+        <h3 class="section-label">{{ 'explorer.schema' | t:lang() }}</h3>
         <div class="schema-grid">
           @for (col of tbl.columns; track col.name) {
             <div class="schema-col">
@@ -104,7 +104,7 @@
         </div>
 
         <!-- Data preview -->
-        <h3 class="section-label">{{ 'explorer.preview' | t }}</h3>
+        <h3 class="section-label">{{ 'explorer.preview' | t:lang() }}</h3>
         @if (isLoadingPreview()) {
           <div class="skeleton-rows">
             @for (s of [1,2,3]; track s) {
@@ -114,7 +114,7 @@
         } @else if (previewError()) {
           <div class="inline-error">
             <p class="error-msg">{{ previewError() }}</p>
-            <button type="button" class="retry-btn" (click)="loadPreview(tbl.name, page())">{{ 'explorer.retryPreview' | t }}</button>
+            <button type="button" class="retry-btn" (click)="loadPreview(tbl.name, page())">{{ 'explorer.retryPreview' | t:lang() }}</button>
           </div>
         } @else if (previewColumns().length) {
           <div class="table-wrap">
@@ -138,21 +138,21 @@
             </table>
           </div>
         } @else {
-          <p class="empty-msg">{{ 'explorer.selectTable' | t }}</p>
+          <p class="empty-msg">{{ 'explorer.selectTable' | t:lang() }}</p>
         }
 
         <!-- Pagination -->
         @if (!isLoadingPreview() && previewColumns().length) {
           <div class="pagination">
-            <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">{{ 'explorer.prev' | t }}</button>
-            <span class="page-info">{{ 'explorer.page' | t:{ page: page(), total: totalPages() } }}</span>
-            <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">{{ 'explorer.next' | t }}</button>
+            <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">{{ 'explorer.prev' | t:lang() }}</button>
+            <span class="page-info">{{ 'explorer.page' | t: { page: page(), total: totalPages() }:lang() }}</span>
+            <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">{{ 'explorer.next' | t:lang() }}</button>
           </div>
         }
       </section>
       } @else if (isLoadingTables()) {
         <div class="panel">
-          <p class="empty-msg">{{ 'explorer.loadingTables' | t }}</p>
+          <p class="empty-msg">{{ 'explorer.loadingTables' | t:lang() }}</p>
           <div class="skeleton-rows">
             @for (s of [1,2,3]; track s) {
               <div class="skeleton-row"></div>
@@ -160,7 +160,7 @@
           </div>
         </div>
       } @else {
-        <div class="panel"><p class="empty-msg">{{ 'explorer.noTables' | t }}</p></div>
+        <div class="panel"><p class="empty-msg">{{ 'explorer.noTables' | t:lang() }}</p></div>
       }
     </main>
   </div>
@@ -168,8 +168,8 @@
   <!-- Load history (real data if available) -->
   <section class="panel loads-panel">
     <div class="panel-header">
-      <h2>{{ 'explorer.loadsTitle' | t }}</h2>
-      <span class="panel-meta">{{ 'explorer.loadsMeta' | t }}</span>
+      <h2>{{ 'explorer.loadsTitle' | t:lang() }}</h2>
+      <span class="panel-meta">{{ 'explorer.loadsMeta' | t:lang() }}</span>
     </div>
 
     @if (isLoadingLoads()) {
@@ -184,11 +184,11 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>{{ 'explorer.date' | t }}</th>
-              <th>{{ 'explorer.mode' | t }}</th>
-              <th>{{ 'explorer.newRecords' | t }}</th>
+              <th>{{ 'explorer.date' | t:lang() }}</th>
+              <th>{{ 'explorer.mode' | t:lang() }}</th>
+              <th>{{ 'explorer.newRecords' | t:lang() }}</th>
               <th>Total raw</th>
-              <th>{{ 'explorer.state' | t }}</th>
+              <th>{{ 'explorer.state' | t:lang() }}</th>
             </tr>
           </thead>
           <tbody>
@@ -210,10 +210,10 @@
     } @else if (loadsError()) {
       <div class="inline-error">
         <p class="error-msg">{{ loadsError() }}</p>
-        <button type="button" class="retry-btn" (click)="loadLoads()">{{ 'explorer.retryLoads' | t }}</button>
+        <button type="button" class="retry-btn" (click)="loadLoads()">{{ 'explorer.retryLoads' | t:lang() }}</button>
       </div>
     } @else {
-      <p class="empty-msg">{{ 'explorer.emptyLoads' | t }}</p>
+      <p class="empty-msg">{{ 'explorer.emptyLoads' | t:lang() }}</p>
     }
   </section>
   }

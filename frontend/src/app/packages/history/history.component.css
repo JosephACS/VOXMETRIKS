@@ -45,13 +45,15 @@
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .tab-btn.active {
-  background: rgba(30, 216, 150, 0.12);
-  border-color: rgba(30, 216, 150, 0.35);
+  background: rgba(30, 216, 150, 0.18);
+  border-color: rgba(30, 216, 150, 0.55);
   color: var(--accent, #1ed896);
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(30, 216, 150, 0.12);
 }
 
 .tab-count {
@@ -60,6 +62,11 @@
   background: rgba(255, 255, 255, 0.08);
   font-size: 0.68rem;
   font-family: var(--font-mono);
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(30, 216, 150, 0.22);
+  color: var(--accent, #1ed896);
 }
 
 .source-note {
@@ -142,6 +149,17 @@
   cursor: pointer;
 }
 
+.ghost-btn--warn {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #d9a441;
+}
+
+.ghost-btn--warn:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
 .timeline-list {
   display: flex;
   flex-direction: column;
@@ -158,7 +176,7 @@
   background: rgba(255, 255, 255, 0.02);
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 a.timeline-row:hover {

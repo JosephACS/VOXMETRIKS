@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import duckdb
 
+from app.core.schema_bootstrap import schema_ready
 from app.core.time_util import utc_now
 from app.packages.users.services.user_storage import ensure_user_tables, migrate_user_scoping
 
@@ -109,6 +110,8 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
 
 
 def ensure_app_tables(conn: duckdb.DuckDBPyConnection) -> None:
+    if schema_ready():
+        return
     migrate_user_scoping(conn)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS app_playlist (

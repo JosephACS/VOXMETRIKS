@@ -1,4 +1,4 @@
-from app.packages.streaming.services.display_text import sanitize_display_text, clean_catalog_row
+from app.packages.streaming.services.display_text import clean_catalog_row, sanitize_display_text
 
 
 def test_sanitize_display_text_strips_noise():

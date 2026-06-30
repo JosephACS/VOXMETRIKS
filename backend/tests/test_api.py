@@ -7,7 +7,6 @@ Run from backend/:
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -235,8 +234,10 @@ class TestTrackSearch:
         )
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) > 0
+        assert isinstance(data, dict)
+        assert isinstance(data.get("items"), list)
+        assert data.get("total", 0) >= len(data["items"])
+        assert len(data["items"]) > 0
 
     def test_search_accent_insensitive(
         self, client: TestClient, auth_headers: dict[str, str]
@@ -248,5 +249,7 @@ class TestTrackSearch:
         )
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert any("marte" in (t.get("nombre_track") or "").lower() for t in data)
+        assert isinstance(data, dict)
+        assert isinstance(data.get("items"), list)
+        assert data.get("total", 0) >= len(data["items"])
+        assert any("marte" in (t.get("nombre_track") or "").lower() for t in data["items"])

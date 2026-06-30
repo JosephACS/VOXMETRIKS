@@ -137,7 +137,8 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
 }
 
 .leg-dot {
@@ -368,6 +369,19 @@
 .gc-tracks {
   font-size: 0.65rem;
   color: var(--text-muted);
+}
+
+.gc-score-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.gc-score-lbl {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .gc-score {

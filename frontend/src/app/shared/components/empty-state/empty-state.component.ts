@@ -1,19 +1,6 @@
-/**
- * EmptyStateComponent
- * ===================
- * Estado vacío reutilizable para tablas analíticas.
- * Soporta: sin-datos, sin-resultados, error, cargando.
- *
- * Uso:
- *   <app-empty-state
- *     type="no-results"
- *     [searchTerm]="searchVal()"
- *     (clearSearch)="onClearSearch()"
- *   />
- */
-
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../services/icon-render.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import {
   Component,
   inject,
@@ -30,21 +17,21 @@ export type EmptyStateType = 'no-data' | 'no-results' | 'error' | 'loading';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="empty-state" [class]="'empty-type-' + type">
+    <div class="empty-state" [class]="'empty-type-' + type" role="status" [attr.aria-live]="type === 'loading' ? 'polite' : null">
       <div class="empty-icon" aria-hidden="true" [innerHTML]="iconSvg"></div>
       <div class="empty-title">{{ title }}</div>
       @if (description) {
         <p class="empty-description">{{ description }}</p>
       }
       @if (type === 'no-results' && searchTerm) {
-        <p class="empty-term">Búsqueda: "<strong>{{ searchTerm }}</strong>"</p>
+        <p class="empty-term">{{ searchLabel }} "<strong>{{ searchTerm }}</strong>"</p>
         <button class="empty-action-btn" type="button" (click)="clearSearch.emit()">
-          Limpiar búsqueda
+          {{ clearSearchLabel }}
         </button>
       }
       @if (type === 'error') {
         <button class="empty-action-btn" type="button" (click)="retry.emit()">
-          Reintentar
+          {{ retryLabel }}
         </button>
       }
     </div>
@@ -118,6 +105,7 @@ export type EmptyStateType = 'no-data' | 'no-results' | 'error' | 'loading';
 })
 export class EmptyStateComponent {
   private iconRender = inject(IconRenderService);
+  private i18n = inject(I18nService);
 
   @Input() type: EmptyStateType = 'no-data';
   @Input() searchTerm = '';
@@ -128,8 +116,7 @@ export class EmptyStateComponent {
   @Output() retry = new EventEmitter<void>();
 
   get iconSvg(): SafeHtml {
-    const key = this.iconKey;
-    return this.iconRender.render(key, 32);
+    return this.iconRender.render(this.iconKey, 32);
   }
 
   get iconKey(): string {
@@ -144,19 +131,31 @@ export class EmptyStateComponent {
   get title(): string {
     if (this.customTitle) return this.customTitle;
     switch (this.type) {
-      case 'no-results': return 'Sin resultados';
-      case 'error':      return 'Error al cargar datos';
-      case 'loading':    return 'Cargando...';
-      default:           return 'Sin datos disponibles';
+      case 'no-results': return this.i18n.t('empty.noResults');
+      case 'error':      return this.i18n.t('empty.errorTitle');
+      case 'loading':    return this.i18n.t('empty.loading');
+      default:           return this.i18n.t('empty.noData');
     }
   }
 
   get description(): string {
     if (this.customDescription) return this.customDescription;
     switch (this.type) {
-      case 'no-results': return 'Intenta con un término diferente o quita los filtros activos.';
-      case 'error':      return 'No se pudo conectar con el servidor. Verifica la conexión.';
+      case 'no-results': return this.i18n.t('empty.noResultsDesc');
+      case 'error':      return this.i18n.t('empty.errorDesc');
       default:           return '';
     }
+  }
+
+  get searchLabel(): string {
+    return this.i18n.t('empty.searchLabel');
+  }
+
+  get clearSearchLabel(): string {
+    return this.i18n.t('empty.clearSearch');
+  }
+
+  get retryLabel(): string {
+    return this.i18n.t('common.retry');
   }
 }

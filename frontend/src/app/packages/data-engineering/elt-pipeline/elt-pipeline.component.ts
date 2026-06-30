@@ -6,6 +6,7 @@ import { StatsService } from '../../analytics/services/stats.service';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
 import { StatsSummary, LoadRecord, SyntheticLimits } from '../../../shared/models/api.models';
 import { I18nService } from '../../../core/services/i18n.service';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 type LayerStatus = 'ready' | 'idle' | 'running' | 'success' | 'warning' | 'failed';
@@ -50,8 +51,10 @@ type VolumeMode = 'multiplier' | 'custom';
   styleUrls: ['./elt-pipeline.component.css'],
 })
 export class EltPipelineComponent implements OnInit, OnDestroy {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private i18n = inject(I18nService);
+  private confirm = inject(ConfirmDialogService);
 
   private runTimer: ReturnType<typeof setInterval> | null = null;
   private elapsedTimer: ReturnType<typeof setInterval> | null = null;
@@ -329,7 +332,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   runPipeline() {
     if (this.pipelineState() === 'running') return;
     if (!this.apiConnected()) {
-      this.addLog('WARN', 'Backend no disponible — conecta FastAPI en localhost:8000');
+      this.addLog('WARN', this.i18n.t('elt.backendUnavailable'));
       return;
     }
 
@@ -339,10 +342,21 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       return;
     }
     if (validation.level === 'warn') {
-      const ok = confirm(`${validation.message}\n\n¿Continuar?`);
-      if (!ok) return;
+      void this.confirm.open({
+        title: this.i18n.t('confirm.continueTitle'),
+        message: `${validation.message}\n\n${this.i18n.t('confirm.continuePrompt')}`,
+        confirmLabel: this.i18n.t('common.continue'),
+        cancelLabel: this.i18n.t('common.cancel'),
+      }).then((ok) => {
+        if (ok) this.executePipeline();
+      });
+      return;
     }
 
+    this.executePipeline();
+  }
+
+  private executePipeline() {
     this.clearTimers();
     this.pipelineState.set('running');
     this.runProgress.set(5);

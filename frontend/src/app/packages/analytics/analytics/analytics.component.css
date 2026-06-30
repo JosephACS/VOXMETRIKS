@@ -90,7 +90,7 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background var(--motion-duration-normal) var(--motion-ease-standard), transform var(--motion-duration-normal) var(--motion-ease-standard), box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
 }
 
 .kpi-card:hover {
@@ -144,7 +144,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.125rem 1.25rem;
-  transition: background 0.2s ease;
+  transition: background var(--motion-duration-normal) var(--motion-ease-standard), border-color var(--motion-duration-normal) var(--motion-ease-standard);
 }
 
 .chart-card:hover { background: var(--spotify-card-hover); }
@@ -241,7 +241,9 @@
   border-radius: 4px 4px 0 0;
   position: relative;
   min-height: 6px;
-  transition: height 600ms;
+  transition: height var(--motion-duration-slower) var(--motion-ease-out);
+  transform-origin: bottom center;
+  animation: vm-meter-grow-y var(--motion-duration-slow) var(--motion-ease-out) both;
 }
 
 .e-val-out {
@@ -297,7 +299,7 @@
   overflow: hidden;
 }
 
-.genre-bar-fill { height: 100%; border-radius: 999px; transition: width 400ms; }
+.genre-bar-fill { height: 100%; border-radius: 999px; transition: width var(--motion-duration-slower) var(--motion-ease-out); transform-origin: left center; animation: vm-meter-grow var(--motion-duration-slower) var(--motion-ease-out) both; }
 
 .genre-count {
   font-size: 0.75rem;
@@ -340,7 +342,7 @@
   overflow: hidden;
 }
 
-.b-fill { height: 100%; border-radius: 999px; transition: width 400ms; }
+.b-fill { height: 100%; border-radius: 999px; transition: width var(--motion-duration-slower) var(--motion-ease-out); transform-origin: left center; animation: vm-meter-grow var(--motion-duration-slower) var(--motion-ease-out) both; }
 
 .b-pop { background: var(--chart-fill-h); }
 

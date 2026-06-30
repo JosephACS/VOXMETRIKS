@@ -1,5 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -29,6 +30,7 @@ const COVER_GRADIENTS = [
   styleUrls: ['./trending.component.css'],
 })
 export class TrendingComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   player = inject(MusicPlayerService);
 
@@ -42,8 +44,20 @@ export class TrendingComponent implements OnInit {
     const daily = this.dailyStreams();
     if (!daily.length) return [0];
     const vals = daily.slice(-14).map((d) => d.total_streams ?? 0);
-    const max = Math.max(...vals, 1);
-    return vals.map((v) => Math.round((v / max) * 100));
+    const max = Math.max(...vals);
+    const min = Math.min(...vals);
+    const range = max - min;
+    // Serie uniforme: línea plana centrada-alta (la nota explica la ausencia de variación).
+    if (range <= 0) return vals.map(() => 60);
+    // Normalización min-max con margen inferior: resalta variaciones aunque los valores sean similares.
+    return vals.map((v) => Math.round(12 + ((v - min) / range) * 88));
+  });
+
+  /** True cuando todos los días del período tienen el mismo volumen de streams. */
+  activityIsUniform = computed(() => {
+    const vals = this.dailyStreams().slice(-14).map((d) => d.total_streams ?? 0);
+    if (vals.length < 2) return false;
+    return Math.max(...vals) === Math.min(...vals);
   });
 
   topTrack = computed(() => this.tracks()[0] ?? null);
@@ -109,7 +123,7 @@ export class TrendingComponent implements OnInit {
     });
     this.stats.getTrendingAnalytics(25).subscribe({
       next: (d) => { this.dailyStreams.set(d.daily_streams ?? []); },
-      error: () => {},
+      error: (err) => console.error('[TrendingComponent] getTrendingAnalytics failed', err),
     });
   }
 

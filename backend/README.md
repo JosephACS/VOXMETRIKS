@@ -16,6 +16,8 @@ backend/
 │   │   ├── streaming/          # catalog, playlists, favorites
 │   │   └── analytics/          # stats, analytics, explorer
 │   └── shared/schemas/
+├── db/schema.sql               # DDL legacy (referencia)
+├── requirements.txt            # Dependencias Python (API + ELT + tests)
 └── tests/
     ├── conftest.py             # DuckDB aislada para pytest
     ├── test_api.py             # health, login, playlists, favorites

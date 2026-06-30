@@ -6,6 +6,7 @@ Utilidades de desarrollo, datos y verificación. Ejecutar desde la raíz del rep
 
 | Script | Uso |
 |--------|-----|
+| `print_tree.py` | Imprime árbol de directorios (`python scripts/print_tree.py [ruta]`) |
 | `dev_start.bat` | Arranque local en Windows (venv + ELT si falta DB + API) |
 | `install-git-hooks.sh` | Instala hook que bloquea co-autores de agentes en commits |
 

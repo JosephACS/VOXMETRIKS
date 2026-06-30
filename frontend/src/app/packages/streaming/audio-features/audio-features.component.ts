@@ -2,34 +2,44 @@ import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MetricBarComponent } from '../../../shared/components/metric-bar/metric-bar.component';
+import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { I18nService } from '../../../core/services/i18n.service';
 import { TracksService } from '../services/tracks.service';
 import { TrackDetail } from '../../../shared/models/api.models';
+import { TranslationKey } from '../../../core/i18n/translations';
 
 interface FeatureDef {
   key: keyof TrackDetail;
-  label: string;
+  labelKey: TranslationKey;
+  helpKey: TranslationKey;
   color: string;
-  help: string;
 }
 
 @Component({
   selector: 'app-audio-features',
   standalone: true,
-  imports: [CommonModule, RouterModule, MetricBarComponent],
+  imports: [
+    CommonModule, RouterModule, MetricBarComponent,
+    DataSourceBadgeComponent, EmptyStateComponent, TranslatePipe,
+  ],
   templateUrl: './audio-features.component.html',
   styleUrls: ['./audio-features.component.css'],
 })
 export class AudioFeaturesComponent implements OnInit {
   private tracksSvc = inject(TracksService);
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
 
-  featureDefs: FeatureDef[] = [
-    { key: 'danceability', label: 'Bailabilidad', color: '#1ed896', help: 'Qué tan apta es para bailar.' },
-    { key: 'energy', label: 'Energía', color: '#7c3aed', help: 'Intensidad y actividad percibida.' },
-    { key: 'valence', label: 'Valencia', color: '#10b981', help: 'Tono emocional positivo.' },
-    { key: 'acousticness', label: 'Acústica', color: '#3b82f6', help: 'Probabilidad de sonido acústico.' },
-    { key: 'speechiness', label: 'Locución', color: '#f59e0b', help: 'Presencia de voz hablada.' },
-    { key: 'instrumentalness', label: 'Instrumental', color: '#ec4899', help: 'Probabilidad de ausencia de voz.' },
-    { key: 'liveness', label: 'En vivo', color: '#6366f1', help: 'Presencia de audiencia o directo.' },
+  readonly featureDefs: FeatureDef[] = [
+    { key: 'danceability', labelKey: 'audioFeatures.feature.danceability', helpKey: 'audioFeatures.help.danceability', color: '#1ed896' },
+    { key: 'energy', labelKey: 'audioFeatures.feature.energy', helpKey: 'audioFeatures.help.energy', color: '#7c3aed' },
+    { key: 'valence', labelKey: 'audioFeatures.feature.valence', helpKey: 'audioFeatures.help.valence', color: '#10b981' },
+    { key: 'acousticness', labelKey: 'audioFeatures.feature.acousticness', helpKey: 'audioFeatures.help.acousticness', color: '#3b82f6' },
+    { key: 'speechiness', labelKey: 'audioFeatures.feature.speechiness', helpKey: 'audioFeatures.help.speechiness', color: '#f59e0b' },
+    { key: 'instrumentalness', labelKey: 'audioFeatures.feature.instrumentalness', helpKey: 'audioFeatures.help.instrumentalness', color: '#ec4899' },
+    { key: 'liveness', labelKey: 'audioFeatures.feature.liveness', helpKey: 'audioFeatures.help.liveness', color: '#6366f1' },
   ];
 
   isLoading = signal(true);
@@ -66,6 +76,14 @@ export class AudioFeaturesComponent implements OnInit {
 
   ngOnInit() {
     this.loadFeatures();
+  }
+
+  featureLabel(def: FeatureDef): string {
+    return this.i18n.t(def.labelKey);
+  }
+
+  featureHelp(def: FeatureDef): string {
+    return this.i18n.t(def.helpKey);
   }
 
   loadFeatures() {
@@ -140,7 +158,7 @@ export class AudioFeaturesComponent implements OnInit {
       const y = cy + maxR * Math.sin(angle);
       const lx = cx + (maxR + 18) * Math.cos(angle);
       const ly = cy + (maxR + 18) * Math.sin(angle);
-      return { x, y, label: f.label, lx, ly };
+      return { x, y, label: this.featureLabel(f), lx, ly };
     });
   }
 

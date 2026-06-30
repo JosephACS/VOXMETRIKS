@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -13,7 +14,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
         <h2>{{ title }}</h2>
         @if (subtitle) { <span class="h-sub">{{ subtitle }}</span> }
         @if (link) {
-          <a class="h-link" [routerLink]="link">{{ 'home.viewAll' | t }}</a>
+          <a class="h-link" [routerLink]="link">{{ 'home.viewAll' | t:lang() }}</a>
         }
       </div>
       <div class="h-scroll-wrap">
@@ -24,13 +25,13 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
     </section>
   `,
   styles: [`
-    .h-section { margin-bottom: 1.75rem; }
+    .h-section { margin-bottom: 1.25rem; }
     .h-head {
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
-      margin-bottom: 0.875rem;
-      padding: 0 0.25rem;
+      margin-bottom: 0.6rem;
+      padding: 0 0.7rem;
     }
     .h-head h2 {
       font-size: 1.25rem;
@@ -77,13 +78,14 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
     }
     .h-scroll {
       display: flex;
-      gap: 1rem;
+      gap: 0.3rem;
       overflow-x: auto;
       overflow-y: hidden;
       overscroll-behavior-x: contain;
       padding: 0.25rem 0.25rem 0.75rem;
       scroll-snap-type: x mandatory;
       scroll-padding-left: 0.25rem;
+      scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
     }
@@ -91,6 +93,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   `],
 })
 export class HorizontalSectionComponent {
+  readonly lang = inject(I18nService).lang;
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
   @Input() link?: string;

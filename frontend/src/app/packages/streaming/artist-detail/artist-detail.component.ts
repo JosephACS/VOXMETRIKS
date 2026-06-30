@@ -1,6 +1,7 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ArtistsService } from '../services/artists.service';
@@ -22,8 +23,10 @@ import { I18nService } from '../../../core/services/i18n.service';
   styleUrls: ['./artist-detail.component.css'],
 })
 export class ArtistDetailComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private i18n = inject(I18nService);
+  private destroyRef = inject(DestroyRef);
   player = inject(MusicPlayerService);
 
   stats = signal<ArtistStats | null>(null);
@@ -55,13 +58,15 @@ export class ArtistDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.route.paramMap.subscribe((pm) => {
-      const id = Number(pm.get('id'));
-      if (!id) return;
-      this.trackPage.set(1);
-      this.tracks.set([]);
-      this.load(id);
-    });
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pm) => {
+        const id = Number(pm.get('id'));
+        if (!id) return;
+        this.trackPage.set(1);
+        this.tracks.set([]);
+        this.load(id);
+      });
   }
 
   load(id: number) {
@@ -81,7 +86,7 @@ export class ArtistDetailComponent implements OnInit {
 
     this.artistsSvc.getArtistStats(id).subscribe({
       next: (s) => { this.stats.set(s); statsOk = true; done(); },
-      error: () => done(),
+      error: (err) => { console.error('[ArtistDetailComponent] getArtistStats failed', err); done(); },
     });
     this.fetchTracks(id, 1, true).then((ok) => { tracksOk = ok; done(); });
   }
@@ -98,8 +103,9 @@ export class ArtistDetailComponent implements OnInit {
           this.tracksLoading.set(false);
           resolve(true);
         },
-        error: () => {
+        error: (err) => {
           this.tracksLoading.set(false);
+          console.error('[ArtistDetailComponent] listTracks failed', err);
           resolve(false);
         },
       });

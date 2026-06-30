@@ -7,8 +7,9 @@ from typing import Any, Dict, List, Optional
 import duckdb
 
 from app.core.time_util import utc_now
+
 from .app_storage import ensure_app_tables
-from .display_text import clean_catalog_row, clean_catalog_rows
+from .display_text import clean_catalog_row
 
 
 def _next_id(conn: duckdb.DuckDBPyConnection, table: str) -> int:

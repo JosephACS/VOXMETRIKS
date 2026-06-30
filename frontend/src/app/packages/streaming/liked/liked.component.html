@@ -4,17 +4,17 @@
       <span [innerHTML]="icon('heart', 48)"></span>
     </div>
     <div class="hero-text">
-      <span class="hero-label">{{ 'liked.type' | t }}</span>
-      <h1>{{ 'liked.title' | t }}</h1>
-      <p>{{ 'liked.count' | t: { count: tracks().length } }}</p>
+      <span class="hero-label">{{ 'liked.type' | t:lang() }}</span>
+      <h1>{{ 'liked.title' | t:lang() }}</h1>
+      <p>{{ 'liked.count' | t: { count: tracks().length }:lang() }}</p>
       <div class="hero-badges">
         <app-data-source-badge kind="live" />
       </div>
-      <p class="hero-note">{{ 'liked.note' | t }}</p>
+      <p class="hero-note">{{ 'liked.note' | t:lang() }}</p>
       @if (tracks().length) {
         <button type="button" class="play-all-btn" (click)="playAll()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          {{ 'common.play' | t }}
+          {{ 'common.play' | t:lang() }}
         </button>
       }
     </div>
@@ -27,19 +27,19 @@
   } @else if (hasError()) {
     <div class="empty glass-panel error-state">
       <span [innerHTML]="icon('alert', 32)"></span>
-      <p>{{ 'liked.loadError' | t }}</p>
-      <small>{{ 'liked.loadErrorHint' | t }}</small>
-      <button type="button" class="link-btn" (click)="loadFavorites()">{{ 'tracks.retry' | t }}</button>
+      <p>{{ 'liked.loadError' | t:lang() }}</p>
+      <small>{{ 'liked.loadErrorHint' | t:lang() }}</small>
+      <button type="button" class="link-btn" (click)="loadFavorites()">{{ 'tracks.retry' | t:lang() }}</button>
     </div>
   } @else if (!tracks().length) {
     <div class="empty glass-panel">
       <span [innerHTML]="icon('heart', 32)"></span>
-      <p>{{ 'liked.empty' | t }}</p>
-      <small>{{ 'liked.emptyHint' | t }}</small>
-      <a routerLink="/tracks" class="link-btn">{{ 'liked.explore' | t }}</a>
+      <p>{{ 'liked.empty' | t:lang() }}</p>
+      <small>{{ 'liked.emptyHint' | t:lang() }}</small>
+      <a routerLink="/tracks" class="link-btn">{{ 'liked.explore' | t:lang() }}</a>
     </div>
   } @else {
-    <div class="track-list glass-panel">
+    <div class="track-list glass-panel vm-content-ready">
       @for (t of tracks(); track t.id_track; let i = $index) {
         <app-track-row
           [track]="likedQueue()[i]"

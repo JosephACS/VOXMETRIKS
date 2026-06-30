@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, inject, Input } from '@angular/core';
 import { TranslationKey } from '../../../core/i18n/translations';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 
@@ -18,7 +19,7 @@ const LABEL_KEYS: Record<DataSourceKind, TranslationKey> = {
   imports: [TranslatePipe],
   template: `
     <span class="data-source-badge" [class]="'data-source-badge--' + kind">
-      {{ labelKey | t }}
+      {{ labelKey | t:lang() }}
     </span>
   `,
   styles: [`
@@ -62,6 +63,7 @@ const LABEL_KEYS: Record<DataSourceKind, TranslationKey> = {
   `],
 })
 export class DataSourceBadgeComponent {
+  readonly lang = inject(I18nService).lang;
   @Input({ required: true }) kind: DataSourceKind = 'live';
 
   get labelKey(): TranslationKey {

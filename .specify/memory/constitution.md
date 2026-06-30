@@ -458,7 +458,7 @@ User Actions ──► app_* tables ◄─────────────�
 
 **Reglas:**
 - MUST NOT compilar dependencias desde fuente (wheels prebuilt only).
-- MUST reconciliar `requirements.txt` root vs `backend/requirements.txt` en una sola fuente pin (deuda).
+- MUST usar `backend/requirements.txt` como única fuente de dependencias Python (API + ELT + tests).
 - MUST usar `get_conn()` / `get_write_conn()` para acceso DuckDB.
 
 ### 7.3 Datos
@@ -470,7 +470,7 @@ User Actions ──► app_* tables ◄─────────────�
 | Formato intermedio | Parquet |
 | Modelo | Star schema + enterprise extensions |
 | DDL authority | `elt/pipelines/elt_pipeline.py` + `elt/transform/enterprise_analytics.py` |
-| Legacy DDL | `schema.sql` — **NO autoritativo**; regenerar o archivar |
+| Legacy DDL | `backend/db/schema.sql` — **NO autoritativo**; regenerar o archivar |
 | Datos versionados | **Prohibido** commitear `.duckdb`, `.parquet`, `.csv` (`.gitignore`) |
 
 ### 7.4 Infraestructura
@@ -564,7 +564,7 @@ Creada en runtime por API, separada del pipeline:
 | Auditoría | Toda carga MUST escribir en `ctl_*` |
 | Validación post-ELT | `scripts/validate_warehouse.py` MUST ejecutarse tras pipeline en CI |
 | Provenance | Responses analytics SHOULD incluir metadata de fuente (real/synthetic) cuando mezclen capas |
-| No silent schema drift | Cambios DDL MUST actualizar pipeline Python, no solo `schema.sql` |
+| No silent schema drift | Cambios DDL MUST actualizar pipeline Python, no solo `backend/db/schema.sql` |
 
 ---
 
@@ -613,9 +613,9 @@ Una feature está DONE cuando:
 | TD-003 | CRUD catálogo sin auth | Alta | Spec security-hardening |
 | TD-004 | SHA-256 passwords | Alta | bcrypt/argon2 migration spec |
 | TD-005 | Docs legacy paths | Media | Spec documentation-reconciliation |
-| TD-006 | `schema.sql` stale | Media | Regenerar o deprecar |
+| TD-006 | `backend/db/schema.sql` stale | Media | Regenerar o deprecar |
 | TD-007 | Historial solo localStorage | Media | Integrar `/analytics/history` |
-| TD-008 | Dual requirements.txt | Media | Unificar pins |
+| TD-008 | Dual requirements.txt | — | **Cerrado** — solo `backend/requirements.txt` |
 | TD-009 | Frontend prod env localhost | Media | Config deploy spec |
 | TD-010 | CORS `*` | Alta | Environment-specific origins |
 
@@ -818,9 +818,9 @@ voxmetriks/                          # Raíz del monorepo
 ├── docs/                            # Legacy — regenerar bajo spec
 ├── docker-compose.yml
 ├── Dockerfile
-├── requirements.txt                 # Root env (reconciliar con backend/)
-├── backend/requirements.txt         # Backend pins
-├── schema.sql                       # Legacy DDL — deprecar
+├── backend/
+│   ├── requirements.txt             # Dependencias Python (API + ELT + tests)
+│   └── db/schema.sql                # Legacy DDL — deprecar
 ├── .env.example
 └── README.md
 ```
@@ -1107,7 +1107,7 @@ flowchart TB
 | `elt/pipelines/elt_pipeline.py` DDL_STATEMENTS | **Canónica** dims/facts base |
 | `elt/transform/enterprise_analytics.py` | **Canónica** enterprise layer |
 | `user_storage.py`, `app_storage.py` | **Canónica** `app_*` |
-| `schema.sql` | **No canónica** — deprecar |
+| `backend/db/schema.sql` | **No canónica** — deprecar |
 
 ### 20.2 Modelo dimensional oficial
 

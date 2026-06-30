@@ -110,6 +110,20 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.np-queue-hint {
+  margin: -0.5rem 0 0.75rem;
+  font-size: 0.6875rem;
+  color: rgba(30, 216, 150, 0.65);
+  line-height: 1.35;
+}
+
+.np-queue-loading {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  animation: vm-fade-in var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
 .np-sub-label {
   margin: 1rem 0 0.5rem;
   font-size: 0.6875rem;
@@ -166,9 +180,17 @@
   font-weight: 700;
   color: var(--shell-fg);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .lib-cover.sm { font-size: 0.875rem; }
+
+.lib-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 .lib-text {
   flex: 1;
@@ -233,14 +255,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
 }
 
+.np-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Fallback placeholder — subtle 2-tone depth + music note behind a padded letter */
+.cover-fallback {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  background: linear-gradient(145deg, rgba(30, 216, 150, 0.12), rgba(0, 0, 0, 0.28));
+}
+
+.cover-note {
+  position: absolute;
+  width: 42%;
+  height: 42%;
+  color: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
 .cover-letter {
-  font-size: 5rem;
+  position: relative;
+  font-size: 3.25rem;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
 }
 
 .np-track-info {
@@ -342,7 +393,7 @@
   height: 100%;
   background: #1ed896;
   border-radius: 999px;
-  transition: width 0.1s linear;
+  transition: width var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .np-actions {
@@ -405,6 +456,14 @@
   font-weight: 600;
   color: var(--shell-fg);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.q-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .q-meta {

@@ -1,0 +1,205 @@
+<section class="analytics-band">
+  <div class="sec-head">
+    <h2>{{ 'home.rail.title' | t:lang() }}</h2>
+    <a routerLink="/analytics">{{ 'home.rail.viewMore' | t:lang() }}</a>
+  </div>
+
+  @if (summary(); as s) {
+    <div class="kpi-strip">
+      <app-kpi-card [label]="'home.kpi.tracks' | t" [value]="s.total_tracks" iconKey="music" color="primary"
+        [subtitle]="'home.kpi.tracksSub' | t" [tooltip]="'home.kpi.tracksTip' | t"
+        [trend]="kpiTrend('tracks').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.artists' | t" [value]="s.total_artistas" iconKey="users" color="info"
+        [subtitle]="'home.kpi.artistsSub' | t" [tooltip]="'home.kpi.artistsTip' | t"
+        [trend]="kpiTrend('artists').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.albums' | t" [value]="s.total_albumes" iconKey="album" color="secondary"
+        [subtitle]="'home.kpi.albumsSub' | t" [tooltip]="'home.kpi.albumsTip' | t"
+        [trend]="kpiTrend('albums').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.playlists' | t" [value]="playlistCount()" iconKey="playlist" color="primary"
+        [subtitle]="'home.kpi.playlistsSub' | t" [tooltip]="'home.kpi.playlistsTip' | t"
+        [trend]="kpiTrend('playlists').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.streams' | t" [value]="s.total_streams ?? null" iconKey="play" color="info"
+        [subtitle]="'home.kpi.streamsSub' | t" [tooltip]="'home.kpi.streamsTip' | t"
+        [trend]="kpiTrend('streams').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.favorites' | t" [value]="favoritesCount()" iconKey="heart" color="warning"
+        [subtitle]="'home.kpi.favoritesSub' | t" [tooltip]="'home.kpi.favoritesTip' | t"
+        [trend]="kpiTrend('favorites').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.likes' | t" [value]="favoritesCount()" iconKey="star" color="primary"
+        [subtitle]="'home.kpi.likesSub' | t" [tooltip]="'home.kpi.likesTip' | t"
+        [trend]="kpiTrend('likes').text" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+        [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+      <app-kpi-card [label]="'home.kpi.minutesToday' | t" [value]="listenMinutesToday()" iconKey="clock" color="secondary"
+        [subtitle]="'home.kpi.todaySub' | t" [tooltip]="'home.kpi.todayTip' | t"
+        [note]="'home.badge.activity' | t" [noteTip]="'home.kpi.todayActivityTip' | t" />
+    </div>
+  } @else if (summaryLoading()) {
+    <div class="kpi-strip kpi-strip--loading" aria-hidden="true">
+      @for (i of kpiSkels(); track i) {
+        <div class="skel home-skel--kpi"></div>
+      }
+    </div>
+  }
+
+  <div class="widgets-grid">
+    <div class="widget-card">
+      <div class="widget-head">{{ 'home.widget.catalogGrowth' | t:lang() }}</div>
+      <p class="widget-context">{{ 'home.widget.catalogGrowthCtx' | t:lang() }}</p>
+      @if (growthValues().length) {
+        <svg viewBox="0 0 440 72" class="mini-chart vm-chart" aria-hidden="true">
+          <defs>
+            <linearGradient id="homeArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon [attr.points]="sparkArea()" fill="url(#homeArea)"/>
+          <polyline [attr.points]="sparkLine()" fill="none" stroke="#1ed896" stroke-width="2"/>
+        </svg>
+      } @else {
+        <p class="chart-empty">{{ 'home.rail.chartEmpty' | t:lang() }}</p>
+      }
+    </div>
+
+    <div class="widget-card">
+      <div class="widget-head">
+        {{ 'home.widget.byHour' | t:lang() }}
+        @if (hasHistoryData()) {
+          <span class="widget-tag">{{ 'home.widget.peakHour' | t: { hour: peakHour() }:lang() }}</span>
+        }
+      </div>
+      <p class="widget-context">{{ 'home.widget.byHourCtx' | t:lang() }}</p>
+      @if (hasHistoryData()) {
+        <div class="bar-chart" aria-hidden="true">
+          @for (h of hourlyBuckets(); track $index) {
+            <span class="bar-col" [class.bar-col--peak]="$index === peakHour()" [style.height.%]="barHeight(h)"
+              [attr.title]="$index + 'h'"></span>
+          }
+        </div>
+        <div class="bar-axis" aria-hidden="true">
+          <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+        </div>
+      } @else {
+        <p class="chart-empty">{{ 'home.widget.noListens' | t:lang() }}</p>
+      }
+    </div>
+
+    <div class="widget-card">
+      <div class="widget-head">
+        {{ 'home.widget.byGenre' | t:lang() }}
+        <span class="widget-tag">{{ 'home.widget.tracksUnit' | t:lang() }}</span>
+      </div>
+      <p class="widget-context">{{ 'home.widget.byGenreCtx' | t:lang() }}</p>
+      <div class="genre-bars">
+        @for (g of genreBars(); track g.name) {
+          <div class="genre-bar-row" [attr.title]="('home.widget.genreTip' | t:{ name: g.name, count: g.tracks })">
+            <span class="genre-bar-label">{{ g.name }}</span>
+            <div class="genre-bar-track"><span [style.width.%]="g.pct"></span></div>
+            <span class="genre-bar-val">{{ fmt(g.tracks) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="widget-card widget-card--compact">
+      <div class="widget-head">{{ 'home.widget.topArtists' | t:lang() }}</div>
+      <p class="widget-context">{{ 'home.widget.topArtistsCtx' | t:lang() }}</p>
+      <ul class="mini-rank">
+        @for (a of artists().slice(0, 5); track a.id; let i = $index) {
+          <li [attr.title]="('home.widget.affinityTip' | t:{ pct: artistAffinity(i) })">
+            <span class="rank-num">#{{ i + 1 }}</span>
+            <span class="rank-name">{{ a.name }}</span>
+            <span class="rank-pct">{{ artistAffinity(i) }}%</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="widget-card widget-card--compact">
+      <div class="widget-head">{{ 'home.widget.topGenres' | t:lang() }}</div>
+      <p class="widget-context">{{ 'home.widget.topGenresCtx' | t:lang() }}</p>
+      <ul class="mini-rank">
+        @for (g of genres().slice(0, 5); track g.id_genero; let i = $index) {
+          <li [attr.title]="('home.widget.popTip' | t:{ pop: g.popularidad_promedio?.toFixed(0) ?? '—' })">
+            <span class="rank-num">#{{ i + 1 }}</span>
+            <span class="rank-name">{{ g.nombre_genero }}</span>
+            <span class="rank-pct">{{ g.popularidad_promedio?.toFixed(0) ?? '—' }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="widget-card widget-card--compact">
+      <div class="widget-head">{{ 'home.widget.weeklyTime' | t:lang() }}</div>
+      <p class="widget-context">{{ 'home.widget.weeklyTimeCtx' | t:lang() }}</p>
+      <div class="weekly-ring" [attr.title]="('home.widget.weeklyTimeTip' | t:{ pct: weeklyTimePct() })">
+        <svg viewBox="0 0 80 80" aria-hidden="true">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+          <circle cx="40" cy="40" r="32" fill="none" stroke="#1ed896" stroke-width="6"
+            stroke-linecap="round"
+            [attr.stroke-dasharray]="201"
+            [attr.stroke-dashoffset]="201 - (201 * weeklyTimePct() / 100)"
+            transform="rotate(-90 40 40)"/>
+        </svg>
+        <span class="weekly-ring-val">{{ weeklyTimePct() }}%</span>
+      </div>
+      <p class="widget-time">{{ weeklyTimeLabel() }}</p>
+      <p class="widget-foot">{{ 'home.widget.weeklyTimeFoot' | t:lang() }}</p>
+    </div>
+  </div>
+
+  <div class="side-panels">
+    @if (activityFeed().length) {
+      <div class="panel-card panel-card--activity">
+        <div class="panel-head">
+          <h3>{{ 'home.activity.title' | t:lang() }}</h3>
+          <a routerLink="/history">{{ 'home.viewAll' | t:lang() }}</a>
+        </div>
+        <ul class="activity-timeline">
+          @for (a of activityFeed(); track a.id_track + a.viewed_at) {
+            <li>
+              <span class="activity-time">{{ a.rel }}</span>
+              <span class="activity-text">{{ a.label }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="panel-card panel-card--goal">
+      <div class="panel-head">
+        <h3>{{ 'home.goal.title' | t:lang() }}</h3>
+      </div>
+      <div class="goal-progress">
+        <div class="goal-bar">
+          <span [style.width.%]="weeklyGoalPct()"></span>
+        </div>
+        <div class="goal-meta">
+          <strong>{{ weeklyGoalPct() }}%</strong>
+          <span>{{ 'home.goal.progress' | t: { current: weeklyDiscoverCount(), target: 100 }:lang() }}</span>
+        </div>
+      </div>
+      @if (topGenre() || topArtist()) {
+        <div class="rail-highlights">
+          @if (topGenre(); as g) {
+            <a class="rail-pill" [routerLink]="['/genres']" [queryParams]="{ q: g }">
+              <span class="rail-pill-label">{{ 'home.rail.topGenre' | t:lang() }}</span>
+              <span class="rail-pill-value">{{ g }}</span>
+            </a>
+          }
+          @if (topArtist(); as a) {
+            <span class="rail-pill">
+              <span class="rail-pill-label">{{ 'home.rail.topArtist' | t:lang() }}</span>
+              <span class="rail-pill-value">{{ a }}</span>
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>

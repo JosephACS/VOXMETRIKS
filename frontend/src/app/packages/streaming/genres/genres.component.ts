@@ -1,27 +1,44 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { AuthService } from '../../../core/services/auth.service';
 import { GenresService } from '../services/genres.service';
 import { GeneroPopularidad } from '../../../shared/models/api.models';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import {
+  apiFormError,
+  createSearchDebouncer,
+  pageWindow,
+  paginatedRowIndex,
+} from '../../../shared/utils/catalog-list.util';
 
 type ModalMode = 'create' | 'edit' | 'delete' | null;
 
 @Component({
   selector: 'app-genres',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, DataSourceBadgeComponent],
+  imports: [CommonModule, FormsModule, ScrollingModule, TranslatePipe, DataSourceBadgeComponent],
   templateUrl: './genres.component.html',
-  styleUrls: ['./genres.component.css'],
+  styleUrls: [
+    '../../../shared/styles/catalog-page-shared.css',
+    '../../../shared/styles/catalog-crud-modal.css',
+    './genres.component.css',
+  ],
 })
 export class GenresComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
   private iconRender = inject(IconRenderService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   protected readonly auth = inject(AuthService);
 
   genres     = signal<GeneroPopularidad[]>([]);
@@ -32,7 +49,7 @@ export class GenresComponent implements OnInit {
   limit      = 50;
   serverTotal = signal(0);
   searchVal  = signal('');
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly searchDebouncer = createSearchDebouncer(this.destroyRef);
 
   totalPages   = computed(() => Math.max(1, Math.ceil(this.serverTotal() / this.limit)));
   displayTotal = computed(() => this.serverTotal());
@@ -49,11 +66,13 @@ export class GenresComponent implements OnInit {
 
   constructor(private svc: GenresService) {}
   ngOnInit() {
-    this.route.queryParamMap.subscribe((pm) => {
-      const q = pm.get('q') ?? pm.get('genre') ?? '';
-      if (q !== this.searchVal()) this.searchVal.set(q);
-      this.loadGenres();
-    });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pm) => {
+        const q = pm.get('q') ?? pm.get('genre') ?? '';
+        if (q !== this.searchVal()) this.searchVal.set(q);
+        this.loadGenres();
+      });
   }
 
   loadGenres() {
@@ -64,24 +83,28 @@ export class GenresComponent implements OnInit {
         this.serverTotal.set(r.total ?? 0);
         this.isLoading.set(false);
       },
-      error: () => { this.hasError.set(true); this.errorMsg.set('Error al conectar con el backend. Verifica que FastAPI esté corriendo en http://localhost:8000'); this.isLoading.set(false); },
+      error: () => { this.hasError.set(true); this.errorMsg.set(this.i18n.t('errors.backendConnection')); this.isLoading.set(false); },
     });
   }
 
   onSearch(val: string) {
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => { this.searchVal.set(val); this.page.set(1); this.loadGenres(); }, 350);
+    this.searchDebouncer.schedule(() => { this.searchVal.set(val); this.page.set(1); this.loadGenres(); });
   }
   clearSearch() { this.searchVal.set(''); this.page.set(1); this.loadGenres(); }
   goTo(p: number) { if (p < 1 || p > this.totalPages()) return; this.page.set(p); this.loadGenres(); }
-  get pageNumbers(): number[] {
-    const total = this.totalPages(), current = this.page(), delta = 2, range: number[] = [];
-    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) range.push(i);
-    return range;
-  }
-  rowIndex(i: number): number { return (this.page() - 1) * this.limit + i + 1; }
+  get pageNumbers(): number[] { return pageWindow(this.page(), this.totalPages()); }
+  rowIndex(i: number): number { return paginatedRowIndex(this.page(), this.limit, i); }
+  trackGenre(_i: number, genre: GeneroPopularidad): number { return genre.id_genero; }
   trackBar(tracks: number): number { return Math.round((tracks / this.maxTracks()) * 100); }
   skeletonRows = Array(10).fill(0);
+
+  /** Navigate to the catalog filtered by this genre's songs. */
+  openGenreTracks(g: GeneroPopularidad) {
+    if (g.id_genero == null) return;
+    this.router.navigate(['/tracks'], {
+      queryParams: { genre_id: g.id_genero, genre_name: g.nombre_genero ?? '' },
+    });
+  }
 
   openCreate() { if (!this.auth.isCatalogSteward()) return; this.formName.set(''); this.formError.set(''); this.modalMode.set('create'); }
   openEdit(g: GeneroPopularidad) { if (!this.auth.isCatalogSteward()) return; this.modalGenre.set(g); this.formName.set(g.nombre_genero ?? ''); this.formError.set(''); this.modalMode.set('edit'); }
@@ -95,7 +118,7 @@ export class GenresComponent implements OnInit {
     this.formSaving.set(true); this.formError.set('');
     this.svc.createGenre({ nombre_genero: name }).subscribe({
       next: () => { this.closeModal(); this.loadGenres(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al crear género'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al crear género')); this.formSaving.set(false); },
     });
   }
 
@@ -106,7 +129,7 @@ export class GenresComponent implements OnInit {
     this.formSaving.set(true); this.formError.set('');
     this.svc.updateGenre(genre.id_genero, { nombre_genero: name }).subscribe({
       next: () => { this.closeModal(); this.loadGenres(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al actualizar género'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al actualizar género')); this.formSaving.set(false); },
     });
   }
 
@@ -116,7 +139,7 @@ export class GenresComponent implements OnInit {
     this.formSaving.set(true); this.formError.set('');
     this.svc.deleteGenre(genre.id_genero).subscribe({
       next: () => { this.closeModal(); this.loadGenres(); },
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar género'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al eliminar género')); this.formSaving.set(false); },
     });
   }
 

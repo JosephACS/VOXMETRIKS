@@ -1,6 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../shared/services/icon-render.service';
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -74,6 +74,7 @@ const AUDIO_LABELS: Record<string, string> = {
   styleUrls: ['./users.component.css'],
 })
 export class UsersComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
 
   private userSvc = inject(UserService);

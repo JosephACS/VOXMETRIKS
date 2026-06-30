@@ -434,7 +434,7 @@ Como **Usuario Registrado**, quiero **favoritar, añadir a playlist o reproducir
 | R-001 | Warehouse vacío | Health/ELT messaging |
 | R-002 | CRUD catálogo sin auth (deuda) | Out of scope usuario; spec táctica 012 |
 | R-003 | Search history split local/API | Spec 005 unifica |
-| R-004 | schema.sql legacy vs dim_track | Plan: DDL authority elt |
+| R-004 | `backend/db/schema.sql` legacy vs dim_track | Plan: DDL authority elt |
 
 ---
 

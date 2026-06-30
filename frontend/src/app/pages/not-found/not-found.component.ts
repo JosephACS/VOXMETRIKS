@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { I18nService } from '../../core/services/i18n.service';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
@@ -10,13 +11,13 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
     <div class="not-found-layout">
       <div class="not-found-container">
         <div class="not-found-code" aria-hidden="true">404</div>
-        <h1 class="not-found-title">{{ 'notFound.title' | t }}</h1>
-        <p class="not-found-body">{{ 'notFound.body' | t }}</p>
+        <h1 class="not-found-title">{{ 'notFound.title' | t:lang() }}</h1>
+        <p class="not-found-body">{{ 'notFound.body' | t:lang() }}</p>
         <a routerLink="/dashboard" class="btn btn-primary not-found-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
-          {{ 'notFound.back' | t }}
+          {{ 'notFound.back' | t:lang() }}
         </a>
       </div>
     </div>
@@ -66,4 +67,5 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
     }
   `],
 })
-export class NotFoundComponent {}
+export class NotFoundComponent {
+  readonly lang = inject(I18nService).lang;}

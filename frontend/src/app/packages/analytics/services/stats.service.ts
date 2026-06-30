@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../../environments/environment';
-import { ReadCache } from '../../../core/http/read-cache';
+import { StatsAnalyticsApi } from '../api/stats-analytics.api';
+import { StatsDashboardApi } from '../api/stats-dashboard.api';
+import { StatsExplorerApi } from '../api/stats-explorer.api';
+import { StatsRecommendationsApi } from '../api/stats-recommendations.api';
 import {
   StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad,
   SyntheticResult, SyntheticLimits, CatalogGrowthPoint,
@@ -12,116 +13,44 @@ import {
   PaginatedResponse,
 } from '../../../shared/models/api.models';
 
+/** Facade over domain-scoped stats/analytics HTTP APIs. */
 @Injectable({ providedIn: 'root' })
 export class StatsService {
-  private readonly http = inject(HttpClient);
-  private readonly BASE = `${environment.apiUrl}/stats`;
-  private readonly summaryCache = new ReadCache<StatsSummary>();
-  private readonly growthCache = new ReadCache<CatalogGrowthPoint[]>();
-  private readonly topTracksCaches = new Map<number, ReadCache<TopTrack[]>>();
+  private readonly dashboard = inject(StatsDashboardApi);
+  private readonly analytics = inject(StatsAnalyticsApi);
+  private readonly explorer = inject(StatsExplorerApi);
+  private readonly recommendations = inject(StatsRecommendationsApi);
 
-  getSummary(): Observable<StatsSummary> {
-    return this.summaryCache.get(() => this.http.get<StatsSummary>(`${this.BASE}/summary`));
-  }
-
-  invalidateSummary(): void {
-    this.summaryCache.invalidate();
-  }
-
-  getTopTracks(limit = 10): Observable<TopTrack[]> {
-    let cache = this.topTracksCaches.get(limit);
-    if (!cache) {
-      cache = new ReadCache<TopTrack[]>();
-      this.topTracksCaches.set(limit, cache);
-    }
-    const params = new HttpParams().set('limit', limit);
-    return cache.get(() => this.http.get<TopTrack[]>(`${this.BASE}/top-tracks`, { params }));
-  }
-
-  invalidateTopTracks(limit?: number): void {
-    if (limit != null) {
-      this.topTracksCaches.get(limit)?.invalidate();
-      return;
-    }
-    this.topTracksCaches.forEach((c) => c.invalidate());
-  }
-
-  getEnergyDistribution(): Observable<DistribucionEnergia[]> {
-    return this.http.get<DistribucionEnergia[]>(`${this.BASE}/energy-distribution`);
-  }
-
-  getLastLoads(limit = 5): Observable<LoadRecord[]> {
-    const params = new HttpParams().set('limit', limit);
-    return this.http.get<LoadRecord[]>(`${this.BASE}/loads`, { params });
-  }
-
+  getSummary(): Observable<StatsSummary> { return this.dashboard.getSummary(); }
+  invalidateSummary(): void { this.dashboard.invalidateSummary(); }
+  getTopTracks(limit = 10): Observable<TopTrack[]> { return this.dashboard.getTopTracks(limit); }
+  invalidateTopTracks(limit?: number): void { this.dashboard.invalidateTopTracks(limit); }
+  getEnergyDistribution(): Observable<DistribucionEnergia[]> { return this.dashboard.getEnergyDistribution(); }
+  getLastLoads(limit = 5): Observable<LoadRecord[]> { return this.dashboard.getLastLoads(limit); }
   getGenreStats(page = 1, limit = 20, search?: string): Observable<PaginatedResponse<GeneroPopularidad>> {
-    let params = new HttpParams().set('page', page).set('limit', limit);
-    if (search) params = params.set('search', search);
-    return this.http.get<PaginatedResponse<GeneroPopularidad>>(`${environment.apiUrl}/genres/stats`, { params });
+    return this.dashboard.getGenreStats(page, limit, search);
   }
-
   generateSynthetic(body: { target_total?: number; multiplier?: number }): Observable<SyntheticResult> {
-    return this.http.post<SyntheticResult>(`${this.BASE}/synthetic`, body);
+    return this.dashboard.generateSynthetic(body);
   }
+  importFromPocketBase(): Observable<ImportResult> { return this.dashboard.importFromPocketBase(); }
+  getSyntheticLimits(): Observable<SyntheticLimits> { return this.dashboard.getSyntheticLimits(); }
+  getCatalogGrowth(months = 12): Observable<CatalogGrowthPoint[]> { return this.dashboard.getCatalogGrowth(months); }
+  invalidateCatalogGrowth(): void { this.dashboard.invalidateCatalogGrowth(); }
+  getHealth(): Observable<HealthResponse> { return this.dashboard.getHealth(); }
 
-  importFromPocketBase(): Observable<ImportResult> {
-    return this.http.post<ImportResult>(`${this.BASE}/import`, {});
-  }
+  getWarehouseStatus(): Observable<WarehouseStatus> { return this.analytics.getWarehouseStatus(); }
+  getTrendingAnalytics(limit = 25): Observable<TrendingAnalytics> { return this.analytics.getTrendingAnalytics(limit); }
+  getPlatformAnalytics(): Observable<PlatformAnalytics> { return this.analytics.getPlatformAnalytics(); }
+  getEngagementAnalytics(): Observable<EngagementAnalytics> { return this.analytics.getEngagementAnalytics(); }
+  getHistoryHub(limit = 30): Observable<HistoryHub> { return this.analytics.getHistoryHub(limit); }
 
-  getSyntheticLimits(): Observable<SyntheticLimits> {
-    return this.http.get<SyntheticLimits>(`${this.BASE}/synthetic/limits`);
-  }
-
-  getCatalogGrowth(months = 12): Observable<CatalogGrowthPoint[]> {
-    return this.growthCache.get(() => {
-      const params = new HttpParams().set('months', months);
-      return this.http.get<CatalogGrowthPoint[]>(`${this.BASE}/catalog-growth`, { params });
-    });
-  }
-
-  invalidateCatalogGrowth(): void {
-    this.growthCache.invalidate();
-  }
-
-  getWarehouseStatus(): Observable<WarehouseStatus> {
-    return this.http.get<WarehouseStatus>(`${environment.apiUrl}/analytics/warehouse`);
-  }
-
-  getTrendingAnalytics(limit = 25): Observable<TrendingAnalytics> {
-    const params = new HttpParams().set('limit', limit);
-    return this.http.get<TrendingAnalytics>(`${environment.apiUrl}/analytics/trending`, { params });
-  }
-
-  getPlatformAnalytics(): Observable<PlatformAnalytics> {
-    return this.http.get<PlatformAnalytics>(`${environment.apiUrl}/analytics/platform`);
-  }
-
-  getEngagementAnalytics(): Observable<EngagementAnalytics> {
-    return this.http.get<EngagementAnalytics>(`${environment.apiUrl}/analytics/engagement`);
-  }
-
-  getExplorerTables(): Observable<WarehouseTableMeta[]> {
-    return this.http.get<WarehouseTableMeta[]>(`${environment.apiUrl}/analytics/explorer/tables`);
-  }
-
+  getExplorerTables(): Observable<WarehouseTableMeta[]> { return this.explorer.getExplorerTables(); }
   getTablePreview(table: string, page = 1, limit = 8): Observable<TablePreview> {
-    const params = new HttpParams().set('page', page).set('limit', limit);
-    return this.http.get<TablePreview>(`${environment.apiUrl}/analytics/explorer/preview/${table}`, { params });
+    return this.explorer.getTablePreview(table, page, limit);
   }
 
   getRecommendations(limit = 12, mood?: string): Observable<RecommendationPayload> {
-    let params = new HttpParams().set('limit', limit);
-    if (mood) params = params.set('mood', mood);
-    return this.http.get<RecommendationPayload>(`${environment.apiUrl}/analytics/recommendations`, { params });
-  }
-
-  getHealth(): Observable<HealthResponse> {
-    return this.http.get<HealthResponse>(`${this.BASE}/health`);
-  }
-
-  getHistoryHub(limit = 30): Observable<HistoryHub> {
-    const params = new HttpParams().set('limit', limit);
-    return this.http.get<HistoryHub>(`${environment.apiUrl}/analytics/history`, { params });
+    return this.recommendations.getRecommendations(limit, mood);
   }
 }

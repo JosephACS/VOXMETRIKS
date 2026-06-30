@@ -20,7 +20,10 @@ export class TrackCoverService {
 
     const req = this.tracksApi.getCover(trackId).pipe(
       map((c) => (c.status === 'ok' && c.image_url ? c.image_url : null)),
-      catchError(() => of(null)),
+      catchError((err) => {
+        console.error('[TrackCoverService] getCover failed for track', trackId, err);
+        return of(null);
+      }),
       shareReplay(1),
     );
     this.cache.set(trackId, req);

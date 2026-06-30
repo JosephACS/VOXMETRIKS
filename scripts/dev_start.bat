@@ -13,7 +13,6 @@ echo.
 if not exist "%ROOT%venv\Scripts\python.exe" (
     echo [ERROR] No existe el entorno virtual. Ejecuta primero:
     echo   python -m venv venv
-    echo   venv\Scripts\pip install -r requirements.txt
     echo   venv\Scripts\pip install -r backend\requirements.txt
     pause
     exit /b 1

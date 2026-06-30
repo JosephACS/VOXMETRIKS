@@ -2,6 +2,7 @@ import { SafeHtml } from '@angular/platform-browser';
 
 import { IconRenderService } from '../../shared/services/icon-render.service';
 
+import { I18nService } from '../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
@@ -78,6 +79,8 @@ type RecTrack = NonNullable<RecommendationPayload['for_you']>[number];
 })
 
 export class RecommendationsComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
 
   private iconRender = inject(IconRenderService);
 
@@ -120,6 +123,12 @@ export class RecommendationsComponent implements OnInit {
   moodCount = computed(() => this.data()?.mood_count ?? 0);
 
   moodLabel = computed(() => this.data()?.mood_label ?? null);
+
+  moodResultsLabel(): string {
+    const count = this.moodCount();
+    const key = count === 1 ? 'recommendations.mood.resultsCount' : 'recommendations.mood.resultsCountPlural';
+    return this.i18n.t(key, { count });
+  }
 
 
 

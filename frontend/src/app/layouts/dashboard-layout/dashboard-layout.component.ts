@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { LoadingService } from '../../shared/services/loading.service';
@@ -51,6 +51,7 @@ interface NavSection {
   animations: [routeFadeAnimation],
 })
 export class DashboardLayoutComponent implements OnInit, OnDestroy {
+  readonly lang = inject(I18nService).lang;
   private auth = inject(AuthService);
   private iconRender = inject(IconRenderService);
   private i18n = inject(I18nService);

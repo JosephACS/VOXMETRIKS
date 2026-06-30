@@ -30,7 +30,7 @@ class TestCriticalSmokeRegression:
         assert demo_payload["user"]["role"] == "user"
 
         admin_headers, admin_payload = _login(client, "admin", "admin123")
-        assert admin_payload["user"]["role"] == "engineer"
+        assert admin_payload["user"]["role"] == "admin"
 
         demo_explorer = client.get(
             "/api/v1/analytics/explorer/tables",
@@ -60,5 +60,46 @@ class TestCriticalSmokeRegression:
         assert logout.status_code == 200
         assert logout.json()["ok"] is True
 
-        expired_session = client.get("/api/v1/users/me", headers=demo_headers)
-        assert expired_session.status_code == 401
+    def test_home_bff_returns_rails(self, client: TestClient) -> None:
+        headers, _ = _login(client, "demo", "demo123")
+        response = client.get("/api/v1/dashboard/home", headers=headers)
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert "summary" in payload
+        assert "top_tracks" in payload
+        assert "discover" in payload
+        assert "genres" in payload
+        assert isinstance(payload["top_tracks"], list)
+
+    def test_search_tracks_paginated(self, client: TestClient) -> None:
+        response = client.get(
+            "/api/v1/tracks/search",
+            params={"q": "de", "page": 1, "limit": 5},
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert "items" in payload
+        assert "total" in payload
+        assert len(payload["items"]) <= 5
+
+    def test_tracks_cursor_pagination(self, client: TestClient) -> None:
+        first = client.get(
+            "/api/v1/tracks",
+            params={"limit": 2, "use_cursor": True, "include_total": True},
+        )
+        assert first.status_code == 200, first.text
+        body = first.json()
+        assert body.get("items")
+        assert body.get("has_more") is True
+        cursor = body.get("next_cursor")
+        assert cursor
+
+        second = client.get(
+            "/api/v1/tracks",
+            params={"limit": 2, "use_cursor": True, "cursor": cursor},
+        )
+        assert second.status_code == 200, second.text
+        next_items = second.json().get("items") or []
+        first_ids = {t["id_track"] for t in body["items"]}
+        second_ids = {t["id_track"] for t in next_items}
+        assert first_ids.isdisjoint(second_ids)

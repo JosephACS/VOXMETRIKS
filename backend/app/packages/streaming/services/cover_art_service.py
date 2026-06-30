@@ -113,6 +113,16 @@ def _search_itunes(terms: str) -> Optional[str]:
     return upscale_artwork(artwork)
 
 
+def get_cached_cover(
+    conn: duckdb.DuckDBPyConnection, track_id: int
+) -> Optional[Dict[str, Any]]:
+    """Return cached cover row when present (read-only path)."""
+    cached = _read_cache(conn, track_id)
+    if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND):
+        return cached
+    return None
+
+
 def resolve_cover(
     conn: duckdb.DuckDBPyConnection,
     track_id: int,

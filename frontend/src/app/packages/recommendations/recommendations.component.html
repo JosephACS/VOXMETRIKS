@@ -1,8 +1,9 @@
 <div class="rec-page">
   <header class="page-header">
     <div class="header-text">
-      <h1>{{ 'recommendations.title' | t }}</h1>
-      <p class="page-subtitle">{{ 'recommendations.subtitle' | t }}</p>
+      <h1>{{ 'recommendations.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'recommendations.subtitle' | t:lang() }}</p>
+      <p class="page-subtitle page-subtitle--human">{{ 'recommendations.subtitleHuman' | t:lang() }}</p>
     </div>
     <div class="header-badges">
       <app-data-source-badge kind="live" />
@@ -11,18 +12,18 @@
 
   @if (prefsLoaded() && !recsEnabled()) {
     <div class="disabled-panel glass-panel">
-      <h2>{{ 'recommendations.disabledTitle' | t }}</h2>
-      <p>{{ 'recommendations.disabledMessage' | t }}</p>
-      <a routerLink="/settings" class="cta-link">{{ 'recommendations.goSettings' | t }}</a>
+      <h2>{{ 'recommendations.disabledTitle' | t:lang() }}</h2>
+      <p>{{ 'recommendations.disabledMessage' | t:lang() }}</p>
+      <a routerLink="/settings" class="cta-link">{{ 'recommendations.goSettings' | t:lang() }}</a>
     </div>
   } @else if (isLoading()) {
-    <p class="loading-msg">{{ 'recommendations.loading' | t }}</p>
+    <p class="loading-msg">{{ 'recommendations.loading' | t:lang() }}</p>
   } @else if (hasError()) {
     <div class="empty glass-panel error-state">
       <span [innerHTML]="icon('alert', 28)"></span>
-      <p>{{ 'recommendations.error' | t }}</p>
-      <small>{{ 'recommendations.errorHint' | t }}</small>
-      <button type="button" class="retry-btn" (click)="retryRecommendations()">{{ 'common.retry' | t }}</button>
+      <p>{{ 'recommendations.error' | t:lang() }}</p>
+      <small>{{ 'recommendations.errorHint' | t:lang() }}</small>
+      <button type="button" class="retry-btn" (click)="retryRecommendations()">{{ 'common.retry' | t:lang() }}</button>
     </div>
   } @else {
     <section class="kpi-grid">
@@ -35,7 +36,10 @@
     <div class="charts-row">
       <section class="panel chart-panel">
         <div class="panel-header">
-          <h2>Afinidad por género</h2>
+          <div>
+            <h2>{{ 'recommendations.genreAffinity.title' | t:lang() }}</h2>
+            <p class="panel-sub">{{ 'recommendations.genreAffinity.subtitle' | t:lang() }}</p>
+          </div>
         </div>
         <div class="genre-chart">
           @for (g of genres(); track g.genre; let i = $index) {
@@ -48,7 +52,7 @@
             </div>
           }
           @if (!genres().length) {
-            <p class="empty-inline">Sin afinidades de género todavía. Completa el pipeline o define tu género favorito.</p>
+            <p class="empty-inline">{{ 'recommendations.genreAffinity.empty' | t:lang() }}</p>
           }
         </div>
       </section>
@@ -56,7 +60,7 @@
 
     <section class="panel">
       <div class="panel-header">
-        <h2>{{ 'recommendations.forYou' | t }}</h2>
+        <h2>{{ 'recommendations.forYou' | t:lang() }}</h2>
       </div>
       <div class="horizontal-scroll">
         @for (item of forYou(); track item.id_track; let i = $index) {
@@ -76,14 +80,14 @@
           }
         }
         @if (!forYou().length) {
-          <p class="empty-inline">No hay tracks recomendados con los datos actuales.</p>
+          <p class="empty-inline">{{ 'recommendations.forYou.empty' | t:lang() }}</p>
         }
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-header">
-        <h2>Artistas recomendados</h2>
+        <h2>{{ 'recommendations.artists.title' | t:lang() }}</h2>
       </div>
       <div class="artists-grid">
         @for (artist of artists(); track artist.id_artista) {
@@ -95,20 +99,20 @@
               <h3 class="artist-name">{{ displayArtist(artist.nombre_artista) }}</h3>
               <div class="artist-metrics">
                 <div class="metric-row">
-                  <span class="metric-label">Popularidad</span>
+                  <span class="metric-label">{{ 'recommendations.artists.popularity' | t:lang() }}</span>
                   <app-metric-bar [value]="artist.promedio_popularidad ?? 0" [max]="100" color="primary" suffix="" digitsInfo="1.0-0"/>
                 </div>
                 <div class="metric-row">
-                  <span class="metric-label">Tracks</span>
+                  <span class="metric-label">{{ 'recommendations.artists.tracks' | t:lang() }}</span>
                   <span>{{ artist.total_tracks ?? 0 }}</span>
                 </div>
               </div>
-              <div class="affinity-badge">{{ artist.affinity ?? 0 }}% afinidad</div>
+              <div class="affinity-badge">{{ 'recommendations.artists.affinity' | t: { pct: artist.affinity ?? 0 }:lang() }}</div>
             </div>
           </article>
         }
         @if (!artists().length) {
-          <p class="empty-inline">Aún no hay artistas recomendados. Revisa agregaciones del warehouse.</p>
+          <p class="empty-inline">{{ 'recommendations.artists.empty' | t:lang() }}</p>
         }
       </div>
     </section>
@@ -116,8 +120,8 @@
     <section class="panel mood-panel">
       <div class="panel-header">
         <div>
-          <h2>{{ 'recommendations.mood' | t }}</h2>
-          <p class="panel-sub">Filtra canciones del catálogo según su nivel de energía</p>
+          <h2>{{ 'recommendations.mood' | t:lang() }}</h2>
+          <p class="panel-sub">{{ 'recommendations.mood.subtitle' | t:lang() }}</p>
         </div>
       </div>
       <div class="mood-grid">
@@ -130,7 +134,7 @@
           >
             <span class="mood-name">{{ mood.name }}</span>
             <span class="mood-desc">{{ mood.description }}</span>
-            <span class="mood-tracks">{{ mood.tracks }} canciones en catálogo</span>
+            <span class="mood-tracks">{{ 'recommendations.mood.catalogCount' | t: { count: mood.tracks ?? 0 }:lang() }}</span>
           </button>
         }
       </div>
@@ -138,16 +142,16 @@
       @if (selectedMood()) {
         <div class="mood-results" [class.loading]="moodLoading()">
           @if (moodLoading()) {
-            <p class="mood-status">Buscando canciones para el mood seleccionado…</p>
+            <p class="mood-status">{{ 'recommendations.mood.loading' | t:lang() }}</p>
           } @else if (moodCount() === 0) {
             <div class="mood-empty glass-panel">
-              <p>No hay canciones en el rango de energía <strong>{{ moodLabel() }}</strong>.</p>
-              <p class="mood-empty-hint">Prueba otro mood o amplía el catálogo con el pipeline ELT.</p>
+              <p>{{ 'recommendations.mood.empty' | t: { mood: moodLabel() ?? '' }:lang() }}</p>
+              <p class="mood-empty-hint">{{ 'recommendations.mood.emptyHint' | t:lang() }}</p>
             </div>
           } @else {
             <div class="mood-results-head">
-              <span class="mood-results-badge">{{ moodCount() }} canción{{ moodCount() === 1 ? '' : 'es' }} encontrada{{ moodCount() === 1 ? '' : 's' }}</span>
-              <span class="mood-results-label">Mood: <strong>{{ moodLabel() }}</strong></span>
+              <span class="mood-results-badge">{{ moodResultsLabel() }}</span>
+              <span class="mood-results-label">{{ 'recommendations.mood.resultsLabel' | t:lang() }} <strong>{{ moodLabel() }}</strong></span>
             </div>
             <div class="mood-tracks-grid">
               @for (track of moodTracks(); track track.id_track; let i = $index) {
@@ -170,7 +174,7 @@
           }
         </div>
       } @else {
-        <p class="mood-hint">Selecciona un mood para ver canciones filtradas por energía.</p>
+        <p class="mood-hint">{{ 'recommendations.mood.selectHint' | t:lang() }}</p>
       }
     </section>
   }

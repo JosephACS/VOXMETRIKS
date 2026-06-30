@@ -1,6 +1,9 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TracksService } from '../services/tracks.service';
@@ -12,6 +15,7 @@ import { MusicPlayerService } from '../../../shared/services/music-player.servic
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
+import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import { displayTrackTitle, displayTrackSubtitle } from '../../../shared/utils/track-display.util';
 import { primaryArtistName } from '../../../shared/utils/artist.util';
 import { demoAudioUrlForTrack } from '../../../shared/config/demo-audio.config';
@@ -24,10 +28,14 @@ import { demoAudioUrlForTrack } from '../../../shared/config/demo-audio.config';
   styleUrls: ['./track-detail.component.css'],
 })
 export class TrackDetailComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private coverArt = inject(CoverArtService);
+  private coverSvc = inject(TrackCoverService);
+  private destroyRef = inject(DestroyRef);
 
   track = signal<TrackDetail | null>(null);
+  coverUrl = signal<string | null>(null);
   isLoading = signal(true);
   hasError = signal(false);
 
@@ -67,16 +75,19 @@ export class TrackDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.route.paramMap.subscribe((pm) => {
-      const id = Number(pm.get('id'));
-      if (!id) return;
-      this.load(id);
-    });
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pm) => {
+        const id = Number(pm.get('id'));
+        if (!id) return;
+        this.load(id);
+      });
   }
 
   load(id: number) {
     this.isLoading.set(true);
     this.hasError.set(false);
+    this.coverUrl.set(null);
     this.tracksSvc.getTrackDetail(id).subscribe({
       next: (d) => {
         this.track.set(d);
@@ -86,6 +97,11 @@ export class TrackDetailComponent implements OnInit {
           nombre_track: d.nombre_track ?? 'Track',
           nombre_artista: d.nombre_artista,
         });
+        this.coverSvc.cover$(d.id_track)
+          .pipe(take(1))
+          .subscribe((url) => {
+            if (this.track()?.id_track === d.id_track) this.coverUrl.set(url);
+          });
       },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });

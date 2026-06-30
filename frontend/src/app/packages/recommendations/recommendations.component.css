@@ -28,6 +28,13 @@
   line-height: 1.45;
 }
 
+/* Segunda línea: tono más humano y secundario respecto al subtítulo técnico */
+.page-subtitle--human {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .header-badges {
   display: flex;
   flex-wrap: wrap;
@@ -272,7 +279,9 @@
 .genre-bar-fill {
   height: 100%;
   border-radius: 4px;
-  transition: width 0.5s ease;
+  transition: width var(--motion-duration-slower) var(--motion-ease-out);
+  transform-origin: left center;
+  animation: vm-meter-grow var(--motion-duration-slower) var(--motion-ease-out) both;
 }
 
 .genre-score {
@@ -295,7 +304,15 @@
   overflow-x: auto;
   padding-bottom: 0.5rem;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Badge de puntuación legible sobre cualquier portada: fondo oscuro semitransparente + texto blanco */
+.horizontal-scroll :deep(.media-badge) {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  backdrop-filter: blur(4px);
 }
 
 .horizontal-scroll::-webkit-scrollbar {

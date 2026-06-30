@@ -1,124 +1,161 @@
 <div class="pl-page">
-  <section class="pl-hero glass-panel">
-    <div class="hero-glow"></div>
-    <div class="hero-content">
-      <div>
-        <h1>{{ 'playlists.title' | t }}</h1>
-        <p class="sub">{{ 'playlists.subtitle' | t }}</p>
-      </div>
-      <div class="hero-actions">
-        <app-data-source-badge kind="live" />
-        <button type="button" class="btn-create" (click)="openCreate()">
-          <span [innerHTML]="icon('playlist', 16)"></span> {{ 'playlists.new' | t }}
+  @if (detailId()) {
+    <div class="pl-detail-page">
+      <div class="page-top-row">
+        <button type="button" class="back-link" (click)="backToList()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          {{ 'playlists.back' | t:lang() }}
         </button>
+        <app-data-source-badge kind="live" />
       </div>
-    </div>
-  </section>
 
-  @if (isLoading()) {
-    <div class="pl-grid">
-      @for (s of [1,2,3,4,5,6]; track s) { <div class="pl-card skel"></div> }
-    </div>
-  } @else if (hasError()) {
-    <div class="empty glass-panel error-state">
-      <span [innerHTML]="icon('alert', 32)"></span>
-      <p>{{ 'playlists.loadError' | t }}</p>
-      <small>{{ 'playlists.loadErrorHint' | t }}</small>
-      <button type="button" class="btn-create" (click)="load()">{{ 'tracks.retry' | t }}</button>
-    </div>
-  } @else if (!playlists().length) {
-    <div class="empty glass-panel">
-      <span [innerHTML]="icon('playlist', 32)"></span>
-      <p>{{ 'playlists.empty' | t }}</p>
-      <small>{{ 'playlists.emptyHint' | t }}</small>
-      <button type="button" class="btn-create" (click)="openCreate()">{{ 'playlists.create' | t }}</button>
-    </div>
-  } @else {
-    <div class="pl-grid">
-      @for (pl of playlists(); track pl.id; let i = $index) {
-        <article class="pl-card glass-panel" [routerLink]="['/playlists', pl.id]">
-          <div class="pl-cover" [style.background]="cover(i)">
-            <span [innerHTML]="icon('music', 28)"></span>
+      @if (detailLoading()) {
+        <section class="detail-hero-page glass-panel skel-hero"></section>
+        <section class="tracks-section glass-panel skel-tracks"></section>
+      } @else if (detailError()) {
+        <div class="empty glass-panel error-state">
+          <span [innerHTML]="icon('alert', 32)"></span>
+          <p>{{ 'playlists.detailError' | t:lang() }}</p>
+          <small>{{ 'playlists.detailErrorHint' | t:lang() }}</small>
+          <button type="button" class="btn-create" (click)="backToList()">{{ 'playlists.back' | t:lang() }}</button>
+        </div>
+      } @else if (selected(); as det) {
+        <section class="detail-hero-page glass-panel">
+          <div class="detail-hero-wrap" [style.background]="detailGradient()"></div>
+          <div class="detail-hero">
+            <div class="detail-cover" [style.background]="detailGradient()">
+              <span [innerHTML]="icon('music', 40)"></span>
+            </div>
+            <div class="detail-meta-block">
+              <span class="detail-type">{{ 'playlists.shareable' | t:lang() }}</span>
+              <h1>{{ det.name }}</h1>
+              <p class="det-meta">{{ 'playlists.songs' | t: { count: det.total_tracks }:lang() }} · {{ formatDuration(det.tracks) }}</p>
+              @if (det.description) { <p class="det-desc">{{ det.description }}</p> }
+              @if (!det.tracks.length) { <p class="det-desc">{{ 'playlists.emptyDetail' | t:lang() }}</p> }
+              <div class="detail-actions">
+                <button type="button" class="btn-play-pl" (click)="playPlaylist()" [disabled]="!det.tracks.length">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  {{ 'playlists.play' | t:lang() }}
+                </button>
+                <button type="button" class="btn-ghost-sm" (click)="openEdit(det)">{{ 'playlists.edit' | t:lang() }}</button>
+                <button type="button" class="btn-danger-sm" (click)="deletePlaylist(det)">{{ 'playlists.delete' | t:lang() }}</button>
+              </div>
+            </div>
           </div>
-          <div class="pl-info">
-            <h3>{{ pl.name }}</h3>
-            <p class="pl-meta">{{ 'playlists.songs' | t: { count: pl.total_tracks } }} · {{ durationLabel(pl.total_tracks) }}</p>
-            @if (pl.description) { <p class="pl-desc">{{ pl.description }}</p> }
+        </section>
+
+        <section class="tracks-section glass-panel">
+          <div class="tracks-head">
+            <h2>{{ 'tracks.title' | t:lang() }}</h2>
+            <span class="tracks-count">{{ 'playlists.songs' | t: { count: det.total_tracks }:lang() }}</span>
           </div>
-        </article>
+          <div class="track-list">
+            @for (t of det.tracks; track t.id_track; let i = $index) {
+              <div class="track-row-wrap">
+                <app-track-row
+                  [track]="playlistQueue(det.tracks)[i]"
+                  [index]="i + 1"
+                  [queue]="playlistQueue(det.tracks)"
+                />
+                <button type="button" class="btn-remove-track" [title]="'playlists.removeTrack' | t" (click)="removeTrack(t.id_track)">×</button>
+              </div>
+            }
+            @if (!det.tracks.length) {
+              <p class="empty-tracks">{{ 'playlists.emptyTracks' | t:lang() }}</p>
+            }
+          </div>
+        </section>
       }
     </div>
+  } @else {
+    <section class="pl-hero glass-panel">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <div>
+          <h1>{{ 'playlists.title' | t:lang() }}</h1>
+          <p class="sub">{{ 'playlists.subtitle' | t:lang() }}</p>
+        </div>
+        <div class="hero-actions">
+          <app-data-source-badge kind="live" />
+          <button type="button" class="btn-create" (click)="openCreate()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            {{ 'playlists.new' | t:lang() }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    @if (isLoading()) {
+      <div class="pl-grid">
+        @for (s of [1,2,3,4,5,6]; track s) { <div class="pl-card skel"></div> }
+      </div>
+    } @else if (hasError()) {
+      <div class="empty glass-panel error-state">
+        <span [innerHTML]="icon('alert', 32)"></span>
+        <p>{{ 'playlists.loadError' | t:lang() }}</p>
+        <small>{{ 'playlists.loadErrorHint' | t:lang() }}</small>
+        <button type="button" class="btn-create" (click)="load()">{{ 'tracks.retry' | t:lang() }}</button>
+      </div>
+    } @else if (!playlists().length) {
+      <div class="empty glass-panel">
+        <span [innerHTML]="icon('playlist', 32)"></span>
+        <p>{{ 'playlists.empty' | t:lang() }}</p>
+        <small>{{ 'playlists.emptyHint' | t:lang() }}</small>
+        <button type="button" class="btn-create" (click)="openCreate()">{{ 'playlists.create' | t:lang() }}</button>
+      </div>
+    } @else {
+      <div class="pl-grid vm-content-ready">
+        @for (pl of playlists(); track pl.id; let i = $index) {
+          <article
+            class="pl-card glass-panel vm-animate-reveal"
+            [class.vm-stagger-1]="i % 4 === 0"
+            [class.vm-stagger-2]="i % 4 === 1"
+            [class.vm-stagger-3]="i % 4 === 2"
+            [class.vm-stagger-4]="i % 4 === 3"
+            [routerLink]="['/playlists', pl.id]"
+          >
+            <div class="pl-cover" [style.background]="cover(i)">
+              <span [innerHTML]="icon('music', 38)"></span>
+            </div>
+            <div class="pl-info">
+              <h3>{{ pl.name }}</h3>
+              <p class="pl-meta">{{ 'playlists.songs' | t: { count: pl.total_tracks }:lang() }} · {{ durationLabel(pl.total_tracks) }}</p>
+              @if (pl.description) { <p class="pl-desc">{{ pl.description }}</p> }
+            </div>
+          </article>
+        }
+      </div>
+    }
   }
 
   @if (showEdit()) {
-    <div class="overlay" (click)="closeEdit()"></div>
-    <div class="modal glass-panel">
-      <h2>{{ 'playlists.edit' | t }}</h2>
-      <label>{{ 'playlists.name' | t }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" /></label>
-      <label>{{ 'playlists.description' | t }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2"></textarea></label>
+    <div class="modal-backdrop" (click)="closeEdit()">
+      <div class="modal glass-panel" (click)="$event.stopPropagation()">
+      <h2>{{ 'playlists.edit' | t:lang() }}</h2>
+      <label>{{ 'playlists.name' | t:lang() }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" /></label>
+      <label>{{ 'playlists.description' | t:lang() }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2"></textarea></label>
       @if (formError()) { <p class="err">{{ formError() }}</p> }
       <div class="modal-actions">
-        <button type="button" class="btn-ghost" (click)="closeEdit()">{{ 'playlists.cancel' | t }}</button>
-        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveEdit()">{{ 'playlists.save' | t }}</button>
+        <button type="button" class="btn-ghost" (click)="closeEdit()">{{ 'playlists.cancel' | t:lang() }}</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveEdit()">{{ 'playlists.save' | t:lang() }}</button>
+      </div>
       </div>
     </div>
   }
 
   @if (showCreate()) {
-    <div class="overlay" (click)="closeCreate()"></div>
-    <div class="modal glass-panel">
-      <h2>{{ 'playlists.createTitle' | t }}</h2>
-      <p class="modal-hint">{{ 'playlists.createHint' | t }}</p>
-      <label>{{ 'playlists.name' | t }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" [placeholder]="'playlists.namePlaceholder' | t" /></label>
-      <label>{{ 'playlists.description' | t }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2" [placeholder]="'playlists.optional' | t"></textarea></label>
+    <div class="modal-backdrop" (click)="closeCreate()">
+      <div class="modal glass-panel" (click)="$event.stopPropagation()">
+      <h2>{{ 'playlists.createTitle' | t:lang() }}</h2>
+      <p class="modal-hint">{{ 'playlists.createHint' | t:lang() }}</p>
+      <label>{{ 'playlists.name' | t:lang() }}<input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" [placeholder]="'playlists.namePlaceholder' | t" /></label>
+      <label>{{ 'playlists.description' | t:lang() }}<textarea [ngModel]="formDesc()" (ngModelChange)="formDesc.set($event)" rows="2" [placeholder]="'playlists.optional' | t"></textarea></label>
       @if (formError()) { <p class="err">{{ formError() }}</p> }
       <div class="modal-actions">
-        <button type="button" class="btn-ghost" (click)="closeCreate()">{{ 'playlists.cancel' | t }}</button>
-        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveCreate()">{{ 'playlists.create' | t }}</button>
+        <button type="button" class="btn-ghost" (click)="closeCreate()">{{ 'playlists.cancel' | t:lang() }}</button>
+        <button type="button" class="btn-create" [disabled]="saving()" (click)="saveCreate()">{{ 'playlists.create' | t:lang() }}</button>
+      </div>
       </div>
     </div>
-  }
-
-  @if (showDetail() && selected(); as det) {
-    <div class="overlay" (click)="closeDetail()"></div>
-    <aside class="detail-panel glass-panel">
-      <div class="detail-hero-wrap" [style.background]="detailGradient()"></div>
-      <button type="button" class="close-btn" (click)="closeDetail()">×</button>
-      <div class="detail-hero">
-        <div class="detail-cover" [style.background]="detailGradient()">
-          <span [innerHTML]="icon('music', 36)"></span>
-        </div>
-        <div class="detail-meta-block">
-          <span class="detail-type">{{ 'playlists.shareable' | t }}</span>
-          <h2>{{ det.name }}</h2>
-          <p class="det-meta">{{ 'playlists.songs' | t: { count: det.total_tracks } }} · {{ formatDuration(det.tracks) }}</p>
-          @if (det.description) { <p class="det-desc">{{ det.description }}</p> }
-          @if (!det.tracks.length) { <p class="det-desc">{{ 'playlists.emptyDetail' | t }}</p> }
-          <div class="detail-actions">
-            <button type="button" class="btn-ghost-sm" (click)="openEdit(det)">{{ 'playlists.edit' | t }}</button>
-            <button type="button" class="btn-danger-sm" (click)="deletePlaylist(det)">{{ 'playlists.delete' | t }}</button>
-          </div>
-          <button type="button" class="btn-play-pl" (click)="playPlaylist()" [disabled]="!det.tracks.length">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            {{ 'playlists.play' | t }}
-          </button>
-        </div>
-      </div>
-      <div class="track-list">
-        @for (t of det.tracks; track t.id_track; let i = $index) {
-          <div class="track-row-wrap">
-            <app-track-row
-              [track]="playlistQueue(det.tracks)[i]"
-              [index]="i + 1"
-              [queue]="playlistQueue(det.tracks)"
-            />
-            <button type="button" class="btn-remove-track" [title]="'playlists.removeTrack' | t" (click)="removeTrack(t.id_track)">×</button>
-          </div>
-        }
-        @if (!det.tracks.length) {
-          <p class="empty-tracks">{{ 'playlists.emptyTracks' | t }}</p>
-        }
-      </div>
-    </aside>
   }
 </div>

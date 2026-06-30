@@ -2,13 +2,17 @@ import { SafeHtml } from '@angular/platform-browser';
 
 import { IconRenderService } from '../../../shared/services/icon-render.service';
 
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
+import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CommonModule } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -19,21 +23,33 @@ import { Artista, TopArtista, PaginatedResponse } from '../../../shared/models/a
 import { splitArtistNames, primaryArtistName } from '../../../shared/utils/artist.util';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import {
+  apiFormError,
+  createSearchDebouncer,
+  pageWindow,
+  paginatedRowIndex,
+} from '../../../shared/utils/catalog-list.util';
 
 type ModalMode = 'create' | 'edit' | 'delete' | null;
 
 @Component({
   selector: 'app-artists',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, DataSourceBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ScrollingModule, TranslatePipe, DataSourceBadgeComponent],
 
   templateUrl: './artists.component.html',
 
-  styleUrls: ['./artists.component.css'],
+  styleUrls: [
+    '../../../shared/styles/catalog-page-shared.css',
+    '../../../shared/styles/catalog-crud-modal.css',
+    './artists.component.css',
+  ],
 
 })
 
 export class ArtistsComponent implements OnInit {
+  readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
 
   private iconRender = inject(IconRenderService);
 
@@ -59,7 +75,8 @@ export class ArtistsComponent implements OnInit {
 
   searchVal   = signal('');
 
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private destroyRef = inject(DestroyRef);
+  private readonly searchDebouncer = createSearchDebouncer(this.destroyRef);
 
 
 
@@ -97,7 +114,11 @@ export class ArtistsComponent implements OnInit {
 
     this.loadTopArtists();
 
-    this.route.queryParamMap.subscribe((pm) => {
+    this.route.queryParamMap
+
+      .pipe(takeUntilDestroyed(this.destroyRef))
+
+      .subscribe((pm) => {
 
       const q = pm.get('q') ?? '';
 
@@ -137,7 +158,10 @@ export class ArtistsComponent implements OnInit {
 
   loadTopArtists() {
 
-    this.svc.getTopArtists(5).subscribe({ next: d => this.topArtists.set(d), error: () => {} });
+    this.svc.getTopArtists(5).subscribe({
+      next: d => this.topArtists.set(d),
+      error: (err) => console.error('[ArtistsComponent] getTopArtists failed', err),
+    });
 
   }
 
@@ -165,7 +189,7 @@ export class ArtistsComponent implements OnInit {
 
         this.hasError.set(true);
 
-        this.errorMsg.set('Error al conectar con el backend. Verifica que FastAPI esté corriendo en http://localhost:8000');
+        this.errorMsg.set(this.i18n.t('errors.backendConnection'));
 
         this.isLoading.set(false);
 
@@ -189,9 +213,7 @@ export class ArtistsComponent implements OnInit {
 
   onSearch(val: string) {
 
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-
-    this.searchTimer = setTimeout(() => {
+    this.searchDebouncer.schedule(() => {
 
       this.searchVal.set(val);
 
@@ -199,7 +221,7 @@ export class ArtistsComponent implements OnInit {
 
       this.loadArtists();
 
-    }, 350);
+    });
 
   }
 
@@ -223,19 +245,15 @@ export class ArtistsComponent implements OnInit {
 
   get pageNumbers(): number[] {
 
-    const total = this.totalPages(), current = this.page(), delta = 2;
-
-    const range: number[] = [];
-
-    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) range.push(i);
-
-    return range;
+    return pageWindow(this.page(), this.totalPages());
 
   }
 
 
 
-  rowIndex(i: number): number { return (this.page() - 1) * this.limit + i + 1; }
+  rowIndex(i: number): number { return paginatedRowIndex(this.page(), this.limit, i); }
+
+  trackArtist(_i: number, artist: Artista): number { return artist.id_artista; }
 
   skeletonRows = Array(12).fill(0);
 
@@ -311,7 +329,7 @@ export class ArtistsComponent implements OnInit {
 
       next: () => { this.closeModal(); this.loadArtists(); this.loadTopArtists(); },
 
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al crear artista'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al crear artista')); this.formSaving.set(false); },
 
     });
 
@@ -339,7 +357,7 @@ export class ArtistsComponent implements OnInit {
 
       next: () => { this.closeModal(); this.loadArtists(); this.loadTopArtists(); },
 
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al actualizar artista'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al actualizar artista')); this.formSaving.set(false); },
 
     });
 
@@ -363,7 +381,7 @@ export class ArtistsComponent implements OnInit {
 
       next: () => { this.closeModal(); this.loadArtists(); this.loadTopArtists(); },
 
-      error: (e) => { this.formError.set(e?.error?.detail ?? 'Error al eliminar artista'); this.formSaving.set(false); },
+      error: (e) => { this.formError.set(apiFormError(e, 'Error al eliminar artista')); this.formSaving.set(false); },
 
     });
 

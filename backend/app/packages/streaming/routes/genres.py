@@ -8,14 +8,21 @@ import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_conn, get_write_conn
-from app.packages.users.services.auth_deps import require_engineer_user
-from app.shared.schemas.models import (
-    Genero, GeneroCreate, GeneroUpdate,
-    GeneroPopularidad, PaginatedResponse, DeleteResponse,
-)
 from app.packages.streaming.services.genre_service import (
-    get_genres, get_genre_by_id, get_genre_stats,
-    create_genre, update_genre, delete_genre,
+    create_genre,
+    delete_genre,
+    get_genre_by_id,
+    get_genre_stats,
+    get_genres,
+    update_genre,
+)
+from app.packages.users.services.auth_deps import require_admin_user
+from app.shared.schemas.models import (
+    DeleteResponse,
+    Genero,
+    GeneroCreate,
+    GeneroUpdate,
+    PaginatedResponse,
 )
 
 router = APIRouter(prefix="/genres", tags=["Genres"])
@@ -35,7 +42,7 @@ def list_genres(
 @router.post("", response_model=Genero, status_code=201, summary="Create genre")
 def create_genre_route(
     body: GeneroCreate,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_genero.strip():
@@ -75,7 +82,7 @@ def get_genre(
 def update_genre_route(
     genre_id: int,
     body: GeneroUpdate,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     if not body.nombre_genero.strip():
@@ -89,7 +96,7 @@ def update_genre_route(
 @router.delete("/{genre_id}", response_model=DeleteResponse, summary="Delete genre")
 def delete_genre_route(
     genre_id: int,
-    _engineer: int = Depends(require_engineer_user),
+    _admin: int = Depends(require_admin_user),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     ok = delete_genre(conn, genre_id)

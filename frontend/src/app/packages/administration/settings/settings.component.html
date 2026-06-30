@@ -2,8 +2,8 @@
 
   <header class="page-header">
     <div>
-      <h1>{{ 'settings.title' | t }}</h1>
-      <p class="page-subtitle">{{ 'settings.subtitle' | t }}</p>
+      <h1>{{ 'settings.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'settings.subtitle' | t:lang() }}</p>
     </div>
     <div class="settings-user-card">
       <span class="user-role">{{ roleLabel() }}</span>
@@ -54,9 +54,9 @@
 
           <section class="settings-section">
 
-            <h2>{{ 'settings.general.title' | t }}</h2>
+            <h2>{{ 'settings.general.title' | t:lang() }}</h2>
 
-            <p class="section-desc">{{ 'settings.general.desc' | t }}</p>
+            <p class="section-desc">{{ 'settings.general.desc' | t:lang() }}</p>
             <div class="context-banner">
               <span class="context-icon" [innerHTML]="icon('settings', 16)"></span>
               <span>Estos cambios se guardan en tu perfil y se sincronizan con la sesión actual. El modo visual también se refleja en preferencias de usuario.</span>
@@ -68,9 +68,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.theme' | t }}</span>
+                <span class="setting-title">{{ 'settings.theme' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.themeHint' | t:{ active: activeThemeLabel() } }}</span>
+                <span class="setting-hint">{{ 'settings.themeHint' | t: { active: activeThemeLabel() }:lang() }}</span>
 
               </div>
 
@@ -102,9 +102,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.language' | t }}</span>
+                <span class="setting-title">{{ 'settings.language' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.languageHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.languageHint' | t:lang() }}</span>
 
               </div>
 
@@ -136,9 +136,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.compact' | t }}</span>
+                <span class="setting-title">{{ 'settings.compact' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.compactHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.compactHint' | t:lang() }}</span>
 
               </div>
 
@@ -158,9 +158,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.showKpis' | t }}</span>
+                <span class="setting-title">{{ 'settings.showKpis' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.showKpisHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.showKpisHint' | t:lang() }}</span>
 
               </div>
 
@@ -180,21 +180,21 @@
 
 
 
-            <h3 class="subsection-title">{{ 'settings.business.title' | t }}</h3>
+            <h3 class="subsection-title">{{ 'settings.business.title' | t:lang() }}</h3>
 
-            <p class="section-desc">{{ 'settings.business.desc' | t }}</p>
+            <p class="section-desc">{{ 'settings.business.desc' | t:lang() }}</p>
 
 
 
             @if (prefsFeedback() === 'ok') {
 
-              <div class="prefs-toast ok" role="status">{{ 'settings.business.saved' | t }}</div>
+              <div class="prefs-toast ok" role="status">{{ 'settings.business.saved' | t:lang() }}</div>
 
             }
 
             @if (prefsFeedback() === 'error') {
 
-              <div class="prefs-toast error" role="alert">{{ 'settings.business.error' | t }}</div>
+              <div class="prefs-toast error" role="alert">{{ 'settings.business.error' | t:lang() }}</div>
 
             }
 
@@ -204,9 +204,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.business.recs' | t }}</span>
+                <span class="setting-title">{{ 'settings.business.recs' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.business.recsHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.business.recsHint' | t:lang() }}</span>
 
               </div>
 
@@ -236,9 +236,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.business.privacy' | t }}</span>
+                <span class="setting-title">{{ 'settings.business.privacy' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.business.privacyHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.business.privacyHint' | t:lang() }}</span>
 
               </div>
 
@@ -268,7 +268,7 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.business.audioQuality' | t }}</span>
+                <span class="setting-title">{{ 'settings.business.audioQuality' | t:lang() }}</span>
                 <span class="setting-hint">Afectará al reproductor cuando se conecten fuentes de audio reales.</span>
 
               </div>
@@ -305,7 +305,7 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.business.favoriteGenre' | t }}</span>
+                <span class="setting-title">{{ 'settings.business.favoriteGenre' | t:lang() }}</span>
                 <span class="setting-hint">Ayuda a ordenar recomendaciones y se muestra en el perfil.</span>
 
               </div>
@@ -342,9 +342,9 @@
 
           <section class="settings-section">
 
-            <h2>{{ 'settings.api.title' | t }}</h2>
+            <h2>{{ 'settings.api.title' | t:lang() }}</h2>
 
-            <p class="section-desc">{{ 'settings.api.desc' | t }}</p>
+            <p class="section-desc">{{ 'settings.api.desc' | t:lang() }}</p>
             <div class="context-banner api">
               <span class="context-icon" [innerHTML]="icon('alert', 16)"></span>
               <span>El endpoint público de health está reducido por seguridad. Los detalles internos solo aparecen si el backend habilita modo verbose.</span>
@@ -356,7 +356,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.api.url' | t }}</span>
+                <span class="info-label">{{ 'settings.api.url' | t:lang() }}</span>
 
                 <code class="info-value">{{ apiUrl }}</code>
 
@@ -364,7 +364,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.api.version' | t }}</span>
+                <span class="info-label">{{ 'settings.api.version' | t:lang() }}</span>
 
                 <span class="info-value">v1</span>
 
@@ -372,7 +372,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.api.docs' | t }}</span>
+                <span class="info-label">{{ 'settings.api.docs' | t:lang() }}</span>
 
                 <code class="info-value">http://localhost:8000/docs</code>
 
@@ -380,7 +380,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.api.health' | t }}</span>
+                <span class="info-label">{{ 'settings.api.health' | t:lang() }}</span>
 
                 <code class="info-value">http://localhost:8000/health</code>
 
@@ -419,9 +419,9 @@
 
           <section class="settings-section">
 
-            <h2>{{ 'settings.wh.title' | t }}</h2>
+            <h2>{{ 'settings.wh.title' | t:lang() }}</h2>
 
-            <p class="section-desc">{{ 'settings.wh.desc' | t }}</p>
+            <p class="section-desc">{{ 'settings.wh.desc' | t:lang() }}</p>
             <div class="context-banner warehouse">
               <span class="context-icon" [innerHTML]="icon('database', 16)"></span>
               <span>Esta sección es visible solo para roles con acceso de ingeniería. El explorador protege tablas sensibles y redacta columnas privadas.</span>
@@ -433,7 +433,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.wh.engine' | t }}</span>
+                <span class="info-label">{{ 'settings.wh.engine' | t:lang() }}</span>
 
                 <span class="info-value">DuckDB</span>
 
@@ -441,7 +441,7 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.wh.file' | t }}</span>
+                <span class="info-label">{{ 'settings.wh.file' | t:lang() }}</span>
 
                 <code class="info-value">{{ warehousePath }}</code>
 
@@ -449,9 +449,9 @@
 
               <div class="info-row">
 
-                <span class="info-label">{{ 'settings.wh.format' | t }}</span>
+                <span class="info-label">{{ 'settings.wh.format' | t:lang() }}</span>
 
-                <span class="info-value">{{ 'settings.wh.formatValue' | t }}</span>
+                <span class="info-value">{{ 'settings.wh.formatValue' | t:lang() }}</span>
 
               </div>
 
@@ -459,7 +459,7 @@
 
 
 
-            <h3 class="subsection-title">{{ 'settings.wh.dimensions' | t }}</h3>
+            <h3 class="subsection-title">{{ 'settings.wh.dimensions' | t:lang() }}</h3>
 
             <div class="chip-grid">
 
@@ -473,7 +473,7 @@
 
 
 
-            <h3 class="subsection-title">{{ 'settings.wh.aggregations' | t }}</h3>
+            <h3 class="subsection-title">{{ 'settings.wh.aggregations' | t:lang() }}</h3>
 
             <div class="chip-grid">
 
@@ -495,9 +495,9 @@
 
           <section class="settings-section">
 
-            <h2>{{ 'settings.pipeline.title' | t }}</h2>
+            <h2>{{ 'settings.pipeline.title' | t:lang() }}</h2>
 
-            <p class="section-desc">{{ 'settings.pipeline.desc' | t }}</p>
+            <p class="section-desc">{{ 'settings.pipeline.desc' | t:lang() }}</p>
             <div class="context-banner pipeline">
               <span class="context-icon" [innerHTML]="icon('zap', 16)"></span>
               <span>Estos valores son preferencias de operación. La ejecución real del ELT se hace desde el módulo Pipeline, con límites del backend.</span>
@@ -509,9 +509,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.pipeline.records' | t }}</span>
+                <span class="setting-title">{{ 'settings.pipeline.records' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.pipeline.recordsHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.pipeline.recordsHint' | t:lang() }}</span>
 
               </div>
 
@@ -545,9 +545,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.pipeline.loadMode' | t }}</span>
+                <span class="setting-title">{{ 'settings.pipeline.loadMode' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.pipeline.loadModeHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.pipeline.loadModeHint' | t:lang() }}</span>
 
               </div>
 
@@ -581,9 +581,9 @@
 
               <div class="setting-info">
 
-                <span class="setting-title">{{ 'settings.pipeline.autoRefresh' | t }}</span>
+                <span class="setting-title">{{ 'settings.pipeline.autoRefresh' | t:lang() }}</span>
 
-                <span class="setting-hint">{{ 'settings.pipeline.autoRefreshHint' | t }}</span>
+                <span class="setting-hint">{{ 'settings.pipeline.autoRefreshHint' | t:lang() }}</span>
 
               </div>
 
@@ -601,7 +601,7 @@
 
             <div class="flow-summary">
 
-              <span class="flow-step">{{ 'settings.pipeline.extract' | t }}</span>
+              <span class="flow-step">{{ 'settings.pipeline.extract' | t:lang() }}</span>
 
               <span class="flow-arrow">→</span>
 

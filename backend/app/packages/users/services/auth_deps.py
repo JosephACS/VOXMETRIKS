@@ -8,6 +8,7 @@ import duckdb
 from fastapi import Depends, Header, HTTPException
 
 from app.core.database import get_conn
+
 from .user_service import get_user_id_from_token
 
 
@@ -45,7 +46,7 @@ def require_engineer_user(
     user_id: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ) -> int:
-    """Catalog steward / engineer mutations (mirrors FE engineerGuard)."""
+    """Engineering access: admin OR data engineer (ELT pipeline + analytics)."""
     from .user_service import _fetch_user
 
     user = _fetch_user(conn, user_id)
@@ -56,5 +57,28 @@ def require_engineer_user(
         raise HTTPException(
             status_code=403,
             detail="Engineer role required",
+        )
+    return user_id
+
+
+def require_admin_user(
+    user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+) -> int:
+    """Catalog mutations (artists/tracks/genres) are admin-only.
+
+    Data engineers manage the ELT pipeline and analytics, but must never edit
+    the music catalog by hand. Mirrors FE isCatalogSteward (admin only).
+    """
+    from .user_service import _fetch_user
+
+    user = _fetch_user(conn, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role = (user.get("role") or "user").lower()
+    if role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el administrador puede modificar el catálogo musical.",
         )
     return user_id

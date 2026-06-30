@@ -7,33 +7,33 @@
         <button type="button" class="np-close" (click)="player.closeExpandedView()" [title]="'player.minimize' | t">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <span class="np-header-label">{{ 'player.nowPlaying' | t }}</span>
+        <span class="np-header-label">{{ 'player.nowPlaying' | t:lang() }}</span>
         <span class="np-header-spacer"></span>
       </header>
 
       <div class="np-body">
         <!-- Biblioteca lateral -->
         <aside class="np-library">
-          <h3 class="np-side-title">{{ 'player.yourLibrary' | t }}</h3>
+          <h3 class="np-side-title">{{ 'player.yourLibrary' | t:lang() }}</h3>
 
           <a routerLink="/liked" class="lib-item liked" (click)="player.closeExpandedView()">
             <span class="lib-icon heart">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </span>
-            <span class="lib-text">{{ 'nav.liked' | t }}</span>
+            <span class="lib-text">{{ 'nav.liked' | t:lang() }}</span>
           </a>
 
           <a routerLink="/playlists" class="lib-item" (click)="player.closeExpandedView()">
             <span class="lib-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
             </span>
-            <span class="lib-text">{{ 'player.yourPlaylists' | t }}</span>
+            <span class="lib-text">{{ 'player.yourPlaylists' | t:lang() }}</span>
           </a>
 
           @if (playlists().length) {
-            <p class="np-sub-label">{{ 'player.recentPlaylists' | t }}</p>
+            <p class="np-sub-label">{{ 'player.recentPlaylists' | t:lang() }}</p>
             @for (pl of playlists(); track pl.id; let i = $index) {
-              <a routerLink="/playlists" class="lib-item pl-item" (click)="player.closeExpandedView()">
+              <a [routerLink]="['/playlists', pl.id]" class="lib-item pl-item" (click)="player.closeExpandedView()">
                 <span class="lib-cover" [style.background]="'linear-gradient(135deg, hsl(' + (i * 47 + 140) + ', 55%, 42%), #121212)'">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/></svg>
                 </span>
@@ -44,11 +44,15 @@
           }
 
           @if (history().length) {
-            <p class="np-sub-label">{{ 'player.recentlyPlayed' | t }}</p>
+            <p class="np-sub-label">{{ 'player.recentlyPlayed' | t:lang() }}</p>
             @for (h of history(); track h.id_track) {
               <button type="button" class="lib-item hist-item" (click)="playHistoryEntry(h)">
                 <span class="lib-cover sm" [style.background]="coverFor(h.id_track)">
-                  {{ h.nombre_track.charAt(0) }}
+                  @if (coverUrl(h.id_track); as img) {
+                    <img class="lib-cover-img" [src]="img" [alt]="h.nombre_track" />
+                  } @else {
+                    {{ h.nombre_track.charAt(0) }}
+                  }
                 </span>
                 <span class="lib-text-col">
                   <span class="lib-text">{{ h.nombre_track }}</span>
@@ -65,7 +69,14 @@
             <div class="np-cover-wrap">
               <div class="np-cover-glow" [style.background]="t.coverGradient"></div>
               <div class="np-cover-large" [style.background]="t.coverGradient">
-                <span class="cover-letter">{{ t.title.charAt(0) }}</span>
+                @if (player.currentCover(); as img) {
+                  <img class="np-cover-img" [src]="img" [alt]="t.title" (error)="player.clearCover()" />
+                } @else {
+                  <span class="cover-fallback">
+                    <svg class="cover-note" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    <span class="cover-letter">{{ t.title.charAt(0) }}</span>
+                  </span>
+                }
               </div>
             </div>
 
@@ -108,49 +119,71 @@
             <div class="np-actions">
               <app-favorite-btn [trackId]="t.id" />
               <app-add-to-playlist-btn [trackId]="t.id" variant="button" />
-              <a [routerLink]="['/tracks', t.id]" class="np-link" (click)="player.closeExpandedView()">{{ 'player.viewTrack' | t }}</a>
+              <a [routerLink]="['/tracks', t.id]" class="np-link" (click)="player.closeExpandedView()">{{ 'player.viewTrack' | t:lang() }}</a>
             </div>
           }
         </main>
 
         <!-- Cola + recomendadas -->
         <aside class="np-queue">
-          @if (player.queue().length > 1) {
-            <h3 class="np-side-title">{{ 'player.inQueue' | t }}</h3>
+          @if (player.queue().length) {
+            <h3 class="np-side-title">{{ 'player.inQueue' | t:lang() }}</h3>
+            @if (player.autoplay()) {
+              <p class="np-queue-hint">{{ 'player.autoplayOn' | t:lang() }}</p>
+            }
             <div class="queue-list">
               @for (q of player.queue(); track q.id; let i = $index) {
-                <button
-                  type="button"
-                  class="queue-row"
-                  [class.active]="isCurrent(q.id)"
-                  (click)="playFromQueue(q)"
-                >
-                  <span class="q-idx">{{ i + 1 }}</span>
-                  <span class="q-cover" [style.background]="q.coverGradient">{{ q.title.charAt(0) }}</span>
-                  <span class="q-meta">
-                    <span class="q-title">{{ q.title }}</span>
-                    <span class="q-artist">{{ q.artist }}</span>
+                @if (i >= player.queueIndex()) {
+                  <button
+                    type="button"
+                    class="queue-row"
+                    [class.active]="isCurrent(q.id)"
+                    (click)="playFromQueue(q)"
+                  >
+                    <span class="q-idx">{{ i + 1 }}</span>
+                    <span class="q-cover" [style.background]="q.coverGradient">
+                      @if (coverUrl(q.id); as img) {
+                        <img class="q-cover-img" [src]="img" [alt]="q.title" />
+                      } @else {
+                        {{ q.title.charAt(0) }}
+                      }
+                    </span>
+                    <span class="q-meta">
+                      <span class="q-title">{{ q.title }}</span>
+                      <span class="q-artist">{{ q.artist }}</span>
+                    </span>
+                    @if (isCurrent(q.id) && player.isPlaying()) {
+                      <span class="q-eq"><span></span><span></span><span></span></span>
+                    }
+                  </button>
+                }
+              }
+            </div>
+            @if (player.autoplayLoading()) {
+              <p class="np-queue-loading">{{ 'player.queueLoading' | t:lang() }}</p>
+            }
+          }
+
+          @if (recommendedVisible().length) {
+            <h3 class="np-side-title">{{ 'player.recommended' | t:lang() }}</h3>
+            <div class="queue-list">
+              @for (r of recommendedVisible(); track r.id) {
+                <button type="button" class="queue-row" [class.active]="isCurrent(r.id)" (click)="playRecommended(r)">
+                  <span class="q-cover" [style.background]="r.coverGradient">
+                    @if (coverUrl(r.id); as img) {
+                      <img class="q-cover-img" [src]="img" [alt]="r.title" />
+                    } @else {
+                      {{ r.title.charAt(0) }}
+                    }
                   </span>
-                  @if (isCurrent(q.id) && player.isPlaying()) {
-                    <span class="q-eq"><span></span><span></span><span></span></span>
-                  }
+                  <span class="q-meta">
+                    <span class="q-title">{{ r.title }}</span>
+                    <span class="q-artist">{{ r.artist }}</span>
+                  </span>
                 </button>
               }
             </div>
           }
-
-          <h3 class="np-side-title">{{ 'player.recommended' | t }}</h3>
-          <div class="queue-list">
-            @for (r of recommended(); track r.id) {
-              <button type="button" class="queue-row" [class.active]="isCurrent(r.id)" (click)="playRecommended(r)">
-                <span class="q-cover" [style.background]="r.coverGradient">{{ r.title.charAt(0) }}</span>
-                <span class="q-meta">
-                  <span class="q-title">{{ r.title }}</span>
-                  <span class="q-artist">{{ r.artist }}</span>
-                </span>
-              </button>
-            }
-          </div>
         </aside>
       </div>
     </div>

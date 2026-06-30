@@ -3,29 +3,69 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 90px;
+  height: 88px;
   z-index: 300;
   background: var(--shell-player);
-  backdrop-filter: blur(20px) saturate(1.2);
-  border-top: 1px solid var(--shell-border);
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border-top: 1px solid color-mix(in srgb, var(--shell-border) 60%, transparent);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.22);
   color: var(--shell-fg);
 }
 
 .player-progress-wrap {
   position: absolute;
-  top: 0;
+  top: -5px;
   left: 0;
   right: 0;
-  height: 4px;
-  background: var(--shell-progress-track);
+  height: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
   cursor: pointer;
+  z-index: 2;
+}
+
+.player-progress-track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--shell-progress-track);
+  overflow: visible;
+  transition: height var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .player-progress-fill {
+  position: relative;
   height: 100%;
-  background: linear-gradient(90deg, #1ed896, #148f5e);
-  transition: width 0.1s linear;
+  border-radius: 999px;
+  background: #1ed896;
+}
+
+.player-progress-thumb {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transform: translate(50%, -50%) scale(0);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+  pointer-events: none;
+}
+
+.player-progress-wrap:hover .player-progress-track {
+  height: 5px;
+}
+
+.player-progress-wrap:hover .player-progress-fill {
+  background: #1ed896;
+}
+
+.player-progress-wrap:hover .player-progress-thumb {
+  transform: translate(50%, -50%) scale(1);
 }
 
 .player-inner {
@@ -56,7 +96,7 @@
   border-radius: 8px;
   padding: 0.25rem 0.5rem 0.25rem 0.25rem;
   margin: -0.25rem;
-  transition: background 0.15s;
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .player-track.expandable:hover {
@@ -73,7 +113,7 @@
   justify-content: center;
   position: relative;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--motion-duration-normal) var(--motion-ease-standard), box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
   overflow: hidden;
 }
 
@@ -109,7 +149,7 @@
   background: rgba(0, 0, 0, 0.35);
   color: #fff;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
   z-index: 1;
 }
 
@@ -138,7 +178,7 @@
   color: var(--shell-fg-muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard), background var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .expand-btn:hover {
@@ -216,7 +256,7 @@
   background: transparent;
   color: var(--shell-fg);
   cursor: pointer;
-  transition: color 0.15s, transform 0.15s, background 0.15s;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard), background var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .ctrl-btn.sm { width: 28px; height: 28px; color: var(--shell-fg-muted); }

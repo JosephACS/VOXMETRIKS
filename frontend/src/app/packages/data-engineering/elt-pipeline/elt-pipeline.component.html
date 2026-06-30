@@ -1,23 +1,23 @@
 <div class="de-page">
   <header class="page-header">
     <div class="header-text">
-      <h1>{{ 'elt.title' | t }}</h1>
-      <p class="page-subtitle">{{ 'elt.subtitle' | t }}</p>
+      <h1>{{ 'elt.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'elt.subtitle' | t:lang() }}</p>
     </div>
     <div class="header-actions">
       <span class="badge" [class.badge-live]="apiConnected()" [class.badge-sim]="!apiConnected()">
         {{ apiConnected() ? ('elt.connected' | t) : ('elt.disconnected' | t) }}
       </span>
       @if (summary(); as s) {
-        <span class="badge badge-count">{{ 'elt.eventsCount' | t:{ count: fmt(totalEventCount()) } }}</span>
-        <span class="badge badge-catalog">{{ 'elt.catalogSize' | t:{ count: fmt(s.total_tracks) } }}</span>
+        <span class="badge badge-count">{{ 'elt.eventsCount' | t: { count: fmt(totalEventCount()) }:lang() }}</span>
+        <span class="badge badge-catalog">{{ 'elt.catalogSize' | t: { count: fmt(s.total_tracks) }:lang() }}</span>
       }
     </div>
   </header>
 
   <section class="kpi-grid compact-kpis">
     <div class="metric-card">
-      <span class="metric-label">{{ 'elt.status' | t }}</span>
+      <span class="metric-label">{{ 'elt.status' | t:lang() }}</span>
       <span class="metric-value status-text" [class]="'state-' + pipelineState()">{{ pipelineStatusLabel() }}</span>
     </div>
     <app-kpi-card [label]="'elt.base' | t" [value]="baseTrackCount()" iconKey="database" color="info" [subtitle]="'elt.baseSub' | t" />
@@ -28,14 +28,14 @@
   <div class="elt-compact-row">
     <section class="panel panel-controls">
       <div class="panel-header">
-        <h2>{{ 'elt.fullPipeline' | t }}</h2>
-        <span class="panel-meta">{{ 'elt.stepsMeta' | t }}</span>
+        <h2>{{ 'elt.fullPipeline' | t:lang() }}</h2>
+        <span class="panel-meta">{{ 'elt.stepsMeta' | t:lang() }}</span>
       </div>
-      <p class="control-desc">{{ 'elt.desc' | t }}</p>
-      <p class="control-note">{{ 'elt.note' | t }}</p>
+      <p class="control-desc">{{ 'elt.desc' | t:lang() }}</p>
+      <p class="control-note">{{ 'elt.note' | t:lang() }}</p>
       <div class="data-explainer">
-        <span>{{ 'elt.catalogExplainer' | t:{ count: fmt(summary()?.total_tracks) } }}</span>
-        <span>{{ 'elt.eventsExplainer' | t:{ count: fmt(totalEventCount()) } }}</span>
+        <span>{{ 'elt.catalogExplainer' | t: { count: fmt(summary()?.total_tracks) }:lang() }}</span>
+        <span>{{ 'elt.eventsExplainer' | t: { count: fmt(totalEventCount()) }:lang() }}</span>
       </div>
 
       @if (volumeValidation().message) {
@@ -53,17 +53,17 @@
           (click)="applyIncrement(100000)">
           +100K
         </button>
-        <span class="increment-hint">→ {{ fmt(baseTrackCount() + 100000) }} {{ 'elt.totalSuffix' | t }}</span>
+        <span class="increment-hint">→ {{ fmt(baseTrackCount() + 100000) }} {{ 'elt.totalSuffix' | t:lang() }}</span>
       </div>
 
       <div class="mode-row">
         <button type="button" class="mode-btn" [class.active]="volumeMode() === 'multiplier'"
           [disabled]="pipelineState() === 'running'" (click)="setVolumeMode('multiplier')">
-          {{ 'elt.multiplier' | t }}
+          {{ 'elt.multiplier' | t:lang() }}
         </button>
         <button type="button" class="mode-btn" [class.active]="volumeMode() === 'custom'"
           [disabled]="pipelineState() === 'running'" (click)="setVolumeMode('custom')">
-          {{ 'elt.custom' | t }}
+          {{ 'elt.custom' | t:lang() }}
         </button>
       </div>
 
@@ -73,41 +73,41 @@
             <button type="button" class="preset-btn" [class.active]="selectedMultiplier() === p.key"
               [disabled]="pipelineState() === 'running'" (click)="selectMultiplier(p.key)">
               <span class="preset-label">{{ p.label }}</span>
-              <span class="preset-sub">{{ fmt(baseTrackCount() * p.key) }} {{ 'elt.totalSuffix' | t }}</span>
+              <span class="preset-sub">{{ fmt(baseTrackCount() * p.key) }} {{ 'elt.totalSuffix' | t:lang() }}</span>
             </button>
           }
         </div>
       } @else {
         <div class="custom-target-row">
-          <label class="custom-label" for="customTarget">{{ 'elt.customTarget' | t }}</label>
+          <label class="custom-label" for="customTarget">{{ 'elt.customTarget' | t:lang() }}</label>
           <input id="customTarget" class="custom-input" type="number" min="1"
             [max]="limits()?.max_target_total ?? 5000000" step="1000"
             [value]="customTarget()" [disabled]="pipelineState() === 'running'"
             (input)="onCustomTargetInput($event)" />
-          <span class="delta-hint">{{ 'elt.generate' | t:{ count: fmt(tracksToCreate()) } }}</span>
+          <span class="delta-hint">{{ 'elt.generate' | t: { count: fmt(tracksToCreate()) }:lang() }}</span>
         </div>
         <div class="quick-targets">
           <button type="button" class="quick-btn" [class.active]="customTarget() === 1_600_000"
             [disabled]="pipelineState() === 'running'" (click)="applyQuickTarget(1600000)">
-            {{ 'elt.quickTarget' | t }}
+            {{ 'elt.quickTarget' | t:lang() }}
           </button>
         </div>
       }
       <div class="btn-row">
         <button type="button" class="btn-primary" [disabled]="!canRunPipeline()" (click)="runPipeline()">
           @if (pipelineState() === 'running') {
-            <span class="spinner"></span> {{ 'elt.running' | t }}
+            <span class="spinner"></span> {{ 'elt.running' | t:lang() }}
           } @else {
-            ▶ {{ 'elt.run' | t }}
+            ▶ {{ 'elt.run' | t:lang() }}
           }
         </button>
         <button type="button" class="btn-ghost"
           [disabled]="pipelineState() === 'running' || !apiConnected()"
           (click)="importFromPocketBaseOnly()">
-          {{ 'elt.pocketbaseOnly' | t }}
+          {{ 'elt.pocketbaseOnly' | t:lang() }}
         </button>
         <button type="button" class="btn-ghost" [disabled]="pipelineState() === 'running'" (click)="resetPipeline()">
-          {{ 'elt.reset' | t }}
+          {{ 'elt.reset' | t:lang() }}
         </button>
       </div>
       @if (runProgress() > 0) {
@@ -120,7 +120,7 @@
 
     <section class="panel panel-steps">
       <div class="panel-header">
-        <h2>{{ 'elt.flow' | t }}</h2>
+        <h2>{{ 'elt.flow' | t:lang() }}</h2>
         <span class="panel-meta">{{ estimatedDuration() }}</span>
       </div>
       <div class="steps-inline">
@@ -133,20 +133,20 @@
           @if (!last) { <span class="step-arrow">→</span> }
         }
       </div>
-      <p class="timeline-note">{{ 'elt.timelineNote' | t }}</p>
+      <p class="timeline-note">{{ 'elt.timelineNote' | t:lang() }}</p>
       <div class="wh-mini">
-        <span><strong>{{ fmt(summary()?.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
-        <span><strong>{{ fmt(summary()?.total_generos) }}</strong> {{ 'home.rail.genres' | t }}</span>
-        <span><strong>{{ fmt(summary()?.total_albumes) }}</strong> {{ 'home.rail.albums' | t }}</span>
-        <span class="wh-health" [style.color]="healthColor(warehouseHealth())">{{ warehouseHealth() }}% {{ 'elt.health' | t }}</span>
+        <span><strong>{{ fmt(summary()?.total_artistas) }}</strong> {{ 'home.stat.artists' | t:lang() }}</span>
+        <span><strong>{{ fmt(summary()?.total_generos) }}</strong> {{ 'home.rail.genres' | t:lang() }}</span>
+        <span><strong>{{ fmt(summary()?.total_albumes) }}</strong> {{ 'home.rail.albums' | t:lang() }}</span>
+        <span class="wh-health" [style.color]="healthColor(warehouseHealth())">{{ warehouseHealth() }}% {{ 'elt.health' | t:lang() }}</span>
       </div>
-      <p class="steps-note">{{ 'elt.stepsNote' | t }}</p>
+      <p class="steps-note">{{ 'elt.stepsNote' | t:lang() }}</p>
     </section>
   </div>
 
   <section class="panel terminal-panel compact-terminal">
     <div class="panel-header">
-      <h2>{{ 'elt.terminal' | t }}</h2>
+      <h2>{{ 'elt.terminal' | t:lang() }}</h2>
       <span class="panel-meta">{{ logs().length }} líneas · {{ lastExecutionLabel() }}</span>
     </div>
     <div class="terminal">
@@ -156,7 +156,7 @@
       </div>
       <div class="terminal-body">
         @if (!logs().length) {
-          <div class="terminal-empty">{{ 'elt.terminalEmpty' | t }}</div>
+          <div class="terminal-empty">{{ 'elt.terminalEmpty' | t:lang() }}</div>
         }
         @for (entry of logs(); track $index) {
           <div class="terminal-line">

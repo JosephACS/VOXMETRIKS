@@ -1,3 +1,4 @@
+import { I18nService } from '../../core/services/i18n.service';
 import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -25,6 +26,7 @@ type HistoryTab = 'music' | 'user' | 'search';
   styleUrls: ['./history.component.css'],
 })
 export class HistoryComponent implements OnInit, OnDestroy {
+  readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -86,9 +88,10 @@ export class HistoryComponent implements OnInit, OnDestroy {
         this.hub.set(d);
         this.isLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.hasError.set(true);
         this.isLoading.set(false);
+        console.error('[HistoryComponent] getHistoryHub failed', err);
       },
     });
   }
