@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ReadCache } from '../../../core/http/read-cache';
 import {
   PlaylistSummary, PlaylistDetail, PlaylistCreate, PlaylistUpdate, DeleteResponse,
 } from '../../../shared/models/api.models';
@@ -10,9 +11,14 @@ import {
 export class PlaylistsService {
   private readonly http = inject(HttpClient);
   private readonly API = `${environment.apiUrl}/playlists`;
+  private readonly listCache = new ReadCache<PlaylistSummary[]>();
 
   list(): Observable<PlaylistSummary[]> {
-    return this.http.get<PlaylistSummary[]>(this.API);
+    return this.listCache.get(() => this.http.get<PlaylistSummary[]>(this.API));
+  }
+
+  private invalidateList(): void {
+    this.listCache.invalidate();
   }
 
   get(id: number): Observable<PlaylistDetail> {
@@ -20,22 +26,32 @@ export class PlaylistsService {
   }
 
   create(body: PlaylistCreate): Observable<PlaylistSummary> {
-    return this.http.post<PlaylistSummary>(this.API, body);
+    return this.http.post<PlaylistSummary>(this.API, body).pipe(
+      tap(() => this.invalidateList()),
+    );
   }
 
   addTrack(playlistId: number, trackId: number): Observable<{ added: boolean }> {
-    return this.http.post<{ added: boolean }>(`${this.API}/${playlistId}/tracks`, { track_id: trackId });
+    return this.http.post<{ added: boolean }>(`${this.API}/${playlistId}/tracks`, { track_id: trackId }).pipe(
+      tap(() => this.invalidateList()),
+    );
   }
 
   removeTrack(playlistId: number, trackId: number): Observable<{ removed: boolean }> {
-    return this.http.delete<{ removed: boolean }>(`${this.API}/${playlistId}/tracks/${trackId}`);
+    return this.http.delete<{ removed: boolean }>(`${this.API}/${playlistId}/tracks/${trackId}`).pipe(
+      tap(() => this.invalidateList()),
+    );
   }
 
   update(id: number, body: PlaylistUpdate): Observable<PlaylistSummary> {
-    return this.http.put<PlaylistSummary>(`${this.API}/${id}`, body);
+    return this.http.put<PlaylistSummary>(`${this.API}/${id}`, body).pipe(
+      tap(() => this.invalidateList()),
+    );
   }
 
   delete(id: number): Observable<DeleteResponse> {
-    return this.http.delete<DeleteResponse>(`${this.API}/${id}`);
+    return this.http.delete<DeleteResponse>(`${this.API}/${id}`).pipe(
+      tap(() => this.invalidateList()),
+    );
   }
 }

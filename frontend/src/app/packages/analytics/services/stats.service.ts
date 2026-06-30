@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ReadCache } from '../../../core/http/read-cache';
 import {
   StatsSummary, TopTrack, DistribucionEnergia, LoadRecord, GeneroPopularidad,
   SyntheticResult, SyntheticLimits, CatalogGrowthPoint,
@@ -15,14 +16,34 @@ import {
 export class StatsService {
   private readonly http = inject(HttpClient);
   private readonly BASE = `${environment.apiUrl}/stats`;
+  private readonly summaryCache = new ReadCache<StatsSummary>();
+  private readonly growthCache = new ReadCache<CatalogGrowthPoint[]>();
+  private readonly topTracksCaches = new Map<number, ReadCache<TopTrack[]>>();
 
   getSummary(): Observable<StatsSummary> {
-    return this.http.get<StatsSummary>(`${this.BASE}/summary`);
+    return this.summaryCache.get(() => this.http.get<StatsSummary>(`${this.BASE}/summary`));
+  }
+
+  invalidateSummary(): void {
+    this.summaryCache.invalidate();
   }
 
   getTopTracks(limit = 10): Observable<TopTrack[]> {
+    let cache = this.topTracksCaches.get(limit);
+    if (!cache) {
+      cache = new ReadCache<TopTrack[]>();
+      this.topTracksCaches.set(limit, cache);
+    }
     const params = new HttpParams().set('limit', limit);
-    return this.http.get<TopTrack[]>(`${this.BASE}/top-tracks`, { params });
+    return cache.get(() => this.http.get<TopTrack[]>(`${this.BASE}/top-tracks`, { params }));
+  }
+
+  invalidateTopTracks(limit?: number): void {
+    if (limit != null) {
+      this.topTracksCaches.get(limit)?.invalidate();
+      return;
+    }
+    this.topTracksCaches.forEach((c) => c.invalidate());
   }
 
   getEnergyDistribution(): Observable<DistribucionEnergia[]> {
@@ -53,8 +74,14 @@ export class StatsService {
   }
 
   getCatalogGrowth(months = 12): Observable<CatalogGrowthPoint[]> {
-    const params = new HttpParams().set('months', months);
-    return this.http.get<CatalogGrowthPoint[]>(`${this.BASE}/catalog-growth`, { params });
+    return this.growthCache.get(() => {
+      const params = new HttpParams().set('months', months);
+      return this.http.get<CatalogGrowthPoint[]>(`${this.BASE}/catalog-growth`, { params });
+    });
+  }
+
+  invalidateCatalogGrowth(): void {
+    this.growthCache.invalidate();
   }
 
   getWarehouseStatus(): Observable<WarehouseStatus> {
@@ -80,10 +107,7 @@ export class StatsService {
 
   getTablePreview(table: string, page = 1, limit = 8): Observable<TablePreview> {
     const params = new HttpParams().set('page', page).set('limit', limit);
-    return this.http.get<TablePreview>(
-      `${environment.apiUrl}/analytics/explorer/preview/${encodeURIComponent(table)}`,
-      { params },
-    );
+    return this.http.get<TablePreview>(`${environment.apiUrl}/analytics/explorer/preview/${table}`, { params });
   }
 
   getRecommendations(limit = 12, mood?: string): Observable<RecommendationPayload> {
@@ -93,11 +117,10 @@ export class StatsService {
   }
 
   getHealth(): Observable<HealthResponse> {
-    const root = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
-    return this.http.get<HealthResponse>(`${root}/health`);
+    return this.http.get<HealthResponse>(`${this.BASE}/health`);
   }
 
-  getHistoryHub(limit = 25): Observable<HistoryHub> {
+  getHistoryHub(limit = 30): Observable<HistoryHub> {
     const params = new HttpParams().set('limit', limit);
     return this.http.get<HistoryHub>(`${environment.apiUrl}/analytics/history`, { params });
   }
