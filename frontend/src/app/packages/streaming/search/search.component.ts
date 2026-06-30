@@ -1,6 +1,7 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +15,8 @@ import { DataSourceBadgeComponent } from '../../../shared/components/data-source
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { displayTrackTitle } from '../../../shared/utils/track-display.util';
 import { SearchHistoryService } from '../services/search-history.service';
+import { Subject, combineLatest, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-search',
@@ -25,6 +28,8 @@ import { SearchHistoryService } from '../services/search-history.service';
 export class SearchComponent implements OnInit {
   private iconRender = inject(IconRenderService);
   private covers = inject(CoverArtService);
+  private destroyRef = inject(DestroyRef);
+  private search$ = new Subject<string>();
 
   query = signal('');
   trackResults = signal<TrackSearchResult[]>([]);
@@ -33,7 +38,6 @@ export class SearchComponent implements OnInit {
   searched = signal(false);
   hasError = signal(false);
   errorMessage = signal('');
-  private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -43,72 +47,73 @@ export class SearchComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.route.queryParamMap.subscribe((pm) => {
+    this.search$.pipe(
+      debounceTime(350),
+      distinctUntilChanged(),
+      tap((q) => {
+        const term = q.trim();
+        if (!term) {
+          this.trackResults.set([]);
+          this.artistResults.set([]);
+          this.searched.set(false);
+          this.hasError.set(false);
+          this.errorMessage.set('');
+          this.isLoading.set(false);
+        }
+      }),
+      switchMap((q) => {
+        const term = q.trim();
+        if (!term) return of(null);
+        this.isLoading.set(true);
+        this.searched.set(true);
+        this.hasError.set(false);
+        this.errorMessage.set('');
+        return combineLatest([
+          this.tracksSvc.searchTracks(term, 100).pipe(
+            map((d) => ({ ok: true as const, items: d ?? [] })),
+            catchError(() => of({ ok: false as const, items: [] as TrackSearchResult[] })),
+          ),
+          this.artistsSvc.listArtists(1, 20, term).pipe(
+            map((res) => ({ ok: true as const, items: res.items ?? [] })),
+            catchError(() => of({ ok: false as const, items: [] as Artista[] })),
+          ),
+        ]).pipe(map(([tracks, artists]) => ({ term, tracks, artists })));
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((result) => {
+      if (!result) return;
+      const { term, tracks, artists } = result;
+      this.trackResults.set(tracks.items);
+      this.artistResults.set(artists.items);
+      this.isLoading.set(false);
+      const failed = (tracks.ok ? 0 : 1) + (artists.ok ? 0 : 1);
+      if (failed > 0) {
+        this.hasError.set(true);
+        this.errorMessage.set(
+          failed === 2
+            ? 'No se pudo consultar el catálogo. Verifica que el backend esté activo.'
+            : 'Algunos resultados no se pudieron cargar. Intenta nuevamente.',
+        );
+      } else {
+        this.searchHistory.add(term, tracks.items.length, artists.items.length);
+      }
+    });
+
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((pm) => {
       const q = pm.get('q') ?? '';
       this.query.set(q);
-      if (q.trim()) this.runSearch(q);
+      if (q.trim()) this.search$.next(q);
     });
   }
 
   onInput(val: string) {
     this.query.set(val);
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.runSearch(val), 350);
+    this.search$.next(val);
   }
 
   runSearch(q: string) {
-    if (!q.trim()) {
-      this.trackResults.set([]);
-      this.artistResults.set([]);
-      this.searched.set(false);
-      this.hasError.set(false);
-      this.errorMessage.set('');
-      return;
-    }
-    this.isLoading.set(true);
-    this.searched.set(true);
-    this.hasError.set(false);
-    this.errorMessage.set('');
-    const term = q.trim();
-    let pending = 2;
-    let trackCount = 0;
-    let artistCount = 0;
-    let failed = 0;
-    const done = () => {
-      if (--pending <= 0) {
-        this.isLoading.set(false);
-        if (failed > 0) {
-          this.hasError.set(true);
-          this.errorMessage.set(
-            failed === 2
-              ? 'No se pudo consultar el catálogo. Verifica que el backend esté activo.'
-              : 'Algunos resultados no se pudieron cargar. Intenta nuevamente.',
-          );
-        } else {
-          this.searchHistory.add(term, trackCount, artistCount);
-        }
-      }
-    };
-
-    this.tracksSvc.searchTracks(term, 100).subscribe({
-      next: (d) => {
-        const items = d ?? [];
-        trackCount = items.length;
-        this.trackResults.set(items);
-        done();
-      },
-      error: () => { failed += 1; this.trackResults.set([]); done(); },
-    });
-
-    this.artistsSvc.listArtists(1, 20, term).subscribe({
-      next: (res) => {
-        const items = res.items ?? [];
-        artistCount = items.length;
-        this.artistResults.set(items);
-        done();
-      },
-      error: () => { failed += 1; this.artistResults.set([]); done(); },
-    });
+    this.query.set(q);
+    this.search$.next(q);
   }
 
   retrySearch() {
