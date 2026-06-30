@@ -112,14 +112,12 @@ export class ArtistDetailComponent implements OnInit {
     this.fetchTracks(id, this.trackPage() + 1, false);
   }
 
+  trackQueue = computed(() => this.tracks().map((t) => this.player.fromTrack(t)));
+
   playAll() {
     const queue = this.trackQueue();
     if (!queue.length) return;
     this.player.playTrack(queue[0], queue);
-  }
-
-  trackQueue() {
-    return this.tracks().map((t) => this.player.fromTrack(t));
   }
 
   icon(key: string, size = 18): SafeHtml {

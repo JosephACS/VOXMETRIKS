@@ -160,9 +160,7 @@ export class TrendingComponent implements OnInit {
     return this.iconRender.render(key, size);
   }
 
-  trackQueue() {
-    return this.tracks().map((t) => this.player.fromTopTrack(t));
-  }
+  trackQueue = computed(() => this.tracks().map((t) => this.player.fromTopTrack(t)));
 
   playHero() {
     const hero = this.topTrack();

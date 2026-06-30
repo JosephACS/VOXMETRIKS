@@ -3,7 +3,7 @@ import { IconRenderService } from '../../../shared/services/icon-render.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -28,6 +28,8 @@ export class TracksComponent implements OnInit {
   private iconRender = inject(IconRenderService);
   protected readonly auth = inject(AuthService);
   player = inject(MusicPlayerService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   tracks      = signal<Track[]>([]);
   genres      = signal<Genero[]>([]);
@@ -39,6 +41,10 @@ export class TracksComponent implements OnInit {
   limit       = 50;
   serverTotal = signal(0);
   searchVal   = signal('');
+  genreFilterId   = signal<number | null>(null);
+  genreFilterName = signal<string>('');
+  artistFilterId   = signal<number | null>(null);
+  artistFilterName = signal<string>('');
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   totalPages   = computed(() => Math.max(1, Math.ceil(this.serverTotal() / this.limit)));
@@ -57,17 +63,37 @@ export class TracksComponent implements OnInit {
   constructor(private svc: TracksService, private genresSvc: GenresService, private artistsSvc: ArtistsService) {}
 
   ngOnInit() {
-    this.loadTracks();
+    this.route.queryParamMap.subscribe((pm) => {
+      const gid = pm.get('genre_id');
+      const aid = pm.get('artist_id');
+      this.genreFilterId.set(gid ? Number(gid) : null);
+      this.genreFilterName.set(pm.get('genre_name') ?? '');
+      this.artistFilterId.set(aid ? Number(aid) : null);
+      this.artistFilterName.set(pm.get('artist_name') ?? '');
+      this.page.set(1);
+      this.loadTracks();
+    });
     if (this.auth.isCatalogSteward()) {
       this.genresSvc.getGenres({ limit: 500 }).subscribe({ next: r => this.genres.set(r.items ?? []), error: () => {} });
       this.artistsSvc.listArtists(1, 500).subscribe({ next: r => this.artists.set(r.items ?? []), error: () => {} });
     }
   }
 
+  hasActiveFilter = computed(() => this.genreFilterId() != null || this.artistFilterId() != null);
+
+  clearFilters() {
+    this.router.navigate(['/tracks']);
+  }
+
   loadTracks() {
     this.isLoading.set(true);
     this.hasError.set(false);
-    this.svc.listTracks(this.page(), this.limit, this.searchVal() || undefined).subscribe({
+    this.svc.listTracks(
+      this.page(), this.limit,
+      this.searchVal() || undefined,
+      this.genreFilterId() ?? undefined,
+      this.artistFilterId() ?? undefined,
+    ).subscribe({
       next: (res: PaginatedResponse<Track>) => {
         this.tracks.set(res.items ?? []);
         this.serverTotal.set(res.total ?? 0);
@@ -104,9 +130,7 @@ export class TracksComponent implements OnInit {
   trackGenreName(t: Track): string {
     return t.nombre_genero?.trim() || (t.id_genero ? `#${t.id_genero}` : '');
   }
-  trackQueue() {
-    return this.tracks().map((t) => this.player.fromTrack(t));
-  }
+  trackQueue = computed(() => this.tracks().map((t) => this.player.fromTrack(t)));
   skeletonRows = Array(12).fill(0);
 
   openCreate() { if (!this.auth.isCatalogSteward()) return; this.formName.set(''); this.formArtist.set(null); this.formGenre.set(null); this.formExplicit.set(false); this.formDuration.set(null); this.formError.set(''); this.modalMode.set('create'); }

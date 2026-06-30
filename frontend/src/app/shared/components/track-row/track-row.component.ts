@@ -1,22 +1,29 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, OnInit, DestroyRef, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FavoriteBtnComponent } from '../favorite-btn/favorite-btn.component';
 import { MusicPlayerService } from '../../services/music-player.service';
 import { CoverArtService } from '../../services/cover-art.service';
+import { TrackCoverService } from '../../services/track-cover.service';
 import { PlayableTrack } from '../../models/player.models';
 
 @Component({
   selector: 'app-track-row',
   standalone: true,
   imports: [CommonModule, RouterModule, FavoriteBtnComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="track-row" [class.playing]="isPlaying" (click)="play()">
+    <div class="track-row" [class.playing]="player.currentTrack()?.id === track.id" (click)="play()">
       <span class="tr-index">{{ index }}</span>
       <button type="button" class="tr-cover" [style.background]="track.coverGradient" (click)="play($event)">
-        <span class="cover-initial tr-cover-letter">{{ coverArt.initialFor(track.title) }}</span>
+        @if (coverUrl()) {
+          <img class="tr-cover-img" [src]="coverUrl()" [alt]="track.title" loading="lazy" (error)="coverUrl.set(null)" />
+        } @else {
+          <span class="cover-initial tr-cover-letter">{{ coverArt.initialFor(track.title) }}</span>
+        }
         <span class="tr-cover-overlay">
-          @if (isPlaying && player.isPlaying()) {
+          @if (player.currentTrack()?.id === track.id && player.isPlaying()) {
             <span class="eq-bars"><span></span><span></span><span></span></span>
           } @else {
             <svg class="play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -26,8 +33,8 @@ import { PlayableTrack } from '../../models/player.models';
       <div class="tr-main">
         <a class="tr-title" [routerLink]="['/tracks', track.id]" (click)="$event.stopPropagation()">{{ track.title }}</a>
         <span class="tr-artist">{{ track.artist }}</span>
-        @if (energy != null) {
-          <span class="tr-meta">Energía {{ energy | number:'1.0-0' }}%</span>
+        @if (energyPct != null) {
+          <span class="tr-meta">Energía {{ energyPct }}%</span>
         }
       </div>
       @if (track.explicit) { <span class="tr-explicit">E</span> }
@@ -79,6 +86,14 @@ import { PlayableTrack } from '../../models/player.models';
     .tr-cover-letter {
       font-size: 0.9375rem;
       font-weight: 700;
+      z-index: 0;
+    }
+    .tr-cover-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       z-index: 0;
     }
     .tr-cover-overlay {
@@ -178,9 +193,11 @@ import { PlayableTrack } from '../../models/player.models';
     }
   `],
 })
-export class TrackRowComponent {
+export class TrackRowComponent implements OnInit {
   player = inject(MusicPlayerService);
   coverArt = inject(CoverArtService);
+  private coverSvc = inject(TrackCoverService);
+  private destroyRef = inject(DestroyRef);
 
   @Input({ required: true }) track!: PlayableTrack;
   @Input() index = 1;
@@ -189,8 +206,20 @@ export class TrackRowComponent {
   @Input() popularity?: number | null;
   @Input() energy?: number | null;
 
-  get isPlaying(): boolean {
-    return this.player.currentTrack()?.id === this.track.id;
+  coverUrl = signal<string | null>(null);
+
+  /** Energy llega en escala 0-1 (Spotify); lo normalizamos a porcentaje 0-100. */
+  get energyPct(): number | null {
+    if (this.energy == null) return null;
+    const pct = this.energy <= 1 ? this.energy * 100 : this.energy;
+    return Math.round(pct);
+  }
+
+  ngOnInit(): void {
+    if (this.track?.id == null || this.track.id < 0) return;
+    this.coverSvc.cover$(this.track.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((url) => this.coverUrl.set(url));
   }
 
   get durationLabel(): string {

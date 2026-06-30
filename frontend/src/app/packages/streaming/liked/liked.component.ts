@@ -1,6 +1,6 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../services/favorites.service';
@@ -54,16 +54,16 @@ export class LikedComponent implements OnInit {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  likedQueue(): PlayableTrack[] {
-    return this.tracks().map((t) => ({
+  likedQueue = computed((): PlayableTrack[] =>
+    this.tracks().map((t) => ({
       id: t.id_track,
       title: t.nombre_track ?? '—',
       artist: t.nombre_artista ?? '—',
       durationMs: t.duration_ms,
       audioUrl: `/assets/audio/demo-${String((t.id_track % 8) + 1).padStart(2, '0')}.wav`,
       coverGradient: this.covers.gradientFor(t.id_track),
-    }));
-  }
+    })),
+  );
 
   playAll() {
     const q = this.likedQueue();
