@@ -2,62 +2,312 @@
   <div class="home-main">
     <header class="home-hero">
       <div class="hero-glow"></div>
-      <div class="hero-text">
-        <p class="hero-greet">{{ greetingKey() | t }}</p>
-        <h1>{{ 'home.title' | t }}</h1>
-        <p class="hero-sub">{{ 'home.subtitle' | t }}</p>
+      <div class="hero-top">
+        <div class="hero-text">
+          <p class="hero-greet">{{ greetingKey() | t }}, <span class="hero-user">{{ userName() }}</span></p>
+          <h1>{{ 'home.title' | t }}</h1>
+          <p class="hero-sub">{{ 'home.subtitle' | t }}</p>
+        </div>
+        @if (summary(); as s) {
+          <div class="hero-stats">
+            <div class="hero-stat hero-stat--accent">
+              <strong>{{ fmt(s.total_events ?? s.total_streams ?? s.total_tracks) }}</strong>
+              <span>{{ 'home.stat.events' | t }}</span>
+            </div>
+            <div class="hero-stat">
+              <strong>{{ fmt(s.total_tracks) }}</strong>
+              <span>{{ 'home.stat.tracks' | t }}</span>
+            </div>
+            <div class="hero-stat">
+              <strong>{{ fmt(s.total_artistas) }}</strong>
+              <span>{{ 'home.stat.artists' | t }}</span>
+            </div>
+            <div class="hero-stat">
+              <strong>{{ fmt(s.total_albumes) }}</strong>
+              <span>{{ 'home.stat.albums' | t }}</span>
+            </div>
+            <div class="hero-stat">
+              <strong>{{ fmt(playlists().length) }}</strong>
+              <span>{{ 'home.stat.playlists' | t }}</span>
+            </div>
+          </div>
+        } @else if (summaryLoading()) {
+          <div class="hero-stats hero-stats--loading" aria-hidden="true">
+            @for (i of heroStatSkels; track i) {
+              <div class="skel home-skel--stat"></div>
+            }
+          </div>
+        }
       </div>
-      <a routerLink="/search" class="hero-search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        {{ 'home.searchPlaceholder' | t }}
-      </a>
+
+      <div class="hero-chips">
+        <span class="hero-chip hero-chip--accent">{{ userPlan() }}</span>
+        @if (listenStreak() > 0) {
+          <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ 'home.chip.streak' | t:{ count: listenStreak() } }}</span>
+        }
+        <span class="hero-chip" [attr.title]="'home.tip.estimated' | t">{{ 'home.chip.today' | t:{ min: listenMinutesToday() } }}</span>
+        <span class="hero-chip" [attr.title]="'home.tip.demoSample' | t">{{ 'home.chip.weeklyGoal' | t:{ pct: weeklyGoalPct() } }}</span>
+        <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ 'home.chip.explorer' | t:{ level: explorerLevel() } }}</span>
+      </div>
+
+      <div class="hero-toolbar">
+        <a routerLink="/search" class="hero-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {{ 'home.searchPlaceholder' | t }}
+        </a>
+        <nav class="discover-shortcuts" [attr.aria-label]="'home.section.discover' | t">
+          <a routerLink="/tracks" class="discover-chip discover-chip--primary">{{ 'home.discover.catalog' | t }}</a>
+          <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t }}</a>
+        </nav>
+      </div>
     </header>
 
-    @if (summary(); as s) {
-      <div class="home-quick-stats">
-        <span class="stat-chip"><strong>{{ fmt(s.total_tracks) }}</strong> {{ 'home.stat.tracks' | t }}</span>
-        <span class="stat-chip"><strong>{{ fmt(s.total_streams) }}</strong> {{ 'home.stat.streams' | t }}</span>
-        <span class="stat-chip"><strong>{{ fmt(s.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
+    @if (hasError()) {
+      <div class="home-state home-state--error" role="alert">
+        <strong>{{ 'home.error' | t }}</strong>
+        <p>{{ 'home.errorHint' | t }}</p>
+        <a routerLink="/tracks" class="home-state-link">{{ 'home.viewCatalog' | t }}</a>
       </div>
-      <nav class="discover-shortcuts" [attr.aria-label]="'home.section.discover' | t">
-        <a routerLink="/tracks" class="discover-chip discover-chip--primary">{{ 'home.discover.catalog' | t }}</a>
-        <a routerLink="/search" class="discover-chip">{{ 'home.discover.search' | t }}</a>
-        <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t }}</a>
-      </nav>
     }
 
-    @if (isLoading()) {
-      <div class="home-state home-state--loading" role="status">
-        <span class="home-state-spinner" aria-hidden="true"></span>
-        {{ 'home.loading' | t }}
-      </div>
-    } @else {
-      @if (hasError()) {
-        <div class="home-state home-state--error" role="alert">
-          <strong>{{ 'home.error' | t }}</strong>
-          <p>{{ 'home.errorHint' | t }}</p>
-          <a routerLink="/tracks" class="home-state-link">{{ 'home.viewCatalog' | t }}</a>
+    <div class="home-feed" [class.vm-content-ready]="initialLoadDone()">
+      <section class="analytics-band">
+        <div class="sec-head">
+          <h2>{{ 'home.rail.title' | t }}</h2>
+          <a routerLink="/analytics">{{ 'home.rail.viewMore' | t }}</a>
         </div>
-      }
 
-    <div class="home-feed">
-      @if (history().length) {
-        <app-horizontal-section [title]="'home.section.recent' | t" [subtitle]="'home.section.recentSub' | t">
-          @for (h of history(); track h.id_track) {
-            <app-media-card
-              [title]="cleanTitle(h.nombre_track)"
-              [subtitle]="h.nombre_artista ?? '—'"
-              [gradient]="cover(h.id_track)"
-              [link]="'/tracks/' + h.id_track"
-              [track]="historyPlayable(h)"
-            />
+        @if (summary(); as s) {
+          <div class="kpi-strip">
+            <app-kpi-card [label]="'home.kpi.tracks' | t" [value]="s.total_tracks" iconKey="music" color="primary"
+              [subtitle]="'home.kpi.tracksSub' | t" [tooltip]="'home.kpi.tracksTip' | t"
+              [trend]="kpiTrend('tracks')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.artists' | t" [value]="s.total_artistas" iconKey="users" color="info"
+              [subtitle]="'home.kpi.artistsSub' | t" [tooltip]="'home.kpi.artistsTip' | t"
+              [trend]="kpiTrend('artists')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.albums' | t" [value]="s.total_albumes" iconKey="album" color="secondary"
+              [subtitle]="'home.kpi.albumsSub' | t" [tooltip]="'home.kpi.albumsTip' | t"
+              [trend]="kpiTrend('albums')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.playlists' | t" [value]="playlists().length" iconKey="playlist" color="primary"
+              [subtitle]="'home.kpi.playlistsSub' | t" [tooltip]="'home.kpi.playlistsTip' | t"
+              [trend]="kpiTrend('playlists')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.streams' | t" [value]="s.total_streams ?? null" iconKey="play" color="info"
+              [subtitle]="'home.kpi.streamsSub' | t" [tooltip]="'home.kpi.streamsTip' | t"
+              [trend]="kpiTrend('streams')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.favorites' | t" [value]="favoritesCount()" iconKey="heart" color="warning"
+              [subtitle]="'home.kpi.favoritesSub' | t" [tooltip]="'home.kpi.favoritesTip' | t"
+              [trend]="kpiTrend('favorites')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.likes' | t" [value]="favoritesCount()" iconKey="star" color="primary"
+              [subtitle]="'home.kpi.likesSub' | t" [tooltip]="'home.kpi.likesTip' | t"
+              [trend]="kpiTrend('likes')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t" [trendPositive]="true"
+              [trendNote]="'home.badge.demo' | t" [trendNoteTip]="'home.kpi.trendDemoTip' | t" />
+            <app-kpi-card [label]="'home.kpi.minutesToday' | t" [value]="listenMinutesToday()" iconKey="clock" color="secondary"
+              [subtitle]="'home.kpi.todaySub' | t" [tooltip]="'home.kpi.todayTip' | t"
+              [note]="'home.badge.activity' | t" [noteTip]="'home.kpi.todayActivityTip' | t" />
+          </div>
+        } @else if (summaryLoading()) {
+          <div class="kpi-strip kpi-strip--loading" aria-hidden="true">
+            @for (i of kpiSkels; track i) {
+              <div class="skel home-skel--kpi"></div>
+            }
+          </div>
+        }
+
+        <div class="widgets-grid">
+          <div class="widget-card">
+            <div class="widget-head">{{ 'home.widget.catalogGrowth' | t }}</div>
+            <p class="widget-context">{{ 'home.widget.catalogGrowthCtx' | t }}</p>
+            @if (growthValues().length) {
+              <svg viewBox="0 0 440 72" class="mini-chart" aria-hidden="true">
+                <defs>
+                  <linearGradient id="homeArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <polygon [attr.points]="sparkArea()" fill="url(#homeArea)"/>
+                <polyline [attr.points]="sparkLine()" fill="none" stroke="#1ed896" stroke-width="2"/>
+              </svg>
+            } @else {
+              <p class="chart-empty">{{ 'home.rail.chartEmpty' | t }}</p>
+            }
+          </div>
+
+          <div class="widget-card">
+            <div class="widget-head">
+              {{ 'home.widget.byHour' | t }}
+              @if (hasHistoryData()) {
+                <span class="widget-tag">{{ 'home.widget.peakHour' | t:{ hour: peakHour() } }}</span>
+              }
+            </div>
+            <p class="widget-context">{{ 'home.widget.byHourCtx' | t }}</p>
+            @if (hasHistoryData()) {
+              <div class="bar-chart" aria-hidden="true">
+                @for (h of hourlyBuckets(); track $index) {
+                  <span class="bar-col" [class.bar-col--peak]="$index === peakHour()" [style.height.%]="barHeight(h)"
+                    [attr.title]="$index + 'h'"></span>
+                }
+              </div>
+              <div class="bar-axis" aria-hidden="true">
+                <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+              </div>
+            } @else {
+              <p class="chart-empty">{{ 'home.widget.noListens' | t }}</p>
+            }
+          </div>
+
+          <div class="widget-card">
+            <div class="widget-head">
+              {{ 'home.widget.byGenre' | t }}
+              <span class="widget-tag">{{ 'home.widget.tracksUnit' | t }}</span>
+            </div>
+            <p class="widget-context">{{ 'home.widget.byGenreCtx' | t }}</p>
+            <div class="genre-bars">
+              @for (g of genreBars(); track g.name) {
+                <div class="genre-bar-row" [attr.title]="('home.widget.genreTip' | t:{ name: g.name, count: g.tracks })">
+                  <span class="genre-bar-label">{{ g.name }}</span>
+                  <div class="genre-bar-track"><span [style.width.%]="g.pct"></span></div>
+                  <span class="genre-bar-val">{{ fmt(g.tracks) }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="widget-card widget-card--compact">
+            <div class="widget-head">{{ 'home.widget.topArtists' | t }}</div>
+            <p class="widget-context">{{ 'home.widget.topArtistsCtx' | t }}</p>
+            <ul class="mini-rank">
+              @for (a of artists().slice(0, 5); track a.id; let i = $index) {
+                <li [attr.title]="('home.widget.affinityTip' | t:{ pct: artistAffinity(i) })">
+                  <span class="rank-num">#{{ i + 1 }}</span>
+                  <span class="rank-name">{{ a.name }}</span>
+                  <span class="rank-pct">{{ artistAffinity(i) }}%</span>
+                </li>
+              }
+            </ul>
+          </div>
+
+          <div class="widget-card widget-card--compact">
+            <div class="widget-head">{{ 'home.widget.topGenres' | t }}</div>
+            <p class="widget-context">{{ 'home.widget.topGenresCtx' | t }}</p>
+            <ul class="mini-rank">
+              @for (g of genres().slice(0, 5); track g.id_genero; let i = $index) {
+                <li [attr.title]="('home.widget.popTip' | t:{ pop: g.popularidad_promedio?.toFixed(0) ?? '—' })">
+                  <span class="rank-num">#{{ i + 1 }}</span>
+                  <span class="rank-name">{{ g.nombre_genero }}</span>
+                  <span class="rank-pct">{{ g.popularidad_promedio?.toFixed(0) ?? '—' }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+
+          <div class="widget-card widget-card--compact">
+            <div class="widget-head">{{ 'home.widget.weeklyTime' | t }}</div>
+            <p class="widget-context">{{ 'home.widget.weeklyTimeCtx' | t }}</p>
+            <div class="weekly-ring" [attr.title]="('home.widget.weeklyTimeTip' | t:{ pct: weeklyTimePct() })">
+              <svg viewBox="0 0 80 80" aria-hidden="true">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+                <circle cx="40" cy="40" r="32" fill="none" stroke="#1ed896" stroke-width="6"
+                  stroke-linecap="round"
+                  [attr.stroke-dasharray]="201"
+                  [attr.stroke-dashoffset]="201 - (201 * weeklyTimePct() / 100)"
+                  transform="rotate(-90 40 40)"/>
+              </svg>
+              <span class="weekly-ring-val">{{ weeklyTimePct() }}%</span>
+            </div>
+            <p class="widget-time">{{ weeklyTimeLabel() }}</p>
+            <p class="widget-foot">{{ 'home.widget.weeklyTimeFoot' | t }}</p>
+          </div>
+        </div>
+
+        <div class="side-panels">
+          @if (activityFeed().length) {
+            <div class="panel-card panel-card--activity">
+              <div class="panel-head">
+                <h3>{{ 'home.activity.title' | t }}</h3>
+                <a routerLink="/history">{{ 'home.viewAll' | t }}</a>
+              </div>
+              <ul class="activity-timeline">
+                @for (a of activityFeed(); track a.id_track + a.viewed_at) {
+                  <li>
+                    <span class="activity-time">{{ a.rel }}</span>
+                    <span class="activity-text">{{ a.label }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
           }
-        </app-horizontal-section>
+
+          <div class="panel-card panel-card--goal">
+            <div class="panel-head">
+              <h3>{{ 'home.goal.title' | t }}</h3>
+            </div>
+            <div class="goal-progress">
+              <div class="goal-bar">
+                <span [style.width.%]="weeklyGoalPct()"></span>
+              </div>
+              <div class="goal-meta">
+                <strong>{{ weeklyGoalPct() }}%</strong>
+                <span>{{ 'home.goal.progress' | t:{ current: weeklyDiscoverCount(), target: 100 } }}</span>
+              </div>
+            </div>
+            @if (topGenre() || topArtist()) {
+              <div class="rail-highlights">
+                @if (topGenre(); as g) {
+                  <a class="rail-pill" [routerLink]="['/genres']" [queryParams]="{ q: g }">
+                    <span class="rail-pill-label">{{ 'home.rail.topGenre' | t }}</span>
+                    <span class="rail-pill-value">{{ g }}</span>
+                  </a>
+                }
+                @if (topArtist(); as a) {
+                  <span class="rail-pill">
+                    <span class="rail-pill-label">{{ 'home.rail.topArtist' | t }}</span>
+                    <span class="rail-pill-value">{{ a }}</span>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      @if (history().length) {
+        <section class="feed-block">
+          <div class="sec-head">
+            <h2>{{ 'home.section.recent' | t }}</h2>
+            <a routerLink="/history">{{ 'home.viewAll' | t }}</a>
+          </div>
+          <div class="continue-grid">
+            @for (h of history(); track h.id_track) {
+              <button type="button" class="continue-tile" (click)="player.playTrack(historyPlayable(h))">
+                <span class="continue-cover" [style.background]="cover(h.id_track)">{{ initials(h.nombre_track) }}</span>
+                <span class="continue-body">
+                  <span class="continue-title">{{ cleanTitle(h.nombre_track) }}</span>
+                  <span class="continue-sub">{{ h.nombre_artista ?? '—' }}</span>
+                  <span class="continue-meta">
+                    <span>{{ trackDuration(h.id_track) }}</span>
+                    <span>{{ relativeTime(h.viewed_at) }}</span>
+                  </span>
+                  <span class="continue-progress"><span [style.width.%]="trackProgress(h.id_track)"></span></span>
+                </span>
+                <span class="continue-play" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </span>
+              </button>
+            }
+          </div>
+        </section>
       }
 
       @if (madeForYou().length) {
         <app-horizontal-section [title]="'home.section.forYou' | t" [subtitle]="'home.section.forYouSub' | t" link="/recommendations">
-          @for (t of madeForYou(); track t.id_track) {
+          @for (t of madeForYou(); track t.id_track; let i = $index) {
             <app-media-card
               [title]="cleanTitle(t.nombre_track)"
               [subtitle]="t.nombre_artista ?? '—'"
@@ -65,8 +315,83 @@
               [link]="'/tracks/' + t.id_track"
               [track]="player.fromTopTrack(t)"
               [queue]="madeForYouPlayable()"
+              [meta]="madeForYouReason(i)"
+            />
+          }
+        </app-horizontal-section>
+      }
+
+      @if (recoForYou().length) {
+        <app-horizontal-section [title]="'home.section.reco' | t" [subtitle]="'home.section.recoSub' | t" link="/recommendations">
+          @for (t of recoForYou(); track t.id_track; let i = $index) {
+            <app-media-card
+              [title]="cleanTitle(t.nombre_track)"
+              [subtitle]="t.nombre_artista ?? '—'"
+              [gradient]="cover('reco-' + t.id_track)"
+              [link]="'/tracks/' + t.id_track"
+              [track]="player.fromTrack(t)"
+              [queue]="recoForYouPlayable()"
+              [tag]="recoBadge(i)"
+              [meta]="recoMeta(t.id_track)"
+            />
+          }
+        </app-horizontal-section>
+      }
+
+      <section class="insight-strip" aria-label="resumen">
+        <div class="insight-card">
+          <span class="insight-ic" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>
+          </span>
+          <span class="insight-body">
+            <span class="insight-label">{{ 'home.insight.artistOfDay' | t }}</span>
+            <span class="insight-value">{{ artistOfDay() }}</span>
+          </span>
+        </div>
+        <div class="insight-card" [attr.title]="'home.tip.localActivity' | t">
+          <span class="insight-ic" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+          </span>
+          <span class="insight-body">
+            <span class="insight-label">{{ 'home.insight.streak' | t }}</span>
+            <span class="insight-value">{{ 'home.insight.streakVal' | t:{ count: listenStreak() } }}</span>
+          </span>
+        </div>
+        <div class="insight-card" [attr.title]="'home.tip.estimated' | t">
+          <span class="insight-ic" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <span class="insight-body">
+            <span class="insight-label">{{ 'home.insight.today' | t }}</span>
+            <span class="insight-value">{{ formatDuration(listenMinutesToday()) }}</span>
+          </span>
+        </div>
+        <div class="insight-card">
+          <span class="insight-ic" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </span>
+          <span class="insight-body">
+            <span class="insight-label">{{ 'home.insight.topGenre' | t }}</span>
+            <span class="insight-value">{{ topGenre() ?? '—' }}</span>
+          </span>
+        </div>
+      </section>
+
+      @if (discoverShown().length) {
+        <app-horizontal-section
+          [title]="'home.section.discover' | t"
+          [subtitle]="'home.section.discoverHint' | t"
+          link="/tracks"
+        >
+          @for (t of discoverShown(); track t.id_track) {
+            <app-media-card
+              [title]="cleanTitle(t.nombre_track)"
+              [subtitle]="t.nombre_artista ?? '—'"
+              [gradient]="cover('disc-' + t.id_track)"
+              [link]="'/tracks/' + t.id_track"
+              [track]="player.fromTrack(t)"
+              [queue]="discoverShownPlayable()"
               [badge]="t.popularity"
-              [meta]="energyMeta(t.energy)"
             />
           }
         </app-horizontal-section>
@@ -74,7 +399,7 @@
 
       @if (trending().length) {
         <app-horizontal-section [title]="'home.section.trending' | t" link="/trending">
-          @for (t of trending(); track t.id_track) {
+          @for (t of trending(); track t.id_track; let i = $index) {
             <app-media-card
               [title]="cleanTitle(t.nombre_track)"
               [subtitle]="t.nombre_artista ?? '—'"
@@ -83,26 +408,7 @@
               [track]="player.fromTopTrack(t)"
               [queue]="trendingPlayable()"
               [badge]="t.popularity"
-            />
-          }
-        </app-horizontal-section>
-      }
-
-      @if (discoverTracks().length) {
-        <app-horizontal-section
-          [title]="'home.section.discover' | t"
-          [subtitle]="discoverSubtitle()"
-          link="/tracks"
-        >
-          @for (t of discoverTracks(); track t.id_track) {
-            <app-media-card
-              [title]="cleanTitle(t.nombre_track)"
-              [subtitle]="t.nombre_artista ?? '—'"
-              [gradient]="cover('disc-' + t.id_track)"
-              [link]="'/tracks/' + t.id_track"
-              [track]="player.fromTrack(t)"
-              [queue]="discoverPlayable()"
-              [badge]="t.popularity"
+              [tag]="trendTag(t, i)"
             />
           }
         </app-horizontal-section>
@@ -110,13 +416,15 @@
 
       @if (artists().length) {
         <app-horizontal-section [title]="'home.section.artists' | t" link="/artists">
-          @for (a of artists(); track a.id) {
+          @for (a of artists(); track a.id; let i = $index) {
             <a class="artist-chip" [routerLink]="'/artists/' + a.id">
+              <span class="artist-rank">#{{ i + 1 }}</span>
               <span class="artist-avatar" [style.background]="cover('artist-' + a.id)">
                 {{ initials(a.name) }}
               </span>
               <span class="artist-name">{{ a.name }}</span>
-              <span class="artist-role">{{ 'home.section.artistSub' | t }}</span>
+              <span class="artist-affinity">{{ artistAffinity(i) }}% {{ 'home.artist.affinity' | t }}</span>
+              <span class="artist-pop">{{ 'home.artist.popular' | t }}</span>
             </a>
           }
         </app-horizontal-section>
@@ -124,12 +432,13 @@
 
       @if (playlists().length) {
         <app-horizontal-section [title]="'home.section.playlists' | t" link="/playlists">
-          @for (pl of playlists(); track pl.id) {
+          @for (pl of playlists(); track pl.id; let i = $index) {
             <app-media-card
               [title]="pl.name"
               [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
               [gradient]="cover('pl-' + pl.id)"
               [link]="'/playlists/' + pl.id"
+              [tag]="playlistBadge(i)"
             />
           }
         </app-horizontal-section>
@@ -138,11 +447,15 @@
       @if (genres().length) {
         <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
           @for (g of genres(); track g.id_genero) {
-            <a class="genre-chip" [routerLink]="genreLink(g)">
-              <span class="genre-dot" [style.background]="cover('genre-' + g.id_genero)"></span>
+            <a
+              class="genre-chip"
+              routerLink="/tracks"
+              [queryParams]="{ genre_id: g.id_genero, genre_name: g.nombre_genero ?? '' }"
+            >
+              <span class="genre-icon" [style.background]="cover('genre-' + g.id_genero)">♪</span>
               <span class="genre-text">
                 <span class="genre-name">{{ g.nombre_genero ?? ('home.genreFallback' | t) }}</span>
-                <span class="genre-score">{{ ('home.section.genreSub' | t:{ score: g.popularidad_promedio?.toFixed(0) ?? '—' }) }}</span>
+                <span class="genre-count">{{ 'home.genre.tracks' | t:{ count: g.total_tracks ?? 0 } }}</span>
               </span>
             </a>
           }
@@ -176,66 +489,7 @@
           <a routerLink="/search" class="home-state-link">{{ 'home.searchPlaceholder' | t }}</a>
         </div>
       }
+
     </div>
-    }
   </div>
-
-  <aside class="analytics-rail glass-panel">
-    <div class="rail-head">
-      <h3>{{ 'home.rail.title' | t }}</h3>
-      <a routerLink="/analytics">{{ 'home.rail.viewMore' | t }}</a>
-    </div>
-
-    @if (summary(); as s) {
-      <div class="rail-kpis">
-        <app-kpi-card [label]="'home.rail.kpi.tracks' | t" [value]="s.total_tracks" iconKey="music" color="primary" [subtitle]="'home.rail.kpi.tracksSub' | t" />
-        <app-kpi-card [label]="'home.rail.kpi.artists' | t" [value]="s.total_artistas" iconKey="users" color="info" [subtitle]="'home.rail.kpi.artistsSub' | t" />
-      </div>
-      <div class="rail-strip">
-        <span><strong>{{ fmt(s.total_generos) }}</strong> {{ 'home.rail.genres' | t }}</span>
-        <span><strong>{{ fmt(s.total_albumes) }}</strong> {{ 'home.rail.albums' | t }}</span>
-        <span><strong>{{ fmt(s.total_streams) }}</strong> {{ 'home.rail.streams' | t }}</span>
-        @if (popularityKpi(); as pop) {
-          <span><strong>{{ pop }}</strong> {{ 'home.rail.avgPopularity' | t }}</span>
-        }
-      </div>
-
-      @if (topGenre() || topArtist()) {
-        <div class="rail-highlights">
-          @if (topGenre(); as g) {
-            <a class="rail-pill" [routerLink]="['/genres']" [queryParams]="{ q: g }">
-              <span class="rail-pill-label">{{ 'home.rail.topGenre' | t }}</span>
-              <span class="rail-pill-value">{{ g }}</span>
-            </a>
-          }
-          @if (topArtist(); as a) {
-            <span class="rail-pill">
-              <span class="rail-pill-label">{{ 'home.rail.topArtist' | t }}</span>
-              <span class="rail-pill-value">{{ a }}</span>
-            </span>
-          }
-        </div>
-      }
-    }
-
-    <div class="rail-chart">
-      <div class="chart-label">{{ 'home.rail.chartLabel' | t }}</div>
-      @if (growthValues().length) {
-        <svg viewBox="0 0 440 90" class="mini-chart" aria-hidden="true">
-          <defs>
-            <linearGradient id="homeArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
-              <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <polygon [attr.points]="sparkArea()" fill="url(#homeArea)"/>
-          <polyline [attr.points]="sparkLine()" fill="none" stroke="#1ed896" stroke-width="2"/>
-        </svg>
-      } @else {
-        <p class="chart-empty">{{ 'home.rail.chartEmpty' | t }}</p>
-      }
-    </div>
-
-    <a routerLink="/analytics" class="rail-link">{{ 'home.rail.fullPanel' | t }}</a>
-  </aside>
 </div>
