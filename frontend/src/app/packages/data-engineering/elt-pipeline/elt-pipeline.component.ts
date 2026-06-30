@@ -100,6 +100,9 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   // Volumen operativo: eventos/facts sintéticos sobre catálogo musical real.
   baseTrackCount = computed(() => this.summary()?.total_events ?? this.summary()?.total_streams ?? 0);
 
+  /** Total de registros de actividad en el warehouse (streams, búsquedas, etc.). */
+  totalEventCount = computed(() => this.summary()?.total_events ?? this.summary()?.total_streams ?? 0);
+
   targetTrackCount = computed(() => {
     if (this.volumeMode() === 'custom') return this.customTarget();
     return this.baseTrackCount() * this.selectedMultiplier();

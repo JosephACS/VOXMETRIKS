@@ -8,8 +8,9 @@
       <span class="badge" [class.badge-live]="apiConnected()" [class.badge-sim]="!apiConnected()">
         {{ apiConnected() ? ('elt.connected' | t) : ('elt.disconnected' | t) }}
       </span>
-      @if (summary()) {
-        <span class="badge badge-count">{{ 'tracks.count' | t:{ count: fmt(summary()!.total_tracks) } }}</span>
+      @if (summary(); as s) {
+        <span class="badge badge-count">{{ 'elt.eventsCount' | t:{ count: fmt(totalEventCount()) } }}</span>
+        <span class="badge badge-catalog">{{ 'elt.catalogSize' | t:{ count: fmt(s.total_tracks) } }}</span>
       }
     </div>
   </header>
@@ -32,6 +33,10 @@
       </div>
       <p class="control-desc">{{ 'elt.desc' | t }}</p>
       <p class="control-note">{{ 'elt.note' | t }}</p>
+      <div class="data-explainer">
+        <span>{{ 'elt.catalogExplainer' | t:{ count: fmt(summary()?.total_tracks) } }}</span>
+        <span>{{ 'elt.eventsExplainer' | t:{ count: fmt(totalEventCount()) } }}</span>
+      </div>
 
       @if (volumeValidation().message) {
         <div class="validation-banner" [class]="'val-' + volumeValidation().level">
@@ -128,6 +133,7 @@
           @if (!last) { <span class="step-arrow">→</span> }
         }
       </div>
+      <p class="timeline-note">{{ 'elt.timelineNote' | t }}</p>
       <div class="wh-mini">
         <span><strong>{{ fmt(summary()?.total_artistas) }}</strong> {{ 'home.stat.artists' | t }}</span>
         <span><strong>{{ fmt(summary()?.total_generos) }}</strong> {{ 'home.rail.genres' | t }}</span>
