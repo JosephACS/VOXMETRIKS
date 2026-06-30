@@ -1,0 +1,340 @@
+/**
+ * Voxmetrik — Design Motion System
+ * Tokens y utilidades reutilizables. Sin colores ni tipografía nuevos.
+ * Inspiración: Spotify, Apple Music, Linear, Vercel, Raycast, Notion.
+ */
+
+:root {
+  /* ── Duraciones ── */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 220ms;
+  --motion-duration-slow: 320ms;
+  --motion-duration-slower: 400ms;
+
+  /* ── Curvas de easing ── */
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Distancias (translate) ── */
+  --motion-distance-xs: 2px;
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 8px;
+  --motion-distance-lg: 12px;
+
+  /* ── Escalas ── */
+  --motion-scale-in: 0.96;
+  --motion-scale-press: 0.98;
+  --motion-scale-hover: 1.02;
+
+  /* ── Presets de transición ── */
+  --motion-transition-interactive:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+
+  --motion-transition-surface:
+    background-color var(--motion-duration-slow) var(--motion-ease-standard),
+    border-color var(--motion-duration-slow) var(--motion-ease-standard),
+    color var(--motion-duration-normal) var(--motion-ease-standard);
+
+  --motion-transition-layout:
+    width var(--motion-duration-slow) var(--motion-ease-standard),
+    max-width var(--motion-duration-slow) var(--motion-ease-standard),
+    opacity var(--motion-duration-normal) var(--motion-ease-standard),
+    transform var(--motion-duration-slow) var(--motion-ease-standard);
+
+  /* Alias legacy (mantener compatibilidad) */
+  --transition: var(--motion-duration-normal) var(--motion-ease-standard);
+  --transition-fast: var(--motion-duration-fast) var(--motion-ease-standard);
+  --ease-smooth: var(--motion-ease-standard);
+  --ease-out-soft: var(--motion-ease-out);
+}
+
+/* ── Keyframes (fuente única) ── */
+
+@keyframes vm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vm-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes vm-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--motion-scale-in)) translateY(var(--motion-distance-md));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes vm-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-md));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vm-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--motion-distance-sm)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vm-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-sm));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vm-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes vm-chart-draw {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Utilidades opt-in ── */
+
+.vm-animate-fade-in {
+  animation: vm-fade-in var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.vm-animate-scale-in {
+  animation: vm-scale-in var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.vm-animate-slide-up {
+  animation: vm-slide-up var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.vm-animate-reveal {
+  animation: vm-reveal var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.vm-animate-chart {
+  animation: vm-chart-draw var(--motion-duration-slow) var(--motion-ease-standard) both;
+}
+
+/* Stagger helpers (listas) */
+.vm-stagger-1 { animation-delay: calc(var(--motion-duration-fast) * 0.5); }
+.vm-stagger-2 { animation-delay: var(--motion-duration-fast); }
+.vm-stagger-3 { animation-delay: calc(var(--motion-duration-fast) * 1.5); }
+.vm-stagger-4 { animation-delay: calc(var(--motion-duration-fast) * 2); }
+
+/* ── Botones ── */
+
+.vm-btn,
+button.btn-primary,
+button.btn-ghost,
+button.btn-secondary,
+button.play-demo-btn,
+button.increment-btn,
+button.mode-btn,
+button.preset-btn {
+  transition: var(--motion-transition-interactive);
+}
+
+.vm-btn:active:not(:disabled),
+button.btn-primary:active:not(:disabled),
+button.btn-ghost:active:not(:disabled) {
+  transform: scale(var(--motion-scale-press));
+}
+
+/* ── Cards ── */
+
+.vm-card,
+.card-hover,
+.glass-panel,
+app-media-card .media-card,
+app-kpi-card .kpi-card {
+  transition: var(--motion-transition-interactive);
+}
+
+.vm-card:hover,
+.card-hover:hover {
+  transform: translateY(calc(-1 * var(--motion-distance-xs)));
+}
+
+/* ── Inputs & focus ── */
+
+.vm-input,
+.search-input,
+.form-input,
+.form-select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.search-input:focus,
+.form-input:focus,
+.form-select:focus,
+.vm-input:focus-visible {
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+/* ── Modales ── */
+
+.modal-backdrop {
+  animation: vm-fade-in var(--motion-duration-fast) var(--motion-ease-standard) both;
+}
+
+.modal-backdrop > .modal,
+.modal-backdrop .modal {
+  animation: vm-scale-in var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+/* ── Dropdowns & tooltips ── */
+
+.user-dropdown,
+.pl-picker,
+.shell-dropdown {
+  animation: vm-slide-down var(--motion-duration-fast) var(--motion-ease-standard) both;
+  transform-origin: top center;
+}
+
+[title]:not([title=""]) {
+  /* Native tooltips: browser-controlled; hover prep for custom tooltips */
+}
+
+.vm-tooltip {
+  animation: vm-fade-in var(--motion-duration-fast) var(--motion-ease-standard) both;
+}
+
+/* ── KPIs ── */
+
+app-kpi-card .kpi-card:hover {
+  transform: translateY(calc(-1 * var(--motion-distance-xs)));
+}
+
+app-kpi-card .kpi-value-num {
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+/* ── Gráficos ── */
+
+.mini-chart,
+.vm-chart,
+svg.mini-chart polyline,
+svg.vm-chart polyline {
+  animation: vm-chart-draw var(--motion-duration-slow) var(--motion-ease-standard) both;
+}
+
+/* ── Listas & filas ── */
+
+.track-row,
+.data-row,
+.activity-timeline li,
+.continue-tile {
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+/* ── Skeleton → contenido ── */
+
+.vm-skeleton,
+.kpi-skeleton,
+.track-skel,
+.skel,
+.home-state-spinner {
+  animation: vm-shimmer 1.6s var(--motion-ease-in-out) infinite;
+}
+
+.vm-content-ready {
+  animation: vm-reveal var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+/* ── Navegación & sidebar ── */
+
+.nav-link,
+.sidebar-link,
+.discover-chip,
+.page-btn {
+  transition: var(--motion-transition-interactive);
+}
+
+.nav-link.active,
+.sidebar-link.active {
+  transition: var(--motion-transition-interactive);
+}
+
+/* ── Tabs ── */
+
+.vm-tab,
+.tab-btn,
+.mode-btn {
+  transition: var(--motion-transition-interactive);
+}
+
+/* ── Route content (complementa Angular animation) ── */
+
+.main-content > router-outlet + * {
+  /* Angular routeFade handles enter; this is fallback for non-animated islands */
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-normal: 0ms;
+    --motion-duration-slow: 0ms;
+    --motion-duration-slower: 0ms;
+  }
+
+  .vm-animate-fade-in,
+  .vm-animate-scale-in,
+  .vm-animate-slide-up,
+  .vm-animate-reveal,
+  .vm-animate-chart,
+  .modal-backdrop,
+  .modal-backdrop > .modal,
+  .user-dropdown {
+    animation: none !important;
+  }
+
+  .vm-card:hover,
+  .card-hover:hover,
+  app-kpi-card .kpi-card:hover {
+    transform: none !important;
+  }
+}

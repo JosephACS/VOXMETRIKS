@@ -18,7 +18,8 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       class="kpi-card"
       [class]="'kpi-card kpi-color-' + color"
       [attr.role]="'figure'"
-      [attr.aria-label]="label + ': ' + (value !== null && value !== undefined ? value : ('common.loading' | t))"
+      [attr.title]="tooltip || null"
+      [attr.aria-label]="(tooltip || label) + ': ' + (value !== null && value !== undefined ? value : ('common.loading' | t))"
     >
       <!-- Accent line top -->
       <div class="kpi-accent" aria-hidden="true"></div>
@@ -27,6 +28,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       <div class="kpi-header">
         <span class="kpi-icon icon-wrap-md" [innerHTML]="iconSvg" aria-hidden="true"></span>
         <span class="kpi-label">{{ label }}</span>
+        @if (note) {
+          <span class="kpi-note" [attr.title]="noteTip || null">{{ note }}</span>
+        }
       </div>
 
       <!-- Value (or skeleton) -->
@@ -50,6 +54,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
           @if (trendLabel) {
             <span class="trend-label">{{ trendLabel }}</span>
           }
+          @if (trendNote) {
+            <span class="trend-note" [attr.title]="trendNoteTip || null">{{ trendNote }}</span>
+          }
         </div>
       }
     </div>
@@ -67,7 +74,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       border: 1px solid var(--border);
       border-radius: 8px;
       overflow: hidden;
-      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+      transition: transform var(--motion-duration-fast) var(--motion-ease-standard),
+        border-color var(--motion-duration-fast) var(--motion-ease-standard),
+        box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
       cursor: default;
       box-shadow: var(--shadow-sm);
     }
@@ -177,7 +186,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 
     .kpi-value-num {
       display: block;
-      transition: color var(--transition-fast);
+      transition: color var(--motion-duration-fast) var(--motion-ease-standard);
     }
 
     /* ── Skeleton ── */
@@ -193,7 +202,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       );
       background-size: 200% 100%;
       border-radius: var(--radius-sm);
-      animation: shimmer 1.6s ease-in-out infinite;
+      animation: vm-shimmer 1.6s var(--motion-ease-in-out) infinite;
     }
 
     /* ── Subtitle ── */
@@ -223,6 +232,23 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       color: var(--color-text-muted);
     }
 
+    /* ── Origen del dato (discreto) ── */
+    .kpi-note,
+    .trend-note {
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--color-text-muted);
+      cursor: help;
+      white-space: nowrap;
+    }
+
+    .kpi-note { margin-left: auto; }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .kpi-card { padding: 1rem; }
@@ -245,6 +271,14 @@ export class KpiCardComponent {
   @Input() trend: string | null = null;
   @Input() trendLabel: string | null = null;
   @Input() trendPositive: boolean | null = null;
+  /** Explicación al pasar el mouse (qué representa la métrica). */
+  @Input() tooltip = '';
+  /** Etiqueta discreta de origen del dato en la cabecera (ej: "Tu actividad"). */
+  @Input() note: string | null = null;
+  @Input() noteTip: string | null = null;
+  /** Etiqueta discreta de origen junto a la tendencia (ej: "Demo"). */
+  @Input() trendNote: string | null = null;
+  @Input() trendNoteTip: string | null = null;
 
   get iconSvg(): SafeHtml {
     return this.iconRender.render(this.iconKey, 16);
