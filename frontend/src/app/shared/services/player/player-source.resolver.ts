@@ -40,13 +40,7 @@ export class PlayerSourceResolver {
       next: (src) => {
         if (callbacks.isStale()) return;
         if (src.status === 'pending') {
-          window.setTimeout(() => {
-            if (callbacks.isStale()) return;
-            this.tracksApi.getAudioSource(track.id).subscribe({
-              next: (retry) => this.applySource(track, retry, callbacks),
-              error: () => { if (!callbacks.isStale()) callbacks.onDemo(); },
-            });
-          }, 1200);
+          this.pollPendingSource(track, callbacks, 0);
           return;
         }
         this.applySource(track, src, callbacks);
@@ -79,6 +73,30 @@ export class PlayerSourceResolver {
       },
       error: () => { if (!callbacks.isStale()) callbacks.onDemo(); },
     });
+  }
+
+  /** yt-dlp resolution can take several seconds on first play — poll before demo fallback. */
+  private pollPendingSource(
+    track: PlayableTrack,
+    callbacks: SourceResolverCallbacks,
+    attempt: number,
+  ): void {
+    const maxAttempts = 8;
+    const delayMs = attempt === 0 ? 800 : Math.min(2500, 800 + attempt * 400);
+    window.setTimeout(() => {
+      if (callbacks.isStale()) return;
+      this.tracksApi.getAudioSource(track.id).subscribe({
+        next: (retry) => {
+          if (callbacks.isStale()) return;
+          if (retry.status === 'pending' && attempt + 1 < maxAttempts) {
+            this.pollPendingSource(track, callbacks, attempt + 1);
+            return;
+          }
+          this.applySource(track, retry, callbacks);
+        },
+        error: () => { if (!callbacks.isStale()) callbacks.onDemo(); },
+      });
+    }, delayMs);
   }
 
   private applySource(

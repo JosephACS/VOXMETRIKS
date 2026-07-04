@@ -35,9 +35,13 @@ rectangle "Dashboards analíticos" {
   usecase "CU-AN09\nWidgets perfil" as CU_AN09
 }
 User --> CU_AN01
+User --> CU_AN02
 User --> CU_AN03
+User --> CU_AN04
 User --> CU_AN05
+User --> CU_AN06
 User --> CU_AN07
-CU_AN08 ..> CU_H02 : <<extend>> spec 004
+User --> CU_AN08
+User --> CU_AN09
 
 @enduml

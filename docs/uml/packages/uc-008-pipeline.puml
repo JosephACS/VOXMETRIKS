@@ -30,10 +30,13 @@ rectangle "Monitoreo pipeline" {
   usecase "CU-PM03\nFlujo UI pipeline" as CU_PM03
   usecase "CU-PM04\nHistorial cargas" as CU_PM04
   usecase "CU-PM05\nEstado warehouse" as CU_PM05
+  usecase "CU-PM06\nLímites synthetic" as CU_PM06
   usecase "CU-PM07\nTabs engineer settings" as CU_PM07
   usecase "CU-PM08\nELT CLI/Docker" as CU_PM08
 }
 Eng --> CU_PM01
+Eng --> CU_PM02
+Eng --> CU_PM06
 Eng --> CU_PM03
 Eng --> CU_PM04
 Eng --> CU_PM05

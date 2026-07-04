@@ -28,12 +28,15 @@ rectangle "Explorador warehouse" {
   usecase "CU-DE02\nFiltrar tablas" as CU_DE02
   usecase "CU-DE03\nPreview filas" as CU_DE03
   usecase "CU-DE04\nPaginar preview" as CU_DE04
+  usecase "CU-DE05\nClasificación y conteos" as CU_DE05
   usecase "CU-DE06\nHistorial cargas" as CU_DE06
   usecase "CU-DE07\nAcceso engineer" as CU_DE07
 }
 Eng --> CU_DE01
 Eng --> CU_DE03
+Eng --> CU_DE05
 Eng --> CU_DE06
+Eng --> CU_DE07
 CU_DE01 ..> CU_DE02 : <<extend>>
 CU_DE03 ..> CU_DE04 : <<include>>
 

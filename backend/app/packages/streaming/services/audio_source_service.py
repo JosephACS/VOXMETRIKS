@@ -433,16 +433,8 @@ def get_audio_source_response(
         if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND, STATUS_DISABLED):
             return cached
 
-    api_key = get_settings().youtube_api_key.strip()
-    if not api_key:
-        return {
-            "track_id": track_id,
-            "provider": "youtube",
-            "youtube_video_id": None,
-            "query": query,
-            "status": STATUS_DISABLED,
-        }
-
+    # yt-dlp resolves without an API key; only cache "disabled" when both paths
+    # are unavailable (handled inside resolve_audio_source on sync resolve).
     if async_resolve and not force:
         _schedule_resolve(track_id)
         return {
