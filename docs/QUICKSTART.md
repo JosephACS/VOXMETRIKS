@@ -1,6 +1,6 @@
 # Voxmetriks — Quickstart (guía única)
 
-Arranque local oficial. Sustituye cualquier `QUICKSTART.md` o README legacy en subcarpetas.
+Arranque local oficial. Sustituye cualquier `quickstart.md` o README legacy en subcarpetas.
 
 **Requisitos:** Python **3.12**, Node.js **20+**, npm **10+**. Docker opcional (final de esta guía).
 
@@ -29,7 +29,8 @@ source .venv/bin/activate
 Instalar dependencias ELT + API:
 
 ```bash
-pip install -r backend/requirements.txt
+pip install -r apps/backend/requirements.txt
+# o: make install
 ```
 
 ---
@@ -37,7 +38,11 @@ pip install -r backend/requirements.txt
 ## 3. Configuración
 
 ```bash
-cp .env.example .env
+# Opción A — entorno compartido (Docker / monorepo)
+cp infrastructure/environments/.env.example .env
+
+# Opción B — solo backend local
+cp apps/backend/.env.example apps/backend/.env
 ```
 
 Variables relevantes (`.env`):
@@ -53,17 +58,17 @@ Variables relevantes (`.env`):
 Sin PocketBase, coloca Parquet en:
 
 ```
-data/processed/stage/raw_spotify.parquet
+data/bronze/raw_spotify.parquet
 ```
 
-(o deja que el bootstrap del pipeline lo genere).
+(o deja que el bootstrap del pipeline lo genere desde PocketBase).
 
 ---
 
 ## 4. Ejecutar ELT (obligatorio antes de la API)
 
 ```bash
-python elt/pipelines/elt_pipeline.py
+python analytics/elt/pipelines/elt_pipeline.py
 ```
 
 Crea o actualiza `data/warehouse/voxmetrik.duckdb` con capas Medallion (`dim_*`, `fact_*`, `agg_*`, `ctl_*`).
@@ -71,17 +76,17 @@ Crea o actualiza `data/warehouse/voxmetrik.duckdb` con capas Medallion (`dim_*`,
 Validación opcional post-ELT:
 
 ```bash
-python scripts/validate_warehouse.py
+python automation/scripts/validate_warehouse.py
 ```
 
 ---
 
 ## 5. Levantar API
 
-Desde `backend/`:
+Desde `apps/backend/`:
 
 ```bash
-cd backend
+cd apps/backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -103,7 +108,7 @@ curl http://localhost:8000/
 En otra terminal:
 
 ```bash
-cd frontend
+cd apps/frontend
 npm install
 npm start
 ```
@@ -120,15 +125,15 @@ Abrir http://localhost:4200
 ## 7. Tests y smoke (opcional)
 
 ```bash
-cd backend
+cd apps/backend
 pytest tests/ -v
 ```
 
 Smoke contra la API real (requiere backend levantado):
 
 ```bash
-python ../scripts/smoke_api.py --base-url http://localhost:8000
-python ../scripts/smoke_user_journey.py --base-url http://localhost:8000
+python ../automation/scripts/smoke_api.py --base-url http://localhost:8000
+python ../automation/scripts/smoke_user_journey.py --base-url http://localhost:8000
 ```
 
 La regresión cubre health, login, logout server-side, RBAC engineer, explorer, protección de datos sensibles, búsqueda y limpieza de textos. El journey agrega favoritos, playlists, recomendaciones e historial.
@@ -138,7 +143,7 @@ La regresión cubre health, login, logout server-side, RBAC engineer, explorer, 
 ## 8. Docker (alternativa)
 
 ```bash
-docker compose up --build
+docker compose -f infrastructure/docker/docker-compose.yml up --build
 ```
 
 - `pipeline` — job one-shot ELT  
@@ -153,18 +158,18 @@ docker compose run --rm pipeline
 
 ### Otra laptop/PC desde cero (cero configuración manual de datos)
 
-El dataset fuente (`pocketbase/pb_data`) viaja en git, así que el pipeline reconstruye el DuckDB solo. Tres pasos:
+El dataset fuente (`infrastructure/pocketbase/pb_data`) viaja en git, así que el pipeline reconstruye el DuckDB solo. Tres pasos:
 
 ```bash
 git clone <repo>
 cd voxmetriks
 cp .env.example .env          # Windows: copy .env.example .env
-docker compose up --build
+docker compose -f infrastructure/docker/docker-compose.yml up --build
 ```
 
 - **`.env` no está en git:** créalo desde `.env.example` y completa `POCKETBASE_EMAIL` / `POCKETBASE_PASSWORD`.
 - **`YOUTUBE_API_KEY` opcional:** `yt-dlp` resuelve el audio sin cuota; la API de YouTube es solo respaldo.
-- El **warehouse DuckDB no se versiona** (está en `.gitignore`); se genera en el primer arranque. La caché de audio (`app_track_audio_source`) se llena al reproducir y no viaja entre máquinas; precalentarla es opcional con `python scripts/resolve_audio_youtube.py --limit 2000`.
+- El **warehouse DuckDB no se versiona** (está en `.gitignore`); se genera en el primer arranque. La caché de audio (`app_track_audio_source`) se llena al reproducir y no viaja entre máquinas; precalentarla es opcional con `python automation/scripts/resolve_audio_youtube.py --limit 2000`.
 
 ---
 
@@ -210,6 +215,6 @@ Confirma `CORS_ORIGINS` e incluye `http://localhost:4200`. Verifica también que
 ## Documentación relacionada
 
 - [README.md](../README.md) — visión y estructura del repo  
-- [specs/README.md](../specs/README.md) — índice de specs SDD  
-- [docs/uml/README.md](uml/README.md) — diagramas PlantUML  
+- [automation/specs/README.md](../README.md) — índice de specs SDD  
+- [docs/uml/README.md](../README.md) — diagramas PlantUML  
 - [../voxmetriks-entregas](../voxmetriks-entregas) — entrega académica TGA07 (docx)

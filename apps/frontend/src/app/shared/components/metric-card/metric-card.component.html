@@ -1,0 +1,31 @@
+<article class="metric-card" [class.metric-card--loading]="loading()">
+  <div class="metric-card__glow" aria-hidden="true"></div>
+  <header class="metric-card__header">
+    @if (icon()) {
+      <span class="metric-card__icon" aria-hidden="true">{{ icon() }}</span>
+    }
+    <h3 class="metric-card__title">{{ title() }}</h3>
+  </header>
+  <div class="metric-card__value" aria-live="polite">
+    @if (loading()) {
+      <span class="metric-card__skeleton"></span>
+    } @else if (value() !== null && value() !== undefined) {
+      @if (typeof value() === 'number') {
+        <span>{{ value() | number }}</span>
+      } @else {
+        <span>{{ value() }}</span>
+      }
+    } @else {
+      <span class="metric-card__muted">—</span>
+    }
+  </div>
+  @if (subtitle()) {
+    <p class="metric-card__subtitle">{{ subtitle() }}</p>
+  }
+  @if (trendPct() !== null && trendPct() !== undefined) {
+    <footer class="metric-card__trend" [class.positive]="trendPositive() === true" [class.negative]="trendPositive() === false">
+      {{ trendPct()! >= 0 ? '+' : '' }}{{ trendPct() | number:'1.1-1' }}%
+      <span class="metric-card__trend-label">vs periodo anterior</span>
+    </footer>
+  }
+</article>

@@ -17,8 +17,8 @@ env/
 
 # Node / Angular
 node_modules/
-frontend/dist/
-frontend/.angular/
+apps/frontend/dist/
+apps/frontend/.angular/
 
 # Generic build output
 dist/
@@ -31,9 +31,12 @@ data/processed/
 
 # Test artifacts
 .pytest_cache/
-backend/tests/.pytest_db/
+apps/backend/tests/.pytest_db/
 .ruff_cache/
 .coverage
+automation/e2e/.auth/
+archive/generated/playwright-report/
+archive/generated/test-results/
 
 # IDE
 .vscode/

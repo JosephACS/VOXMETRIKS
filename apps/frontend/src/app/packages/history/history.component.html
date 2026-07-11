@@ -1,0 +1,235 @@
+<div class="hist-page">
+  <header class="vx-page-header">
+    <div>
+      <h1>{{ 'history.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'history.subtitle' | t:lang() }}</p>
+    </div>
+    <button type="button" class="refresh-btn" (click)="loadHub()" [disabled]="isLoading()">
+      {{ isLoading() ? ('history.refreshing' | t) : ('history.refresh' | t) }}
+    </button>
+  </header>
+
+  <nav class="tab-bar">
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'music'" (click)="selectTab('music')">
+      <span [innerHTML]="icon('music', 16)"></span>
+      {{ 'history.tab.music' | t:lang() }}
+      <span class="tab-count">{{ musicCount() }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'user'" (click)="selectTab('user')">
+      <span [innerHTML]="icon('user', 16)"></span>
+      {{ 'history.tab.user' | t:lang() }}
+      <span class="tab-count">{{ userCount() }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab() === 'search'" (click)="selectTab('search')">
+      <span [innerHTML]="icon('search', 16)"></span>
+      {{ 'history.tab.search' | t:lang() }}
+      <span class="tab-count">{{ searchCount() }}</span>
+    </button>
+  </nav>
+
+  <div class="source-note glass-panel">
+    <span [innerHTML]="icon('database', 16)"></span>
+    <p>{{ 'history.sourceNote' | t:lang() }}</p>
+    <div class="source-badges">
+      <app-data-source-badge kind="local" />
+      <app-data-source-badge kind="mixed" />
+    </div>
+  </div>
+
+  @if (hasError()) {
+    <div class="empty-panel glass-panel warn-panel">
+      <span [innerHTML]="icon('alert', 18)"></span>
+      <p>{{ 'history.error' | t:lang() }}</p>
+      <button type="button" class="ghost-btn" (click)="loadHub()">{{ 'history.retry' | t:lang() }}</button>
+    </div>
+  }
+
+  @if (activeTab() === 'music') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>{{ 'history.musicTitle' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.musicDesc' | t:lang() }}</p>
+        </div>
+        <app-data-source-badge kind="local" />
+        @if (localMusicEntries().length) {
+          <button type="button" class="ghost-btn ghost-btn--warn" (click)="clearLocalMusic()" [title]="'history.clearWarn' | t">{{ 'history.clear' | t:lang() }}</button>
+        }
+      </div>
+
+      @if (!localMusicEntries().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('music', 28)"></span>
+          <p>{{ 'history.emptyMusic' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.emptyMusicHint' | t:lang() }}</p>
+          <a routerLink="/tracks" class="cta-link">{{ 'history.exploreTracks' | t:lang() }}</a>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (item of localMusicEntries(); track item.id_track; let i = $index) {
+            <div class="timeline-row interactive">
+              <button type="button" class="row-play-btn" (click)="playFromHistory(item, $event)" [attr.aria-label]="trackTitle(item.nombre_track)">
+                <span [innerHTML]="icon('play', 14)"></span>
+              </button>
+              <span class="row-rank">{{ i + 1 }}</span>
+              <div class="row-main">
+                <a class="row-title link" [routerLink]="['/tracks', item.id_track]">{{ trackTitle(item.nombre_track) }}</a>
+                <span class="row-sub">{{ artistName(item.nombre_artista) }}</span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(item.viewed_at) }}</span>
+              <app-track-actions
+                [track]="historyPlayable(item)"
+                [queue]="historyQueue()"
+                size="sm"
+              />
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- USUARIO -->
+  @if (activeTab() === 'user') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>{{ 'history.user.title' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.user.desc' | t:lang() }}</p>
+        </div>
+        <app-data-source-badge kind="mixed" />
+      </div>
+
+      @if (isLoading()) {
+        <p class="loading-msg">{{ 'common.loading' | t:lang() }}</p>
+      } @else if (!userTimeline().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('user', 28)"></span>
+          <p>{{ 'history.user.empty' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.user.emptyHint' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.user.badgeNote' | t:lang() }}</p>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (ev of userTimeline(); track $index) {
+            <div class="timeline-row static">
+              <span class="event-icon" [innerHTML]="icon(eventIcon(ev.event_type), 16)"></span>
+              <div class="row-main">
+                <span class="row-title">{{ ev.label ?? ev.event_type }}</span>
+                <span class="row-sub">
+                  @if (ev.nombre_track) {
+                    {{ ev.nombre_track }} — {{ artistName(ev.nombre_artista) }}
+                  } @else {
+                    {{ ev.detalle ?? 'Evento de cuenta' }}
+                  }
+                </span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(ev.fecha_evento) }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    @if (userFavorites().length) {
+      <section class="glass-panel section">
+        <div class="section-head">
+          <h2>Favoritos añadidos</h2>
+          <span class="meta-badge">{{ userFavorites().length }}</span>
+        </div>
+        <div class="chip-list">
+          @for (f of userFavorites(); track $index) {
+            @if (f.id_track) {
+              <a class="fav-chip" [routerLink]="['/tracks', f.id_track]">
+                {{ f.nombre_track }} · {{ artistName(f.nombre_artista) }}
+              </a>
+            }
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <!-- BÚSQUEDAS -->
+  @if (activeTab() === 'search') {
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>{{ 'history.search.title' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.search.desc' | t:lang() }}</p>
+        </div>
+        <app-data-source-badge kind="local" />
+        @if (localSearchEntries().length) {
+          <button type="button" class="ghost-btn ghost-btn--warn" (click)="clearLocalSearch()" [title]="'history.clearWarn' | t">{{ 'history.clear' | t:lang() }}</button>
+        }
+      </div>
+
+      @if (!localSearchEntries().length) {
+        <div class="empty-state">
+          <span class="empty-icon" [innerHTML]="icon('search', 28)"></span>
+          <p>{{ 'history.search.empty' | t:lang() }}</p>
+          <p class="empty-hint">{{ 'history.search.emptyHint' | t:lang() }}</p>
+          <a routerLink="/search" class="cta-link">{{ 'history.search.goSearch' | t:lang() }}</a>
+        </div>
+      } @else {
+        <div class="timeline-list">
+          @for (s of localSearchEntries(); track s.query + s.searched_at; let i = $index) {
+            <a class="timeline-row search-row" [routerLink]="['/search']" [queryParams]="{ q: s.query }">
+              <span class="row-rank">{{ i + 1 }}</span>
+              <div class="row-main">
+                <span class="row-title">"{{ s.query }}"</span>
+                <span class="row-sub">
+                  {{ s.track_count ?? 0 }} canciones · {{ s.artist_count ?? 0 }} artistas
+                </span>
+              </div>
+              <span class="row-time mono">{{ formatRelative(s.searched_at) }}</span>
+            </a>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="glass-panel section">
+      <div class="section-head">
+        <div>
+          <h2>{{ 'history.search.warehouseTitle' | t:lang() }}</h2>
+          <p class="section-desc">{{ 'history.search.warehouseDesc' | t:lang() }}</p>
+        </div>
+        <app-data-source-badge kind="mixed" />
+        <span class="meta-badge">{{ warehouseSearches().length }}</span>
+      </div>
+
+      @if (isLoading()) {
+        <p class="loading-msg">{{ 'common.loading' | t:lang() }}</p>
+      } @else if (!warehouseSearches().length) {
+        <p class="empty-hint center">{{ 'history.search.warehouseEmpty' | t:lang() }}</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Consulta</th>
+                <th>Resultados</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ws of warehouseSearches(); track ws.id_search ?? $index) {
+                <tr>
+                  <td>
+                    <a class="search-link" [routerLink]="['/search']" [queryParams]="{ q: ws.query }">
+                      {{ ws.query ?? '—' }}
+                    </a>
+                  </td>
+                  <td class="mono">{{ ws.results_count ?? 0 }}</td>
+                  <td class="mono">{{ formatRelative(ws.fecha_evento) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+</div>

@@ -1,165 +1,99 @@
 # Voxmetriks
 
-Plataforma de analítica musical sobre dataset Spotify: SPA Angular + API FastAPI + warehouse DuckDB (arquitectura Medallion).
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular)](https://angular.io)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.1-yellow)](https://duckdb.org)
+[![Release](https://img.shields.io/badge/Release-V2%20RC1-orange)](docs/RELEASE_NOTES.md)
 
-**Documentación canónica:** este README es el único punto de entrada. El arranque operativo está en [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+**Plataforma de streaming musical con analytics enterprise** — SPA Angular, API FastAPI y warehouse DuckDB (Medallion ELT).
 
----
-
-## Qué es
-
-| Capa | Tecnología | Ubicación |
-|------|------------|-----------|
-| Frontend | Angular 21 | `frontend/` |
-| API | FastAPI 2.x | `backend/app/` |
-| Warehouse | DuckDB (Gold + tablas app) | `data/warehouse/voxmetrik.duckdb` |
-| ELT | Python (Bronze → Silver → Gold) | `elt/pipelines/elt_pipeline.py` |
-
-| Specs SDD | Markdown 001–011 | `specs/` |
-
-Principios de diseño: package-by-domain (P2), single warehouse authority (P4), ELT-before-API (P7). Ver [`.specify/memory/constitution.md`](.specify/memory/constitution.md). La entrega académica TGA07 (docx) está en el repo hermano [`../voxmetriks-entregas`](../voxmetriks-entregas).
+**Estado actual:** [VOXMETRIKS V2 — Release Candidate 1](docs/RELEASE_NOTES.md) (beta privada / demo controlada).
 
 ---
 
-## Inicio rápido
+## Descripción
+
+Voxmetriks combina experiencia de escucha (catálogo, playlists, reproductor, recomendaciones, IA musical) con un hub analítico alimentado por tablas Gold. Dataset Spotify sintético/warehouse; motor de recomendaciones explicable; IA con fallback local (sin API key obligatoria).
+
+---
+
+## Arquitectura (resumen)
+
+```mermaid
+flowchart LR
+    FE[Angular SPA] --> API[FastAPI]
+    API --> DB[(DuckDB)]
+    PB[PocketBase] --> ELT[Pipeline ELT]
+    ELT --> DB
+```
+
+Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md)
+
+---
+
+## Tecnologías
+
+| Capa | Stack |
+|------|-------|
+| Frontend | Angular 21, RxJS, Material, ECharts |
+| Backend | FastAPI, Pydantic v2, Python 3.12 |
+| Datos | DuckDB, arquitectura Medallion |
+| ELT | Python, Pandas/Polars, PocketBase |
+| Tests | pytest, Vitest, Playwright |
+| DevOps | Docker Compose, Makefile, GitHub Actions (opcional) |
+
+---
+
+## Cómo ejecutar
 
 ```bash
-# Ver guía completa paso a paso
-docs/QUICKSTART.md
+# Con Docker (API)
+make up
+
+# Desarrollo local
+make install
+make pipeline   # warehouse
+make dev        # backend :8000
+cd apps/frontend && npm install && npm start   # SPA :4200
 ```
 
-Resumen mínimo (local):
+Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
-1. `pip install -r backend/requirements.txt`
-2. `cp .env.example .env`
-3. `python elt/pipelines/elt_pipeline.py`
-4. `cd backend && uvicorn app.main:app --reload`
-5. `cd frontend && npm install && npm start` → http://localhost:4200
+### Credenciales demo (solo development)
 
-Credenciales demo (seed automático): `demo` / `demo123`. Engineer (pipeline/explorer): `admin` / `admin123`.
+| Usuario | Password | Rol |
+|---------|----------|-----|
+| `demo` | `demo123` | user |
+| `admin` | `admin123` | admin |
 
 ---
 
-## Estructura del repositorio
+## Fases del producto
 
-```
-voxmetriks/
-├── frontend/              # SPA Angular (PKG-01..07)
-├── backend/
-│   ├── app/               # FastAPI — main.py, packages/
-│   ├── db/schema.sql      # DDL legacy (referencia; canónico en elt/)
-│   ├── requirements.txt   # Dependencias Python (API + ELT + tests)
-│   └── tests/             # pytest (health, login, playlists, favorites)
-├── elt/                   # Extract / transform / pipelines
-├── data/warehouse/        # DuckDB canónico (generado por ELT)
-├── specs/                 # Specs operativas 001–011 + trazabilidad (SDD)
-├── .specify/              # Spec Kit (constitución, plantillas, scripts)
-├── docs/
-│   ├── QUICKSTART.md      # ← guía única de arranque
-│   └── uml/               # Diagramas PlantUML
-├── docker-compose.yml     # pocketbase → pipeline → api → frontend
-└── scripts/               # validate_warehouse.py, smoke tests
-```
+| Fase | Doc |
+|------|-----|
+| 1 Spotify UX | [PLAYBACK_SPOTIFY_UX_PHASE1.md](docs/PLAYBACK_SPOTIFY_UX_PHASE1.md) |
+| 2 Playback Engine | [PLAYBACK_ENGINE_PHASE2.md](docs/PLAYBACK_ENGINE_PHASE2.md) |
+| 3 Audio Resolver | [AUDIO_RESOLVER_PHASE3.md](docs/AUDIO_RESOLVER_PHASE3.md) |
+| 4 Smart Recommendations | [SMART_RECOMMENDATION_ENGINE_PHASE4.md](docs/SMART_RECOMMENDATION_ENGINE_PHASE4.md) |
+| 5 Enterprise Platform | [ENTERPRISE_PLATFORM_PHASE5.md](docs/ENTERPRISE_PLATFORM_PHASE5.md) |
+| 6 VOXMETRIKS AI | [VOXMETRIKS_AI_PHASE6.md](docs/VOXMETRIKS_AI_PHASE6.md) |
+| 7 Hardening / RC | [FINAL_PRODUCT_AUDIT.md](docs/FINAL_PRODUCT_AUDIT.md) |
 
 ---
 
-## API y salud
+## Documentación
 
-| Recurso | URL |
-|---------|-----|
-| Swagger | http://localhost:8000/docs |
-| Health | http://localhost:8000/health |
-| API v1 | http://localhost:8000/api/v1/… |
+**Índice:** [docs/README.md](docs/README.md)
 
-Prefijo REST: `/api/v1`. Autenticación: header `Authorization: Bearer <token>` (login en `/api/v1/users/login`).
+| Documento | Enlace |
+|-----------|--------|
+| Features | [PRODUCT_FEATURES.md](docs/PRODUCT_FEATURES.md) |
+| Release Notes RC1 | [RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
+| Roadmap | [ROADMAP.md](docs/ROADMAP.md) |
+| Auditoría final | [FINAL_PRODUCT_AUDIT.md](docs/FINAL_PRODUCT_AUDIT.md) |
+| API | [api.md](docs/api/api.md) |
+| Seguridad | [security.md](docs/security/security.md) |
 
----
-
-## Specs y documentación
-
-| Documento | Descripción |
-|-----------|-------------|
-| [`specs/README.md`](specs/README.md) | Índice specs 001–011 |
-| [`specs/TRACEABILITY-MASTER.md`](specs/TRACEABILITY-MASTER.md) | Matriz CU→FR→Impl |
-| [`docs/uml/`](docs/uml/) | Casos de uso, componentes, arquitectura, flujo ELT |
-| [`../voxmetriks-entregas`](../voxmetriks-entregas) | Entrega académica TGA07 (docx) |
-
----
-
-## Tests
-
-```bash
-cd backend
-pip install -r requirements.txt   # desde backend/
-pytest tests/ -v
-```
-
-Smoke contra el backend real:
-
-```bash
-uvicorn app.main:app --reload --port 8000
-python ../scripts/smoke_api.py --base-url http://localhost:8000
-python ../scripts/smoke_user_journey.py --base-url http://localhost:8000
-```
-
-La suite cubre health, login, logout real, RBAC engineer, explorer, protección de datos sensibles, búsqueda y limpieza de textos. `smoke_user_journey.py` agrega favoritos, playlists, recomendaciones e historial contra la API real.
-
----
-
-## Docker
-
-Una sola orden levanta todo (primera vez):
-
-```bash
-docker compose up --build
-```
-
-Orden de arranque: **pocketbase** (sirve el dataset ~100k desde `./pocketbase/pb_data`) → **pipeline** (corre el ELT y construye el DuckDB) → **api** (arranca al terminar el pipeline, P7) → **frontend** (nginx sirve la SPA y hace proxy `/api` → api).
-
-### Arrancar en otra laptop/PC (desde cero)
-
-Todo lo necesario viaja en git: código, `docker-compose.yml` y el dataset fuente (`pocketbase/pb_data`, ~20 MB). El warehouse DuckDB **no** se versiona (está en `.gitignore`); el pipeline lo reconstruye solo en el primer arranque. Tres pasos:
-
-```bash
-git clone <repo>
-cd voxmetriks
-cp .env.example .env          # Windows: copy .env.example .env  → completa credenciales PocketBase
-docker compose up --build
-```
-
-Listo: frontend en http://localhost:8080, API en http://localhost:8000.
-
-Notas:
-
-- **`.env` no está en git** (lleva credenciales). Hay que crearlo desde `.env.example` en cada máquina.
-- **`YOUTUBE_API_KEY` puede ir vacío:** la resolución de audio usa `yt-dlp` (sin cuota); la API de YouTube es solo respaldo.
-- El **audio se resuelve solo al primer play** de cada canción (1–2 s) y queda cacheado en el DuckDB de esa máquina. La caché no viaja entre PCs; si quieres pre-calentarla corre `python scripts/resolve_audio_youtube.py --limit 2000` (opcional, con el backend apagado).
-
-| Servicio | URL |
-|----------|-----|
-| Frontend | http://localhost:8080 |
-| API / Swagger | http://localhost:8000/docs |
-| PocketBase | http://localhost:8090 |
-
-```bash
-docker compose up -d pocketbase api frontend   # sin re-correr el pipeline
-docker compose run --rm pipeline               # re-ejecutar el ELT
-```
-
-> El primer arranque requiere que `./pocketbase/pb_data` tenga el dataset y el superusuario, y que `.env` tenga las credenciales de PocketBase.
-
----
-
-## Cuentas, verificación por correo y Google
-
-- **Las cuentas son únicas:** el registro valida que el correo y el usuario no existan, y cada usuario tiene sus propios favoritos y playlists (`user_id`). El **nombre de usuario** es el que se muestra en el perfil.
-- **Registro con código:** al crear una cuenta se envía un **código de 6 dígitos** al correo. Hay que ingresarlo para activar la cuenta e iniciar sesión.
-  - Configura SMTP en `.env` (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`). Con Gmail usa una [contraseña de aplicación](https://myaccount.google.com/apppasswords).
-  - **Sin SMTP (modo desarrollo):** no se envía correo; el código se imprime en el log del backend y se devuelve en la respuesta para probar en localhost.
-- **Iniciar sesión con Google:** crea un **OAuth Client ID** (tipo *Web*) en [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), agrega `http://localhost:4200` (y tu dominio) como *Authorized JavaScript origins*, y pega el ID en `GOOGLE_CLIENT_ID` del `.env`. Si está vacío, el botón de Google no aparece.
-
----
-
-## Licencia
-
-Proyecto académico Voxmetriks — uso según indicaciones del curso o cliente.
+Especificaciones SDD: [automation/specs/README.md](automation/specs/README.md)

@@ -175,8 +175,8 @@ Voxmetriks opera en tres niveles empresariales interconectados. Cada decisión a
 | Elemento | Artefacto canónico | Estado actual |
 |----------|-------------------|---------------|
 | Arquitectura de capas | Constitución §6 | Ratificado |
-| Package-by-domain | `backend/app/packages/`, `frontend/src/app/packages/` | Implementado |
-| Topología Docker | `docker-compose.yml` | Compose alineado; Dockerfile pendiente fix |
+| Package-by-domain | `apps/backend/app/packages/`, `frontend/src/app/packages/` | Implementado |
+| Topología Docker | `infrastructure/docker/docker-compose.yml` | Compose alineado; Dockerfile pendiente fix |
 | Modelo de datos warehouse | `elt/pipelines/elt_pipeline.py`, `enterprise_analytics.py` | Implementado |
 | Workflow SDD | `.specify/workflows/speckit/workflow.yml` | Instalado |
 | Diseño target Kiro | `.kiro/specs/.../design.md` | Referencia; validar vs código |
@@ -190,12 +190,12 @@ Voxmetriks opera en tres niveles empresariales interconectados. Cada decisión a
 | Elemento | Artefacto canónico | Estado actual |
 |----------|-------------------|---------------|
 | Dev local Windows | `scripts/dev_start.bat` | **Fuente operativa más fiable** |
-| Pipeline ELT | `python elt/pipelines/elt_pipeline.py` | Entry point canónico |
+| Pipeline ELT | `python analytics/elt/pipelines/elt_pipeline.py` | Entry point canónico |
 | Validación warehouse | `scripts/validate_warehouse.py` | Disponible |
 | Health API | `GET /health` | Implementado |
 | Control ELT | `ctl_carga_dataset`, `ctl_auditoria`, `ctl_pipeline_stages` | Implementado |
 | Configuración | `.env` (no versionado), `.env.example` | Compartido pipeline+API |
-| Quickstarts legacy | `QUICKSTART.md`, `docs/*` | **Desactualizados — no usar como runbook** |
+| Quickstarts legacy | `quickstart.md`, `docs/*` | **Desactualizados — no usar como runbook** |
 
 **Responsabilidad:** definir *cómo se ejecuta* el sistema día a día.
 
@@ -243,7 +243,7 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 | History | (API analytics/history) | `packages/history/` |
 | Administration | — | `packages/administration/` |
 
-**Justificación:** Evidencia en `backend/app/packages/` y `frontend/src/app/packages/`. Nuevas features MUST ubicarse en el dominio correspondiente o crear dominio nuevo con spec que lo justifique.
+**Justificación:** Evidencia en `apps/backend/app/packages/` y `frontend/src/app/packages/`. Nuevas features MUST ubicarse en el dominio correspondiente o crear dominio nuevo con spec que lo justifique.
 
 ### P3. Medallion Data Architecture
 
@@ -257,7 +257,7 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 
 ### P4. Single Warehouse Authority
 
-**Declaración:** La fuente analítica canónica es un único archivo DuckDB en ruta resuelta por `backend/app/core/config.py`.
+**Declaración:** La fuente analítica canónica es un único archivo DuckDB en ruta resuelta por `apps/backend/app/core/config.py`.
 
 **Ruta canónica:** `{project_root}/data/warehouse/voxmetrik.duckdb`
 
@@ -453,7 +453,7 @@ User Actions ──► app_* tables ◄─────────────�
 | Config | pydantic-settings | `2.3.4` |
 | Database driver | duckdb | `1.1.3` |
 | Python | 3.12 | **Prohibido 3.13+** (compat wheels) |
-| Entry point | `backend/app/main.py` | `uvicorn app.main:app` desde `backend/` |
+| Entry point | `apps/backend/app/main.py` | `uvicorn app.main:app` desde `apps/backend/` |
 | Pattern | routes → services → SQL | Sin ORM |
 
 **Reglas:**
@@ -470,7 +470,7 @@ User Actions ──► app_* tables ◄─────────────�
 | Formato intermedio | Parquet |
 | Modelo | Star schema + enterprise extensions |
 | DDL authority | `elt/pipelines/elt_pipeline.py` + `elt/transform/enterprise_analytics.py` |
-| Legacy DDL | `backend/db/schema.sql` — **NO autoritativo**; regenerar o archivar |
+| Legacy DDL | `archive/legacy/schema.sql` — **NO autoritativo**; DDL canónico en ELT |
 | Datos versionados | **Prohibido** commitear `.duckdb`, `.parquet`, `.csv` (`.gitignore`) |
 
 ### 7.4 Infraestructura
@@ -489,7 +489,7 @@ User Actions ──► app_* tables ◄─────────────�
 |----------|----------|
 | Base image | `python:3.12-slim` |
 | Compose services | `pipeline`, `api`, `pocketbase` |
-| Pipeline command | `python elt/pipelines/elt_pipeline.py` |
+| Pipeline command | `python analytics/elt/pipelines/elt_pipeline.py` |
 | API command | `uvicorn app.main:app --host 0.0.0.0 --port 8000` |
 | DB volume | `duckdb_data:/app/data/warehouse` |
 | PocketBase image | `spectado/pocketbase:latest` |
@@ -564,7 +564,7 @@ Creada en runtime por API, separada del pipeline:
 | Auditoría | Toda carga MUST escribir en `ctl_*` |
 | Validación post-ELT | `scripts/validate_warehouse.py` MUST ejecutarse tras pipeline en CI |
 | Provenance | Responses analytics SHOULD incluir metadata de fuente (real/synthetic) cuando mezclen capas |
-| No silent schema drift | Cambios DDL MUST actualizar pipeline Python, no solo `backend/db/schema.sql` |
+| No silent schema drift | Cambios DDL MUST actualizar pipeline Python, no solo `archive/legacy/schema.sql` |
 
 ---
 
@@ -613,7 +613,7 @@ Una feature está DONE cuando:
 | TD-003 | CRUD catálogo sin auth | Alta | Spec security-hardening |
 | TD-004 | SHA-256 passwords | Alta | bcrypt/argon2 migration spec |
 | TD-005 | Docs legacy paths | Media | Spec documentation-reconciliation |
-| TD-006 | `backend/db/schema.sql` stale | Media | Regenerar o deprecar |
+| TD-006 | `archive/legacy/schema.sql` stale | Media | Archivado |
 | TD-007 | Historial solo localStorage | Media | Integrar `/analytics/history` |
 | TD-008 | Dual requirements.txt | — | **Cerrado** — solo `backend/requirements.txt` |
 | TD-009 | Frontend prod env localhost | Media | Config deploy spec |
@@ -645,7 +645,7 @@ Una feature está DONE cuando:
 | Service unit | pytest | SQL services con DuckDB in-memory o test file |
 | Pipeline smoke | pytest/script | `run_pipeline()` dry-run o post-run counts |
 
-**Estado actual:** `backend/tests/test_api.py` incompatible — MUST reescribirse antes de expandir coverage.
+**Estado actual:** `apps/backend/tests/test_api.py` incompatible — MUST reescribirse antes de expandir coverage.
 
 **Regla:** pytest MUST añadirse a `backend/requirements.txt` o grupo dev documentado.
 
@@ -664,8 +664,8 @@ Una feature está DONE cuando:
 ```yaml
 # Target pipeline (no implementado aún)
 - pip install -r backend/requirements.txt
-- pytest backend/tests/
-- cd frontend && npm test
+- pytest apps/backend/tests/
+- cd apps/frontend && npm test
 - ruff/flake8 backend (cuando se adopte)
 ```
 
@@ -687,10 +687,10 @@ Una feature está DONE cuando:
 | 1 | **Esta Constitución** | Principios, restricciones, gobernanza |
 | 2 | **`specs/NNN-feature/`** (Specify) | Requisitos activos por feature |
 | 3 | **OpenAPI `/docs`** | Contrato API runtime |
-| 4 | **Código fuente** (`elt/`, `backend/`, `frontend/`) | Comportamiento real |
+| 4 | **Código fuente** (`elt/`, `apps/backend/`, `apps/frontend/`) | Comportamiento real |
 | 5 | **`.specify/templates/`** | Formatos SDD |
 | 6 | **`.kiro/specs/`** | Referencia histórica — NO activa sin migración |
-| 7 | **`docs/`, `QUICKSTART.md`** | Legacy — archivar o regenerar |
+| 7 | **`docs/`, `quickstart.md`** | Legacy — archivar o regenerar |
 
 ### 11.2 Documentos obligatorios por feature (Specify)
 
@@ -761,7 +761,7 @@ Cada `spec.md` MUST incluir tabla:
 |----------|------------|
 | Branch | `NNN-feature-short-name` (Specify sequential) |
 | Spec directory | `specs/NNN-feature-short-name/` |
-| Commit message | Referenciar spec: `feat(analytics): implement trending filter (specs/003-trending-filters)` |
+| Commit message | Referenciar spec: `feat(analytics): implement trending filter (automation/specs/003-trending-filters)` |
 | PR description | Link a spec.md + plan.md + tasks completados |
 
 ### 12.5 Trazabilidad de datos (ELT)
@@ -816,11 +816,10 @@ voxmetriks/                          # Raíz del monorepo
 ├── scripts/                         # dev_start.bat, validate_warehouse.py
 ├── specs/                           # Features Specify (creado por /speckit-specify)
 ├── docs/                            # Legacy — regenerar bajo spec
-├── docker-compose.yml
+├── infrastructure/docker/docker-compose.yml
 ├── Dockerfile
-├── backend/
-│   ├── requirements.txt             # Dependencias Python (API + ELT + tests)
-│   └── db/schema.sql                # Legacy DDL — deprecar
+├── backend/                         # FastAPI + tests (requirements.txt)
+├── archive/                         # Artefactos históricos (analytics-api, DDL legacy)
 ├── .env.example
 └── README.md
 ```
@@ -869,7 +868,7 @@ voxmetriks/                          # Raíz del monorepo
 | Elemento | Convención | Ejemplo |
 |--------|------------|---------|
 | Feature branch | `NNN-short-name` | `001-docker-stabilization` |
-| Spec directory | `specs/NNN-short-name/` | `specs/001-docker-stabilization/` |
+| Spec directory | `specs/NNN-short-name/` | `automation/specs/001-docker-stabilization/` |
 | Short name | 2-4 words kebab-case | `user-auth`, `elt-fix` |
 
 ### 14.5 Tablas DuckDB (prefijos obligatorios)
@@ -1107,7 +1106,7 @@ flowchart TB
 | `elt/pipelines/elt_pipeline.py` DDL_STATEMENTS | **Canónica** dims/facts base |
 | `elt/transform/enterprise_analytics.py` | **Canónica** enterprise layer |
 | `user_storage.py`, `app_storage.py` | **Canónica** `app_*` |
-| `backend/db/schema.sql` | **No canónica** — deprecar |
+| `archive/legacy/schema.sql` | **No canónica** — archivada |
 
 ### 20.2 Modelo dimensional oficial
 
@@ -1140,7 +1139,7 @@ flowchart TB
 ### 21.1 Entry point canónico
 
 ```bash
-python elt/pipelines/elt_pipeline.py
+python analytics/elt/pipelines/elt_pipeline.py
 ```
 
 **NO usar:** `python elt_pipeline.py` (raíz — no existe).
@@ -1294,7 +1293,7 @@ Todo release (minor o major) MUST satisfacer:
 ### Supremacía
 
 Esta Constitución **prevalece** sobre:
-- Documentación en `docs/`, `QUICKSTART.md`, `backend/docs/`
+- Documentación en `docs/`, `quickstart.md` (raíz → `docs/quickstart.md`)
 - Specs Kiro no migradas a Specify
 - Decisiones ad hoc no registradas en specs
 - Sugerencias de agentes IA que contradigan principios ratificados

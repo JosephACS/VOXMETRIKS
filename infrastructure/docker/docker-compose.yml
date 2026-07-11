@@ -1,0 +1,102 @@
+# ── Voxmetriks — docker-compose (enterprise layout) ───────────────────────────
+#
+#   make up
+#   docker compose -f infrastructure/docker/docker-compose.yml --project-directory . up --build
+#
+# Boot: DuckDB → ELT (auto) → GOLD → cache warm → API :8000
+
+services:
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: runtime
+    image: voxmetrik-v2:latest
+    container_name: voxmetrik-backend
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 1
+      --log-level info
+    env_file:
+      - ../../.env
+    environment:
+      DB_PATH: /app/data/warehouse/voxmetrik.duckdb
+      RUN_ETL_ON_BOOT: auto
+      PYTHONPATH: /app/backend:/app
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../data:/app/data
+      - ../../.env:/app/.env:ro
+    networks: [voxmetrik]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  pocketbase:
+    profiles: ["full"]
+    image: spectado/pocketbase:latest
+    ports:
+      - "8090:80"
+    volumes:
+      - ../../infrastructure/pocketbase/pb_data:/pb/pb_data
+      - ../../infrastructure/pocketbase/pb_migrations:/pb/pb_migrations
+    networks: [voxmetrik]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pipeline:
+    profiles: ["full"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: runtime
+    image: voxmetrik-v2:latest
+    working_dir: /app
+    command: python elt/pipelines/elt_pipeline.py
+    env_file:
+      - ../../.env
+    environment:
+      POCKETBASE_URL: http://pocketbase
+      DB_PATH: /app/data/warehouse/voxmetrik.duckdb
+      PYTHONPATH: /app:/app/backend
+    volumes:
+      - ../../data:/app/data
+      - ../../.env:/app/.env:ro
+    networks: [voxmetrik]
+    restart: "no"
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+
+  frontend:
+    profiles: ["full"]
+    build:
+      context: ../../apps/frontend
+    image: voxmetrik-frontend:latest
+    ports:
+      - "8080:80"
+    networks: [voxmetrik]
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  voxmetrik:
+    driver: bridge

@@ -1,0 +1,202 @@
+import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
+import { MusicPlayerService } from './music-player.service';
+import { CoverArtService } from './cover-art.service';
+import { HistoryService } from '../../packages/streaming/services/history.service';
+import { TracksService } from '../../packages/streaming/services/tracks.service';
+import { TrackCoverService } from './track-cover.service';
+import { StatsService } from '../../packages/analytics/services/stats.service';
+import { ListenStatsService } from '../../packages/streaming/services/listen-stats.service';
+import { PlayableTrack } from '../models/player.models';
+import { QueueManager } from '../../playback-core/queue.manager';
+import { PlaybackEngine } from '../../playback-core/playback.engine';
+
+function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
+  return {
+    id: 42,
+    title: 'Test Track',
+    artist: 'Test Artist',
+    durationMs: 180_000,
+    audioUrl: '/assets/demo.mp3',
+    coverGradient: 'linear-gradient(135deg, #111, #333)',
+    ...overrides,
+  };
+}
+
+function createMockEngine() {
+  let tickFn: (() => void) | null = null;
+  const engine = {
+    isYoutube: false,
+    loadedId: null as number | null,
+    setVolume: vi.fn(),
+    primeDemo: vi.fn(),
+    startYoutube: vi.fn(),
+    startDemo: vi.fn((_url: string, trackId: number) => {
+      engine.loadedId = trackId;
+      return Promise.resolve(true);
+    }),
+    markLoaded: vi.fn((trackId: number) => { engine.loadedId = trackId; }),
+    pause: vi.fn(),
+    playDemo: vi.fn(() => Promise.resolve(true)),
+    playYoutube: vi.fn(),
+    seek: vi.fn((s: number) => s),
+    getCurrentTime: vi.fn(() => 0),
+    getDuration: vi.fn((_f: number) => 180),
+    stopAll: vi.fn(),
+    startTick: vi.fn((fn: () => void) => { tickFn = fn; }),
+    destroy: vi.fn(),
+    _tick: () => tickFn?.(),
+  };
+  return engine;
+}
+
+describe('MusicPlayerService', () => {
+  let svc: MusicPlayerService;
+  let historyAdd: ReturnType<typeof vi.fn>;
+  let mockEngine: ReturnType<typeof createMockEngine>;
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+    historyAdd = vi.fn();
+    mockEngine = createMockEngine();
+
+    TestBed.configureTestingModule({
+      providers: [
+        MusicPlayerService,
+        QueueManager,
+        {
+          provide: PlaybackEngine,
+          useValue: {
+            init: () => undefined,
+            get instance() { return mockEngine; },
+            isReady: true,
+            destroy: vi.fn(),
+          },
+        },
+        { provide: CoverArtService, useValue: { gradientFor: () => 'grad' } },
+        { provide: HistoryService, useValue: { add: historyAdd, remove: vi.fn() } },
+        {
+          provide: TracksService,
+          useValue: {
+            getAudioSource: vi.fn(() => of({ status: 'ok', youtube_video_id: null })),
+            getCover: vi.fn(() => of({ status: 'ok', image_url: null })),
+            listTracks: vi.fn(() => of({ total: 0, page: 1, limit: 24, items: [] })),
+          },
+        },
+        {
+          provide: TrackCoverService,
+          useValue: { cover$: () => of('https://example.com/cover.jpg') },
+        },
+        {
+          provide: StatsService,
+          useValue: { getTopTracks: vi.fn(() => of([])) },
+        },
+        { provide: ListenStatsService, useValue: { tick: vi.fn() } },
+      ],
+    });
+
+    svc = TestBed.inject(MusicPlayerService);
+  });
+
+  afterEach(() => {
+    svc.stopPlayback();
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  describe('loadTrack (hotspot)', () => {
+    it('sets currentTrack, duration, and resets currentTime', () => {
+      const track = sampleTrack();
+      svc.playTrack(track);
+      expect(svc.currentTrack()).toEqual(track);
+      expect(svc.currentTime()).toBe(0);
+      expect(svc.duration()).toBe(180);
+    });
+
+    it('persists session to sessionStorage', async () => {
+      vi.useFakeTimers();
+      svc.playTrack(sampleTrack({ id: 7, title: 'Persisted' }));
+      await vi.advanceTimersByTimeAsync(350);
+      const raw = sessionStorage.getItem('vox:playback:session');
+      expect(raw).toBeTruthy();
+      const stored = JSON.parse(raw!) as { track: PlayableTrack };
+      expect(stored.track.id).toBe(7);
+      vi.useRealTimers();
+    });
+
+    it('records the track in listening history', () => {
+      const track = sampleTrack();
+      svc.playTrack(track);
+      expect(historyAdd).toHaveBeenCalledWith({
+        id_track: track.id,
+        nombre_track: track.title,
+        nombre_artista: track.artist,
+      });
+    });
+
+    it('resolves YouTube playback when youtubeVideoId is present', () => {
+      svc.playTrack(sampleTrack({ youtubeVideoId: 'dQw4w9WgXcQ' }));
+      expect(svc.audioMode()).toBe('youtube');
+      expect(mockEngine.startYoutube).toHaveBeenCalledWith('dQw4w9WgXcQ', true);
+      expect(svc.status()).toBe('playing');
+    });
+
+    it('falls back to demo mode when no YouTube id is available', () => {
+      svc.playTrack(sampleTrack());
+      expect(svc.audioMode()).toBe('demo');
+      expect(mockEngine.stopAll).toHaveBeenCalled();
+    });
+  });
+
+  describe('transport controls', () => {
+    it('pause and resume toggle status', () => {
+      svc.playTrack(sampleTrack());
+      svc.pause();
+      expect(svc.status()).toBe('paused');
+      svc.resume();
+      expect(svc.status()).toBe('playing');
+    });
+
+    it('next advances queue', () => {
+      const a = sampleTrack({ id: 1, title: 'A' });
+      const b = sampleTrack({ id: 2, title: 'B' });
+      svc.setQueue([a, b], 0);
+      expect(svc.currentTrack()?.id).toBe(1);
+      svc.next();
+      expect(svc.currentTrack()?.id).toBe(2);
+    });
+
+    it('previous uses playback history after seek reset window', () => {
+      const a = sampleTrack({ id: 1, title: 'A' });
+      const b = sampleTrack({ id: 2, title: 'B' });
+      svc.setQueue([a, b], 0);
+      svc.next();
+      svc.previous();
+      expect(svc.currentTrack()?.id).toBe(1);
+    });
+
+    it('cycleRepeat cycles off → all → one', () => {
+      expect(svc.repeatMode()).toBe('off');
+      svc.cycleRepeat();
+      expect(svc.repeatMode()).toBe('all');
+      svc.cycleRepeat();
+      expect(svc.repeatMode()).toBe('one');
+    });
+
+    it('toggleMute persists preference', () => {
+      svc.toggleMute();
+      expect(svc.muted()).toBe(true);
+      const prefs = JSON.parse(localStorage.getItem('vox:playback:prefs')!);
+      expect(prefs.muted).toBe(true);
+    });
+
+    it('addToQueue appends without playing', () => {
+      svc.playTrack(sampleTrack({ id: 1 }));
+      const added = svc.addToQueue(sampleTrack({ id: 99, title: 'Queued' }));
+      expect(added).toBe(true);
+      expect(svc.queue().length).toBe(2);
+      expect(svc.currentTrack()?.id).toBe(1);
+    });
+  });
+});

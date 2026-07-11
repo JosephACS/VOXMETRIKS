@@ -1,0 +1,43 @@
+<div class="tracks-feature">
+  <header class="tracks-feature__hero">
+    <h1>Canciones destacadas</h1>
+    <p>Ranking del catálogo por popularidad y streams.</p>
+  </header>
+
+  @if (loading() && !allTracks().length) {
+    <app-empty-state type="loading" customTitle="Cargando canciones…" />
+  } @else if (loadError() && !allTracks().length) {
+    <app-empty-state type="error" [customDescription]="loadError()!" />
+  } @else {
+    <div class="tracks-feed">
+      @for (t of allTracks(); track t.id_track; let i = $index) {
+        <app-media-card
+          class="tracks-feed__card"
+          data-testid="featured-track-card"
+          [title]="cleanTitle(t.nombre_track)"
+          [subtitle]="t.nombre_artista ?? '—'"
+          [gradient]="cover(t.id_track)"
+          [coverTrackId]="t.id_track"
+          [coverArtistId]="t.id_artista"
+          [link]="'/tracks/' + t.id_track"
+          [track]="player.fromTopTrack(t)"
+          [queue]="topTracksPlayable()"
+          [badge]="t.popularity"
+          [tag]="'#' + (i + 1)"
+          [meta]="(t.total_streams ? (t.total_streams | number) + ' streams' : 'Pop. ' + t.popularity)"
+        />
+      }
+    </div>
+
+    @if (hasMore() || loadingMore()) {
+      <div #sentinel class="tracks-feature__sentinel" aria-hidden="true">
+        <span class="tracks-feature__spinner"></span>
+        <span class="tracks-feature__loading-label">Cargando más canciones…</span>
+      </div>
+    } @else if (allTracks().length > 0) {
+      <p class="tracks-feature__end">
+        Has visto las {{ allTracks().length }} canciones destacadas del ranking.
+      </p>
+    }
+  }
+</div>

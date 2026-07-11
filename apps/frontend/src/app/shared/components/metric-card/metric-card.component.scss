@@ -1,0 +1,103 @@
+.metric-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 14px;
+  background: var(--glass-bg, rgba(18, 18, 18, 0.72));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  backdrop-filter: var(--glass-blur, blur(16px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(16px));
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  min-height: 132px;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(30, 216, 150, 0.22);
+    box-shadow: var(--shadow-glow);
+  }
+
+  &--loading {
+    pointer-events: none;
+  }
+
+  &__glow {
+    position: absolute;
+    inset: -40% auto auto -20%;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(30, 216, 150, 0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__icon {
+    font-size: 1.1rem;
+    line-height: 1;
+    opacity: 0.9;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  &__value {
+    font-family: var(--font-mono);
+    font-size: 1.85rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+    line-height: 1.1;
+  }
+
+  &__muted {
+    color: var(--color-text-muted);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+  }
+
+  &__trend {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+
+    &.positive { color: var(--color-success); }
+    &.negative { color: var(--color-danger); }
+  }
+
+  &__trend-label {
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  &__skeleton {
+    display: block;
+    width: 96px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--color-skeleton-base), var(--color-skeleton-shimmer), var(--color-skeleton-base));
+    background-size: 200% 100%;
+    animation: vm-shimmer 1.4s ease-in-out infinite;
+  }
+}

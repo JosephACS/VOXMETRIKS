@@ -1,0 +1,184 @@
+<div class="rec-page">
+  <header class="page-header">
+    <div class="header-text">
+      <h1>{{ 'recommendations.title' | t:lang() }}</h1>
+      <p class="page-subtitle">{{ 'recommendations.subtitle' | t:lang() }}</p>
+      <p class="page-subtitle page-subtitle--human">{{ 'recommendations.subtitleHuman' | t:lang() }}</p>
+    </div>
+    <div class="header-badges">
+      <app-data-source-badge kind="live" />
+    </div>
+  </header>
+
+  @if (prefsLoaded() && !recsEnabled()) {
+    <div class="disabled-panel glass-panel">
+      <h2>{{ 'recommendations.disabledTitle' | t:lang() }}</h2>
+      <p>{{ 'recommendations.disabledMessage' | t:lang() }}</p>
+      <a routerLink="/settings" class="cta-link">{{ 'recommendations.goSettings' | t:lang() }}</a>
+    </div>
+  } @else if (isLoading()) {
+    <p class="loading-msg">{{ 'recommendations.loading' | t:lang() }}</p>
+  } @else if (hasError()) {
+    <div class="empty glass-panel error-state">
+      <span [innerHTML]="icon('alert', 28)"></span>
+      <p>{{ 'recommendations.error' | t:lang() }}</p>
+      <small>{{ 'recommendations.errorHint' | t:lang() }}</small>
+      <button type="button" class="retry-btn" (click)="retryRecommendations()">{{ 'common.retry' | t:lang() }}</button>
+    </div>
+  } @else {
+    <section class="kpi-grid">
+      <app-kpi-card [label]="'recommendations.kpi.tracks' | t" [value]="kpiTracks()" iconKey="music" color="primary" [subtitle]="'recommendations.kpi.tracksSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.score' | t" [value]="avgScore()" iconKey="target" color="info" [subtitle]="'recommendations.kpi.scoreSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.genres' | t" [value]="kpiGenres()" iconKey="layers" color="warning" [subtitle]="'recommendations.kpi.genresSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.moods' | t" [value]="moods().length" iconKey="chart" color="secondary" [subtitle]="'recommendations.kpi.moodsSub' | t" />
+    </section>
+
+    <div class="charts-row">
+      <section class="panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <h2>{{ 'recommendations.genreAffinity.title' | t:lang() }}</h2>
+            <p class="panel-sub">{{ 'recommendations.genreAffinity.subtitle' | t:lang() }}</p>
+          </div>
+        </div>
+        <div class="genre-chart">
+          @for (g of genres(); track g.genre; let i = $index) {
+            <div class="genre-bar-row">
+              <span class="genre-label">{{ g.genre }}</span>
+              <div class="genre-bar-track">
+                <div class="genre-bar-fill" [style.width.%]="genreBarWidth(g.score ?? 0)" [style.background]="accent(i)"></div>
+              </div>
+              <span class="genre-score">{{ g.score }}</span>
+            </div>
+          }
+          @if (!genres().length) {
+            <p class="empty-inline">{{ 'recommendations.genreAffinity.empty' | t:lang() }}</p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>{{ 'recommendations.forYou' | t:lang() }}</h2>
+      </div>
+      <div class="horizontal-scroll">
+        @for (item of forYou(); track item.id_track; let i = $index) {
+          @if (item.id_track) {
+            <div class="rec-card-wrap">
+              <app-media-card
+                [title]="displayTitle(item.nombre_track)"
+                [subtitle]="item.nombre_artista ?? '—'"
+                [gradient]="covers.gradientFor(item.id_track)"
+                [coverTrackId]="item.id_track"
+                [coverArtistId]="item.id_artista"
+                [link]="'/tracks/' + item.id_track"
+                [track]="toPlayable(item)"
+                [queue]="forYouPlayable()"
+                [badge]="item.recommendation_score ?? item.popularity"
+              />
+            </div>
+          }
+        }
+        @if (!forYou().length) {
+          <p class="empty-inline">{{ 'recommendations.forYou.empty' | t:lang() }}</p>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>{{ 'recommendations.artists.title' | t:lang() }}</h2>
+      </div>
+      <div class="artists-grid">
+        @for (artist of artists(); track artist.id_artista) {
+          <article class="artist-card">
+            <div class="artist-avatar" [style.background]="artistGradient(artist.nombre_artista)">
+              {{ artistInitial(artist.nombre_artista) }}
+            </div>
+            <div class="artist-info">
+              <h3 class="artist-name">{{ displayArtist(artist.nombre_artista) }}</h3>
+              <div class="artist-metrics">
+                <div class="metric-row">
+                  <span class="metric-label">{{ 'recommendations.artists.popularity' | t:lang() }}</span>
+                  <app-metric-bar [value]="artist.promedio_popularidad ?? 0" [max]="100" color="primary" suffix="" digitsInfo="1.0-0"/>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">{{ 'recommendations.artists.tracks' | t:lang() }}</span>
+                  <span>{{ artist.total_tracks ?? 0 }}</span>
+                </div>
+              </div>
+              <div class="affinity-badge">{{ 'recommendations.artists.affinity' | t: { pct: artist.affinity ?? 0 }:lang() }}</div>
+            </div>
+          </article>
+        }
+        @if (!artists().length) {
+          <p class="empty-inline">{{ 'recommendations.artists.empty' | t:lang() }}</p>
+        }
+      </div>
+    </section>
+
+    <section class="panel mood-panel">
+      <div class="panel-header">
+        <div>
+          <h2>{{ 'recommendations.mood' | t:lang() }}</h2>
+          <p class="panel-sub">{{ 'recommendations.mood.subtitle' | t:lang() }}</p>
+        </div>
+      </div>
+      <div class="mood-grid">
+        @for (mood of moods(); track mood.id) {
+          <button
+            type="button"
+            class="mood-card"
+            [class.selected]="selectedMood() === mood.id"
+            (click)="selectMood(mood.id!)"
+          >
+            <span class="mood-name">{{ mood.name }}</span>
+            <span class="mood-desc">{{ mood.description }}</span>
+            <span class="mood-tracks">{{ 'recommendations.mood.catalogCount' | t: { count: mood.tracks ?? 0 }:lang() }}</span>
+          </button>
+        }
+      </div>
+
+      @if (selectedMood()) {
+        <div class="mood-results" [class.loading]="moodLoading()">
+          @if (moodLoading()) {
+            <p class="mood-status">{{ 'recommendations.mood.loading' | t:lang() }}</p>
+          } @else if (moodCount() === 0) {
+            <div class="mood-empty glass-panel">
+              <p>{{ 'recommendations.mood.empty' | t: { mood: moodLabel() ?? '' }:lang() }}</p>
+              <p class="mood-empty-hint">{{ 'recommendations.mood.emptyHint' | t:lang() }}</p>
+            </div>
+          } @else {
+            <div class="mood-results-head">
+              <span class="mood-results-badge">{{ moodResultsLabel() }}</span>
+              <span class="mood-results-label">{{ 'recommendations.mood.resultsLabel' | t:lang() }} <strong>{{ moodLabel() }}</strong></span>
+            </div>
+            <div class="mood-tracks-grid">
+              @for (track of moodTracks(); track track.id_track; let i = $index) {
+                @if (track.id_track) {
+                  <div class="mood-track-wrap" [style.--accent]="accent(i)">
+                    <app-media-card
+                      [title]="displayTitle(track.nombre_track)"
+                      [subtitle]="displayArtist(track.nombre_artista)"
+                      [gradient]="covers.gradientFor(track.id_track)"
+                      [coverTrackId]="track.id_track"
+                      [coverArtistId]="track.id_artista"
+                      [link]="'/tracks/' + track.id_track"
+                      [track]="toPlayable(track)"
+                      [queue]="moodTracksPlayable()"
+                      [meta]="'Energía ' + (((track.energy ?? 0) * 100) | number:'1.0-0') + '%'"
+                    />
+                    <app-favorite-btn [trackId]="track.id_track" size="sm" />
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="mood-hint">{{ 'recommendations.mood.selectHint' | t:lang() }}</p>
+      }
+    </section>
+  }
+</div>

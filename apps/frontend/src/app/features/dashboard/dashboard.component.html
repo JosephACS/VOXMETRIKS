@@ -1,0 +1,96 @@
+<div class="enterprise-dashboard">
+  <header class="enterprise-dashboard__hero">
+    <div>
+      <p class="enterprise-dashboard__eyebrow">Analítica VOXMETRIK</p>
+      <h1>Panel de streaming</h1>
+      <p class="enterprise-dashboard__subtitle">
+        Métricas operativas del catálogo y la actividad de escucha.
+      </p>
+    </div>
+  </header>
+
+  @if (loading() && !overview()) {
+    <app-empty-state type="loading" customTitle="Cargando panel…" />
+  } @else if (error()) {
+    <app-empty-state
+      type="error"
+      [customDescription]="error()!"
+      (retry)="retry()"
+    />
+  } @else if (!overview()) {
+    <app-empty-state
+      type="no-data"
+      customTitle="Sin datos disponibles"
+      customDescription="No hay métricas de resumen en el warehouse."
+    />
+  } @else {
+    @if (error()) {
+      <p class="enterprise-dashboard__warn" role="status">{{ error() }}</p>
+    }
+    <section class="enterprise-dashboard__kpis" aria-label="Indicadores clave">
+      <app-metric-card
+        title="Streams totales"
+        [value]="totalStreams()"
+        [loading]="loading()"
+        [trendPct]="growthPct()"
+      />
+      <app-metric-card
+        title="Usuarios activos"
+        [value]="activeUsers()"
+        [loading]="loading()"
+      />
+      <app-metric-card
+        title="Género principal"
+        [value]="topGenre()"
+        [loading]="loading()"
+      />
+      <app-metric-card
+        title="Crecimiento"
+        [value]="growthPct() !== null ? (growthPct()! + '%') : null"
+        [loading]="loading()"
+        [trendPct]="growthPct()"
+      />
+    </section>
+
+    <section class="enterprise-dashboard__charts">
+      <app-chart-widget
+        class="span-2"
+        type="line"
+        title="Tendencia de streaming"
+        subtitle="Streams diarios y usuarios únicos"
+        [labels]="streamLabels()"
+        [series]="streamSeries()"
+        [dualAxis]="true"
+        [height]="300"
+      />
+      <app-chart-widget
+        type="pie"
+        title="Distribución por género"
+        subtitle="Participación en streams (7 días)"
+        [series]="genrePie()"
+        [height]="300"
+      />
+      <app-chart-widget
+        type="bar"
+        title="Uso por dispositivo"
+        subtitle="Participación por plataforma (%)"
+        [labels]="deviceLabels()"
+        [series]="deviceSeries()"
+        [height]="300"
+      />
+    </section>
+
+    <section class="enterprise-dashboard__tables">
+      <app-table-widget
+        title="Artistas destacados"
+        [columns]="artistColumns"
+        [rows]="artistRows()"
+      />
+      <app-table-widget
+        title="Tracks destacados"
+        [columns]="trackColumns"
+        [rows]="topTrackRows()"
+      />
+    </section>
+  }
+</div>

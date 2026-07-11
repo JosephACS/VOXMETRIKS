@@ -1,0 +1,11 @@
+{
+  "name": "voxmetriks",
+  "private": true,
+  "scripts": {
+    "e2e": "npm --prefix automation/playwright run e2e",
+    "e2e:ui": "npm --prefix automation/playwright run e2e:ui",
+    "e2e:install": "npm --prefix automation/playwright run e2e:install",
+    "e2e:backend": "npm --prefix automation/playwright run e2e:backend",
+    "e2e:frontend": "npm --prefix automation/playwright run e2e:frontend"
+  }
+}

@@ -5,5 +5,5 @@ alwaysApply: true
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/012-auto-quality-gates/plan.md
+at automation/specs/013-academic-defense-deliverables/plan.md
 <!-- SPECKIT END -->

@@ -57,7 +57,7 @@
     {
       "name": "Voxmetriks Test DB",
       "driver": "DuckDB",
-      "database": "${workspaceFolder}/backend/tests/.pytest_db/voxmetrik_test.duckdb",
+      "database": "${workspaceFolder}/apps/backend/tests/.pytest_db/voxmetrik_test.duckdb",
       "previewLimit": 50
     }
   ],

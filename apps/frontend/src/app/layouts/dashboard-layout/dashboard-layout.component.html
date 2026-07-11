@@ -1,0 +1,134 @@
+<div class="app-shell" data-testid="app-shell"
+  [class.sidebar-open]="sidebarOpen()"
+  [class.sidebar-collapsed]="sidebarCollapsed()">
+
+  <aside class="sidebar" [class.open]="sidebarOpen()">
+    <div class="sidebar-brand">
+      <div class="brand-logo" title="VOXMETRIK">
+        <img src="/assets/images/voxmetrik-icon.webp" width="28" height="28" alt="VOXMETRIK" class="brand-favicon" />
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">VOXMETRIK</span>
+        <span class="brand-version">v2.0</span>
+      </div>
+      <button
+        type="button"
+        class="sidebar-collapse-btn"
+        (click)="toggleSidebarCollapse()"
+        [attr.aria-label]="sidebarCollapsed() ? ('shell.expandMenu' | t) : ('shell.collapseMenu' | t)"
+        [title]="sidebarCollapsed() ? ('shell.expandMenu' | t) : ('shell.collapseMenu' | t)"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          @if (sidebarCollapsed()) {
+            <polyline points="9 18 15 12 9 6"/>
+          } @else {
+            <polyline points="15 18 9 12 15 6"/>
+          }
+        </svg>
+      </button>
+      <button type="button" class="sidebar-close-btn" (click)="closeSidebar()" [attr.aria-label]="'shell.closeMenu' | t">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav" data-testid="app-sidebar-nav">
+      @for (section of visibleNavSections(); track section.id) {
+        <div class="nav-section">
+          <span class="nav-section-label">
+            {{ section.title }}
+            @if (section.id === 'data' && isEngineerRole()) {
+              <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t:lang() }}</span>
+            }
+          </span>
+          @for (item of section.items; track item.path) {
+            <a
+              class="nav-item"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.exact }"
+              [title]="item.label"
+              [attr.aria-label]="item.label"
+              (click)="closeSidebar()"
+            >
+              <span class="nav-icon" [innerHTML]="safeSvg(item.icon)"></span>
+              <span class="nav-label">{{ item.label }}</span>
+              <span class="nav-indicator"></span>
+            </a>
+          }
+        </div>
+      }
+    </nav>
+  </aside>
+
+  @if (sidebarOpen()) {
+    <div class="sidebar-overlay" (click)="closeSidebar()"></div>
+  }
+
+  <div class="main-content">
+    <header class="topbar">
+      <button type="button" class="menu-btn" (click)="toggleSidebar()" [attr.aria-label]="'shell.openMenu' | t">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="topbar-profile">
+        <div class="user-menu-wrap">
+          <button type="button" class="topbar-user-btn" data-testid="user-menu-btn" (click)="toggleUserMenu($event)">
+            <div class="topbar-user-avatar" [style.background]="avatarGradient()">{{ userInitial() }}</div>
+            <span class="topbar-user-name">{{ userName() }}</span>
+            @if (isDemoUser()) {
+              <span class="demo-badge">{{ 'shell.demo' | t:lang() }}</span>
+            } @else if (isEngineerRole()) {
+              <span class="role-badge role-badge--engineer">{{ roleLabel() }}</span>
+            }
+            <svg class="topbar-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          @if (userMenuOpen()) {
+            <div class="user-dropdown glass-panel" (click)="$event.stopPropagation()">
+              <div class="ud-header">
+                <strong>{{ userName() }}</strong>
+                <span class="ud-meta">
+                  <span class="role-badge" [class.role-badge--engineer]="isEngineerRole()">{{ roleLabel() }}</span>
+                  <span class="ud-plan">{{ userPlan() }}</span>
+                </span>
+              </div>
+              <a routerLink="/users" class="ud-item" (click)="userMenuOpen.set(false)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {{ 'shell.myProfile' | t:lang() }}
+              </a>
+              <a routerLink="/liked" class="ud-item" (click)="userMenuOpen.set(false)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {{ 'nav.liked' | t:lang() }}
+              </a>
+              <a routerLink="/settings" class="ud-item" (click)="userMenuOpen.set(false)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                {{ 'nav.settings' | t:lang() }}
+              </a>
+              <button type="button" class="ud-item ud-logout" data-testid="logout-btn" (click)="logout()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                {{ 'shell.logout' | t:lang() }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+      @if (loading.isLoading()) {
+        <div class="global-loader"><div class="loader-bar"></div></div>
+      }
+      <div class="page-shell" [@routeFade]="router.url">
+        <router-outlet />
+      </div>
+    </main>
+    <app-now-playing-view />
+    <app-player-bar />
+  </div>
+</div>

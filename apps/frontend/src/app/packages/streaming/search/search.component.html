@@ -1,0 +1,173 @@
+<div class="search-page">
+
+  <header class="search-header glass-panel">
+
+    <div class="header-row">
+
+      <div>
+
+        <h1>{{ 'search.title' | t:lang() }}</h1>
+
+        <p class="search-subtitle">{{ 'search.subtitle' | t:lang() }}</p>
+
+      </div>
+
+      <app-data-source-badge kind="live" />
+
+    </div>
+
+    <div class="search-box">
+
+      <span [innerHTML]="icon('search', 18)"></span>
+
+      <input
+        data-testid="search-input"
+        type="search"
+
+        [placeholder]="'search.placeholder' | t"
+
+        [ngModel]="query()"
+
+        (ngModelChange)="onInput($event)"
+
+        autofocus
+
+      />
+
+    </div>
+
+    <div class="search-ai-row">
+      <label class="ai-toggle">
+        <input type="checkbox" [checked]="aiMode()" (change)="toggleAiMode()" />
+        Búsqueda natural (IA local)
+      </label>
+      <button type="button" class="ai-playlist-btn" (click)="openAiPlaylist()">Crear playlist con IA</button>
+    </div>
+    @if (nlIntent()) {
+      <p class="nl-intent">Intención detectada: {{ nlIntent() }}</p>
+    }
+
+  </header>
+
+  <app-ai-playlist-dialog />
+
+
+
+  @if (isLoading()) {
+
+    <div class="results-grid">
+
+      @for (s of [1,2,3,4,5,6]; track s) { <div class="result-card skel"></div> }
+
+    </div>
+
+  } @else if (hasError()) {
+
+    <div class="empty error glass-panel">
+
+      <span [innerHTML]="icon('alert', 32)"></span>
+
+      <p>{{ errorMessage() }}</p>
+
+      <button type="button" class="retry-btn" (click)="retrySearch()">{{ 'search.retry' | t:lang() }}</button>
+
+    </div>
+
+  } @else if (searched() && !hasResults()) {
+
+    <div class="empty glass-panel">
+
+      <span [innerHTML]="icon('music', 32)"></span>
+
+      <p>{{ 'search.noResults' | t: { query: query() }:lang() }}</p>
+
+      <small>{{ 'search.noResultsHint' | t:lang() }}</small>
+
+    </div>
+
+  } @else {
+
+    <div class="search-results vm-content-ready">
+
+    @if (artistResults().length) {
+
+      <h2 class="section-title">{{ 'search.artistsSection' | t: { count: artistResults().length }:lang() }}</h2>
+
+      <div class="artist-row">
+
+        @for (a of artistResults(); track a.id_artista) {
+
+          <a class="artist-chip glass-panel" [routerLink]="['/artists', a.id_artista]">
+
+            <span class="artist-initial">{{ artistLabel(a.nombre_artista).charAt(0) }}</span>
+
+            <span>{{ artistLabel(a.nombre_artista) }}</span>
+
+          </a>
+
+        }
+
+      </div>
+
+    }
+
+
+
+    @if (trackResults().length) {
+
+      <h2 class="section-title">{{ 'search.tracksSection' | t: { count: trackTotal() }:lang() }}</h2>
+
+      <cdk-virtual-scroll-viewport itemSize="96" class="search-tracks-viewport">
+        <div class="result-card glass-panel card-hover" *cdkVirtualFor="let r of trackResults(); trackBy: trackId">
+          <button type="button" class="r-play" (click)="playTrack(r, $event)" [attr.aria-label]="'track.playNow' | t">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <a class="r-cover-link" [routerLink]="['/tracks', r.id_track]" [style.background]="cover(r.id_track)">
+            {{ displayTitle(r.nombre_track).charAt(0) }}
+          </a>
+          <div class="r-body">
+            <a class="r-track" [routerLink]="['/tracks', r.id_track]">{{ displayTitle(r.nombre_track) }}</a>
+            <span class="r-artist">{{ r.nombre_artista ?? '—' }}</span>
+            <span class="r-genre">{{ r.nombre_genero ?? '—' }}</span>
+            <div class="r-pop">
+              <div class="pop-bar"><div class="pop-fill" [style.width.%]="r.popularity ?? 0"></div></div>
+              <span class="mono" title="Popularidad Spotify 0-100">{{ r.popularity ?? '—' }}/100</span>
+            </div>
+          </div>
+          <app-track-actions [track]="playable(r)" [queue]="trackQueue()" [artistId]="r.id_artista" size="sm" />
+        </div>
+      </cdk-virtual-scroll-viewport>
+
+      @if (trackTotalPages() > 1) {
+        <div class="search-pagination">
+          <button type="button" class="page-btn" [disabled]="trackPage() <= 1" (click)="loadTrackPage(trackPage() - 1)">‹</button>
+          <span class="page-info">{{ trackPage() }} / {{ trackTotalPages() }}</span>
+          <button type="button" class="page-btn" [disabled]="trackPage() >= trackTotalPages()" (click)="loadTrackPage(trackPage() + 1)">›</button>
+        </div>
+      }
+
+    }
+
+    </div>
+
+  }
+
+
+
+  @if (!searched() && !isLoading()) {
+
+    <div class="hint glass-panel">
+
+      <span [innerHTML]="icon('search', 28)"></span>
+
+      <p>{{ 'search.hint' | t:lang() }}</p>
+
+      <small>{{ 'search.hintDetail' | t:lang() }}</small>
+
+    </div>
+
+  }
+
+</div>
+
+

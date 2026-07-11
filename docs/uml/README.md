@@ -1,41 +1,37 @@
-# UML — Voxmetriks (entregable bloque 3)
+# UML — Voxmetriks
 
-Diagramas PlantUML derivados de specs operativas **001–011**, `TRACEABILITY-MASTER.md` v2.0.0 y código verificado.
+Diagramas PlantUML derivados de specs **001–013**, `TRACEABILITY-MASTER.md` y código verificado.
 
-| Archivo | Contenido |
+## Estructura
+
+| Carpeta | Contenido |
 |---------|-----------|
-| `01-use-cases.puml` | Casos de uso por spec / paquete (CU agregados) |
-| `02-components.puml` | Componentes **compacto** FE/BE PKG-01..07 (PNG sin recorte) |
-| `02-components-detailed.puml` | Mismo diagrama con cada componente interno (puede ser muy ancho) |
-| `03-architecture.puml` | Arquitectura **compatible web** Docker + Medallion + SPA + API |
-| `03-architecture-detailed.puml` | Variante con nodos anidados (puede dar error en plantuml.com) |
-| `04-elt-flow.puml` | Flujo ELT real (CLI) vs consola UI (simulación + synthetic) |
+| [use-cases/](use-cases/) | Casos de uso agregados y por paquete (`packages/uc-*.puml`) |
+| [components/](components/) | Componentes frontend/backend |
+| [architecture/](architecture/) | Arquitectura de despliegue y Medallion |
+| [elt/](elt/) | Flujo ELT (CLI vs consola UI) |
+| [classes/](classes/) | Modelo de clases core y warehouse |
+| [sequence/](sequence/) | Secuencias login, play, recomendaciones |
+| [context/](context/) | Vista de paquetes / contexto |
+| [_rendered/](_rendered/) | PNG exportados (subcarpetas por tipo) |
 
 ## Renderizar
 
-### Opción A — PlantUML CLI
+### PlantUML CLI
 
 ```bash
-# Instalar Java + plantuml (o usar Docker)
-java -jar plantuml.jar docs/uml/*.puml
+java -jar plantuml.jar docs/uml/**/*.puml
 
 # Docker
-docker run --rm -v "%cd%/docs/uml:/data" plantuml/plantuml /data/*.puml
+docker run --rm -v "%cd%/docs/uml:/data" plantuml/plantuml /data/**/*.puml
 ```
 
-Genera PNG/SVG junto a cada `.puml`.
+### VS Code / Cursor
 
-### Opción B — VS Code / Cursor
-
-Extensión **PlantUML** → `Alt+D` preview → export PNG/SVG.
-
-### Opción C — Online (solo preview)
-
-Copiar contenido a [https://www.plantuml.com/plantuml](https://www.plantuml.com/plantuml) (no subir secretos).
+Extensión **PlantUML** → preview → export PNG/SVG.
 
 ## Trazabilidad
 
-- Casos de uso ↔ matriz: `specs/TRACEABILITY-MASTER.md`
-- Delimitación ELT UI vs CLI: `specs/008-pipeline-monitoring/spec.md` §RB-PM01, FR-PM11–PM12, FR-PM24
-- Arquitectura Medallion: `elt/pipelines/elt_pipeline.py`, Constitución §3–§4
-- Despliegue: `docker-compose.yml` (pipeline → api, healthcheck `/health`)
+- Matriz de casos de uso: `automation/specs/TRACEABILITY-MASTER.md`
+- Pipeline UI vs CLI: `automation/specs/008-pipeline-monitoring/spec.md`
+- Implementación: `elt/pipelines/elt_pipeline.py`
