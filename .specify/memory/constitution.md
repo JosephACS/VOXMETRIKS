@@ -1,26 +1,33 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 0.0.0 (template) → 1.0.0 (ratified)
-Modified principles: N/A — initial ratification from architectural audit (2026-06-19)
-Added sections: All 24 enterprise sections (§1–§24) + Governance
-Removed sections: Generic Spec Kit placeholder principles
-Templates requiring updates:
-  - .specify/templates/plan-template.md — ⚠ pending (Constitution Check references should align manually on first /speckit-plan)
-  - .specify/templates/spec-template.md — ⚠ pending
-  - .specify/templates/tasks-template.md — ⚠ pending
-Deferred items: None
-Ratification: Initial constitution derived from codebase audit; stakeholder formal sign-off TODO if required by org policy
+Version change: 1.0.0 → 1.1.0 (amendment — spec 014 Phase B)
+Modified: §1 audio reality; §3.2 audio OOS; §5 P2 package-by-domain + empty-domain ban;
+  new P0 design chain; §11 specs path; §13 monorepo layout; §14 naming honesty;
+  §15 Spec Kit/OpenSpec obligation; §23.3 audio legal/commercial limits;
+  status vocabulary (implementado/parcial/propuesto/no comprobado); glossary Demo Player
+Added: clarifications only — no new enterprise domains (CRM/billing/orgs)
+Removed: none
+Templates: no mandatory template rewrite in this amendment
+Source: automation/specs/014-repository-stabilization-domain-foundation/
 -->
 
 # Constitución Empresarial de Voxmetriks
 
 **Documento:** Constitución del Proyecto Voxmetriks  
-**Metodología:** GitHub Spec Kit (Spec-Driven Development)  
+**Metodología:** GitHub Spec Kit / OpenSpec (Spec-Driven Development)  
 **Alcance:** Repositorio `voxmetriks` — plataforma de streaming musical y analítica de datos  
 **Autoridad:** Este documento prevalece sobre documentación legacy, specs Kiro no ratificadas y decisiones ad hoc no registradas en Specify.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-06-19
+**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
+
+**Vocabulario de estado (obligatorio en docs/specs):**
+| Etiqueta | Significado |
+|----------|-------------|
+| **Implementado** | Existe en código y tiene evidencia de uso o prueba |
+| **Parcial** | Existe pero incompleto, con adaptadores o deuda conocida |
+| **Propuesto** | Aprobado en spec; aún no implementado |
+| **No comprobado** | Afirmado sin evidencia verificada en este repositorio |
 
 ---
 
@@ -62,7 +69,7 @@ Voxmetriks es una **plataforma empresarial de inteligencia musical** que integra
 3. **Exponer** el catálogo, las métricas analíticas y las funcionalidades de usuario (playlists, favoritos, recomendaciones, perfil) mediante una API REST FastAPI con prefijo `/api/v1`.
 4. **Presentar** una interfaz web Angular que unifique navegación de catálogo, reproductor musical, dashboards analíticos y herramientas de data engineering (pipeline ELT, explorador de warehouse).
 
-Voxmetriks **no es** un servicio de streaming de audio en producción: el reproductor frontend utiliza assets WAV de demostración. El valor empresarial reside en **catálogo musical gobernado, analítica accionable, trazabilidad de pipeline y personalización de usuario** sobre un warehouse unificado.
+Voxmetriks **no es** un servicio de streaming de audio con licencia comercial propia. La reproducción actual (**implementado**, evidencia en `apps/backend/app/packages/streaming/services/audio/`) resuelve fuentes vía **YouTube** (proveedor primario), **Audius** (fallback público sin API key) y **demo** local cuando no hay match. No implica derechos de distribución Spotify/DRM ni CDN propio. El valor empresarial reside en **catálogo musical gobernado, analítica accionable, trazabilidad de pipeline y personalización de usuario** sobre un warehouse unificado.
 
 El propósito de evolución del proyecto, documentado en `.kiro/specs/voxmetrik-professionalization/requirements.md` y ratificado aquí, es **professionalizar el sistema existente sin reescritura arquitectónica**: mejorar documentación, estabilizar infraestructura, establecer pruebas, observabilidad y gobernanza SDD — preservando FastAPI, DuckDB, Angular y el pipeline ELT como pilares inmutables salvo enmienda constitucional.
 
@@ -128,7 +135,7 @@ Ratificado desde Kiro requirements y evidencia de código:
 | Reemplazo de FastAPI, DuckDB o Angular | Stack inmutable salvo enmienda |
 | Recreación del pipeline ELT desde cero | Pipeline funcional en `elt/` |
 | Modificación masiva del esquema warehouse existente sin spec | Riesgo de ruptura analítica |
-| Streaming de audio real / CDN / DRM | Player usa demo WAV; no hay backend streaming |
+| Streaming con licencia comercial propia / CDN / DRM | Reproducción vía YouTube/Audius/demo (**parcial**); sin CDN ni DRM propios |
 | CD completo automatizado (inicialmente) | Kiro: CI only en fase 1 |
 | Autenticación OAuth/JWT externa (fase actual) | Implementación actual: tokens opacos en DuckDB |
 | PocketBase como auth provider del API | Configurado pero no implementado |
@@ -216,6 +223,18 @@ Voxmetriks opera en tres niveles empresariales interconectados. Cada decisión a
 
 Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio MUST incluir justificación explícita y plan de remediación en la spec asociada.
 
+### P0. Cadena de diseño (negocio → software)
+
+**Declaración:** El razonamiento y la documentación de cambios relevantes MUST seguir:
+
+> **negocio → objetivos → procesos → actores → casos de uso → reglas → datos → backend → frontend → reportes → IA**
+
+**Justificación:** Evita saltar a código o “módulos IA/Enterprise” sin anclar el problema de negocio y los datos. Spec 014 ratifica esta cadena como principio de gobierno.
+
+**Implicaciones:**
+- Specs MUST declarar alineación a esta cadena (aunque sea breve).
+- No se inventan dominios empresariales vacíos “por arquitectura futura”.
+
 ### P1. Evolución sobre Reescritura
 
 **Declaración:** El sistema existente es un activo funcional. Las mejoras MUST ser incrementales sobre la base de código actual.
@@ -229,21 +248,24 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 
 ### P2. Package-by-Domain (Backend y Frontend)
 
-**Declaración:** La organización del código MUST seguir dominios de negocio alineados entre capas.
+**Declaración:** La organización del código MUST seguir **dominios técnicos** alineados entre capas. Los **dominios empresariales futuros** (CRM, billing, organizations, campaigns, etc.) son **propuestos** solo vía specs dedicadas — MUST NOT crearse como carpetas vacías “placeholder”.
 
-**Dominios oficiales:**
+**Dominios técnicos actuales (evidencia en código — estado mixto implementado/parcial):**
 
-| Dominio | Backend | Frontend |
-|---------|---------|----------|
-| Streaming | `packages/streaming/` | `packages/streaming/` |
-| Analytics | `packages/analytics/` | `packages/analytics/` |
-| Users | `packages/users/` | `packages/users/` |
-| Data Engineering | (API analytics/stats) | `packages/data-engineering/` |
-| Recommendations | (API analytics) | `packages/recommendations/` |
-| History | (API analytics/history) | `packages/history/` |
-| Administration | — | `packages/administration/` |
+| Dominio técnico | Backend (hoy) | Frontend (hoy) | Notas |
+|-----------------|---------------|----------------|-------|
+| Streaming / catálogo+engagement | `apps/backend/app/packages/streaming/` | `apps/frontend/src/app/packages/streaming/` (+ `features/` residual) | Consolidación hacia catalog/engagement = **propuesto** (spec 014) |
+| Analytics | `packages/analytics/` | `packages/analytics/` | Incluye smart (**parcial**) |
+| Users / identity | `packages/users/` | `packages/users/` | Rename a identity = **propuesto** (spec 014) |
+| AI | `packages/ai/` | `packages/ai/` | Naming honesto: capacidades asistidas, no “AGI” |
+| Platform | `app/platform/` | — | Cross-cutting (**parcial**) |
+| Data Engineering | vía analytics API | `packages/data-engineering/` | |
+| Administration | — | `packages/administration/` | |
+| Recommendations / History / Smart | analytics services | packages/`recommendations`, `history`, `smart` | No inventar carpetas vacías adicionales |
 
-**Justificación:** Evidencia en `apps/backend/app/packages/` y `frontend/src/app/packages/`. Nuevas features MUST ubicarse en el dominio correspondiente o crear dominio nuevo con spec que lo justifique.
+**Prohibición:** MUST NOT crear directorios de dominio sin código real ni spec activa. MUST NOT presentar dominios empresariales no implementados como si existieran en el monorepo.
+
+**Justificación:** Evidencia en `apps/backend/app/packages/` y `apps/frontend/src/app/packages/`. Spec 014 estabiliza sin crear CRM/billing/orgs.
 
 ### P3. Medallion Data Architecture
 
@@ -283,11 +305,11 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 
 **Justificación:** `main.py` lifespan verifica DB; servicios analytics tienen fallbacks documentados en código.
 
-### P8. Spec-Driven Development (SDD)
+### P8. Spec-Driven Development (SDD) / OpenSpec
 
-**Declaración:** Toda feature no trivial MUST seguir el flujo Specify: Constitution → Specify → [Clarify] → [Checklist] → Plan → Tasks → [Analyze] → Implement.
+**Declaración:** Todo cambio estructural o feature no trivial MUST seguir Spec Kit / OpenSpec: Constitution → Specify → [Clarify] → [Checklist] → Plan → Tasks → [Analyze] → Implement. La ubicación canónica actual de specs es **`automation/specs/`**. `.specify/` es **gobierno y tooling** (constitución, templates, scripts, workflows) — no el almacén de features.
 
-**Justificación:** Spec Kit v0.11.3 instalado con integración `cursor-agent`. Skills en `.cursor/skills/speckit-*`.
+**Justificación:** Spec Kit instalado; specs 001–014 viven en `automation/specs/`. `.specify/feature.json` apunta al feature activo.
 
 ### P9. Contract-First API
 
@@ -684,26 +706,28 @@ Una feature está DONE cuando:
 
 | Prioridad | Fuente | Uso |
 |:---------:|--------|-----|
-| 1 | **Esta Constitución** | Principios, restricciones, gobernanza |
-| 2 | **`specs/NNN-feature/`** (Specify) | Requisitos activos por feature |
+| 1 | **Esta Constitución** (`.specify/memory/constitution.md`) | Principios, restricciones, gobernanza |
+| 2 | **`automation/specs/NNN-feature/`** (Specify / OpenSpec) | Requisitos activos por feature |
 | 3 | **OpenAPI `/docs`** | Contrato API runtime |
-| 4 | **Código fuente** (`elt/`, `apps/backend/`, `apps/frontend/`) | Comportamiento real |
-| 5 | **`.specify/templates/`** | Formatos SDD |
+| 4 | **Código fuente** (`analytics/elt/`, `apps/backend/`, `apps/frontend/`) | Comportamiento real |
+| 5 | **`.specify/`** (templates, scripts, workflows) | Tooling SDD — no almacén de features |
 | 6 | **`.kiro/specs/`** | Referencia histórica — NO activa sin migración |
-| 7 | **`docs/`, `quickstart.md`** | Legacy — archivar o regenerar |
+| 7 | **`docs/`, quickstarts** | Legacy — archivar o regenerar |
 
 ### 11.2 Documentos obligatorios por feature (Specify)
 
 ```
-specs/NNN-feature-name/
-├── spec.md           # Requisitos, user stories, acceptance scenarios
-├── plan.md           # Decisiones técnicas, Constitution Check
-├── tasks.md          # Tareas accionables
-├── checklists/       # Quality gates (opcional pero recomendado)
-├── research.md       # Investigación (si aplica)
-├── data-model.md     # Entidades afectadas (si aplica)
-└── contracts/        # OpenAPI fragments, SQL contracts (si aplica)
+automation/specs/NNN-feature-name/
+├── spec.md
+├── plan.md
+├── tasks.md
+├── checklist.md          # o checklists/ según feature
+├── research.md           # opcional
+├── data-model.md         # opcional
+└── contracts/            # opcional
 ```
+
+**Nota:** No crear specs nuevas bajo `.specify/` ni bajo `specs/` en la raíz si el proyecto ya usa `automation/specs/` (ubicación canónica actual).
 
 ### 11.3 Reglas de escritura
 
@@ -777,57 +801,52 @@ Cada `spec.md` MUST incluir tabla:
 ## 13. Organización Oficial del Repositorio
 
 ```
-voxmetriks/                          # Raíz del monorepo
+voxmetriks/                          # Raíz del monorepo (NO mover)
 ├── .cursor/                         # Reglas y skills Cursor + Spec Kit
-│   ├── rules/                       # git-commits.mdc, specify-rules.mdc
-│   └── skills/speckit-*/            # Comandos SDD
-├── .specify/                        # Infraestructura Spec Kit (NO mover)
+│   ├── rules/
+│   └── skills/speckit-*/
+├── .specify/                        # Gobierno + tooling Spec Kit (NO es almacén de features)
 │   ├── memory/constitution.md       # ESTE DOCUMENTO
-│   ├── templates/                   # Plantillas spec/plan/tasks
-│   ├── scripts/powershell/          # Scaffolding features
-│   └── workflows/                   # SDD workflows
-├── .kiro/specs/                     # Specs históricas Kiro (referencia)
-├── backend/
-│   └── app/
-│       ├── main.py                  # Entry point API
-│       ├── core/                    # config, database, logger
-│       ├── shared/schemas/          # Pydantic DTOs
-│       └── packages/                # Dominios: streaming, analytics, users
-│           ├── streaming/routes|services/
-│           ├── analytics/routes|services/
-│           └── users/routes|services/
-├── frontend/
-│   └── src/app/
-│       ├── app.routes.ts            # Routing canónico
-│       ├── core/                    # auth, guards, interceptors, i18n
-│       ├── shared/                  # components, models, pipes
-│       ├── layouts/                 # auth-layout, dashboard-layout
-│       └── packages/                # Dominios mirror backend
-├── elt/
-│   ├── pipelines/elt_pipeline.py  # ORQUESTADOR ELT CANÓNICO
-│   ├── transform/enterprise_analytics.py
-│   └── extract/                     # bootstrap, download (legacy)
-├── data/                            # Gitignored parcialmente
-│   ├── bronze/
-│   ├── silver/
-│   ├── gold/
-│   └── warehouse/voxmetrik.duckdb
-├── pocketbase/                      # Migraciones PB
-├── scripts/                         # dev_start.bat, validate_warehouse.py
-├── specs/                           # Features Specify (creado por /speckit-specify)
-├── docs/                            # Legacy — regenerar bajo spec
-├── infrastructure/docker/docker-compose.yml
-├── Dockerfile
-├── backend/                         # FastAPI + tests (requirements.txt)
-├── archive/                         # Artefactos históricos (analytics-api, DDL legacy)
-├── .env.example
+│   ├── feature.json                 # Feature activo → automation/specs/...
+│   ├── templates/
+│   ├── scripts/
+│   └── workflows/
+├── apps/
+│   ├── backend/                     # FastAPI + tests (canónico)
+│   │   └── app/
+│   │       ├── main.py
+│   │       ├── core/
+│   │       ├── platform/            # parcial
+│   │       ├── api/                 # routers / fachada
+│   │       └── packages/            # streaming, analytics, users, ai, …
+│   └── frontend/                    # Angular SPA (canónico)
+│       └── src/app/
+│           ├── core/
+│           ├── layouts/             # shell futuro = propuesto
+│           ├── packages/
+│           ├── features/            # residual — consolidación propuesta (014)
+│           ├── playback-core/       # dirección futura documentada
+│           └── shared/
+├── analytics/
+│   └── elt/                         # Pipeline Medallion (declarado canónico en 014)
+├── automation/
+│   ├── specs/                       # Specs Specify canónicas (001–014…)
+│   ├── playwright/                  # E2E
+│   └── scripts/                     # validate_warehouse, smokes
+├── infrastructure/                  # Docker/Makefile compose
+├── data/                            # bronze/silver/gold/warehouse (gitignored parcial)
+├── docs/
+├── archive/                         # Histórico
+├── Makefile                         # Delega a infrastructure/
 └── README.md
 ```
 
 **Reglas estructurales:**
 - MUST NOT crear dominios fuera de `packages/` sin spec.
-- MUST NOT mover `.specify/` ni `.cursor/skills/speckit-*` sin `specify integration` commands.
-- Nuevas features Specify van en `specs/`, NO en `.kiro/specs/`.
+- MUST NOT crear carpetas de dominios empresariales vacíos (CRM, billing, organizations, …).
+- MUST NOT mover `.specify/` ni `.cursor/skills/speckit-*` sin comandos de integración Specify.
+- Nuevas features Specify van en `automation/specs/`, NO en `.kiro/specs/` ni dentro de `.specify/`.
+- Rutas legacy `backend/`, `frontend/`, `elt/`, `specs/` en raíz, si existen, son históricas o stubs — el canónico operativo es `apps/` + `analytics/elt` + `automation/specs`.
 
 ---
 
@@ -838,9 +857,17 @@ voxmetriks/                          # Raíz del monorepo
 | Contexto | Nombre oficial |
 |----------|----------------|
 | Producto / marca | **Voxmetriks** |
-| Código interno / API metadata | **VOXMETRIK_V2** |
+| Código interno / API metadata | **VOXMETRIK_V2** (identificador legacy de codebase — no implica “v2 de producto” comercial) |
 | Repositorio | `voxmetriks` |
 | Base de datos | `voxmetrik.duckdb` |
+
+### 14.1.1 Naming honesto (AI, Enterprise, RC)
+
+| Término | Uso permitido | Prohibido |
+|---------|---------------|-----------|
+| **AI** | Asistentes/explicaciones/recomendaciones con proveedor local/externo/mock documentado | Afirmar autonomía general o “IA de producción certificada” sin evidencia |
+| **Enterprise** | Capa analítica/synthetic o rutas etiquetadas enterprise en código | Afirmar ERP/CRM/billing multi-tenant completo |
+| **RC / Release Candidate** | Hitos de endurecimiento con checklist | Afirmar readiness de producción global sin gates G1–G9 / evidencia |
 
 ### 14.2 Código backend (Python)
 
@@ -868,7 +895,7 @@ voxmetriks/                          # Raíz del monorepo
 | Elemento | Convención | Ejemplo |
 |--------|------------|---------|
 | Feature branch | `NNN-short-name` | `001-docker-stabilization` |
-| Spec directory | `specs/NNN-short-name/` | `automation/specs/001-docker-stabilization/` |
+| Spec directory | `automation/specs/NNN-short-name/` | `automation/specs/014-repository-stabilization-domain-foundation/` |
 | Short name | 2-4 words kebab-case | `user-auth`, `elt-fix` |
 
 ### 14.5 Tablas DuckDB (prefijos obligatorios)
@@ -888,14 +915,16 @@ voxmetriks/                          # Raíz del monorepo
 
 ### 15.1 Cuándo crear spec
 
-MUST crear spec via `/speckit-specify` cuando:
+MUST crear spec via Spec Kit (`/speckit-specify` / OpenSpec) en `automation/specs/` cuando:
 
 - Nueva feature visible para usuario o API pública
+- Cambio estructural de monorepo / package-by-domain
 - Cambio breaking en contrato API
 - Modificación DDL warehouse
 - Cambio en pipeline ELT
 - Remediación de deuda técnica TD-001 a TD-010
 - Introducción de dependencia major nueva
+- Introducción de un dominio empresarial nuevo (CRM, billing, orgs, …) — **solo entonces** se crean esas carpetas
 
 MAY omitir spec para: typo fixes, formatting, dependency patch sin behavior change.
 
@@ -1206,7 +1235,7 @@ Todo release (minor o major) MUST satisfacer:
 ### 22.4 Documentación
 
 - [ ] Runbook operativo único y validado (`dev_start.bat` + doc generada)
-- [ ] Specs de features del release en `specs/`
+- [ ] Specs de features del release en `automation/specs/`
 - [ ] Deuda técnica TD-* del release cerrada o diferida con spec
 
 ---
@@ -1238,9 +1267,11 @@ Todo release (minor o major) MUST satisfacer:
 
 | Restricción | Descripción |
 |-------------|-------------|
-| No streaming audio real | Player demo WAV |
-| Datos enterprise synthetic | No presentar como telemetría real |
+| Audio sin licencia comercial propia | Reproducción vía YouTube / Audius / demo (**implementado** en resolver); no CDN/DRM propios; no redistribución Spotify |
+| Límites legales/comerciales del audio | Proveedores terceros sujetos a sus ToS; uso demo/académico; no afirmar catálogo licenciado para venta de streams |
+| Datos enterprise synthetic | No presentar como telemetría real de usuarios finales |
 | PocketBase solo ingesta | No auth provider API |
+| Dominios empresariales no inventados | CRM/billing/organizations/campaigns = **propuesto** solo con spec futura — no carpetas vacías |
 
 ### 23.4 Restricciones de seguridad (hasta remediación)
 
@@ -1264,27 +1295,28 @@ Todo release (minor o major) MUST satisfacer:
 | **Enterprise Layer** | Extensión synthetic behavioral generada por `enterprise_analytics.py` |
 | **Synthetic Data** | Datos generados algorítmicamente, no telemetría real |
 | **Catalog Data** | Datos de tracks/artists/genres del dataset fuente |
-| **Package** | Dominio de código (`streaming`, `analytics`, `users`) |
+| **Package** | Dominio técnico de código (`streaming`, `analytics`, `users`, `ai`, …) |
 | **app_* tables** | Tablas de aplicación gestionadas por API (usuarios, playlists) |
 | **ctl_* tables** | Tablas de control y auditoría del pipeline |
 | **dim_* / fact_* / agg_*** | Prefijos del modelo dimensional warehouse |
 | **ELT** | Extract-Load-Transform; carga antes de transformación en DuckDB |
-| **Pipeline** | Orquestador batch `elt/pipelines/elt_pipeline.py` |
+| **Pipeline** | Orquestador batch `analytics/elt/pipelines/elt_pipeline.py` (canónico declarado) |
 | **PocketBase** | Servicio opcional de ingesta CSV (colección `datasets`) |
-| **Specify / Spec Kit** | Toolkit GitHub SDD con CLI `specify` y skills `/speckit-*` |
+| **Specify / Spec Kit / OpenSpec** | Toolkit SDD; tooling en `.specify/`; features en `automation/specs/` |
 | **Constitution** | Este documento; principios supremos del proyecto |
-| **Spec** | Especificación formal en `specs/NNN-*/spec.md` |
+| **Spec** | Especificación formal en `automation/specs/NNN-*/spec.md` |
 | **OE/OT/OO** | Objetivo Estratégico / Táctico / Operativo |
 | **CU / HU** | Caso de Uso / Historia de Usuario |
 | **SDD** | Spec-Driven Development |
 | **Modular Monolith** | Monolito con separación lógica por packages |
 | **Schema Introspection** | Patrón DESCRIBE/safe_query antes de asumir columnas |
 | **Engineer Access** | Rol con acceso a ELT pipeline UI y warehouse explorer |
-| **Demo Player** | Reproductor HTML5 Audio con WAV locales, no streaming backend |
+| **Demo Player / Audio resolver** | Reproducción vía YouTube, Audius fallback y demo — no licencia comercial propia |
 | **OpenAPI** | Contrato API auto-generado en `/docs` |
 | **Deuda Técnica (TD-NNN)** | Registro de gaps conocidos §9.4 |
 | **Definition of Done** | Criterios §9.3 para cerrar features |
 | **Constitution Check** | Gate en plan.md validando compliance con esta Constitución |
+| **Implementado / Parcial / Propuesto / No comprobado** | Vocabulario de estado obligatorio (encabezado) |
 
 ---
 
@@ -1302,7 +1334,7 @@ El **código fuente** prevalece sobre documentación legacy para describir compo
 
 ### Procedimiento de enmienda
 
-1. Crear spec `specs/NNN-constitution-amendment/` describiendo cambio propuesto.
+1. Crear spec `automation/specs/NNN-constitution-amendment/` describiendo cambio propuesto.
 2. Documentar impacto en principios, templates y deuda técnica.
 3. Ejecutar `/speckit-plan` y `/speckit-analyze`.
 4. Actualizar `.specify/memory/constitution.md` con versión semver:
@@ -1324,6 +1356,6 @@ Los skills en `.cursor/skills/speckit-*` operan bajo esta Constitución. El cont
 
 ---
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-06-19
+**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
 
-*Documento generado conforme a GitHub Spec Kit v0.11.3 y auditoría arquitectónica Voxmetriks 2026-06-19.*
+*Enmienda 1.1.0 conforme a spec 014 (Fase B). Documento base: Spec Kit + auditoría 2026-06-19.*
