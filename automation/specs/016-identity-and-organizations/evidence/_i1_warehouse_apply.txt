@@ -1,0 +1,68 @@
+warehouse=C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik.duckdb
+exists=True
+
+--- read-only before ---
+=== BEFORE (read-only) ===
+  app_user: 5
+  app_session: 243
+  app_email_code: 0
+  app_organization: TABLE_MISSING
+  app_organization_member: TABLE_MISSING
+  app_business_role: TABLE_MISSING
+  app_permission: TABLE_MISSING
+  app_role_permission: TABLE_MISSING
+  app_member_role: TABLE_MISSING
+
+--- write ensure_organization_tables ---
+schema_ready after reset: False
+ensure_organization_tables: OK
+=== AFTER (write conn) ===
+  app_user: 5
+  app_session: 243
+  app_email_code: 0
+  app_organization: 0
+  app_organization_member: 0
+  app_business_role: 9
+  app_permission: 15
+  app_role_permission: 48
+  app_member_role: 0
+
+org_seed_check: app_organization count=0 (expect 0 if no org seed)
+CONFIRM: 0 organizations (catalogs only, no org seed)
+
+--- read-only after ---
+=== AFTER (read-only) ===
+  app_user: 5
+  app_session: 243
+  app_email_code: 0
+  app_organization: 0
+  app_organization_member: 0
+  app_business_role: 9
+  app_permission: 15
+  app_role_permission: 48
+  app_member_role: 0
+
+summary: roles=9 permissions=15 role_permissions=48 orgs=0
+PASS
+EXIT=0
+
+--- reconfirm after I1 pytest/auth/validate ---
+warehouse=C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik.duckdb
+exists=True
+=== IDENTITY ===
+  app_user: 5
+  app_session: 243
+  app_email_code: 0
+=== ORGS ===
+  app_organization: 0
+  app_organization_member: 0
+=== CATALOGS ===
+  app_business_role: 9
+  app_permission: 15
+  app_role_permission: 48
+  app_member_role: 0
+EXPECT identity 5/243/0: PASS
+EXPECT orgs 0/0: PASS
+EXPECT catalogs 9/15/48: PASS
+PASS
+EXIT=0

@@ -1,0 +1,35 @@
+# I1 pytest evidence — apps/backend
+# Generated: 2026-07-11
+
+## 1) tests/test_dashboard.py::test_dashboard_api_routes
+Command: python -m pytest tests/test_dashboard.py::test_dashboard_api_routes -q --tb=line
+
+.
+                                                                        [100%]
+
+PASSED=1
+FAILED=0
+TOTAL=1
+EXIT=0
+
+## 2) tests/test_organizations_schema_i1.py tests/test_organizations_repositories_i1.py
+Command: python -m pytest tests/test_organizations_schema_i1.py tests/test_organizations_repositories_i1.py -q --tb=line
+
+..................                                                       [100%]
+
+PASSED=18
+FAILED=0
+TOTAL=18
+EXIT=0
+
+## 3) Full suite
+Command: python -m pytest -q --tb=line
+
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+..........................................                               [100%]
+
+PASSED=186
+FAILED=0
+TOTAL=186
+EXIT=0

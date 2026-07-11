@@ -1,0 +1,24 @@
+=== IDENTITY / ORG COUNTS (read-only) ===
+app_user: 5
+app_session: 269
+app_email_code: 0
+app_organization: 10
+app_organization_member: 12
+app_organization_invitation: 4
+app_member_role: 12
+app_business_role: 9
+app_permission: 15
+app_role_permission: 48
+app_user_organization_preference: 2
+app_audit_log: 31
+=== DESCRIBE org tables ===
+app_organization: id, display_name, legal_name, slug, organization_type, country_code, timezone, default_currency, status, created_by, created_at, updated_at, closed_at, is_demo
+app_organization_member: id, organization_id, user_id, status, joined_at, suspended_at, left_at, removed_at, created_by, created_at, updated_at
+app_organization_invitation: id, organization_id, email_normalized, token_hash, status, expires_at, invited_by, initial_role_code, accepted_by, accepted_at, revoked_by, revoked_at, created_at, updated_at
+app_audit_log: id, organization_id, actor_user_id, actor_platform_role, action, target_type, target_id, previous_values_json, new_values_json, reason, request_id, source, result, occurred_at
+app_user_organization_preference: user_id, active_organization_id, updated_at, updated_by
+=== CATALOG SAMPLE ===
+roles=administrator,analyst,artist,artist_manager,billing_manager,finance,marketing_manager,owner,viewer
+perms=analytics.view,audit.view,invitation.revoke,invitation.view,member.invite,member.remove,member.suspend,member.view,organization.close,organization.create,organization.update,organization.view,report.view,role.assign,role.view
+=== ORG STATUS DIST ===
+[('active', 9), ('closed', 1)]

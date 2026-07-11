@@ -16,6 +16,8 @@ import { routeFadeAnimation } from '../../shared/animations/route.animations';
 import { TranslationKey } from '../../core/i18n/translations';
 import { PlatformEventsService } from '../../core/services/platform-events.service';
 import { SafeHtml } from '@angular/platform-browser';
+import { OrgSelectorComponent } from '../../packages/organizations/components/org-selector.component';
+import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 
 interface NavItemConfig {
   path: string;
@@ -46,7 +48,7 @@ interface NavSection {
 @Component({
   selector: 'app-dashboard-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, PlayerBarComponent, NowPlayingViewComponent, TranslatePipe],
+  imports: [CommonModule, RouterModule, PlayerBarComponent, NowPlayingViewComponent, TranslatePipe, OrgSelectorComponent],
   templateUrl: './dashboard-layout.component.html',
   styleUrls: ['./dashboard-layout.component.css'],
   animations: [routeFadeAnimation],
@@ -63,6 +65,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private player = inject(MusicPlayerService);
   private destroyRef = inject(DestroyRef);
   private platformEvents = inject(PlatformEventsService);
+  private orgCtx = inject(OrganizationContextService);
 
   sidebarOpen = signal(false);
   sidebarCollapsed = signal(this.readCollapsedPref());
@@ -172,6 +175,22 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      id: 'organizations',
+      titleKey: 'nav.section.organizations',
+      items: [
+        {
+          path: '/organizations/none',
+          labelKey: 'nav.orgStatus',
+          icon: this.svgIcon('<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>'),
+        },
+        {
+          path: '/organizations/new',
+          labelKey: 'nav.orgCreate',
+          icon: this.svgIcon('<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>'),
+        },
+      ],
+    },
+    {
       id: 'system',
       titleKey: 'nav.section.system',
       items: [
@@ -182,16 +201,57 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   navSections = computed((): NavSection[] => {
     this.i18n.tick();
-    return this.navConfig.map((section) => ({
-      id: section.id,
-      title: this.i18n.t(section.titleKey),
-      items: section.items.map((item) => ({
-        path: item.path,
-        label: this.i18n.t(item.labelKey),
-        icon: item.icon,
-        exact: item.exact ?? false,
-      })),
-    }));
+    const activeId = this.orgCtx.activeOrganization()?.id;
+    return this.navConfig.map((section) => {
+      if (section.id === 'organizations' && activeId) {
+        return {
+          id: section.id,
+          title: this.i18n.t(section.titleKey),
+          items: [
+            {
+              path: `/organizations/${activeId}/settings`,
+              label: this.i18n.t('nav.orgSettings'),
+              icon: section.items[0].icon,
+              exact: false,
+            },
+            {
+              path: `/organizations/${activeId}/members`,
+              label: this.i18n.t('nav.orgMembers'),
+              icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+              exact: false,
+            },
+            {
+              path: `/organizations/${activeId}/invitations`,
+              label: this.i18n.t('nav.orgInvitations'),
+              icon: this.svgIcon('<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>'),
+              exact: false,
+            },
+            {
+              path: `/organizations/${activeId}/audit`,
+              label: this.i18n.t('nav.orgAudit'),
+              icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+              exact: false,
+            },
+            {
+              path: '/organizations/new',
+              label: this.i18n.t('nav.orgCreate'),
+              icon: section.items[1].icon,
+              exact: false,
+            },
+          ],
+        };
+      }
+      return {
+        id: section.id,
+        title: this.i18n.t(section.titleKey),
+        items: section.items.map((item) => ({
+          path: item.path,
+          label: this.i18n.t(item.labelKey),
+          icon: item.icon,
+          exact: item.exact ?? false,
+        })),
+      };
+    });
   });
 
   visibleNavSections = computed(() => {
@@ -223,6 +283,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       this.ui.syncThemeFromDarkMode(user.preferences.dark_mode);
     }
     this.platformEvents.start(this.destroyRef);
+    void this.orgCtx.bootstrap();
   }
 
   ngOnDestroy() {
@@ -274,6 +335,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   logout() {
     this.player.stopPlayback();
+    this.orgCtx.clearOrganizationScopedState();
     this.auth.logout();
     this.router.navigate(['/login']);
   }

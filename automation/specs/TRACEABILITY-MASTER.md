@@ -1,10 +1,75 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 2.0.0 | **Ratificado documental:** 2026-06-20  
-**Alcance:** Specs operativas `001`–`011` (capa operativa completa)  
-**Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia
+**Versión:** 2.2.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-11  
+**Alcance:** Specs operativas `001`–`011` (capa operativa) + fundamento empresarial **015** + Identity & Organizations **016**  
+**Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia  
+**Constitución vigente:** 2.0.0 (`.specify/memory/constitution.md`)
 
-Referencia: Constitución (versión vigente en `.specify/memory/constitution.md`) §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+Referencia: Constitución §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+
+### Identity & Organizations — Spec 016 (cierre 2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `016-identity-and-organizations` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest 231 PASS · FE lint/unit/build PASS · warehouse validate PASS · security I5 PASS |
+| E2E Playwright | **NOT_VERIFIED** (0 specs; accepted debt) |
+| Código | `apps/backend/app/packages/organizations/` · `apps/frontend/src/app/packages/organizations/` · identity reutilizado |
+| Evidencia | `automation/specs/016-identity-and-organizations/evidence/spec-closure.md` |
+| feature.json | permanece en 016 (017 no creada) |
+
+**MUST NOT** afirmar CRM/billing/campañas/artistas empresariales como implementados. 016 entrega solo identity+organizations.
+
+Relación 015→016:
+
+```text
+015 DESIGN_APPROVED (fundamento)
+  → 016 CLOSED_WITH_ACCEPTED_DEBT (primera capacidad implementada)
+    → futuras specs (CRM, billing, …) aún IMPLEMENTATION_PENDING
+```
+
+### Fundamento empresarial — Spec 015 (2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `015-enterprise-business-foundation` |
+| Cierre | `CLOSED_WITH_DEFERRED_DECISIONS` |
+| Producto | B2B SaaS de gestión e inteligencia musical |
+| Pagador | Organización musical |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_PENDING** |
+| Primera implementación aprobada | **016 Identity & Organizations** — **CLOSED_WITH_ACCEPTED_DEBT** |
+
+**MUST NOT** enlazar la 015 a tablas DuckDB, endpoints o pantallas empresariales que **aún no existen**. La matriz de filas 001–011 describe la capa operativa técnica existente; la 015 es el **modelo de negocio** sobre el que se construirán specs futuras.
+
+#### Relaciones de trazabilidad 015 (diseño)
+
+```text
+Producto B2B (015)
+  → Objetivos estratégicos (strategic-model.md)
+    → Objetivos tácticos (tactical-model.md)
+      → Objetivos / procesos operativos (operational-model.md)
+        → Capacidades (capability-map.md)
+          → Dominios (domain-boundaries.md) — DESIGN_APPROVED
+            → Golden Path (business-golden-path.md)
+              → Futuras specs (future-specification-map.md) — IMPLEMENTATION_PENDING
+```
+
+| Dominio empresarial (015) | Estado |
+|---------------------------|--------|
+| organizations | **IMPLEMENTED** (016 CLOSED_WITH_ACCEPTED_DEBT) |
+| crm, contracts, subscriptions, billing | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
+| artists empresariales, catalog_rights, campaigns | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
+| reporting empresarial, customer_success, support, compliance | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
+
+| Dominio técnico (código actual) | Relación con 015 |
+|---------------------------------|------------------|
+| identity/users, catalog/streaming, engagement, analytics, ai, platform | Base técnica; no sustituyen dominios empresariales |
+
+Evidencia de cierre 015: `automation/specs/015-enterprise-business-foundation/evidence/spec-closure.md`.
 
 ### Deuda de rutas (Spec 014 G — 2026-07-11)
 
@@ -22,7 +87,11 @@ Las columnas **Evidencia** de esta matriz aún citan rutas históricas (`backend
 
 Actualización fila-a-fila de las 248 evidencias = **deuda aceptada** (spec posterior / herramienta de regeneración). No se reescriben filas aquí para no fingir historial.
 
-**Cierre Spec 014:** `CLOSED_WITH_ACCEPTED_DEBT` — `automation/specs/014-repository-stabilization-domain-foundation/evidence/spec-closure.md`. Esta matriz **no** afirma dominios empresariales (CRM, billing, organizations) como implementados.
+**Cierre Spec 014:** `CLOSED_WITH_ACCEPTED_DEBT` — `automation/specs/014-repository-stabilization-domain-foundation/evidence/spec-closure.md`.
+
+**Cierre Spec 015:** `CLOSED_WITH_DEFERRED_DECISIONS` — fundamento empresarial **DESIGN_APPROVED**; CRM/billing/etc. siguen **IMPLEMENTATION_PENDING**.
+
+**Cierre Spec 016:** `CLOSED_WITH_ACCEPTED_DEBT` — Identity & Organizations **IMPLEMENTATION_COMPLETE**; Playwright E2E NOT_VERIFIED; ver `accepted-debt.md`.
 
 ### Leyenda Impl
 

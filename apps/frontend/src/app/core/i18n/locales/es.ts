@@ -6,6 +6,7 @@ export const LOCALE_ES = {
     'nav.section.recommendations': 'RECOMENDACIONES',
     'nav.section.data': 'DATOS',
     'nav.section.system': 'SISTEMA',
+    'nav.section.organizations': 'ORGANIZACIONES',
     // Nav items
     'nav.home': 'Inicio',
     'nav.analyticsHub': 'Centro analítico',
@@ -27,6 +28,12 @@ export const LOCALE_ES = {
     'nav.eltPipeline': 'Pipeline ELT',
     'nav.explorer': 'Explorador de datos',
     'nav.settings': 'Configuración',
+    'nav.orgStatus': 'Estado org.',
+    'nav.orgCreate': 'Crear organización',
+    'nav.orgSettings': 'Perfil org.',
+    'nav.orgMembers': 'Miembros',
+    'nav.orgInvitations': 'Invitaciones',
+    'nav.orgAudit': 'Auditoría',
     // Shell / layout
     'shell.expandMenu': 'Expandir menú',
     'shell.collapseMenu': 'Contraer menú',

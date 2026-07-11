@@ -1,0 +1,34 @@
+Spec 016 I3 warehouse cleanup
+db=C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik.duckdb
+
+Deletes (safe order):
+  app_audit_log: ok (WHERE organization_id IS NOT NULL)
+  app_member_role: ok
+  app_organization_invitation: ok
+  app_organization_member: ok
+  app_user_organization_preference: ok
+  app_organization: ok
+
+Post-cleanup counts:
+  app_audit_log=0
+  app_member_role=0
+  app_organization_invitation=0
+  app_organization_member=0
+  app_user_organization_preference=0
+  app_organization=0
+  app_user=5
+  app_business_role=9
+  app_permission=15
+  app_role_permission=48
+
+Expected:
+  app_organization: got=0 expected=0 OK
+  app_organization_member: got=0 expected=0 OK
+  app_member_role: got=0 expected=0 OK
+  app_organization_invitation: got=0 expected=0 OK
+  app_user: got=5 expected=5 OK
+  app_business_role: got=9 expected=9 OK
+  app_permission: got=15 expected=15 OK
+  app_role_permission: got=48 expected=48 OK
+
+ALL_OK=True

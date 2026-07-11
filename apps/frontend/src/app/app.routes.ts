@@ -3,6 +3,7 @@ import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-l
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { engineerGuard } from './core/guards/engineer.guard';
+import { ORGANIZATIONS_ROUTES } from './packages/organizations/organizations.routes';
 
 export const APP_ROUTES: Routes = [
   {
@@ -229,6 +230,7 @@ export const APP_ROUTES: Routes = [
             (m) => m.SettingsComponent
           ),
       },
+      ...ORGANIZATIONS_ROUTES,
       {
         path: '**',
         title: 'notFound.title',

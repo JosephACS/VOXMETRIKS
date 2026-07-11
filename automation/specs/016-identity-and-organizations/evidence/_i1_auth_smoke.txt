@@ -1,0 +1,8 @@
+GET /health -> 200 body={"status":"healthy","db_connected":true,"tables_ok":true,"etl_status":"pending","gold_ready":true,"last_pipeline_run":"2026-06-29T00:00:00Z","row_counts":{"streaming":585000,"tracks":89740,"users":11250,"gold_daily":90},"version":"2.0.0"}
+POST /api/v1/users/login -> 200 body={"token":"7ed8ccf4-1c19-457a-ade5-9a995cf2b7a6","user":{"id":1,"username":"demo","email":"demo@voxmetrik.io","role":"user","plan":"Premium","favorite_genre":"Pop","created_at":"2026-06-21 19:25:07.925961","preferences":{"dark_mode":true,"audio_quality":"high","recommendations_enabled":true,"privacy_public":false},"email_verified":true,"auth_provider":"local"}}
+token_present=True keys=['token', 'user']
+GET /api/v1/users/me -> 200 body={"id":1,"username":"demo","email":"demo@voxmetrik.io","role":"user","plan":"Premium","favorite_genre":"Pop","created_at":"2026-06-21 19:25:07.925961","preferences":{"dark_mode":true,"audio_quality":"high","recommendations_enabled":true,"privacy_public":false},"email_verified":true,"auth_provider":"local","stats":{"favorites_count":3,"playlists_count":3},"playlists":[{"id":4,"name":"Track Test PL","description":null,"created_at":"2026-06-30 02:44:18.843969","total_tracks":0,"cover_track_id":null},{"id":2,"name":"Para estudiar","description":"Baja energía y buen ritmo","created_at":"2026-06-21 19:25:07.949966","total_tracks":4,"cover_track_id":57291},{"id":1,"name":"Mis favoritas","description":"Top tracks del catálogo","created_at":"2026-06-21 19:25:07.945965","total_tracks":4,"cover_track_
+POST /api/v1/users/logout -> 200 body={"ok":true}
+GET /api/v1/users/me (after logout) -> 401 body={"status":"error","message":"Not authenticated","details":{"code":"http_error"}}
+PASS: bearer rejected after logout
+EXIT=0

@@ -54,6 +54,8 @@ from app.packages.engagement.routes import (
 from app.packages.engagement.services.app_storage import ensure_app_tables
 from app.packages.identity.routes import users_router
 from app.packages.identity.services.user_storage import ensure_user_tables
+from app.packages.organizations.infrastructure.schema import ensure_organization_tables
+from app.packages.organizations.routes import organizations_router
 
 setup_logging()
 logger = get_logger("voxmetrik.main")
@@ -86,13 +88,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             with using_write_conn() as conn:
                 ensure_user_tables(conn)
                 ensure_app_tables(conn)
-                ensure_secondary_indexes(conn)
-                ensure_search_fold(conn)
+                # Critical for Spec 016 I1 — must not be swallowed.
+                ensure_organization_tables(conn)
+                try:
+                    ensure_secondary_indexes(conn)
+                    ensure_search_fold(conn)
+                except Exception as exc:
+                    logger.error(
+                        "Secondary index/search_fold bootstrap failed: %s",
+                        exc,
+                        exc_info=True,
+                    )
             mark_schema_ready()
             open_read_pool(db_path)
             logger.info("Warehouse OK — %s tables", bootstrap.get("table_count"))
         except Exception as exc:
-            logger.error("Legacy bootstrap failed: %s", exc)
+            logger.error("Legacy bootstrap failed: %s", exc, exc_info=True)
+            raise
     else:
         logger.warning("Warehouse not ready: %s", bootstrap.get("message"))
 
@@ -174,6 +186,7 @@ def create_app() -> FastAPI:
     application.include_router(ai_router, prefix="/api/v1")
     application.include_router(platform_router, prefix="/api/v1")
     application.include_router(users_router, prefix="/api/v1")
+    application.include_router(organizations_router, prefix="/api/v1")
 
     @application.get("/", tags=["Root"], summary="Service metadata")
     def root():

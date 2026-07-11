@@ -78,6 +78,7 @@
       </button>
 
       <div class="topbar-profile">
+        <app-org-selector />
         <div class="user-menu-wrap">
           <button type="button" class="topbar-user-btn" data-testid="user-menu-btn" (click)="toggleUserMenu($event)">
             <div class="topbar-user-avatar" [style.background]="avatarGradient()">{{ userInitial() }}</div>

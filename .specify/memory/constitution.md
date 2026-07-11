@@ -1,32 +1,58 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.1.0 → 2.0.0 (MAJOR amendment — spec 015 closed CLOSED_WITH_DEFERRED_DECISIONS)
+Reason: Redefinición oficial del producto a plataforma B2B SaaS de gestión e inteligencia musical
+  (cliente pagador = organización); audio deja de presentarse como negocio principal;
+  dominios empresariales DESIGN_APPROVED / IMPLEMENTATION_PENDING; principios de dinero,
+  multi-organización, ownership, KPIs/ROI, DuckDB académico vs SaaS transaccional.
+
+Modified principles / sections:
+  - Header alcance + vocabulario de estado (+ diseñado / futuro)
+  - §1 Propósito del Proyecto (definición B2B oficial)
+  - §2 Visión Empresarial (alineada a B2B; streaming como apoyo)
+  - §3 Alcance (dominios técnicos vs empresariales; audio)
+  - §5 P0 cadena de diseño ampliada; P2 dominios; P4 DuckDB límites;
+    nuevos P10–P17 (multi-org, ownership, dinero, KPIs/ROI, honestidad)
+  - §8 / §20 / §23 (DuckDB académico; audio; no compliance legal afirmado)
+  - §18 (sesiones bearer / tokens opacos — no afirmar JWT)
+  - §24 Glosario
+  - Governance footer versión
+
+Added: principios empresariales P10–P17; distinción DESIGN_APPROVED vs IMPLEMENTATION_PENDING
+Removed: ninguna sección histórica eliminada (historial Sync Impact 1.0.0→1.1.0 conservado arriba vía este bloque)
+Templates: no mandatory rewrite (plantillas Spec Kit genéricas); docs/specs futuras deben usar vocabulario ampliado
+Related specs: 015-enterprise-business-foundation (fuente); 014 (estabilización previa);
+  primera implementación aprobada: Identity & Organizations (sin número aún)
+Accepted debts / deferred (from 015): precios/umbrales/trial/cancel; pasarela real;
+  enmienda numeración specs; usuario-sin-org temporal; ingreso reconocido OOS v1
+Source: automation/specs/015-enterprise-business-foundation/evidence/approved-decisions.md
+
+Prior amendment (preserved):
 Version change: 1.0.0 → 1.1.0 (amendment — spec 014 Phase B)
 Modified: §1 audio reality; §3.2 audio OOS; §5 P2 package-by-domain + empty-domain ban;
   new P0 design chain; §11 specs path; §13 monorepo layout; §14 naming honesty;
   §15 Spec Kit/OpenSpec obligation; §23.3 audio legal/commercial limits;
   status vocabulary (implementado/parcial/propuesto/no comprobado); glossary Demo Player
-Added: clarifications only — no new enterprise domains (CRM/billing/orgs)
-Removed: none
-Templates: no mandatory template rewrite in this amendment
-Source: automation/specs/014-repository-stabilization-domain-foundation/
 -->
 
 # Constitución Empresarial de Voxmetriks
 
 **Documento:** Constitución del Proyecto Voxmetriks  
 **Metodología:** GitHub Spec Kit / OpenSpec (Spec-Driven Development)  
-**Alcance:** Repositorio `voxmetriks` — plataforma de streaming musical y analítica de datos  
+**Alcance:** Repositorio `voxmetriks` — plataforma B2B SaaS de gestión e inteligencia musical (con capacidades analíticas y de exploración musical)  
 **Autoridad:** Este documento prevalece sobre documentación legacy, specs Kiro no ratificadas y decisiones ad hoc no registradas en Specify.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
+**Version**: 2.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
 
 **Vocabulario de estado (obligatorio en docs/specs):**
 | Etiqueta | Significado |
 |----------|-------------|
 | **Implementado** | Existe en código y tiene evidencia de uso o prueba |
 | **Parcial** | Existe pero incompleto, con adaptadores o deuda conocida |
-| **Propuesto** | Aprobado en spec; aún no implementado |
+| **Diseñado** | Aprobado en modelo/spec empresarial; aún no implementado (DESIGN_APPROVED) |
+| **Futuro** / **Propuesto** | Planificado o diferido; IMPLEMENTATION_PENDING o no iniciado |
+| **Fuera de alcance** | Explicitamente excluido |
 | **No comprobado** | Afirmado sin evidencia verificada en este repositorio |
 
 ---
@@ -62,16 +88,48 @@ Source: automation/specs/014-repository-stabilization-domain-foundation/
 
 ## 1. Propósito del Proyecto
 
-Voxmetriks es una **plataforma empresarial de inteligencia musical** que integra experiencia de usuario tipo streaming con capacidades analíticas sobre catálogos musicales estilo Spotify. El propósito verificable del sistema, según la evidencia del código y los artefactos de gobernanza existentes, es:
+VOXMETRIKS es una **plataforma B2B SaaS de gestión e inteligencia musical** dirigida a:
 
-1. **Ingerir** datasets de catálogo musical (CSV vía PocketBase, Parquet local o bootstrap sintético controlado).
-2. **Transformar** esos datos mediante un pipeline ELT con arquitectura Medallion (Bronze → Silver → Gold) hacia un data warehouse analítico en DuckDB.
-3. **Exponer** el catálogo, las métricas analíticas y las funcionalidades de usuario (playlists, favoritos, recomendaciones, perfil) mediante una API REST FastAPI con prefijo `/api/v1`.
-4. **Presentar** una interfaz web Angular que unifique navegación de catálogo, reproductor musical, dashboards analíticos y herramientas de data engineering (pipeline ELT, explorador de warehouse).
+- artistas;
+- managers;
+- sellos discográficos;
+- agencias;
+- equipos de marketing;
+- equipos financieros;
+- analistas;
+- dirección empresarial.
 
-Voxmetriks **no es** un servicio de streaming de audio con licencia comercial propia. La reproducción actual (**implementado**, evidencia en `apps/backend/app/packages/streaming/services/audio/`) resuelve fuentes vía **YouTube** (proveedor primario), **Audius** (fallback público sin API key) y **demo** local cuando no hay match. No implica derechos de distribución Spotify/DRM ni CDN propio. El valor empresarial reside en **catálogo musical gobernado, analítica accionable, trazabilidad de pipeline y personalización de usuario** sobre un warehouse unificado.
+El **cliente pagador principal** es una **organización musical** (decisión aprobada, spec 015).
 
-El propósito de evolución del proyecto, documentado en `.kiro/specs/voxmetrik-professionalization/requirements.md` y ratificado aquí, es **professionalizar el sistema existente sin reescritura arquitectónica**: mejorar documentación, estabilizar infraestructura, establecer pruebas, observabilidad y gobernanza SDD — preservando FastAPI, DuckDB, Angular y el pipeline ELT como pilares inmutables salvo enmienda constitucional.
+### 1.1 Negocio principal (**diseñado** — DESIGN_APPROVED / IMPLEMENTATION_PENDING)
+
+Gestionar organizaciones; contratar planes; facturar y cobrar; gestionar artistas y catálogo con derechos; administrar campañas y presupuestos; medir rendimiento y ROI; producir reportes; apoyar decisiones; renovar y ampliar clientes.
+
+Estos dominios empresariales están **diseñados** en `automation/specs/015-enterprise-business-foundation/` y **no** deben presentarse como implementados hasta specs de implementación aprobadas (primera: Identity & Organizations).
+
+### 1.2 Capacidades técnicas actuales (**implementado / parcial**)
+
+El sistema existente, según evidencia de código, además:
+
+1. **Ingiere** datasets de catálogo musical (CSV vía PocketBase, Parquet local o bootstrap sintético controlado).
+2. **Transforma** esos datos mediante pipeline ELT Medallion hacia un data warehouse analítico en DuckDB.
+3. **Expone** catálogo, métricas, playlists, favoritos y recomendaciones vía API REST FastAPI (`/api/v1`).
+4. **Presenta** una SPA Angular con navegación de catálogo, reproductor de exploración, dashboards analíticos y herramientas de data engineering.
+
+### 1.3 Propósito del audio (no es el negocio principal)
+
+La reproducción musical se mantiene como:
+
+- capacidad de **exploración**;
+- **apoyo** a la experiencia;
+- **fuente de eventos** de engagement;
+- **demostración académica**.
+
+**MUST NOT** presentarse como servicio comercial de streaming licenciado. Las licencias y permisos del audio **no están comprobados**. YouTube, Audius y fuentes demo **no** constituyen una solución comercial garantizada. Una futura versión comercial necesitará fuentes autorizadas o deberá operar como producto analítico sin promesa de streaming licenciado.
+
+### 1.4 Evolución
+
+Professionalizar y evolucionar el sistema existente **sin reescritura arquitectónica gratuita**: Spec-Driven Development, preservando FastAPI, Angular y el pipeline ELT; DuckDB permanece válido para warehouse académico/analítico local, **sin** afirmarse como arquitectura SaaS transaccional definitiva (spec 015, decisión #9).
 
 ---
 
@@ -79,34 +137,34 @@ El propósito de evolución del proyecto, documentado en `.kiro/specs/voxmetrik-
 
 ### 2.1 Visión (horizonte 3–5 años)
 
-Voxmetriks será la **plataforma de referencia interna** para equipos que necesiten combinar experiencia de consumo musical con analítica de datos de catálogo, comportamiento simulado y métricas de engagement — gobernada por especificaciones trazables, datos auditables y arquitectura medallion reproducible en contenedores.
+VOXMETRIKS será la plataforma B2B de referencia para organizaciones musicales que necesiten **gestionar** roster, derechos, campañas, suscripción y facturación, y **decidir** con inteligencia musical trazable — con exploración de audio como apoyo, no como promesa de streaming comercial.
 
 ### 2.2 Misión operativa
 
-Entregar un ecosistema software donde:
+Entregar un ecosistema donde:
 
-- Los **analistas de datos** exploten un warehouse dimensional con hechos, agregados y capa enterprise documentada.
-- Los **desarrolladores** evolucionen features bajo Spec-Driven Development con constitución, specs, planes y tareas versionados en Git.
-- Los **usuarios finales** interactúen con catálogo, playlists, favoritos y recomendaciones sobre datos gobernados.
-- Los **ingenieros de datos** operen pipelines ELT observables con tablas de control (`ctl_*`) y validación post-carga.
+- Las **organizaciones** (pagadoras) operen membresías, planes y cobros (**diseñado**).
+- Los **managers / marketing / finanzas / dirección** ejecuten procesos end-to-end con estados, reglas y auditoría (**diseñado**).
+- Los **analistas** exploten warehouse dimensional y KPIs con fórmula y fuente.
+- Los **desarrolladores** evolucionen bajo Spec-Driven Development.
+- Los **usuarios** (incl. modo legacy sin org, temporal) interactúen con catálogo, playlists y exploración de audio (**parcial / implementado**).
+- Los **ingenieros de datos** operen ELT observable.
 
 ### 2.3 Propuesta de valor diferenciada
 
-| Dimensión | Voxmetriks | Justificación (evidencia) |
-|-----------|------------|---------------------------|
-| **Unificación UX + Analytics** | SPA Angular con módulos streaming y analytics en un solo shell | 18 rutas lazy-loaded, `StatsService` con 15+ métodos |
-| **Warehouse embebido de alto rendimiento** | DuckDB OLAP en archivo único | 35+ tablas, queries analíticas sin cluster externo |
-| **Pipeline resiliente** | Fallbacks PocketBase → Parquet → bootstrap | `elt/pipelines/elt_pipeline.py` |
-| **Extensibilidad enterprise** | Capa synthetic behavioral + agregados | `enterprise_analytics.py`, ~220k filas fact sintéticas |
-| **Gobernanza SDD** | Spec Kit + trazabilidad Git | `.specify/`, skills `/speckit-*` |
+| Dimensión | VOXMETRIKS | Estado |
+|-----------|------------|--------|
+| Gestión + inteligencia musical B2B | Org → plan → cobro → artistas → campañas → ROI → decisión | **Diseñado** (015) |
+| Unificación UX exploración + Analytics | SPA Angular + warehouse | **Parcial / implementado** |
+| Warehouse académico embebido | DuckDB OLAP archivo único | **Implementado** (límites SaaS: ver §5 P4) |
+| Gobernanza SDD | Spec Kit + `automation/specs/` | **Implementado** (proceso) |
 
-### 2.4 Alineación estratégica
+### 2.4 Outcomes estratégicos
 
-La visión se materializa en tres outcomes medibles:
-
-1. **Time-to-insight:** desde ingesta CSV hasta dashboard analytics en un solo entorno Docker o dev local.
-2. **Time-to-feature:** nueva capacidad siguiendo flujo Constitution → Specify → Plan → Tasks → Implement con gates de calidad.
-3. **Auditability:** toda carga ELT y mutación crítica de catálogo deja rastro en tablas de control o commits Git trazables a specs.
+1. **Organizaciones activas y renovación** (KPIs SaaS — **diseñado**).
+2. **Dinero trazable** (factura → pago → conciliación — **diseñado**).
+3. **Time-to-insight** analítico sobre warehouse gobernado (**parcial**).
+4. **Auditability** Spec Kit + evidencia de cierre.
 
 ---
 
@@ -114,30 +172,38 @@ La visión se materializa en tres outcomes medibles:
 
 ### 3.1 Dentro del alcance (In Scope)
 
-| Dominio | Capacidades incluidas |
-|---------|----------------------|
-| **Ingesta** | PocketBase colección `datasets`, CSV/Parquet, bootstrap catalog |
-| **ELT** | Pipeline medallion, capa enterprise, export Gold Parquet |
-| **Warehouse** | Modelo dimensional + facts enterprise + agregados + tablas `app_*` |
-| **API** | 54 endpoints: catálogo CRUD, stats, analytics, users, playlists, favorites |
-| **Frontend** | Auth, catálogo, player demo, analytics, recommendations, ELT UI, explorer |
-| **Contenedores** | Docker Compose: pipeline job, API, PocketBase |
-| **Gobernanza** | Constitución, specs Specify, OpenAPI auto-generada |
-| **Professionalización** | Docs, CI (tests+lint), observabilidad, estabilización Docker |
+**Capacidades técnicas actuales (implementado / parcial):**
+
+| Dominio técnico | Capacidades | Estado |
+|-----------------|-------------|--------|
+| identity / users | Auth, sesión bearer / token opaco, perfil | **Parcial / implementado** |
+| catalog / streaming | Catálogo, playlists, favoritos; audio YT/Audius/demo | **Parcial / implementado** |
+| engagement | Eventos / facts de uso | **Parcial** |
+| analytics | Stats, dashboards, smart | **Parcial / implementado** |
+| ai | Asistencias documentadas (naming honesto) | **Parcial** |
+| platform | Health, ops transversales | **Parcial** |
+| Ingesta / ELT / warehouse | Medallion → DuckDB | **Parcial / implementado** |
+| Gobernanza | Constitución, Spec Kit, `automation/specs/` | **Implementado** (proceso) |
+
+**Dominios empresariales (diseñados — DESIGN_APPROVED / IMPLEMENTATION_PENDING):**
+
+organizations · crm · contracts · subscriptions · billing · artists empresariales · catalog_rights · campaigns · reporting empresarial · customer_success · support · compliance  
+
+MUST NOT presentarse como carpetas, tablas o módulos existentes. Solo vía spec de implementación aprobada.
 
 ### 3.2 Fuera del alcance (Out of Scope)
-
-Ratificado desde Kiro requirements y evidencia de código:
 
 | Exclusión | Razón |
 |-----------|-------|
 | Reescritura completa del backend o frontend | Principio "evolucionar, no reescribir" |
-| Reemplazo de FastAPI, DuckDB o Angular | Stack inmutable salvo enmienda |
-| Recreación del pipeline ELT desde cero | Pipeline funcional en `elt/` |
-| Modificación masiva del esquema warehouse existente sin spec | Riesgo de ruptura analítica |
-| Streaming con licencia comercial propia / CDN / DRM | Reproducción vía YouTube/Audius/demo (**parcial**); sin CDN ni DRM propios |
-| CD completo automatizado (inicialmente) | Kiro: CI only en fase 1 |
-| Autenticación OAuth/JWT externa (fase actual) | Implementación actual: tokens opacos en DuckDB |
+| Reemplazo de FastAPI o Angular | Stack inmutable salvo enmienda |
+| DuckDB como arquitectura SaaS transaccional definitiva | Válido académico/analítico; migración futura diseñada en specs |
+| Streaming comercial licenciado / CDN / DRM propios | Audio = exploración/demo/eventos; permisos **no comprobados** |
+| Afirmar cumplimiento GDPR / PCI / ISO / SRI | Sin evidencia; no declarar |
+| Pasarela de pago real ya implementada | Solo mock académico + manual/transferencia (**diseñado**); PaymentProvider **futuro** |
+| Crear dominios empresariales vacíos sin spec | Prohibición package-by-domain |
+| CD completo automatizado (inicialmente) | CI first |
+| Autenticación OAuth externa (fase actual) | Sesiones bearer / tokens opacos actuales — **no** afirmar JWT sin evidencia |
 | PocketBase como auth provider del API | Configurado pero no implementado |
 
 ### 3.3 Límites del sistema
@@ -223,17 +289,21 @@ Voxmetriks opera en tres niveles empresariales interconectados. Cada decisión a
 
 Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio MUST incluir justificación explícita y plan de remediación en la spec asociada.
 
-### P0. Cadena de diseño (negocio → software)
+### P0. Cadena de diseño (negocio → evidencia)
 
 **Declaración:** El razonamiento y la documentación de cambios relevantes MUST seguir:
 
-> **negocio → objetivos → procesos → actores → casos de uso → reglas → datos → backend → frontend → reportes → IA**
+```text
+negocio → objetivos estratégicos → objetivos tácticos → objetivos operativos
+→ capacidades → procesos → actores → casos de uso → reglas → estados
+→ datos → backend → frontend → reportes → KPIs → pruebas → evidencia
+```
 
-**Justificación:** Evita saltar a código o “módulos IA/Enterprise” sin anclar el problema de negocio y los datos. Spec 014 ratifica esta cadena como principio de gobierno.
+**Justificación:** Spec 015 ratifica la cadena completa. Evita crear tablas, endpoints, pantallas, reportes o funciones sin trazabilidad demostrable.
 
 **Implicaciones:**
-- Specs MUST declarar alineación a esta cadena (aunque sea breve).
-- No se inventan dominios empresariales vacíos “por arquitectura futura”.
+- Specs MUST declarar alineación a esta cadena.
+- MUST NOT inventar dominios empresariales vacíos ni afirmar DESIGN_APPROVED como implementado.
 
 ### P1. Evolución sobre Reescritura
 
@@ -248,24 +318,25 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 
 ### P2. Package-by-Domain (Backend y Frontend)
 
-**Declaración:** La organización del código MUST seguir **dominios técnicos** alineados entre capas. Los **dominios empresariales futuros** (CRM, billing, organizations, campaigns, etc.) son **propuestos** solo vía specs dedicadas — MUST NOT crearse como carpetas vacías “placeholder”.
+**Declaración:** La organización del código MUST seguir **dominios técnicos** alineados entre capas. Los **dominios empresariales** solo se materializan en código tras spec de implementación aprobada.
 
-**Dominios técnicos actuales (evidencia en código — estado mixto implementado/parcial):**
+**Dominios técnicos actuales (evidencia en código — implementado/parcial):**
 
-| Dominio técnico | Backend (hoy) | Frontend (hoy) | Notas |
-|-----------------|---------------|----------------|-------|
-| Streaming / catálogo+engagement | `apps/backend/app/packages/streaming/` | `apps/frontend/src/app/packages/streaming/` (+ `features/` residual) | Consolidación hacia catalog/engagement = **propuesto** (spec 014) |
-| Analytics | `packages/analytics/` | `packages/analytics/` | Incluye smart (**parcial**) |
-| Users / identity | `packages/users/` | `packages/users/` | Rename a identity = **propuesto** (spec 014) |
-| AI | `packages/ai/` | `packages/ai/` | Naming honesto: capacidades asistidas, no “AGI” |
-| Platform | `app/platform/` | — | Cross-cutting (**parcial**) |
-| Data Engineering | vía analytics API | `packages/data-engineering/` | |
-| Administration | — | `packages/administration/` | |
-| Recommendations / History / Smart | analytics services | packages/`recommendations`, `history`, `smart` | No inventar carpetas vacías adicionales |
+| Dominio técnico | Notas |
+|-----------------|-------|
+| identity / users | `packages/identity` (+ shim users) |
+| catalog / streaming | catálogo + audio en streaming; engagement separado parcialmente |
+| engagement | eventos / uso |
+| analytics | stats, smart, warehouse queries |
+| ai | asistencias; naming honesto |
+| platform | cross-cutting / health |
 
-**Prohibición:** MUST NOT crear directorios de dominio sin código real ni spec activa. MUST NOT presentar dominios empresariales no implementados como si existieran en el monorepo.
+**Dominios empresariales diseñados (015 — DESIGN_APPROVED / IMPLEMENTATION_PENDING):**  
+organizations, crm, contracts, subscriptions, billing, artists (empresariales), catalog_rights, campaigns, reporting (empresarial), customer_success, support, compliance.
 
-**Justificación:** Evidencia en `apps/backend/app/packages/` y `apps/frontend/src/app/packages/`. Spec 014 estabiliza sin crear CRM/billing/orgs.
+**Prohibición:** MUST NOT crear directorios de dominio sin código real ni spec activa. MUST NOT presentar dominios empresariales no implementados como existentes.
+
+**Justificación:** Spec 014 estabilizó packages técnicos; Spec 015 diseñó límites empresariales sin código.
 
 ### P3. Medallion Data Architecture
 
@@ -277,13 +348,17 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 - No se permite carga directa a tablas dimensionales sin pasar por staging documentado.
 - Cada ejecución MUST registrar estado en tablas `ctl_*`.
 
-### P4. Single Warehouse Authority
+### P4. Single Warehouse Authority (analítico) + límites SaaS
 
-**Declaración:** La fuente analítica canónica es un único archivo DuckDB en ruta resuelta por `apps/backend/app/core/config.py`.
+**Declaración:** La fuente analítica canónica actual es un único archivo DuckDB en ruta resuelta por `apps/backend/app/core/config.py` (`{project_root}/data/warehouse/voxmetrik.duckdb`).
 
-**Ruta canónica:** `{project_root}/data/warehouse/voxmetrik.duckdb`
+DuckDB es tecnología **válida** para: contexto académico; warehouse analítico; demostración local; hechos, dimensiones y agregados.
 
-**Justificación:** `config.py` resuelve buscando `data/warehouse/` en ancestros del proyecto. Rutas legacy (`duckdb/`, `/app/duckdb/`) MUST desaparecer de configs activos.
+DuckDB **MUST NOT** presentarse como: arquitectura transaccional definitiva de un SaaS multiusuario; ni como prueba de alta concurrencia, alta disponibilidad o escalabilidad internacional.
+
+Las operaciones empresariales futuras (orgs, billing, etc.) MUST diseñarse para una **migración posterior** del almacenamiento transaccional cuando la spec correspondiente lo autorice.
+
+**Justificación:** Spec 015 decisión #9; evidencia warehouse actual.
 
 ### P5. Schema Introspection over Assumption
 
@@ -309,7 +384,7 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 
 **Declaración:** Todo cambio estructural o feature no trivial MUST seguir Spec Kit / OpenSpec: Constitution → Specify → [Clarify] → [Checklist] → Plan → Tasks → [Analyze] → Implement. La ubicación canónica actual de specs es **`automation/specs/`**. `.specify/` es **gobierno y tooling** (constitución, templates, scripts, workflows) — no el almacén de features.
 
-**Justificación:** Spec Kit instalado; specs 001–014 viven en `automation/specs/`. `.specify/feature.json` apunta al feature activo.
+**Justificación:** Spec Kit instalado; specs 001–015 viven en `automation/specs/`. `.specify/feature.json` apunta al feature activo (gestión manual por el equipo).
 
 ### P9. Contract-First API
 
@@ -334,6 +409,42 @@ Todo cambio MUST evaluarse contra estos principios. Un PR que viole un principio
 **Declaración:** Logging estructurado, request correlation IDs y métricas de pipeline MUST implementarse según backlog Kiro Phase 1. `python-json-logger` en deps MUST utilizarse.
 
 **Justificación:** Logging actual es `basicConfig`; Kiro tasks 1.1.x–1.2.x planifican structured JSON.
+
+### P13. Multi-organización futura e aislamiento
+
+**Declaración:** El producto B2B MUST evolucionar hacia multi-organización. Los datos empresariales MUST aislarse por `organization` cuando el dominio lo requiera. El modo **usuario sin organización** se conserva **temporalmente** por compatibilidad (decisión 015 #7); las funciones empresariales futuras MUST requerir organization context.
+
+**Estado:** **Diseñado** (015). MUST NOT afirmar multi-tenancy implementado.
+
+### P14. Propiedad única de datos por dominio
+
+**Declaración:** Cada entidad conceptual MUST tener un único dominio propietario. Las dependencias entre dominios MUST ser acíclicas. Ejemplo ratificado: subscriptions publica eventos; billing consume eventos y publica pagos; la orquestación actualiza entitlements — subscriptions MUST NOT leer tablas internas de billing.
+
+### P15. Mínimo privilegio, separación de funciones y auditoría
+
+**Declaración:** Roles de organización y de plataforma MUST distinguirse. Operaciones sensibles MUST aplicar mínimo privilegio, separación de funciones y auditoría. Acceso cross-org de personal de plataforma MUST ser temporal, justificado y auditado.
+
+### P16. Procesos end-to-end con estados explícitos
+
+**Declaración:** Capacidades empresariales MUST modelarse como procesos con estados, transiciones, excepciones, aprobaciones y operaciones prohibidas antes de implementar.
+
+### P17. Dinero trazable
+
+**Declaración:** Todo flujo financiero futuro MUST contemplar, como mínimo: factura; intento de pago; pago; asignación (`payment_allocation`); conciliación explícita; reembolso; nota de crédito; ledger no destructivo (append-only); idempotencia (`idempotency_key`); moneda coherente (sin FX en v1 salvo spec); auditoría.
+
+MUST NOT almacenar PAN ni CVV. MUST NOT afirmar pasarela real implementada. Alcance inicial aprobado: proveedor **simulado académico**, registro **manual/transferencia**, abstracción **PaymentProvider** futura (015 #5–#6).
+
+### P18. KPIs con fórmula y fuente; ROI comprobable
+
+**Declaración:** Todo KPI oficial MUST declarar fórmula, fuente, granularidad, frecuencia, propietario, limitaciones y tratamiento de nulos/denominador cero. ROI de campañas MUST calcularse solo con ingreso atribuible aprobado (definición de atribución, moneda, periodo, confianza, responsable); en caso contrario MUST reportarse **No disponible**. Streams u engagement MUST NOT convertirse en dinero sin fuente aprobada.
+
+### P19. Naming honesto (AI / Enterprise / RC)
+
+**Declaración:** MUST NOT usar “AI”, “Enterprise” o “RC” para sugerir capacidades inexistentes. “Enterprise” en código legacy de analytics ≠ CRM/billing implementados. Capacidades AI MUST describirse como asistidas/documentadas según evidencia.
+
+### P20. Honestidad de estado de madurez
+
+**Declaración:** Docs y specs MUST etiquetar capacidades como implementado, parcial, diseñado, futuro/propuesto, fuera de alcance o no comprobado. DESIGN_APPROVED ≠ IMPLEMENTATION_PENDING ≠ implementado.
 
 ---
 
@@ -1054,7 +1165,7 @@ flowchart TB
 | Control | Estado | Riesgo |
 |---------|--------|--------|
 | Password hash | SHA-256 sin salt | **Crítico** |
-| Session tokens | UUID opaco en DuckDB | Aceptable dev; mejorar prod |
+| Session tokens | UUID opaco / sesión bearer en DuckDB (MUST NOT afirmar JWT sin evidencia) | Aceptable dev; mejorar prod |
 | Auth coverage | Parcial (playlists/favorites/me) | **Alto** |
 | CORS | `allow_origins=["*"]` | **Alto** en prod |
 | Demo credentials | `demo/demo123`, `admin/admin123` | **Alto** en prod |
@@ -1242,23 +1353,24 @@ Todo release (minor o major) MUST satisfacer:
 
 ## 23. Restricciones del Proyecto
 
-### 23.1 Restricciones tecnológicas inmutables
+### 23.1 Restricciones tecnológicas
 
 | Restricción | Justificación |
 |-------------|---------------|
 | Python 3.12 only | Wheels duckdb/pyarrow/pydantic |
-| No ORM | Patrón establecido routes→services→SQL |
-| DuckDB file-based | Arquitectura warehouse actual |
-| Angular standalone (no NgModules) | 42 componentes ya standalone |
-| No microservicios | Modular monolith suficiente para escala actual |
+| No ORM (patrón actual) | routes→services→SQL |
+| DuckDB file-based para warehouse analítico/académico | No afirmar SaaS transaccional definitivo ni HA/escala global |
+| Angular standalone (no NgModules) | Componentes ya standalone |
+| No microservicios (ahora) | Modular monolith suficiente a escala actual |
 | Medallion ELT | Pipeline implementado y funcional |
+| FastAPI + Angular | Pilares de aplicación salvo enmienda |
 
 ### 23.2 Restricciones de proceso
 
 | Restricción | Descripción |
 |-------------|-------------|
 | No reescritura | §5 P1 |
-| Spec before implement (non-trivial) | §15 |
+| Spec before implement (non-trivial / empresarial) | §15 / P8 |
 | Constitution prevalece | Governance |
 | Kiro superseded by Specify | §11.4 |
 | No commit datos binarios | `.gitignore` |
@@ -1267,17 +1379,22 @@ Todo release (minor o major) MUST satisfacer:
 
 | Restricción | Descripción |
 |-------------|-------------|
-| Audio sin licencia comercial propia | Reproducción vía YouTube / Audius / demo (**implementado** en resolver); no CDN/DRM propios; no redistribución Spotify |
-| Límites legales/comerciales del audio | Proveedores terceros sujetos a sus ToS; uso demo/académico; no afirmar catálogo licenciado para venta de streams |
-| Datos enterprise synthetic | No presentar como telemetría real de usuarios finales |
+| Negocio principal = B2B SaaS gestión e inteligencia musical | Spec 015; pagador = organización |
+| Audio ≠ streaming comercial licenciado | Exploración / demo / eventos; permisos **no comprobados** |
+| YouTube / Audius / demo | No solución comercial garantizada |
+| Datos enterprise synthetic | No presentar como telemetría real |
 | PocketBase solo ingesta | No auth provider API |
-| Dominios empresariales no inventados | CRM/billing/organizations/campaigns = **propuesto** solo con spec futura — no carpetas vacías |
+| Dominios empresariales | DESIGN_APPROVED en 015; IMPLEMENTATION_PENDING — no carpetas vacías |
+| Cumplimiento legal (GDPR/PCI/ISO/SRI) | MUST NOT afirmar sin evidencia |
+| Precios / umbrales / trial / cancel definitivos | Diferidos a specs de implementación |
+| Auth actual | Sesiones bearer / tokens opacos — MUST NOT llamar JWT sin evidencia |
 
 ### 23.4 Restricciones de seguridad (hasta remediación)
 
 - Demo credentials permitidas **solo** en development
 - CORS `*` permitido **solo** en development
 - CRUD sin auth es **deuda temporal**, no patrón target
+- MUST NOT almacenar PAN/CVV en flujos de cobro futuros
 
 ---
 
@@ -1285,7 +1402,7 @@ Todo release (minor o major) MUST satisfacer:
 
 | Término | Definición |
 |---------|------------|
-| **Voxmetriks** | Plataforma empresarial de streaming musical y analítica de datos |
+| **Voxmetriks / VOXMETRIKS** | Plataforma B2B SaaS de gestión e inteligencia musical (pagador: organización); audio como exploración/demo/eventos |
 | **VOXMETRIK_V2** | Identificador interno del codebase y metadata API |
 | **Medallion Architecture** | Patrón de capas Bronze (raw) → Silver (clean) → Gold (curated) |
 | **Bronze** | Capa raw landing en Parquet (`data/bronze/`) |
@@ -1311,13 +1428,16 @@ Todo release (minor o major) MUST satisfacer:
 | **Modular Monolith** | Monolito con separación lógica por packages |
 | **Schema Introspection** | Patrón DESCRIBE/safe_query antes de asumir columnas |
 | **Engineer Access** | Rol con acceso a ELT pipeline UI y warehouse explorer |
-| **Demo Player / Audio resolver** | Reproducción vía YouTube, Audius fallback y demo — no licencia comercial propia |
+| **Demo Player / Audio resolver** | Reproducción vía YouTube, Audius y demo — exploración/eventos/demo académica; permisos **no comprobados**; no streaming comercial licenciado |
 | **OpenAPI** | Contrato API auto-generado en `/docs` |
 | **Deuda Técnica (TD-NNN)** | Registro de gaps conocidos §9.4 |
 | **Definition of Done** | Criterios §9.3 para cerrar features |
 | **Constitution Check** | Gate en plan.md validando compliance con esta Constitución |
-| **Implementado / Parcial / Propuesto / No comprobado** | Vocabulario de estado obligatorio (encabezado) |
-
+| **Implementado / Parcial / Diseñado / Futuro / Fuera de alcance / No comprobado** | Vocabulario de estado obligatorio (encabezado) |
+| **DESIGN_APPROVED** | Modelo aprobado en spec; sin código obligatorio aún |
+| **IMPLEMENTATION_PENDING** | Diseño aprobado; implementación no iniciada o incompleta |
+| **PaymentProvider** | Abstracción de cobros (**diseñado**); mock/manual primero; pasarela real futura |
+| **Organization (B2B)** | Cliente pagador; multi-org **diseñado** |
 ---
 
 ## Governance
@@ -1356,6 +1476,6 @@ Los skills en `.cursor/skills/speckit-*` operan bajo esta Constitución. El cont
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
+**Version**: 2.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-07-11
 
-*Enmienda 1.1.0 conforme a spec 014 (Fase B). Documento base: Spec Kit + auditoría 2026-06-19.*
+*Enmienda 2.0.0 (MAJOR) conforme a spec 015 cerrada `CLOSED_WITH_DEFERRED_DECISIONS` y `evidence/approved-decisions.md`. Conserva historial 1.0.0→1.1.0 (spec 014) en Sync Impact Report.*
