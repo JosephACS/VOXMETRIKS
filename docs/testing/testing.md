@@ -123,7 +123,7 @@ Detalle de cierre: [v2-delivery-closure.md](../12-audit/v2-delivery-closure.md)
 ## CI recomendado
 
 ```yaml
-- pip install -r backend/requirements.txt
+- pip install -r apps/backend/requirements.txt
 - pytest tests/ -q --cov=app --cov-fail-under=70
 - cd apps/frontend && npm ci && ng build
 ```

@@ -124,7 +124,7 @@ def _init_test_database(db_path: Path) -> None:
     """)
 
     from app.packages.streaming.services.app_storage import ensure_app_tables
-    from app.packages.users.services.user_storage import ensure_user_tables
+    from app.packages.identity.services.user_storage import ensure_user_tables
 
     ensure_user_tables(conn)
     ensure_app_tables(conn)

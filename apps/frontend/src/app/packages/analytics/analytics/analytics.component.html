@@ -60,7 +60,7 @@
 
       @if (engagement(); as e) {
 
-        <div class="kpi-card" [title]="'analytics.kpi.engagementTip' | t"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score ?? '—' }}</span><span class="kpi-label">{{ 'analytics.kpi.engagement' | t:lang() }}</span></div></div>
+        <div class="kpi-card" [title]="'analytics.kpi.engagementTip' | t"><div class="kpi-icon kpi-orange" [innerHTML]="icon('activity', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.engagement_score != null ? e.engagement_score : 'No disponible' }}</span><span class="kpi-label">{{ 'analytics.kpi.engagement' | t:lang() }}</span></div></div>
 
         <div class="kpi-card" [title]="'analytics.kpi.completionTip' | t"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">{{ 'analytics.kpi.completion' | t:lang() }}</span></div></div>
 

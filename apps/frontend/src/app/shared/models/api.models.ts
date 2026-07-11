@@ -198,7 +198,7 @@ export interface EngagementAnalytics {
   skip_rate: number;
   completion_rate: number;
   avg_session_time_min: number;
-  engagement_score: number;
+  engagement_score?: number | null;
   user_segments: Array<{ segment: string; user_count?: number; avg_plays?: number; retention_pct?: number }>;
   user_retention: Array<{ cohort_week: string; week_1_pct?: number; week_2_pct?: number; week_4_pct?: number }>;
   top_searches: Array<{ query_text: string; search_count?: number }>;
@@ -249,6 +249,8 @@ export interface TopTrack {
   energy?: number;
   danceability?: number;
   valence?: number;
+  total_streams?: number | null;
+  engagement_score?: number | null;
 }
 
 // Load Records — /api/v1/stats/loads (matches backend ctl_carga_dataset)

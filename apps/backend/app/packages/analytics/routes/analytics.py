@@ -16,8 +16,8 @@ from app.packages.analytics.services.analytics_service import (
     get_warehouse_tables,
 )
 from app.packages.analytics.services.history_service import get_history_hub
-from app.packages.users.services.auth_deps import get_optional_user_id, require_engineer_user
-from app.packages.users.services.user_service import get_me
+from app.packages.identity.services.auth_deps import require_engineer_user, require_user_id
+from app.packages.identity.services.user_service import get_me
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -33,18 +33,25 @@ def warehouse(
 @router.get("/trending", summary="Trending analytics — tracks, genres, daily streams")
 def trending(
     limit: int = Query(25, ge=1, le=100),
+    _user: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_trending_analytics(conn, limit=limit)
 
 
 @router.get("/platform", summary="Platform usage — devices, sessions, active users")
-def platform(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+def platform(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
     return get_platform_analytics(conn)
 
 
 @router.get("/engagement", summary="Engagement metrics — skip rate, retention, searches")
-def engagement(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+def engagement(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
     return get_engagement_analytics(conn)
 
 
@@ -77,7 +84,7 @@ def explorer_preview(
 @router.get("/history", summary="Unified history — user activity and searches")
 def history(
     limit: int = Query(25, ge=1, le=50),
-    user_id: int | None = Depends(get_optional_user_id),
+    user_id: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_history_hub(conn, user_id=user_id, limit=limit)
@@ -87,12 +94,11 @@ def history(
 def recommendations(
     limit: int = Query(12, ge=1, le=50),
     mood: str | None = Query(None, description="Energy range id e.g. 0_0-0_2"),
-    user_id: int | None = Depends(get_optional_user_id),
+    user_id: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     favorite_genre = None
-    if user_id:
-        profile = get_me(conn, user_id)
-        if profile:
-            favorite_genre = profile.get("favorite_genre")
+    profile = get_me(conn, user_id)
+    if profile:
+        favorite_genre = profile.get("favorite_genre")
     return get_recommendations(conn, favorite_genre=favorite_genre, limit=limit, mood=mood)

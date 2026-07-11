@@ -3,7 +3,7 @@
 **Feature Branch**: `014-repository-stabilization-domain-foundation`  
 **Feature Directory**: `automation/specs/014-repository-stabilization-domain-foundation/`  
 **Created**: 2026-07-11  
-**Status**: Draft — pendiente autorización de ejecución (correcciones post-revisión externa aplicadas)  
+**Status**: **CLOSED_WITH_ACCEPTED_DEBT** (cierre documental 2026-07-11) — ver `evidence/spec-closure.md`  
 **Input**: Estabilizar la arquitectura actual de VOXMETRIKS y consolidar package-by-domain sin cambiar el comportamiento funcional ni crear todavía los nuevos módulos empresariales.
 
 **Prerrequisitos:** Constitución v1.0.0; specs 001–013; auditoría de dominio (sesión 2026-07-11, no versionada aún en `.specify/reviews/`).

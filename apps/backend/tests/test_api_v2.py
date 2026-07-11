@@ -170,9 +170,13 @@ def api_v2_db(tmp_path, monkeypatch):
 @pytest.fixture()
 def v2_client(api_v2_db):
     from app.main import app
+    from app.packages.identity.services.auth_deps import require_user_id
 
+    # Isolated warehouse has no app_user (schema_ready already true from session client).
+    app.dependency_overrides[require_user_id] = lambda: 1
     with TestClient(app) as client:
         yield client
+    app.dependency_overrides.pop(require_user_id, None)
 
 
 def test_analytics_daily_streams(v2_client):

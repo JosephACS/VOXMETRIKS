@@ -60,7 +60,7 @@ class TopTrackItem(BaseModel):
     track_name: str
     artist: str
     popularity: int
-    engagement_score: float
+    engagement_score: float | None = None
     total_streams: int | None = None
 
 
@@ -263,8 +263,8 @@ class LiveTrackItem(BaseModel):
     track_id: int
     track_name: str
     artist: str
-    streams: int
-    engagement_score: float
+    streams: int | None = None
+    engagement_score: float | None = None
 
 
 class DeviceShareItem(BaseModel):

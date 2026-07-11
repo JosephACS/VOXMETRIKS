@@ -1,11 +1,28 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 2.0.0 | **Ratificado documental:** 2026-06-20
-**Alcance:** Specs operativas `001`–`011` (capa operativa completa)
+**Versión:** 2.0.0 | **Ratificado documental:** 2026-06-20  
+**Alcance:** Specs operativas `001`–`011` (capa operativa completa)  
 **Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia
 
-Referencia: Constitución v1.0.0 §12. Documento canónico transversal; las specs individuales
-incluyen subconjunto y detalle de casos de uso / historias de usuario.
+Referencia: Constitución (versión vigente en `.specify/memory/constitution.md`) §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+
+### Deuda de rutas (Spec 014 G — 2026-07-11)
+
+Las columnas **Evidencia** de esta matriz aún citan rutas históricas (`backend/...`, `frontend/...`, `packages/users`, `packages/streaming`) anteriores al monorepo `apps/` y a la consolidación D2 (`identity` / `catalog` / `engagement`).
+
+**Mapeo canónico actual (no reescribe filas históricas):**
+
+| Histórico en matriz | Canónico / adaptador |
+|---------------------|----------------------|
+| `backend/app/...` | `apps/backend/app/...` |
+| `frontend/src/...` | `apps/frontend/src/...` |
+| `packages/users` | `packages/identity` (+ shim `packages/users`) |
+| `packages/streaming` (catálogo/engagement) | `packages/catalog` + `packages/engagement` (+ shim `streaming`; audio permanece en streaming) |
+| `elt/pipelines/...` | `analytics/elt/pipelines/...` |
+
+Actualización fila-a-fila de las 248 evidencias = **deuda aceptada** (spec posterior / herramienta de regeneración). No se reescriben filas aquí para no fingir historial.
+
+**Cierre Spec 014:** `CLOSED_WITH_ACCEPTED_DEBT` — `automation/specs/014-repository-stabilization-domain-foundation/evidence/spec-closure.md`. Esta matriz **no** afirma dominios empresariales (CRM, billing, organizations) como implementados.
 
 ### Leyenda Impl
 

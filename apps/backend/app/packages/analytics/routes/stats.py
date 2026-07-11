@@ -18,7 +18,7 @@ from app.packages.analytics.services.stats_service import (
     get_synthetic_limits,
     get_top_tracks_by_popularity,
 )
-from app.packages.users.services.auth_deps import require_engineer_user
+from app.packages.identity.services.auth_deps import require_engineer_user, require_user_id
 from app.shared.schemas.models import DistribucionEnergia
 
 router = APIRouter(prefix="/stats", tags=["Statistics"])
@@ -42,20 +42,24 @@ class SyntheticRequest(BaseModel):
 
 
 @router.get("/summary", summary="High-level warehouse counts")
-def summary(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+def summary(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
     return get_summary(conn)
 
 
 @router.get("/catalog-growth", summary="Catalog growth from load history")
 def catalog_growth(
     months: int = Query(12, ge=3, le=24),
+    _user: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_catalog_growth(conn, months=months)
 
 
 @router.get("/synthetic/limits", summary="Validation limits for synthetic generation")
-def synthetic_limits():
+def synthetic_limits(_engineer: int = Depends(require_engineer_user)):
     return get_synthetic_limits()
 
 
@@ -89,19 +93,26 @@ def synthetic(
 
 
 @router.get("/energia", response_model=list[DistribucionEnergia], summary="Energy distribution")
-def energia(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+def energia(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
     return get_energia_distribution(conn)
 
 
 @router.get("/energy-distribution", response_model=list[DistribucionEnergia], summary="Energy distribution (alias)")
-def energy_distribution(conn: duckdb.DuckDBPyConnection = Depends(get_conn)):
+def energy_distribution(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
     return get_energia_distribution(conn)
 
 
 @router.get("/top-tracks", summary="Top tracks by popularity")
 def top_tracks(
     limit: int = Query(10, ge=1, le=100),
-    conn:  duckdb.DuckDBPyConnection = Depends(get_conn),
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_top_tracks_by_popularity(conn, limit=limit)
 
@@ -109,6 +120,7 @@ def top_tracks(
 @router.get("/loads", summary="Recent pipeline load history")
 def load_history(
     limit: int = Query(5, ge=1, le=50),
-    conn:  duckdb.DuckDBPyConnection = Depends(get_conn),
+    _engineer: int = Depends(require_engineer_user),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_last_loads(conn, limit=limit)

@@ -14,7 +14,12 @@ from app.models.schemas import (
     TopTrackItem,
     TopTracksResponse,
 )
-from app.services._warehouse import agg_daily_skip_rate_sql, normalize_skip_rate, table_exists
+from app.services._warehouse import (
+    agg_daily_skip_rate_sql,
+    normalize_skip_rate,
+    table_column_names,
+    table_exists,
+)
 
 logger = get_logger(__name__)
 
@@ -102,17 +107,36 @@ class AnalyticsService:
         if not table_exists(self._client, "agg_tracks_populares"):
             return TopTracksResponse(items=[], count=0)
 
+        cols = table_column_names(self._client, "agg_tracks_populares")
+        has_streams = "total_streams" in cols
+        has_engagement = "engagement_score" in cols
+        has_popularity = "popularity" in cols
+
+        streams_sql = "total_streams" if has_streams else "CAST(NULL AS INTEGER) AS total_streams"
+        engagement_sql = (
+            "engagement_score" if has_engagement else "CAST(NULL AS DOUBLE) AS engagement_score"
+        )
+        order_parts: list[str] = []
+        if has_streams:
+            order_parts.append("total_streams DESC")
+        if has_popularity:
+            order_parts.append("popularity DESC")
+        if has_engagement:
+            order_parts.append("engagement_score DESC")
+        if not order_parts:
+            order_parts.append("id_track")
+
         rows = self._client.fetch_all(
-            """
+            f"""
             SELECT
                 id_track,
                 nombre_track AS track_name,
                 nombre_artista AS artist,
-                popularity,
-                engagement_score,
-                total_streams
+                {"popularity" if has_popularity else "CAST(0 AS INTEGER) AS popularity"},
+                {engagement_sql},
+                {streams_sql}
             FROM agg_tracks_populares
-            ORDER BY total_streams DESC, popularity DESC
+            ORDER BY {", ".join(order_parts)}
             LIMIT ?
             """,
             [limit],
@@ -124,7 +148,9 @@ class AnalyticsService:
                 track_name=str(r["track_name"] or ""),
                 artist=str(r["artist"] or ""),
                 popularity=int(r["popularity"] or 0),
-                engagement_score=float(r["engagement_score"] or 0),
+                engagement_score=(
+                    float(r["engagement_score"]) if r.get("engagement_score") is not None else None
+                ),
                 total_streams=int(r["total_streams"]) if r.get("total_streams") is not None else None,
             )
             for r in rows

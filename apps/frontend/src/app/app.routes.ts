@@ -32,7 +32,7 @@ export const APP_ROUTES: Routes = [
         path: 'dashboard',
         title: 'nav.analyticsHub',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then(
+          import('./packages/analytics/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
           ),
       },
@@ -48,7 +48,7 @@ export const APP_ROUTES: Routes = [
         path: 'insights/analytics',
         title: 'nav.streamsAnalytics',
         loadComponent: () =>
-          import('./features/analytics/analytics.component').then(
+          import('./packages/analytics/stream-insights/analytics.component').then(
             (m) => m.AnalyticsFeatureComponent,
           ),
       },
@@ -56,7 +56,7 @@ export const APP_ROUTES: Routes = [
         path: 'insights/tracks',
         title: 'nav.topTracks',
         loadComponent: () =>
-          import('./features/tracks/tracks.component').then(
+          import('./packages/analytics/top-tracks/tracks.component').then(
             (m) => m.TracksFeatureComponent,
           ),
       },

@@ -11,6 +11,7 @@ from app.models.schemas import (
     TopArtistsResponse,
     TopTracksResponse,
 )
+from app.packages.identity.services.auth_deps import require_user_id
 from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -26,7 +27,10 @@ def analytics_status():
     response_model=DailyStreamsResponse,
     summary="Latest daily streaming KPIs",
 )
-def daily_streams(service: AnalyticsService = Depends(get_analytics_service)):
+def daily_streams(
+    _user: int = Depends(require_user_id),
+    service: AnalyticsService = Depends(get_analytics_service),
+):
     return service.get_daily_streams()
 
 
@@ -37,6 +41,7 @@ def daily_streams(service: AnalyticsService = Depends(get_analytics_service)):
 )
 def top_artists(
     limit: int = Query(20, ge=1, le=100),
+    _user: int = Depends(require_user_id),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     return service.get_top_artists(limit=limit)
@@ -49,6 +54,7 @@ def top_artists(
 )
 def top_tracks(
     limit: int = Query(20, ge=1, le=100),
+    _user: int = Depends(require_user_id),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     return service.get_top_tracks(limit=limit)
@@ -61,6 +67,7 @@ def top_tracks(
 )
 def genres(
     limit: int = Query(50, ge=1, le=200),
+    _user: int = Depends(require_user_id),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     return service.get_genres(limit=limit)
@@ -73,6 +80,7 @@ def genres(
 )
 def platform_usage(
     limit: int = Query(20, ge=1, le=100),
+    _user: int = Depends(require_user_id),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     return service.get_platform_usage(limit=limit)

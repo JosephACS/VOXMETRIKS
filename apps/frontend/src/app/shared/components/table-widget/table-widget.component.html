@@ -13,15 +13,19 @@
             {{ col.header }}
           </th>
           <td mat-cell *matCellDef="let row" [class.num]="col.align === 'right'">
-            @switch (col.format) {
-              @case ('number') {
-                {{ cellValue(row, col) | number }}
-              }
-              @case ('percent') {
-                {{ cellValue(row, col) | number:'1.1-1' }}%
-              }
-              @default {
-                {{ cellValue(row, col) }}
+            @if (cellValue(row, col) === null || cellValue(row, col) === undefined) {
+              <span class="table-widget__na">No disponible</span>
+            } @else {
+              @switch (col.format) {
+                @case ('number') {
+                  {{ cellValue(row, col) | number }}
+                }
+                @case ('percent') {
+                  {{ cellValue(row, col) | number:'1.1-1' }}%
+                }
+                @default {
+                  {{ cellValue(row, col) }}
+                }
               }
             }
           </td>

@@ -4,17 +4,12 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular)](https://angular.io)
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.1-yellow)](https://duckdb.org)
-[![Release](https://img.shields.io/badge/Release-V2%20RC1-orange)](docs/RELEASE_NOTES.md)
 
-**Plataforma de streaming musical con analytics enterprise** — SPA Angular, API FastAPI y warehouse DuckDB (Medallion ELT).
+**Plataforma de catálogo musical + analytics** — SPA Angular, API FastAPI y warehouse DuckDB (Medallion ELT).
 
-**Estado actual:** [VOXMETRIKS V2 — Release Candidate 1](docs/RELEASE_NOTES.md) (beta privada / demo controlada).
+**Estado:** demo / beta controlada (Release Candidate documental). No es un servicio de streaming con licencia comercial propia; la reproducción usa YouTube + Audius + audio demo.
 
----
-
-## Descripción
-
-Voxmetriks combina experiencia de escucha (catálogo, playlists, reproductor, recomendaciones, IA musical) con un hub analítico alimentado por tablas Gold. Dataset Spotify sintético/warehouse; motor de recomendaciones explicable; IA con fallback local (sin API key obligatoria).
+Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
 
 ---
 
@@ -24,38 +19,40 @@ Voxmetriks combina experiencia de escucha (catálogo, playlists, reproductor, re
 flowchart LR
     FE[Angular SPA] --> API[FastAPI]
     API --> DB[(DuckDB)]
-    PB[PocketBase] --> ELT[Pipeline ELT]
+    PB[PocketBase] --> ELT[analytics/elt]
     ELT --> DB
 ```
 
-Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md)
+| Ruta | Rol | Estado |
+|------|-----|--------|
+| `apps/frontend` | SPA Angular | **Implementado** |
+| `apps/backend` | API FastAPI | **Implementado** |
+| `analytics/elt` | Pipeline ELT canónico | **Implementado** |
+| `apps/backend/app/etl` | Refresh runtime / tests | **Parcial** (adaptador; no rebuild completo) |
+| `playback-core` | Dirección futura del player | **Parcial** / propuesto V2 |
+| Dominios CRM/billing/orgs | — | **No implementado** (fuera de 014) |
 
----
-
-## Tecnologías
-
-| Capa | Stack |
-|------|-------|
-| Frontend | Angular 21, RxJS, Material, ECharts |
-| Backend | FastAPI, Pydantic v2, Python 3.12 |
-| Datos | DuckDB, arquitectura Medallion |
-| ELT | Python, Pandas/Polars, PocketBase |
-| Tests | pytest, Vitest, Playwright |
-| DevOps | Docker Compose, Makefile, GitHub Actions (opcional) |
+Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md) · Playback: [docs/playback/SPEC_014_PHASE_F_DECISION.md](docs/playback/SPEC_014_PHASE_F_DECISION.md)
 
 ---
 
 ## Cómo ejecutar
 
 ```bash
-# Con Docker (API)
-make up
-
-# Desarrollo local
+# Dependencias
 make install
-make pipeline   # warehouse
-make dev        # backend :8000
-cd apps/frontend && npm install && npm start   # SPA :4200
+cd apps/frontend && npm install && cd ../..
+
+# Warehouse (canónico)
+make pipeline
+# o: python analytics/elt/pipelines/elt_pipeline.py
+
+# API
+make dev
+# o: cd apps/backend && uvicorn app.main:app --reload --port 8000
+
+# SPA
+cd apps/frontend && npm start
 ```
 
 Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
@@ -69,17 +66,24 @@ Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
 ---
 
-## Fases del producto
+## Tests
 
-| Fase | Doc |
-|------|-----|
-| 1 Spotify UX | [PLAYBACK_SPOTIFY_UX_PHASE1.md](docs/PLAYBACK_SPOTIFY_UX_PHASE1.md) |
-| 2 Playback Engine | [PLAYBACK_ENGINE_PHASE2.md](docs/PLAYBACK_ENGINE_PHASE2.md) |
-| 3 Audio Resolver | [AUDIO_RESOLVER_PHASE3.md](docs/AUDIO_RESOLVER_PHASE3.md) |
-| 4 Smart Recommendations | [SMART_RECOMMENDATION_ENGINE_PHASE4.md](docs/SMART_RECOMMENDATION_ENGINE_PHASE4.md) |
-| 5 Enterprise Platform | [ENTERPRISE_PLATFORM_PHASE5.md](docs/ENTERPRISE_PLATFORM_PHASE5.md) |
-| 6 VOXMETRIKS AI | [VOXMETRIKS_AI_PHASE6.md](docs/VOXMETRIKS_AI_PHASE6.md) |
-| 7 Hardening / RC | [FINAL_PRODUCT_AUDIT.md](docs/FINAL_PRODUCT_AUDIT.md) |
+```bash
+# Backend
+cd apps/backend && python -m pytest -q
+
+# Frontend
+cd apps/frontend && npm test && npm run lint && npm run build
+```
+
+Playwright (`automation/playwright`) y Docker Compose son **opcionales**; no asumir verdes si no se ejecutaron en el entorno.
+
+---
+
+## Specs SDD
+
+Especificaciones: [automation/specs/](automation/specs/README.md)  
+Spec de estabilización: `automation/specs/014-repository-stabilization-domain-foundation/`
 
 ---
 
@@ -89,11 +93,8 @@ Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
 | Documento | Enlace |
 |-----------|--------|
+| Quickstart | [QUICKSTART.md](docs/QUICKSTART.md) |
 | Features | [PRODUCT_FEATURES.md](docs/PRODUCT_FEATURES.md) |
-| Release Notes RC1 | [RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
-| Roadmap | [ROADMAP.md](docs/ROADMAP.md) |
-| Auditoría final | [FINAL_PRODUCT_AUDIT.md](docs/FINAL_PRODUCT_AUDIT.md) |
+| Release Notes | [RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
 | API | [api.md](docs/api/api.md) |
 | Seguridad | [security.md](docs/security/security.md) |
-
-Especificaciones SDD: [automation/specs/README.md](automation/specs/README.md)

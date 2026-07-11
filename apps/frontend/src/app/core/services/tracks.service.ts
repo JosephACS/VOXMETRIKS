@@ -1,3 +1,10 @@
+/**
+ * Enterprise top-tracks / recommendations API (`/api/v1/tracks/top`, …).
+ *
+ * Canonical for warehouse ranking endpoints.
+ * Distinct from `packages/streaming/services/tracks.service` (catalog CRUD).
+ * Do not merge the two — different HTTP surfaces and DTOs.
+ */
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';

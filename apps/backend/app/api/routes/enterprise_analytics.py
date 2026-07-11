@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.deps_enterprise import get_analytics_service
 from app.core.query_params import ListFilters, get_list_filters
+from app.packages.identity.services.auth_deps import require_user_id
 from app.schemas.common import success_response
 from app.services.enterprise_analytics_service import EnterpriseAnalyticsService
 from app.utils.time_utils import utc_today
@@ -22,6 +23,7 @@ def streams_analytics(
     start_date: date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: date | None = Query(None, description="End date (YYYY-MM-DD)"),
     filters: ListFilters = Depends(get_list_filters),
+    _user: int = Depends(require_user_id),
     service: EnterpriseAnalyticsService = Depends(get_analytics_service),
 ):
     end = end_date or utc_today()

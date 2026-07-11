@@ -8,12 +8,12 @@ import os
 import duckdb
 from fastapi.testclient import TestClient
 
-from app.packages.users.services.password_security import (
+from app.packages.identity.services.password_security import (
     hash_password,
     is_legacy_hash,
     verify_password,
 )
-from app.packages.users.services.user_storage import ensure_user_tables
+from app.packages.identity.services.user_storage import ensure_user_tables
 
 
 class TestPasswordSecurity:

@@ -4,8 +4,11 @@
 
 El pipeline ELT transforma el dataset Spotify (~100k filas desde PocketBase) en un warehouse dimensional DuckDB listo para analytics.
 
-**Script principal:** `elt/pipelines/elt_pipeline.py`  
+**Pipeline canónico (Spec 014 E):** `analytics/elt/pipelines/elt_pipeline.py`  
+**Comando ops:** `make pipeline`  
 **Output:** `data/warehouse/voxmetrik.duckdb`
+
+**Backend runtime (no canónico para rebuild completo):** `apps/backend/app/etl/` — refresh Bronze→Silver→Gold *en proceso* cuando ya existe `raw_spotify`. Conservado como adaptador/consumidor; no duplicar el builder de dims/facts.
 
 ## Flujo completo
 
@@ -35,38 +38,53 @@ flowchart TB
 2. `dim_track`, `dim_playlist`
 3. `fact_streaming`
 4. Agregaciones base: `agg_top_artistas`, `agg_genero_popularidad`, `agg_tracks_populares`
-5. Enterprise (`elt/transform/enterprise_analytics.py`): facts adicionales + 12 agg_*
-6. Backend gold builders (`apps/backend/app/etl/gold/`): refresh incremental
+5. Enterprise (`analytics/elt/transform/enterprise_analytics.py`): facts adicionales + agg_* + `ctl_pipeline_stages`
+6. Backend gold builders (`apps/backend/app/etl/gold/`): refresh incremental **solo** si boot lo solicita y existe `raw_spotify`
 
 ## Enterprise analytics
 
-Archivo: `elt/transform/enterprise_analytics.py`
+Archivo: `analytics/elt/transform/enterprise_analytics.py`
 
 Genera tablas de comportamiento sintético/realista:
 - Facts: `fact_user_activity`, `fact_searches`, `fact_stream_sessions`, etc.
 - Aggs: `agg_daily_streams`, `agg_artist_growth`, `agg_genre_trends`, etc.
 - Control: `ctl_pipeline_stages`
 
+Los eventos sintéticos no deben presentarse como actividad real de usuarios.
+
 ## Boot automático
 
 Al arrancar FastAPI (`run_system_boot()`):
-1. Init warehouse si no existe
-2. ETL si `RUN_ETL_ON_BOOT` lo permite
-3. GOLD builders
-4. Dashboard cache
+
+1. Init directorios / warehouse
+2. Si **no** existe el DuckDB → bootstrap con **analytics/elt** (canónico)
+3. Según `RUN_ETL_ON_BOOT` (ver tabla)
+4. Warm de caché dashboard (best-effort)
 5. Validación (`utils/data_validation.py`)
+
+| Valor | Comportamiento |
+|-------|----------------|
+| `never` / `off` / `false` / `0` | Sin ETL |
+| `validate` / `validation-only` | Solo validación |
+| `auto` / `if_missing` | Refresh backend si gold no listo; canónico solo si falta warehouse |
+| `always` | Intenta refresh backend si hay `raw_spotify` |
+| `full` / `rebuild` | Rebuild canónico explícito (largo; preferir `make pipeline` fuera del boot) |
+
+**Deuda:** no hay worker/cola; un full rebuild no debe bloquear el arranque normal de la API.
 
 ## Ejecución manual
 
 ```bash
-# Pipeline completo
+# Pipeline canónico completo
 python analytics/elt/pipelines/elt_pipeline.py
+# o
+make pipeline
 
-# Solo validación
+# Refresh backend (requiere warehouse + raw_spotify)
+make etl
+
+# Solo validación (lectura)
 python automation/scripts/validate_warehouse.py
-
-# Re-run en Docker
-docker compose run --rm pipeline
 ```
 
 ## Variables ELT
@@ -77,15 +95,12 @@ docker compose run --rm pipeline
 | `POCKETBASE_URL` | URL PocketBase |
 | `POCKETBASE_EMAIL` | Credencial extract |
 | `POCKETBASE_PASSWORD` | Credencial extract |
-| `RUN_ETL_ON_BOOT` | `always` / `never` / `if_missing` |
+| `RUN_ETL_ON_BOOT` | Ver tabla de modos arriba |
 
-## Backend ETL scaffold
+## Adaptador backend
 
-`apps/backend/app/etl/` implementa builders modulares reutilizables:
-- `bronze/bronze_loader.py`
-- `silver/clean_*.py`
-- `gold/*_analytics.py`
-- `gold/gold_builder.py` — orquestador
+`apps/backend/app/etl/canonical_adapter.py` resuelve e invoca el script canónico.
+`apps/backend/app/etl/pipelines.py` permanece para tests y refresh en proceso.
 
 ## Control y auditoría
 

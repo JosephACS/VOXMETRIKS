@@ -49,6 +49,13 @@ VOXMETRIKS.git/
 # Logs
 *.log
 
+# Review / agent temp artifacts (Spec 014 G)
+automation/specs/**/*.zip
+apps/backend/_*.txt
+apps/frontend/_*.txt
+apps/backend/tests/_*.json
+apps/backend/tests/_*.txt
+
 # OS
 Thumbs.db
 Desktop.ini

@@ -45,17 +45,15 @@ from app.services.health_service import HealthService
 from app.packages.analytics.routes import analytics_router, smart_router, stats_router
 from app.packages.ai.routes.ai import router as ai_router
 from app.platform.routes.platform import router as platform_router
-from app.packages.streaming.routes import (
-    artists_router,
+from app.packages.catalog.routes import artists_router, genres_router, tracks_router
+from app.packages.engagement.routes import (
     dashboard_router,
     favorites_router,
-    genres_router,
     playlists_router,
-    tracks_router,
 )
-from app.packages.streaming.services.app_storage import ensure_app_tables
-from app.packages.users.routes import users_router
-from app.packages.users.services.user_storage import ensure_user_tables
+from app.packages.engagement.services.app_storage import ensure_app_tables
+from app.packages.identity.routes import users_router
+from app.packages.identity.services.user_storage import ensure_user_tables
 
 setup_logging()
 logger = get_logger("voxmetrik.main")
@@ -153,13 +151,17 @@ def create_app() -> FastAPI:
     application.add_middleware(RequestContextMiddleware)
     register_error_handlers(application)
 
-    # ── Enterprise V1 analytics API (register before legacy for route priority) ─
+    # ── Spec 014 D1: /api/v1 facade ─────────────────────────────────────────
+    # Enterprise V1 registers first for overlapping contracts used by Angular
+    # (dashboard/overview, analytics/streams, tracks/top, users/{id}/insights).
+    # Package routers remain as COMPATIBILITY_ADAPTER surfaces for non-overlapping
+    # paths (/dashboard/home, /stats/*, catalog CRUD, etc.). See app.api.route_policy.
     application.include_router(enterprise_v1_router)
 
-    # ── V2 modular router ───────────────────────────────────────────────────
+    # ── V2 modular router (compatibility adapter; AUTH_REQUIRED on sensitive) ─
     application.include_router(api_router)
 
-    # ── Legacy package routers (backward compatible) ────────────────────────
+    # ── Package routers (backward compatible under /api/v1) ─────────────────
     application.include_router(artists_router, prefix="/api/v1")
     application.include_router(genres_router, prefix="/api/v1")
     application.include_router(tracks_router, prefix="/api/v1")

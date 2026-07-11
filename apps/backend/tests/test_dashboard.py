@@ -119,13 +119,18 @@ def test_dashboard_engagement(dash_db):
 
 def test_dashboard_api_routes(dash_db):
     from app.main import app
+    from app.packages.identity.services.auth_deps import require_user_id
 
-    with TestClient(app) as client:
-        resp = client.get("/api/v2/dashboard/overview")
-        assert resp.status_code == 200
-        assert resp.json()["total_streams"] == 150
-        assert "X-Response-Time-Ms" in resp.headers
+    app.dependency_overrides[require_user_id] = lambda: 1
+    try:
+        with TestClient(app) as client:
+            resp = client.get("/api/v2/dashboard/overview")
+            assert resp.status_code == 200
+            assert resp.json()["total_streams"] == 150
+            assert "X-Response-Time-Ms" in resp.headers
 
-        growth = client.get("/api/v2/dashboard/growth")
-        assert growth.status_code == 200
-        assert "weekly_growth_pct" in growth.json()
+            growth = client.get("/api/v2/dashboard/growth")
+            assert growth.status_code == 200
+            assert "weekly_growth_pct" in growth.json()
+    finally:
+        app.dependency_overrides.pop(require_user_id, None)

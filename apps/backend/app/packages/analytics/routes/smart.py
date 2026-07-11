@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_conn
 from app.packages.analytics.services.smart.smart_service import SmartRecommendationService
-from app.packages.users.services.auth_deps import get_optional_user_id
+from app.packages.identity.services.auth_deps import get_optional_user_id
 
 router = APIRouter(prefix="/smart", tags=["Smart Recommendations"])
 

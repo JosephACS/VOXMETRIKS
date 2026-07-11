@@ -18,7 +18,12 @@ from app.models.schemas import (
     LiveTrackItem,
     UserSegmentItem,
 )
-from app.services._warehouse import agg_daily_skip_rate_sql, normalize_skip_rate, table_exists
+from app.services._warehouse import (
+    agg_daily_skip_rate_sql,
+    normalize_skip_rate,
+    table_column_names,
+    table_exists,
+)
 
 logger = get_logger(__name__)
 
@@ -215,12 +220,14 @@ class DashboardService:
             avg_engagement = round(sum(s.avg_plays for s in segments) / len(segments), 2)
             retention = round(sum(s.retention_pct for s in segments) / len(segments), 1)
 
-        if table_exists(self._client, "agg_tracks_populares"):
+        # Warehouse ELT schema may lack engagement_score (not equivalent to popularity).
+        agg_cols = table_column_names(self._client, "agg_tracks_populares")
+        if "engagement_score" in agg_cols:
             eng = self._client.fetch_scalar(
                 "SELECT ROUND(AVG(engagement_score), 2) FROM agg_tracks_populares",
                 label="dashboard_avg_engagement",
             )
-            if eng:
+            if eng is not None:
                 avg_engagement = float(eng)
 
         result = DashboardEngagementResponse(
@@ -307,27 +314,50 @@ class DashboardService:
     def _top_live_tracks(self, *, limit: int) -> list[LiveTrackItem]:
         if not table_exists(self._client, "agg_tracks_populares"):
             return []
+        cols = table_column_names(self._client, "agg_tracks_populares")
+        has_streams = "total_streams" in cols
+        has_engagement = "engagement_score" in cols
+        has_popularity = "popularity" in cols
+
+        streams_sql = "total_streams" if has_streams else "CAST(NULL AS INTEGER) AS total_streams"
+        engagement_sql = (
+            "engagement_score" if has_engagement else "CAST(NULL AS DOUBLE) AS engagement_score"
+        )
+        order_parts: list[str] = []
+        if has_streams:
+            order_parts.append("total_streams DESC")
+        elif has_popularity:
+            order_parts.append("popularity DESC NULLS LAST")
+        if has_engagement:
+            order_parts.append("engagement_score DESC")
+        if not order_parts:
+            order_parts.append("id_track")
+
         rows = self._client.fetch_all(
-            """
+            f"""
             SELECT id_track, nombre_track AS track_name, nombre_artista AS artist,
-                   total_streams, engagement_score
+                   {streams_sql}, {engagement_sql}
             FROM agg_tracks_populares
-            ORDER BY total_streams DESC, engagement_score DESC
+            ORDER BY {", ".join(order_parts)}
             LIMIT ?
             """,
             [limit],
             label="dashboard_live_tracks",
         )
-        return [
-            LiveTrackItem(
-                track_id=int(r["id_track"]),
-                track_name=str(r["track_name"] or ""),
-                artist=str(r["artist"] or ""),
-                streams=int(r["total_streams"] or 0),
-                engagement_score=float(r["engagement_score"] or 0),
+        items: list[LiveTrackItem] = []
+        for r in rows:
+            streams_raw = r.get("total_streams")
+            eng_raw = r.get("engagement_score")
+            items.append(
+                LiveTrackItem(
+                    track_id=int(r["id_track"]),
+                    track_name=str(r["track_name"] or ""),
+                    artist=str(r["artist"] or ""),
+                    streams=int(streams_raw) if streams_raw is not None else None,
+                    engagement_score=float(eng_raw) if eng_raw is not None else None,
+                )
             )
-            for r in rows
-        ]
+        return items
 
     def _device_distribution(self, *, limit: int) -> list[DeviceShareItem]:
         if not table_exists(self._client, "agg_platform_usage"):

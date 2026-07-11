@@ -24,7 +24,7 @@ export class AnalyticsComponent implements OnInit {
   partialError = signal(false);
   energyDist   = signal<DistribucionEnergia[]>([]);
   genreStats   = signal<GeneroPopularidad[]>([]);
-  engagement   = signal<{ skip_rate?: number; completion_rate?: number; engagement_score?: number; avg_session_time_min?: number } | null>(null);
+  engagement   = signal<{ skip_rate?: number; completion_rate?: number; engagement_score?: number | null; avg_session_time_min?: number } | null>(null);
   maxTracks    = computed(() => Math.max(...this.genreStats().map(g => g.total_tracks ?? 0), 1));
   maxEnergy    = computed(() => Math.max(...this.energyDist().map(e => e.cantidad_tracks ?? 0), 1));
   topGenres    = computed(() => this.genreStats().slice(0, 12));

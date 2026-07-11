@@ -82,9 +82,11 @@ export interface TopTrack {
   nombre_artista: string;
   nombre_genero?: string | null;
   popularity: number;
-  total_streams: number;
+  /** Absent when warehouse agg lacks total_streams (do not invent 0). */
+  total_streams?: number | null;
   energy?: number | null;
   danceability?: number | null;
+  engagement_score?: number | null;
 }
 
 export interface UserInsights {

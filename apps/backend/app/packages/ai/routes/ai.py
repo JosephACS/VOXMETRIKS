@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 
 from app.core.database import get_conn, get_write_conn
 from app.packages.ai.service import AIService
-from app.packages.streaming.services.playlist_service import create_playlist, add_track_to_playlist
-from app.packages.users.services.auth_deps import get_optional_user_id, require_user_id
+from app.packages.engagement.services.playlist_service import add_track_to_playlist, create_playlist
+from app.packages.identity.services.auth_deps import get_optional_user_id, require_user_id
 
 router = APIRouter(prefix="/ai", tags=["VOXMETRIKS AI"])
 
@@ -36,12 +36,19 @@ def _svc(conn: duckdb.DuckDBPyConnection = Depends(get_conn)) -> AIService:
 
 
 @router.get("/provider/status", summary="Active AI provider and fallback info")
-def provider_status(svc: AIService = Depends(_svc)):
+def provider_status(
+    _user: int = Depends(require_user_id),
+    svc: AIService = Depends(_svc),
+):
     return svc.provider_status()
 
 
 @router.post("/search/natural", summary="Natural language search → tracks")
-def natural_search(body: NLSearchBody, svc: AIService = Depends(_svc)):
+def natural_search(
+    body: NLSearchBody,
+    _user: int = Depends(require_user_id),
+    svc: AIService = Depends(_svc),
+):
     return svc.search_tracks(body.query)
 
 

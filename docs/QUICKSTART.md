@@ -67,17 +67,25 @@ data/bronze/raw_spotify.parquet
 
 ## 4. Ejecutar ELT (obligatorio antes de la API)
 
+**Pipeline canónico** (Spec 014):
+
 ```bash
+make pipeline
+# equivalente:
 python analytics/elt/pipelines/elt_pipeline.py
 ```
 
 Crea o actualiza `data/warehouse/voxmetrik.duckdb` con capas Medallion (`dim_*`, `fact_*`, `agg_*`, `ctl_*`).
+
+`make etl` / `apps/backend/app/etl` es un **refresh runtime** (requiere warehouse + `raw_spotify`); no sustituye el pipeline canónico.
 
 Validación opcional post-ELT:
 
 ```bash
 python automation/scripts/validate_warehouse.py
 ```
+
+Arranque API: `RUN_ETL_ON_BOOT=never` (recomendado en dev si el warehouse ya existe) | `auto` | `validate` | `full` (rebuild largo; preferir `make pipeline` fuera del boot). Ver [architecture/elt.md](architecture/elt.md).
 
 ---
 
@@ -125,8 +133,15 @@ Abrir http://localhost:4200
 ## 7. Tests y smoke (opcional)
 
 ```bash
+# Backend (suite completa)
 cd apps/backend
-pytest tests/ -v
+python -m pytest -q
+
+# Frontend
+cd apps/frontend
+npm test
+npm run lint
+npm run build
 ```
 
 Smoke contra la API real (requiere backend levantado):
@@ -135,6 +150,8 @@ Smoke contra la API real (requiere backend levantado):
 python ../automation/scripts/smoke_api.py --base-url http://localhost:8000
 python ../automation/scripts/smoke_user_journey.py --base-url http://localhost:8000
 ```
+
+Playwright (`automation/playwright`) requiere `npm install` en esa carpeta; **no está instalado por defecto** en todos los entornos.
 
 La regresión cubre health, login, logout server-side, RBAC engineer, explorer, protección de datos sensibles, búsqueda y limpieza de textos. El journey agrega favoritos, playlists, recomendaciones e historial.
 
@@ -204,7 +221,7 @@ Versión incompatible del archivo. Borra el `.duckdb` y vuelve a correr el pipel
 uvicorn app.main:app --reload --port 8001
 ```
 
-Actualiza `frontend/src/environments/environment.ts` → `apiUrl`.
+Actualiza `apps/frontend/src/environments/environment.ts` → `apiUrl`.
 
 ### Frontend no conecta a API
 

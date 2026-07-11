@@ -24,15 +24,18 @@ flowchart TB
 
 ## Monorepo
 
-| Ruta | Rol |
-|------|-----|
-| `apps/frontend` | SPA Angular 21 |
-| `apps/backend` | API FastAPI + servicios de dominio |
-| `analytics/elt` | Pipeline ELT Bronze → Silver → Gold |
-| `data/warehouse` | DuckDB (`voxmetrik.duckdb`) |
-| `infrastructure/docker` | Compose + Dockerfile |
-| `automation/` | Specs SDD, Playwright, scripts |
-| `docs/` | Documentación de producto |
+| Ruta | Rol | Estado |
+|------|-----|--------|
+| `apps/frontend` | SPA Angular 21 | Implementado |
+| `apps/backend` | API FastAPI + dominios | Implementado |
+| `apps/backend/app/packages/{identity,catalog,engagement,analytics,ai}` | Package-by-domain | Implementado (+ shims legacy) |
+| `analytics/elt` | Pipeline ELT **canónico** | Implementado |
+| `apps/backend/app/etl` | Refresh runtime / tests | Parcial (adaptador) |
+| `data/warehouse` | DuckDB (`voxmetrik.duckdb`) | Implementado |
+| `infrastructure/docker` | Compose + Dockerfile | Implementado (validación Docker = entorno-dependiente) |
+| `automation/` | Specs SDD, Playwright, scripts | Implementado / Playwright opcional |
+| `docs/` | Documentación de producto | Implementado |
+| `playback-core` (FE) | Dirección futura del player | Parcial — ver [playback/SPEC_014_PHASE_F_DECISION.md](playback/SPEC_014_PHASE_F_DECISION.md) |
 
 ---
 

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import duckdb
 from fastapi import APIRouter, Depends, Path, Query
 
 from app.api.deps_enterprise import get_track_service
+from app.core.database import get_conn
 from app.core.query_params import (
     ListFilters,
     PaginationParams,
@@ -14,6 +16,7 @@ from app.core.query_params import (
     paginate_items,
     sort_items,
 )
+from app.packages.identity.services.auth_deps import ensure_self_or_admin, require_user_id
 from app.schemas.common import success_response
 from app.services.track_service import TrackService
 
@@ -30,6 +33,7 @@ def top_tracks(
     pagination: PaginationParams | None = Depends(get_pagination_params),
     sort: SortParams = Depends(get_sort_params),
     filters: ListFilters = Depends(get_list_filters),
+    _user: int = Depends(require_user_id),
     service: TrackService = Depends(get_track_service),
 ):
     has_filters = any(
@@ -70,8 +74,15 @@ def track_recommendations(
     user_id: int = Path(..., ge=1, description="Target user ID"),
     limit: int = Query(20, ge=1, le=50),
     pagination: PaginationParams | None = Depends(get_pagination_params),
+    current_user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
     service: TrackService = Depends(get_track_service),
 ):
+    ensure_self_or_admin(
+        target_user_id=user_id,
+        current_user_id=current_user_id,
+        conn=conn,
+    )
     items = service.get_recommendations(user_id, limit=limit)
     rows = [i.model_dump(exclude_none=True) for i in items]
 

@@ -19,7 +19,8 @@ Tables created in DuckDB:
   Staging    : raw_spotify (Bronze mirror)
 
 Run:
-    python elt/pipelines/elt_pipeline.py
+    python analytics/elt/pipelines/elt_pipeline.py
+    # or: make pipeline
 """
 
 # ── Bootstrap: load .env from project root or pipeline dir ───────────────────
@@ -27,10 +28,20 @@ import os
 import sys
 from pathlib import Path
 
-# Resolve project root (two levels up from elt/pipelines/)
-_HERE        = Path(__file__).resolve().parent          # elt/pipelines/
-_PROJECT_ROOT = _HERE.parent.parent                     # VOXMETRIK_V2/
+# Resolve paths for both monorepo (analytics/elt/...) and Docker (/app/elt/...).
+_HERE = Path(__file__).resolve().parent  # .../elt/pipelines
+_ELT_PKG = _HERE.parent  # .../elt  (Python package root for `import elt`)
+_IMPORT_ROOT = _ELT_PKG.parent  # analytics/ (monorepo) or /app (Docker)
 
+# Spec 014 E: warehouse + data live at the monorepo / container project root.
+_PROJECT_ROOT = _IMPORT_ROOT
+for _candidate in (_IMPORT_ROOT, *_IMPORT_ROOT.parents):
+    if (_candidate / "apps" / "backend").is_dir() or (_candidate / "data" / "warehouse").is_dir():
+        _PROJECT_ROOT = _candidate
+        break
+
+if str(_IMPORT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_IMPORT_ROOT))
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

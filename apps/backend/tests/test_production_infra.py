@@ -7,16 +7,20 @@ from fastapi.testclient import TestClient
 
 
 class TestErrorEnvelope:
-    def test_validation_error_envelope(self, client: TestClient) -> None:
-        response = client.get("/api/v1/users/not-an-int/insights")
+    def test_validation_error_envelope(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        response = client.get("/api/v1/users/not-an-int/insights", headers=auth_headers)
         assert response.status_code == 422
         body = response.json()
         assert body["status"] == "error"
         assert "message" in body
         assert "details" in body
 
-    def test_not_found_envelope(self, client: TestClient) -> None:
-        response = client.get("/api/v1/users/999999/insights")
+    def test_not_found_or_forbidden_envelope(
+        self, client: TestClient, admin_auth_headers: dict[str, str]
+    ) -> None:
+        response = client.get("/api/v1/users/999999/insights", headers=admin_auth_headers)
         assert response.status_code == 404
         body = response.json()
         assert body["status"] == "error"
@@ -39,21 +43,29 @@ class TestSecurityHeaders:
 
 
 class TestCacheConfig:
-    def test_dashboard_cache_hit(self, client: TestClient) -> None:
-        first = client.get("/api/v1/dashboard/overview")
-        second = client.get("/api/v1/dashboard/overview")
+    def test_dashboard_cache_hit(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        first = client.get("/api/v1/dashboard/overview", headers=auth_headers)
+        second = client.get("/api/v1/dashboard/overview", headers=auth_headers)
         assert first.status_code == 200
         assert second.status_code == 200
         assert first.json() == second.json()
 
 
 class TestPagination:
-    def test_top_tracks_pagination_optional(self, client: TestClient) -> None:
-        legacy = client.get("/api/v1/tracks/top", params={"limit": 5})
+    def test_top_tracks_pagination_optional(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        legacy = client.get("/api/v1/tracks/top", params={"limit": 5}, headers=auth_headers)
         assert legacy.status_code == 200
         assert legacy.json()["meta"].get("limit") == 5
 
-        paged = client.get("/api/v1/tracks/top", params={"page": 1, "page_size": 5})
+        paged = client.get(
+            "/api/v1/tracks/top",
+            params={"page": 1, "page_size": 5},
+            headers=auth_headers,
+        )
         assert paged.status_code == 200
         meta = paged.json()["meta"]
         assert meta.get("page") == 1

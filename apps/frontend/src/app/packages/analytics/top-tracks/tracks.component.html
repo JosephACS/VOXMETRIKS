@@ -15,7 +15,7 @@
           class="tracks-feed__card"
           data-testid="featured-track-card"
           [title]="cleanTitle(t.nombre_track)"
-          [subtitle]="t.nombre_artista ?? '—'"
+          [subtitle]="t.nombre_artista || '—'"
           [gradient]="cover(t.id_track)"
           [coverTrackId]="t.id_track"
           [coverArtistId]="t.id_artista"
@@ -24,7 +24,7 @@
           [queue]="topTracksPlayable()"
           [badge]="t.popularity"
           [tag]="'#' + (i + 1)"
-          [meta]="(t.total_streams ? (t.total_streams | number) + ' streams' : 'Pop. ' + t.popularity)"
+          [meta]="trackMeta(t)"
         />
       }
     </div>

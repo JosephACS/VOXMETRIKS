@@ -9,6 +9,11 @@ import {
   TrackSearchResult, TrackDetail, AudioSource, CoverArt,
 } from '../../../shared/models/api.models';
 
+/**
+ * Catalog CRUD / search / audio-source API (`/api/v1/tracks`).
+ * Canonical for streaming catalog.
+ * Distinct from `core/services/tracks.service` (EnterpriseTracksService).
+ */
 @Injectable({ providedIn: 'root' })
 export class TracksService {
   private readonly http = inject(HttpClient);

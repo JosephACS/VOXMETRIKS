@@ -1,5 +1,3 @@
-"""Backward-compatible re-exports; prefer ``app.core.query_helpers``."""
+"""COMPATIBILITY_ADAPTER — Spec 014 D2. Prefer ``app.packages.catalog.services.base_service``."""
 
-from app.core.query_helpers import count_rows, fetch_rows
-
-__all__ = ["count_rows", "fetch_rows"]
+from app.packages.catalog.services.base_service import *  # noqa: F401,F403

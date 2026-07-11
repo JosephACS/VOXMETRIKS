@@ -2,7 +2,7 @@
 
 **Branch**: `014-repository-stabilization-domain-foundation` | **Date**: 2026-07-11 | **Spec**: [spec.md](./spec.md)
 
-**Status**: Draft — no ejecutar hasta autorización (post-revisión externa)
+**Status**: **CLOSED_WITH_ACCEPTED_DEBT** (2026-07-11) — ejecución A–G completada; deudas en `evidence/accepted-debt.md`
 
 ## Summary
 

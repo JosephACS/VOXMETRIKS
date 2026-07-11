@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from app.core.config import get_settings
-from app.packages.users.services.auth_deps import get_optional_user_id, require_engineer_user, require_user_id
+from app.packages.identity.services.auth_deps import get_optional_user_id, require_engineer_user, require_user_id
 from app.platform.notifications.service import get_notification_service
 from app.platform.observability.status import PlatformStatusService
 from app.platform.realtime.hub import get_event_hub
