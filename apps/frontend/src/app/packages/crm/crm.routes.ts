@@ -35,6 +35,13 @@ export const CRM_ROUTES: Routes = [
       import('./pages/crm-prospect-detail.page').then((m) => m.CrmProspectDetailPageComponent),
   },
   {
+    path: 'crm/contacts',
+    title: 'CRM — Contactos',
+    canActivate: [crmAccessGuard],
+    loadComponent: () =>
+      import('./pages/crm-contacts-list.page').then((m) => m.CrmContactsListPageComponent),
+  },
+  {
     path: 'crm/opportunities',
     title: 'CRM — Oportunidades',
     canActivate: [crmAccessGuard],

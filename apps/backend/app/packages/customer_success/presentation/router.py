@@ -133,6 +133,11 @@ def list_risks(ctx: dict = Depends(require_org_cs_permission("customer_success.v
     return [RiskOut(**r.__dict__) for r in RiskUseCases(ctx["conn"]).list(ctx["organization_id"])]
 
 
+@customer_success_router.get("/interventions", response_model=list[InterventionOut])
+def list_interventions(ctx: dict = Depends(require_org_cs_permission("customer_success.view"))) -> list[InterventionOut]:
+    return [InterventionOut(**i.__dict__) for i in InterventionUseCases(ctx["conn"]).list(ctx["organization_id"])]
+
+
 @customer_success_router.post("/interventions", response_model=InterventionOut, status_code=201)
 def assign_intervention(body: InterventionCreateRequest, ctx: dict = Depends(require_org_cs_permission("customer_intervention.manage"))) -> InterventionOut:
     try:

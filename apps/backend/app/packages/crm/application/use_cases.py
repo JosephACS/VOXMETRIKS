@@ -1281,6 +1281,45 @@ class QuotationUseCases:
         )
         return updated
 
+    def accept_version(
+        self,
+        version_id: int,
+        *,
+        actor_user_id: int,
+        request_id: Optional[str] = None,
+    ):
+        """Mark a sent/approved quotation version as accepted (commercial next step)."""
+        version = self._get_version_or_raise(version_id)
+        if version.status not in ("sent", "approved"):
+            raise ValidationError(
+                f"Cannot accept version in status '{version.status}'; must be sent or approved"
+            )
+        now = _now()
+        self._conn.execute(
+            """
+            UPDATE app_crm_quotation_version
+            SET status = 'accepted', is_immutable = TRUE, accepted_at = ?
+            WHERE id = ?
+            """,
+            [now, version_id],
+        )
+        self._conn.execute(
+            "UPDATE app_crm_quotation SET status = 'accepted', updated_at = ? WHERE id = ?",
+            [now, version.quotation_id],
+        )
+        updated = self._get_version_or_raise(version_id)
+        _audit(
+            self._conn,
+            action="crm.quotation.version_accepted",
+            target_type="crm_quotation_version",
+            target_id=str(version_id),
+            actor_user_id=actor_user_id,
+            previous_values={"status": version.status},
+            new_values={"status": "accepted"},
+            request_id=request_id,
+        )
+        return updated
+
     def request_discount_approval(
         self,
         version_id: int,

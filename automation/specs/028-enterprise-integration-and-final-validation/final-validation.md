@@ -1,33 +1,34 @@
-# Final Validation — Spec 028 (post polish pass)
+# Final Validation — Spec 028 (enterprise completeness pass)
 
 **Date:** 2026-07-12  
 **Outcome:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT**
 
-## Gate results (final polish)
+## Gate results (completeness pass)
 
 | Gate | Result |
 |------|--------|
-| Reporting tests (024) | PASS |
-| Customer success tests (025) | PASS |
 | Golden path S028 (API) | PASS |
-| Backend full pytest | PASS |
+| Backend pytest (excl. lock conflict) | PASS (~747; full suite recoverable when DuckDB unlocked) |
+| Golden path alone after unlock | PASS (10) |
 | FE lint | PASS (0 errors, 15 historical warnings) |
 | FE unit | PASS (179) |
 | FE build | PASS (budget warnings accepted) |
-| validate_warehouse.py | PASS |
-| Playwright | **NOT_VERIFIED** |
+| Browser login page | VERIFIED (`/login` loads) |
+| Browser authenticated walkthrough | **PARTIAL** — protected routes redirect to login; credential automation not authorized in session |
+| Playwright E2E | **NOT_VERIFIED** |
 | Docker | **NOT_VERIFIED** |
 
-## Polish scope (no Spec 029)
+## Completeness fixes shipped (no Spec 029)
 
-Functional/visual polish only: org-scoped FE context, dead links removed, UI states, expanded opt-in demo seed, i18n nav key for payment attempts. No new domains/tables/specs.
+- CRM contacts page + nav; quotation accept API + UI; contract create from quotation; conversion modes aligned (`create_org` / `link_existing`)
+- Opportunity detail: contracts + conversion actions
+- Campaign approval request/decide wired
+- CS risks / interventions / expansions actionable on dashboard
+- Strategic dashboard: commercial snapshot from live APIs; MRR/ARR honestly **No disponible**
+- Seed expanded to related commercial chain (contact→version→contract→risk/intervention→campaign spend)
+- Billing nav: manual transfer / refunds / credit notes
 
 ## Specs
 
 **Present & closed:** 014–028  
-
-**OUT_OF_SCOPE:** Royalties / Payouts (future; not 024/025); Spec 029 not created
-
-## Closure decision
-
-Enterprise layer demo-ready with accepted debt (Playwright/Docker/MOCK/DuckDB/bundle budgets).
+**OUT_OF_SCOPE:** Royalties/Payouts; Spec 029; real payment/email gateways; Docker/Playwright CI

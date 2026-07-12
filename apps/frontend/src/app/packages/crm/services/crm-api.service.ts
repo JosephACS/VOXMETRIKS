@@ -276,6 +276,12 @@ export class CrmApiService {
       .pipe(catchError(this.handle));
   }
 
+  acceptQuotationVersion(versionId: number): Observable<QuotationVersion> {
+    return this.http
+      .post<QuotationVersion>(`${this.base}/quotation-versions/${versionId}/accept`, {})
+      .pipe(catchError(this.handle));
+  }
+
   requestDiscountApproval(versionId: number, reason: string): Observable<ApprovalRequest> {
     return this.http
       .post<ApprovalRequest>(`${this.base}/quotation-versions/${versionId}/request-approval`, {
@@ -374,6 +380,19 @@ export class CrmApiService {
   }
 
   // ── Contracts ─────────────────────────────────────────────────────────────
+
+  createContract(body: {
+    quotation_version_id: number;
+    opportunity_id: number;
+    legal_name: string;
+    organization_id?: number | null;
+    signatory_contact_id?: number | null;
+    terms_snapshot?: Record<string, unknown> | null;
+  }): Observable<CommercialContract> {
+    return this.http
+      .post<CommercialContract>(`${this.base}/contracts`, body)
+      .pipe(catchError(this.handle));
+  }
 
   listContracts(
     page = 1,

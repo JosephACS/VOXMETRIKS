@@ -268,6 +268,118 @@ def seed_enterprise_demo() -> dict[str, object]:
                             quotation_id = None  # type: ignore
                     if quotation_id:
                         result["entities"]["quotation"] = quotation_id
+                        # Related commercial chain: contact → version → item → accepted → contract
+                        if _table_exists(conn, "app_crm_contact"):
+                            ct = conn.execute(
+                                "SELECT id FROM app_crm_contact WHERE email = 'demo.contact@example.invalid'"
+                            ).fetchone()
+                            if ct:
+                                contact_id = int(ct[0])
+                            else:
+                                contact_id = _next_id(conn, "app_crm_contact")
+                                conn.execute(
+                                    """
+                                    INSERT INTO app_crm_contact
+                                        (id, full_name, email, email_normalized, phone, company_name,
+                                         linked_user_id, created_by, created_at, updated_at, deleted_at)
+                                    VALUES (?, 'Demo Contact (Synthetic)', 'demo.contact@example.invalid',
+                                            'demo.contact@example.invalid', NULL, 'Demo Label Co',
+                                            NULL, ?, ?, ?, NULL)
+                                    """,
+                                    [contact_id, admin_id, now, now],
+                                )
+                            result["entities"]["contact"] = contact_id
+                            if _table_exists(conn, "app_crm_prospect_contact"):
+                                if not conn.execute(
+                                    "SELECT 1 FROM app_crm_prospect_contact WHERE prospect_id = ? AND contact_id = ?",
+                                    [prospect_id, contact_id],
+                                ).fetchone():
+                                    conn.execute(
+                                        """
+                                        INSERT INTO app_crm_prospect_contact
+                                            (prospect_id, contact_id, is_primary, is_decision_maker, is_signatory, added_at)
+                                        VALUES (?, ?, TRUE, TRUE, TRUE, ?)
+                                        """,
+                                        [prospect_id, contact_id, now],
+                                    )
+
+                        if _table_exists(conn, "app_crm_quotation_version"):
+                            ver = conn.execute(
+                                "SELECT id FROM app_crm_quotation_version WHERE quotation_id = ?",
+                                [quotation_id],
+                            ).fetchone()
+                            if ver:
+                                version_id = int(ver[0])
+                            else:
+                                version_id = _next_id(conn, "app_crm_quotation_version")
+                                try:
+                                    conn.execute(
+                                        """
+                                        INSERT INTO app_crm_quotation_version
+                                            (id, quotation_id, version_no, status, subtotal, discount_pct,
+                                             discount_requires_approval, total, notes, is_immutable,
+                                             sent_at, accepted_at, rejected_at, created_by, created_at)
+                                        VALUES (?, ?, 1, 'accepted', 1000.00, 0, FALSE, 1000.00,
+                                                '[SYNTHETIC] demo quotation version', TRUE, ?, ?, NULL, ?, ?)
+                                        """,
+                                        [version_id, quotation_id, now, now, admin_id, now],
+                                    )
+                                    conn.execute(
+                                        "UPDATE app_crm_quotation SET status = 'accepted', current_version_no = 1, updated_at = ? WHERE id = ?",
+                                        [now, quotation_id],
+                                    )
+                                except Exception:
+                                    result["skipped"].append("app_crm_quotation_version_insert")
+                                    version_id = None  # type: ignore
+                            if version_id:
+                                result["entities"]["quotation_version"] = version_id
+                                if _table_exists(conn, "app_crm_quotation_item"):
+                                    if not conn.execute(
+                                        "SELECT 1 FROM app_crm_quotation_item WHERE quotation_version_id = ?",
+                                        [version_id],
+                                    ).fetchone():
+                                        item_id = _next_id(conn, "app_crm_quotation_item")
+                                        try:
+                                            conn.execute(
+                                                """
+                                                INSERT INTO app_crm_quotation_item
+                                                    (id, quotation_version_id, description, quantity, unit_price,
+                                                     discount_pct, line_total, sort_order, created_at)
+                                                VALUES (?, ?, '[SYNTHETIC] Enterprise starter seats', 1, 1000.00,
+                                                        0, 1000.00, 1, ?)
+                                                """,
+                                                [item_id, version_id, now],
+                                            )
+                                            result["entities"]["quotation_item"] = item_id
+                                        except Exception:
+                                            result["skipped"].append("app_crm_quotation_item_insert")
+
+                                if _table_exists(conn, "app_commercial_contract"):
+                                    cc = conn.execute(
+                                        "SELECT id FROM app_commercial_contract WHERE quotation_version_id = ?",
+                                        [version_id],
+                                    ).fetchone()
+                                    if cc:
+                                        contract_id = int(cc[0])
+                                    else:
+                                        contract_id = _next_id(conn, "app_commercial_contract")
+                                        try:
+                                            conn.execute(
+                                                """
+                                                INSERT INTO app_commercial_contract
+                                                    (id, quotation_version_id, opportunity_id, organization_id,
+                                                     legal_name, status, acceptance_evidence, accepted_at,
+                                                     created_by, created_at, updated_at)
+                                                VALUES (?, ?, ?, ?, 'Demo Label Co (Synthetic)', 'accepted',
+                                                        '[SYNTHETIC] demo acceptance evidence', ?, ?, ?, ?)
+                                                """,
+                                                [contract_id, version_id, opportunity_id, org_id, now, admin_id, now, now],
+                                            )
+                                        except Exception:
+                                            result["skipped"].append("app_commercial_contract_insert")
+                                            contract_id = None  # type: ignore
+                                    if contract_id:
+                                        result["entities"]["commercial_contract"] = contract_id
         else:
             result["skipped"].append("app_crm_prospect")
 
@@ -448,6 +560,43 @@ def seed_enterprise_demo() -> dict[str, object]:
                     [campaign_id, org_id, artist_id, admin_id, now, now],
                 )
             result["entities"]["campaign"] = campaign_id
+            if _table_exists(conn, "app_campaign_budget"):
+                if not conn.execute(
+                    "SELECT 1 FROM app_campaign_budget WHERE campaign_id = ?", [campaign_id]
+                ).fetchone():
+                    try:
+                        bid = _next_id(conn, "app_campaign_budget")
+                        conn.execute(
+                            """
+                            INSERT INTO app_campaign_budget
+                                (id, campaign_id, organization_id, amount, currency, created_at, updated_at)
+                            VALUES (?, ?, ?, 500.00, 'USD', ?, ?)
+                            """,
+                            [bid, campaign_id, org_id, now, now],
+                        )
+                        result["entities"]["campaign_budget"] = bid
+                    except Exception:
+                        result["skipped"].append("app_campaign_budget_insert")
+            if _table_exists(conn, "app_campaign_expense"):
+                if not conn.execute(
+                    "SELECT 1 FROM app_campaign_expense WHERE campaign_id = ? AND category = 'demo_ads'",
+                    [campaign_id],
+                ).fetchone():
+                    try:
+                        eid = _next_id(conn, "app_campaign_expense")
+                        conn.execute(
+                            """
+                            INSERT INTO app_campaign_expense
+                                (id, campaign_id, organization_id, amount, currency, category,
+                                 description, expense_date, recorded_by, created_at, updated_at)
+                            VALUES (?, ?, ?, 100.00, 'USD', 'demo_ads',
+                                    '[SYNTHETIC] demo spend', CURRENT_DATE, ?, ?, ?)
+                            """,
+                            [eid, campaign_id, org_id, admin_id, now, now],
+                        )
+                        result["entities"]["campaign_expense"] = eid
+                    except Exception:
+                        result["skipped"].append("app_campaign_expense_insert")
         else:
             result["skipped"].append("app_campaign")
 
@@ -592,6 +741,50 @@ def seed_enterprise_demo() -> dict[str, object]:
                 result["entities"]["onboarding"] = oid
             else:
                 result["entities"]["onboarding"] = int(ob[0])
+
+        if _table_exists(conn, "app_customer_risk"):
+            risk = conn.execute(
+                "SELECT id FROM app_customer_risk WHERE organization_id = ? AND title = 'Demo Risk (Synthetic)'",
+                [org_id],
+            ).fetchone()
+            if risk:
+                risk_id = int(risk[0])
+            else:
+                risk_id = _next_id(conn, "app_customer_risk")
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO app_customer_risk
+                            (id, organization_id, title, status, severity, description, created_by, created_at, updated_at)
+                        VALUES (?, ?, 'Demo Risk (Synthetic)', 'open', 'medium',
+                                '[SYNTHETIC] demo churn risk for walkthrough', ?, ?, ?)
+                        """,
+                        [risk_id, org_id, admin_id, now, now],
+                    )
+                except Exception:
+                    result["skipped"].append("app_customer_risk_insert")
+                    risk_id = None  # type: ignore
+            if risk_id:
+                result["entities"]["customer_risk"] = risk_id
+                if _table_exists(conn, "app_customer_intervention"):
+                    if not conn.execute(
+                        "SELECT 1 FROM app_customer_intervention WHERE organization_id = ? AND risk_id = ?",
+                        [org_id, risk_id],
+                    ).fetchone():
+                        try:
+                            iid = _next_id(conn, "app_customer_intervention")
+                            conn.execute(
+                                """
+                                INSERT INTO app_customer_intervention
+                                    (id, organization_id, risk_id, title, status, assignee_user_id,
+                                     completed_at, created_at, updated_at)
+                                VALUES (?, ?, ?, 'Demo Intervention (Synthetic)', 'planned', ?, NULL, ?, ?)
+                                """,
+                                [iid, org_id, risk_id, admin_id, now, now],
+                            )
+                            result["entities"]["customer_intervention"] = iid
+                        except Exception:
+                            result["skipped"].append("app_customer_intervention_insert")
 
         if _table_exists(conn, "app_customer_health_snapshot"):
             # Ensure definition exists via schema seed; create a snapshot

@@ -205,6 +205,11 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
         },
         {
+          path: '/crm/contacts',
+          labelKey: 'nav.crm.contacts',
+          icon: this.svgIcon('<path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/>'),
+        },
+        {
           path: '/crm/opportunities',
           labelKey: 'nav.crm.opportunities',
           icon: this.svgIcon('<line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>'),
@@ -260,6 +265,21 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           path: '/billing/payment-attempts',
           labelKey: 'nav.billing.paymentAttempts',
           icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
+        {
+          path: '/billing/manual-transfer',
+          labelKey: 'nav.billing.manualTransfer',
+          icon: this.svgIcon('<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+        },
+        {
+          path: '/billing/refunds',
+          labelKey: 'nav.billing.refunds',
+          icon: this.svgIcon('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'),
+        },
+        {
+          path: '/billing/credit-notes',
+          labelKey: 'nav.billing.creditNotes',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
         },
         {
           path: '/billing/profile',

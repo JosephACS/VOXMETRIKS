@@ -847,6 +847,23 @@ def send_quotation_version(
         raise_crm_http(exc)
 
 
+@router.post("/quotation-versions/{version_id}/accept", response_model=QuotationVersionOut)
+def accept_quotation_version(
+    version_id: int,
+    actor: dict = Depends(require_crm_permission("quotation.send")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        v = QuotationUseCases(conn).accept_version(
+            version_id,
+            actor_user_id=actor["user_id"],
+            request_id=actor["request_id"],
+        )
+        return _version_out(v)
+    except Exception as exc:
+        raise_crm_http(exc)
+
+
 @router.post("/quotation-versions/{version_id}/request-approval", status_code=201, response_model=ApprovalOut)
 def request_discount_approval(
     version_id: int,

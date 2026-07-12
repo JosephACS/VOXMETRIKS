@@ -74,6 +74,26 @@ export class CampaignsApiService {
     });
   }
 
+  requestApproval(
+    orgId: number,
+    campaignId: number,
+    body: { approval_type: string },
+  ): Observable<CampaignApproval> {
+    return this.http.post<CampaignApproval>(`${base}/campaigns/${campaignId}/approvals`, body, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  decideApproval(
+    orgId: number,
+    approvalId: number,
+    body: { approved: boolean; reason?: string },
+  ): Observable<CampaignApproval> {
+    return this.http.post<CampaignApproval>(`${base}/campaigns/approvals/${approvalId}/decide`, body, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
   computeRoi(orgId: number, campaignId: number): Observable<CampaignRoiSnapshot> {
     return this.http.post<CampaignRoiSnapshot>(`${base}/campaigns/${campaignId}/roi/compute`, null, {
       headers: this.orgHeaders(orgId),

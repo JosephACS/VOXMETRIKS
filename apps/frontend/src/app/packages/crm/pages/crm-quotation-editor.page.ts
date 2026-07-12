@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest } from '../models/crm.models';
@@ -143,6 +143,19 @@ import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest 
                   </button>
                 </div>
               }
+
+              @if (v.status === 'sent' || v.status === 'approved') {
+                <div class="crm-actions" style="margin-top:0.6rem">
+                  <button type="button" class="crm-btn" [disabled]="saving()"
+                    (click)="accept(v.id)">
+                    Aceptar cotización
+                  </button>
+                  <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
+                    (click)="createContractFrom(v.id)">
+                    Crear contrato desde esta versión
+                  </button>
+                </div>
+              }
             </div>
           }
         } @else {
@@ -155,6 +168,7 @@ import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest 
 export class CrmQuotationEditorPageComponent implements OnInit {
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   quotationId = 0;
   activeItemForm: number | null = null;
@@ -266,8 +280,49 @@ export class CrmQuotationEditorPageComponent implements OnInit {
     try {
       await firstValueFrom(this.api.requestDiscountApproval(versionId, reason));
       this.success.set('Solicitud de aprobación enviada.');
+      await this.load();
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al solicitar aprobación');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async accept(versionId: number): Promise<void> {
+    if (!confirm('¿Aceptar esta versión de cotización?')) return;
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      await firstValueFrom(this.api.acceptQuotationVersion(versionId));
+      this.success.set('Cotización aceptada.');
+      await this.load();
+    } catch (e) {
+      this.error.set(e instanceof CrmApiError ? e.message : 'Error al aceptar cotización');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async createContractFrom(versionId: number): Promise<void> {
+    const q = this.quotation();
+    if (!q) return;
+    const legalName = prompt('Razón social del contrato:')?.trim();
+    if (!legalName) return;
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const c = await firstValueFrom(
+        this.api.createContract({
+          quotation_version_id: versionId,
+          opportunity_id: q.opportunity_id,
+          legal_name: legalName,
+          terms_snapshot: { source: 'quotation_ui', synthetic_note: 'created_from_quotation_editor' },
+        }),
+      );
+      this.success.set(`Contrato #${c.id} creado.`);
+      await this.router.navigate(['/crm/contracts', c.id]);
+    } catch (e) {
+      this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear contrato');
     } finally {
       this.saving.set(false);
     }

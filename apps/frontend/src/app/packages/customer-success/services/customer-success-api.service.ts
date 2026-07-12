@@ -35,6 +35,54 @@ export class CustomerSuccessApiService {
     });
   }
 
+  listRisks(orgId: number): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${base}/customer-success/risks`, { headers: this.orgHeaders(orgId) });
+  }
+
+  createRisk(orgId: number, title: string, severity = 'medium') {
+    return this.http.post(
+      `${base}/customer-success/risks`,
+      { title, severity, description: '' },
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
+  listInterventions(orgId: number): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${base}/customer-success/interventions`, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  createIntervention(orgId: number, title: string, riskId?: number) {
+    return this.http.post(
+      `${base}/customer-success/interventions`,
+      { title, risk_id: riskId ?? null },
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
+  completeIntervention(orgId: number, interventionId: number) {
+    return this.http.post(
+      `${base}/customer-success/interventions/${interventionId}/complete`,
+      null,
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
+  listExpansions(orgId: number): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${base}/customer-success/expansions`, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  createExpansion(orgId: number, title: string) {
+    return this.http.post(
+      `${base}/customer-success/expansions`,
+      { title, notes: '[UI] expansion opportunity' },
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
   listCases(orgId: number): Observable<unknown[]> {
     return this.http.get<unknown[]>(`${base}/support/cases`, { headers: this.orgHeaders(orgId) });
   }

@@ -362,6 +362,14 @@ class InterventionUseCases:
                target_id=str(iid), actor_user_id=actor_user_id, organization_id=organization_id, request_id=request_id)
         return self.get(organization_id, iid)
 
+    def list(self, organization_id: int) -> list[CustomerIntervention]:
+        rows = self._conn.execute(
+            "SELECT id, organization_id, risk_id, title, status, assignee_user_id, completed_at, created_at, updated_at "
+            "FROM app_customer_intervention WHERE organization_id = ? ORDER BY id DESC",
+            [organization_id],
+        ).fetchall()
+        return [CustomerIntervention(*r) for r in rows]
+
     def get(self, organization_id: int, intervention_id: int) -> CustomerIntervention:
         row = self._conn.execute(
             "SELECT id, organization_id, risk_id, title, status, assignee_user_id, completed_at, created_at, updated_at FROM app_customer_intervention WHERE id = ? AND organization_id = ?",

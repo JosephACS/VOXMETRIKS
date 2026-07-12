@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
@@ -7,7 +8,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 @Component({
   selector: 'app-cs-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="page">
       <h1>Customer Success</h1>
@@ -65,6 +66,78 @@ import { OrganizationContextService } from '../../organizations/services/organiz
             <p class="muted">{{ dashboard.label || 'Customer Success academic dashboard' }}</p>
           </section>
         }
+
+        <section class="cs-card">
+          <h2>Risks</h2>
+          <form class="inline-form" (ngSubmit)="createRisk()">
+            <input [(ngModel)]="riskTitle" name="riskTitle" placeholder="Risk title" required />
+            <select [(ngModel)]="riskSeverity" name="riskSeverity">
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+            <button type="submit" [disabled]="busy || !riskTitle.trim()">Create risk</button>
+          </form>
+          @if (risks.length === 0) {
+            <p class="empty-state">No risks.</p>
+          } @else {
+            <ul>
+              @for (r of risks; track $any(r).id) {
+                <li>
+                  <span class="badge">{{ $any(r).severity }}</span>
+                  {{ $any(r).title }} — {{ $any(r).status }}
+                  <button type="button" (click)="assignIntervention($any(r).id)" [disabled]="busy">
+                    Assign intervention
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="cs-card">
+          <h2>Interventions</h2>
+          @if (interventions.length === 0) {
+            <p class="empty-state">No interventions.</p>
+          } @else {
+            <ul>
+              @for (i of interventions; track $any(i).id) {
+                <li>
+                  {{ $any(i).title }} — <span class="badge">{{ $any(i).status }}</span>
+                  @if ($any(i).status !== 'completed') {
+                    <button type="button" (click)="completeIntervention($any(i).id)" [disabled]="busy">
+                      Complete
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="cs-card">
+          <h2>Expansion</h2>
+          <form class="inline-form" (ngSubmit)="createExpansion()">
+            <input [(ngModel)]="expansionTitle" name="expansionTitle" placeholder="Expansion title" required />
+            <button type="submit" [disabled]="busy || !expansionTitle.trim()">Create expansion</button>
+          </form>
+          @if (expansions.length === 0) {
+            <p class="empty-state">No expansion opportunities.</p>
+          } @else {
+            <ul>
+              @for (e of expansions; track $any(e).id) {
+                <li>
+                  {{ $any(e).title }} — {{ $any(e).status }}
+                  @if ($any(e).estimated_value == null) {
+                    <em>No disponible</em>
+                  } @else {
+                    ({{ $any(e).estimated_value }})
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
       }
     </div>
   `,
@@ -80,6 +153,12 @@ export class CsDashboardPage implements OnInit {
     score_state?: string;
     limitations?: string;
   } | null = null;
+  risks: unknown[] = [];
+  interventions: unknown[] = [];
+  expansions: unknown[] = [];
+  riskTitle = '';
+  riskSeverity = 'medium';
+  expansionTitle = '';
   loading = false;
   busy = false;
   error = '';
@@ -88,6 +167,21 @@ export class CsDashboardPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (this.orgId) this.refresh();
+  }
+
+  private loadLists(orgId: number): void {
+    this.api.listRisks(orgId).subscribe({
+      next: (r) => (this.risks = r || []),
+      error: () => (this.risks = []),
+    });
+    this.api.listInterventions(orgId).subscribe({
+      next: (i) => (this.interventions = i || []),
+      error: () => (this.interventions = []),
+    });
+    this.api.listExpansions(orgId).subscribe({
+      next: (e) => (this.expansions = e || []),
+      error: () => (this.expansions = []),
+    });
   }
 
   refresh(): void {
@@ -102,6 +196,7 @@ export class CsDashboardPage implements OnInit {
         this.api.dashboard(this.orgId!).subscribe({
           next: (d) => {
             this.dashboard = d as typeof this.dashboard;
+            this.loadLists(this.orgId!);
             this.loading = false;
             this.busy = false;
             this.success = 'Health refreshed.';
@@ -148,6 +243,72 @@ export class CsDashboardPage implements OnInit {
       },
       error: (e) => {
         this.error = e?.error?.detail?.message || 'Renewal failed';
+        this.busy = false;
+      },
+    });
+  }
+
+  createRisk(): void {
+    if (!this.orgId || !this.riskTitle.trim()) return;
+    this.busy = true;
+    this.api.createRisk(this.orgId, this.riskTitle.trim(), this.riskSeverity).subscribe({
+      next: () => {
+        this.riskTitle = '';
+        this.busy = false;
+        this.success = 'Risk created.';
+        this.loadLists(this.orgId!);
+      },
+      error: (e) => {
+        this.error = e?.error?.detail?.message || 'Create risk failed';
+        this.busy = false;
+      },
+    });
+  }
+
+  assignIntervention(riskId: number): void {
+    if (!this.orgId) return;
+    this.busy = true;
+    this.api.createIntervention(this.orgId, `Intervention for risk #${riskId}`, riskId).subscribe({
+      next: () => {
+        this.busy = false;
+        this.success = 'Intervention assigned.';
+        this.loadLists(this.orgId!);
+      },
+      error: (e) => {
+        this.error = e?.error?.detail?.message || 'Intervention failed';
+        this.busy = false;
+      },
+    });
+  }
+
+  completeIntervention(id: number): void {
+    if (!this.orgId) return;
+    this.busy = true;
+    this.api.completeIntervention(this.orgId, id).subscribe({
+      next: () => {
+        this.busy = false;
+        this.success = 'Intervention completed.';
+        this.loadLists(this.orgId!);
+      },
+      error: (e) => {
+        this.error = e?.error?.detail?.message || 'Complete failed';
+        this.busy = false;
+      },
+    });
+  }
+
+  createExpansion(): void {
+    if (!this.orgId || !this.expansionTitle.trim()) return;
+    this.busy = true;
+    this.api.createExpansion(this.orgId, this.expansionTitle.trim()).subscribe({
+      next: () => {
+        this.expansionTitle = '';
+        this.busy = false;
+        this.success = 'Expansion created.';
+        this.loadLists(this.orgId!);
+      },
+      error: (e) => {
+        this.error = e?.error?.detail?.message || 'Expansion failed';
         this.busy = false;
       },
     });

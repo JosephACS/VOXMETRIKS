@@ -35,5 +35,10 @@ System remains **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** after integrating
 | CRM context cleared on org switch | Fixed |
 | Expanded opt-in demo seed (CRM→CS path) | Done — still opt-in only |
 | Dead FE links (`/billing/invoices/new`, subscription changes) | Removed |
+| CRM contacts UI + quotation accept + contract/conversion wiring | Done (completeness pass) |
+| Campaign approval decide + CS risks/interventions | Done |
 | Bundle size / CSS budget warnings | Accepted historical debt |
 | Playwright / Docker | Still **NOT_VERIFIED** |
+| Authenticated browser automation in this session | PARTIAL (login gate verified; credentials not entered via automation) |
+| Mora/dunning module | Still absent (past_due display only) — accepted debt |
+| Auto-provision subscription from CRM conversion | Still manual post-org — by design / accepted debt |

@@ -10,9 +10,15 @@ import { Invoice, InvoiceItem } from '../models/billing.models';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    @if (invoice) {
-      <div class="invoice-detail-page">
-        <a routerLink="/billing/invoices" class="back-link">← Invoices</a>
+    <div class="invoice-detail-page">
+      <a routerLink="/billing/invoices" class="back-link">← Invoices</a>
+      @if (loading) {
+        <p>Loading…</p>
+      } @else if (error && !invoice) {
+        <p class="error">{{ error }}</p>
+      } @else if (!invoice) {
+        <p class="empty-state">Invoice not found.</p>
+      } @else {
         <div class="page-header">
           <h1>{{ invoice.invoice_number }}</h1>
           <span class="badge" [class]="'badge--' + invoice.status">{{ invoice.status }}</span>
@@ -23,13 +29,15 @@ import { Invoice, InvoiceItem } from '../models/billing.models';
           </div>
         }
         <dl class="meta">
-          <dt>Currency</dt><dd>{{ invoice.currency }}</dd>
+          <dt>Currency</dt><dd>{{ invoice.currency || 'No disponible' }}</dd>
           <dt>Subtotal</dt><dd>{{ invoice.subtotal | number:'1.2-2' }}</dd>
           <dt>Total</dt><dd>{{ invoice.total | number:'1.2-2' }}</dd>
           <dt>Paid</dt><dd>{{ invoice.amount_paid | number:'1.2-2' }}</dd>
           <dt>Due</dt><dd>{{ invoice.amount_due | number:'1.2-2' }}</dd>
-          <dt>Due date</dt><dd>{{ invoice.due_date | date:'mediumDate' }}</dd>
-          <dt>Issued</dt><dd>{{ invoice.issued_at | date:'short' }}</dd>
+          <dt>Due date</dt>
+          <dd>{{ invoice.due_date ? (invoice.due_date | date:'mediumDate') : 'No disponible' }}</dd>
+          <dt>Issued</dt>
+          <dd>{{ invoice.issued_at ? (invoice.issued_at | date:'short') : 'No disponible' }}</dd>
         </dl>
         <h2>Line items</h2>
         @if (items.length) {
@@ -40,7 +48,7 @@ import { Invoice, InvoiceItem } from '../models/billing.models';
             <tbody>
               @for (it of items; track it.id) {
                 <tr>
-                  <td>{{ it.description }}</td>
+                  <td>{{ it.description || 'No disponible' }}</td>
                   <td>{{ it.quantity }}</td>
                   <td>{{ it.unit_price | number:'1.2-2' }}</td>
                   <td>{{ it.amount | number:'1.2-2' }}</td>
@@ -54,10 +62,8 @@ import { Invoice, InvoiceItem } from '../models/billing.models';
         @if (error) {
           <p class="error">{{ error }}</p>
         }
-      </div>
-    } @else {
-      <p>Loading…</p>
-    }
+      }
+    </div>
   `,
 })
 export class InvoiceDetailPage implements OnInit {
@@ -67,6 +73,7 @@ export class InvoiceDetailPage implements OnInit {
   invoice: Invoice | null = null;
   items: InvoiceItem[] = [];
   error: string | null = null;
+  loading = false;
   orgId: number | null = null;
 
   ngOnInit(): void {
@@ -80,15 +87,20 @@ export class InvoiceDetailPage implements OnInit {
       this.error = 'Invalid invoice id';
       return;
     }
+    this.loading = true;
     this.api.getInvoice(this.orgId!, id).subscribe({
       next: (inv) => {
         this.invoice = inv;
+        this.loading = false;
         this.api.getInvoiceItems(this.orgId!, id).subscribe({
           next: (items) => (this.items = items),
           error: () => (this.items = []),
         });
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error loading invoice'),
+      error: (e) => {
+        this.error = e.error?.detail?.message ?? e.error?.message ?? 'Error loading invoice';
+        this.loading = false;
+      },
     });
   }
 }

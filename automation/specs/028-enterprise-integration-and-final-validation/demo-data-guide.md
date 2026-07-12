@@ -30,12 +30,12 @@ Creates (all tagged demo/synthetic; skips missing tables gracefully):
 |--------|--------------------|-------|
 | Organization | slug `enterprise-demo-s028` | `is_demo=TRUE` |
 | Plan + subscription | `demo-enterprise-starter` | `activation_source=demo_seed_synthetic` |
-| CRM | prospect, opportunity, quotation (best-effort) | SYNTHETIC notes |
+| CRM | prospect → contact (linked) → opportunity → quotation → accepted version + item → commercial contract | SYNTHETIC |
 | Billing | profile, invoice, payment_attempt + payment mock | provider `mock` |
 | Artists / rights | artist profile, catalog asset, rights row | demo labels |
-| Campaign | synthetic campaign | demo |
+| Campaign | campaign + budget + expense | demo |
 | Reporting | definition, generation, snapshot, executive report, decision | academic disclaimer |
-| Customer Success | onboarding + health snapshot | rule-based |
+| Customer Success | onboarding + health + risk + intervention | rule-based |
 | Support | case + messages | demo |
 
 Does **not** run on boot. Does **not** write warehouse facts.

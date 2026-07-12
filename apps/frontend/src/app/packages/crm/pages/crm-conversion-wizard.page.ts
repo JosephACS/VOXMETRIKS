@@ -75,12 +75,12 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
             <div class="crm-card">
               <h2>Continuar proceso</h2>
               <div class="crm-actions">
-                @if (conv()!.mode === 'link') {
+                @if (conv()!.mode === 'link_existing') {
                   <button type="button" class="crm-btn" (click)="step = 'confirm-link'">
                     Confirmar enlace (soy el propietario de la org)
                   </button>
                 }
-                @if (conv()!.mode === 'claim') {
+                @if (conv()!.mode === 'create_org') {
                   <button type="button" class="crm-btn" (click)="step = 'claim'">
                     Reclamar con token
                   </button>

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
-import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, OPPORTUNITY_STAGES } from '../models/crm.models';
+import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, CommercialContract, CustomerConversion, OPPORTUNITY_STAGES } from '../models/crm.models';
 
 @Component({
   selector: 'app-crm-opportunity-detail-page',
@@ -167,6 +167,58 @@ import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, OPPORTU
           </div>
         </div>
 
+        <!-- Contracts -->
+        <div class="crm-card">
+          <h2>Contratos</h2>
+          @if (contracts().length) {
+            <table class="crm-table">
+              <thead><tr><th>#</th><th>Razón social</th><th>Estado</th></tr></thead>
+              <tbody>
+                @for (c of contracts(); track c.id) {
+                  <tr>
+                    <td><a [routerLink]="['/crm/contracts', c.id]">C-{{ c.id }}</a></td>
+                    <td>{{ c.legal_name || 'No disponible' }}</td>
+                    <td><span class="crm-badge">{{ c.status }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="crm-muted">Sin contratos. Créalos desde una cotización aceptada/enviada.</p>
+          }
+        </div>
+
+        <!-- Conversion -->
+        <div class="crm-card">
+          <h2>Conversión a organización</h2>
+          <p class="crm-muted">
+            Prepara la conversión comercial. La suscripción/facturación se gestionan después en sus módulos.
+          </p>
+          @if (conversions().length) {
+            <table class="crm-table">
+              <thead><tr><th>#</th><th>Modo</th><th>Estado</th><th>Org</th></tr></thead>
+              <tbody>
+                @for (cv of conversions(); track cv.id) {
+                  <tr>
+                    <td><a [routerLink]="['/crm/conversions', cv.id]">CV-{{ cv.id }}</a></td>
+                    <td>{{ cv.mode }}</td>
+                    <td><span class="crm-badge">{{ cv.status }}</span></td>
+                    <td>{{ cv.organization_id ?? 'No disponible' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="crm-muted">Sin conversiones aún.</p>
+          }
+          <div class="crm-actions" style="margin-top:0.6rem">
+            <button type="button" class="crm-btn" [disabled]="saving()"
+              (click)="prepareConversion('link_existing')">Preparar conversión (vincular org)</button>
+            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
+              (click)="prepareConversion('create_org')">Preparar conversión (crear org)</button>
+          </div>
+        </div>
+
         <!-- Activities -->
         <div class="crm-card">
           <h2>Actividades recientes</h2>
@@ -252,6 +304,8 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   readonly opp = signal<Opportunity | null>(null);
   readonly history = signal<OpportunityStageHistory[]>([]);
   readonly quotations = signal<Quotation[]>([]);
+  readonly contracts = signal<CommercialContract[]>([]);
+  readonly conversions = signal<CustomerConversion[]>([]);
   readonly activities = signal<SalesActivity[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -274,11 +328,13 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
     this.error.set(null);
     this.success.set(null);
     try {
-      const [o, hist, quots, acts] = await Promise.all([
+      const [o, hist, quots, acts, contractsRes, conversionsRes] = await Promise.all([
         firstValueFrom(this.api.getOpportunity(this.oppId)),
         firstValueFrom(this.api.getOpportunityStageHistory(this.oppId)),
         firstValueFrom(this.api.listQuotations(1, 25, this.oppId)),
         firstValueFrom(this.api.listActivities(1, 25, this.oppId)),
+        firstValueFrom(this.api.listContracts(1, 25, this.oppId)),
+        firstValueFrom(this.api.listConversions(1, 25, this.oppId)),
       ]);
       this.opp.set(o);
       this.newStage = o.stage;
@@ -293,6 +349,8 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
       this.history.set(hist);
       this.quotations.set(quots.items);
       this.activities.set(acts.items);
+      this.contracts.set(contractsRes.items ?? []);
+      this.conversions.set(conversionsRes.items ?? []);
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al cargar oportunidad');
     } finally {
@@ -376,6 +434,21 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
       await this.router.navigate(['/crm/quotations', q.id]);
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear cotización');
+      this.saving.set(false);
+    }
+  }
+
+  async prepareConversion(mode: 'create_org' | 'link_existing'): Promise<void> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const res = await firstValueFrom(
+        this.api.prepareConversion({ opportunity_id: this.oppId, mode }),
+      );
+      this.success.set(`Conversión #${res.conversion.id} preparada.`);
+      await this.router.navigate(['/crm/conversions', res.conversion.id]);
+    } catch (e) {
+      this.error.set(e instanceof CrmApiError ? e.message : 'Error al preparar conversión');
       this.saving.set(false);
     }
   }

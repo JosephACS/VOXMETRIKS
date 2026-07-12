@@ -261,7 +261,7 @@ export interface CustomerConversion {
 
 export interface ConversionPrepareRequest {
   opportunity_id: number;
-  mode: 'link' | 'claim';
+  mode: 'create_org' | 'link_existing';
   contact_id?: number;
   idempotency_key?: string;
 }
