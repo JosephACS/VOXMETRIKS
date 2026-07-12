@@ -31,6 +31,12 @@ export const SUBSCRIPTIONS_ROUTES: Routes = [
       import('./pages/trial-start.page').then((m) => m.TrialStartPageComponent),
   },
   {
+    path: 'subscriptions/select-plan',
+    title: 'Seleccionar plan — Voxmetrik',
+    loadComponent: () =>
+      import('./pages/subscription-select-plan.page').then((m) => m.SubscriptionSelectPlanPage),
+  },
+  {
     path: 'subscriptions/:id/cancel',
     title: 'Cancelar Suscripción — Voxmetrik',
     loadComponent: () =>

@@ -23,6 +23,17 @@ BUSINESS_ANALYTICS_TABLES = (
 
 def ensure_business_analytics_tables(conn: duckdb.DuckDBPyConnection) -> None:
     if schema_ready():
+        # Additive: isolated test DBs / partial warehouses may lack tables
+        # even when the process-level schema_ready flag is True.
+        _create_kpi_definition(conn)
+        _create_kpi_snapshot(conn)
+        _create_metric_source(conn)
+        _create_data_quality_result(conn)
+        _create_business_alert(conn)
+        _create_analytics_view_preference(conn)
+        _create_recommendation_record(conn)
+        _seed_metric_sources(conn)
+        _seed_default_kpis(conn)
         return
     _create_kpi_definition(conn)
     _create_kpi_snapshot(conn)
@@ -177,6 +188,9 @@ def _seed_default_kpis(conn: duckdb.DuckDBPyConnection) -> None:
         ("daily_streams", "Daily Streams", "SUM(total_streams) from agg_daily_streams", "warehouse:agg_daily_streams"),
         ("skip_rate", "Skip Rate", "skipped streams / total streams", "warehouse:fact_streaming"),
         ("campaign_roi", "Campaign ROI", "From app_campaign_roi_snapshot when available", "campaigns:roi_snapshot"),
+        ("active_mrr", "Active MRR", "Sum monthly-normalized plan prices for status=active; no FX", "subscriptions:plan_price"),
+        ("active_arr", "Active ARR", "Active MRR × 12 per currency; no FX", "subscriptions:plan_price"),
+        ("past_due_mrr", "Past-due MRR", "Monthly-normalized prices for status=past_due (separate metric)", "subscriptions:plan_price"),
     ]
     for code, name, formula, source_type in kpis:
         existing = conn.execute("SELECT id FROM app_kpi_definition WHERE code = ? AND version = 1", [code]).fetchone()

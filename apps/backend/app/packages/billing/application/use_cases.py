@@ -852,6 +852,52 @@ class PaymentAttemptUseCases:
         )
         return updated_attempt
 
+    def fail(
+        self,
+        attempt_id: int,
+        *,
+        actor_user_id: int,
+        organization_id: int,
+        failure_reason: Optional[str] = None,
+        request_id: Optional[str] = None,
+        open_dunning: bool = True,
+    ) -> PaymentAttempt:
+        """Mark mock/manual attempt as failed and open dunning when applicable."""
+        attempt = self._get_or_raise_for_org(attempt_id, organization_id)
+        if attempt.status not in ("created", "processing"):
+            raise InvalidTransitionError(
+                f"Cannot fail attempt in status={attempt.status}"
+            )
+        now = _now()
+        sanitized = (failure_reason or "mock_payment_failed")[:200]
+        self._conn.execute(
+            """
+            UPDATE app_payment_attempt SET
+                status='failed', failure_reason=?, updated_at=?
+            WHERE id=?
+            """,
+            [sanitized, now, attempt_id],
+        )
+        updated = self._get_or_raise(attempt_id)
+        _audit(
+            self._conn, action="payment_attempt.failed",
+            target_type="payment_attempt", target_id=str(attempt_id),
+            actor_user_id=actor_user_id, organization_id=organization_id,
+            new_values={"status": "failed", "failure_reason": sanitized},
+            request_id=request_id,
+        )
+        if open_dunning:
+            from app.packages.billing.application.dunning import DunningUseCases
+            DunningUseCases(self._conn).open_from_failed_attempt(
+                organization_id=organization_id,
+                invoice_id=attempt.invoice_id,
+                attempt_id=attempt_id,
+                actor_user_id=actor_user_id,
+                failure_reason=sanitized,
+                request_id=request_id,
+            )
+        return updated
+
     def cancel(
         self,
         attempt_id: int,
@@ -1252,6 +1298,17 @@ class PaymentUseCases:
                 actor_user_id=actor_user_id,
                 request_id=request_id,
             )
+        if new_status == "paid":
+            try:
+                from app.packages.billing.application.dunning import DunningUseCases
+                DunningUseCases(self._conn).mark_recovered(
+                    organization_id=organization_id,
+                    invoice_id=invoice_id,
+                    actor_user_id=actor_user_id,
+                    request_id=request_id,
+                )
+            except Exception:
+                pass
 
         row = self._conn.execute(
             f"SELECT {_ALLOC_COLS} FROM app_payment_allocation WHERE id = ?", [alloc_id]

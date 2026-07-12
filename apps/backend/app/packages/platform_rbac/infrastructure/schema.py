@@ -40,6 +40,14 @@ PLATFORM_RBAC_TABLES = (
 def ensure_platform_rbac_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create platform RBAC tables, seed catalogs, and seed demo CRM users (idempotent)."""
     if schema_ready():
+        # Additive re-seed when tables exist (isolated DBs may lack them).
+        try:
+            conn.execute("SELECT 1 FROM app_platform_role LIMIT 1").fetchone()
+        except Exception:
+            return
+        _seed_platform_rbac_catalogs(conn)
+        if get_settings().seed_demo_crm_users_enabled:
+            _seed_demo_crm_users(conn)
         return
 
     _create_platform_role(conn)

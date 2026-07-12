@@ -57,9 +57,10 @@ class TestServerLogout:
 
 class TestPasswordRehashOnLogin:
     def test_legacy_password_upgraded_to_bcrypt(self, client: TestClient) -> None:
+        from app.core.config import get_settings
         from app.core.database import _release_read_connections, _reopen_read_pool
 
-        db_path = os.environ["db_path"]
+        db_path = str(get_settings().db_path_resolved)
         legacy = hashlib.sha256(b"demo123").hexdigest()
         _release_read_connections()
         conn = duckdb.connect(db_path)

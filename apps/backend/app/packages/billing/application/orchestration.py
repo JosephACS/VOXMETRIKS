@@ -49,6 +49,7 @@ def notify_subscription_recovered(
             subscription_id,
             actor_user_id=actor_user_id,
             access_state="full",
+            also_restore_active=True,
             reason="payment_settled",
             request_id=request_id,
         )

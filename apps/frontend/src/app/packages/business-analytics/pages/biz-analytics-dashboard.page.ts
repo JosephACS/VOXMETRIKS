@@ -60,9 +60,37 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
               <p class="kpi-value">{{ commercial.amountPaidSum == null ? 'No disponible' : (commercial.amountPaidSum | number:'1.2-2') }}</p>
             </div>
             <div class="kpi-card">
-              <h3>MRR / ARR</h3>
-              <p class="kpi-null">No disponible</p>
-              <p class="kpi-source">No billing MRR formula endpoint — not invented</p>
+              <h3>Active MRR</h3>
+              @if (overview?.kpis?.['active_mrr']?.value != null) {
+                <p class="kpi-value">
+                  {{ overview!.kpis['active_mrr'].value | number:'1.2-2' }}
+                  {{ recurring?.primary_currency || '' }}
+                </p>
+                <p class="kpi-source">{{ overview!.kpis['active_mrr'].source_label }}</p>
+              } @else {
+                <p class="kpi-null">No disponible</p>
+                <p class="kpi-source">{{ overview?.kpis?.['active_mrr']?.quality_status || 'subscriptions:plan_price' }}</p>
+              }
+            </div>
+            <div class="kpi-card">
+              <h3>Active ARR</h3>
+              @if (overview?.kpis?.['active_arr']?.value != null) {
+                <p class="kpi-value">
+                  {{ overview!.kpis['active_arr'].value | number:'1.2-2' }}
+                  {{ recurring?.primary_currency || '' }}
+                </p>
+              } @else {
+                <p class="kpi-null">No disponible</p>
+              }
+            </div>
+            <div class="kpi-card">
+              <h3>Past-due MRR</h3>
+              @if (overview?.kpis?.['past_due_mrr']?.value != null) {
+                <p class="kpi-value">{{ overview!.kpis['past_due_mrr'].value | number:'1.2-2' }}</p>
+              } @else {
+                <p class="kpi-null">No disponible</p>
+              }
+              <p class="kpi-source">Métrica separada — no incluida en Active MRR</p>
             </div>
             <div class="kpi-card">
               <h3>Open CS risks</h3>
@@ -103,6 +131,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
   private orgCtx = inject(OrganizationContextService);
 
   overview: DashboardOverview | null = null;
+  recurring: { primary_currency?: string | null } | null = null;
   kpiEntries: { code: string; data: DashboardOverview['kpis'][string] }[] = [];
   commercial: {
     openOpportunities: number | null;
@@ -146,6 +175,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
       next: (res) => {
         if (res.dash) {
           this.overview = res.dash;
+          this.recurring = (res.dash as DashboardOverview & { recurring_revenue?: { primary_currency?: string | null } }).recurring_revenue ?? null;
           this.kpiEntries = Object.entries(res.dash.kpis || {}).map(([code, data]) => ({ code, data }));
         }
         if (res.opps?.items) {

@@ -158,18 +158,29 @@ def seed_enterprise_demo() -> dict[str, object]:
                     [plan_id, now, now],
                 )
             result["plan_id"] = plan_id
-            if _table_exists(conn, "app_plan_price") and not conn.execute(
-                "SELECT 1 FROM app_plan_price WHERE plan_id = ? AND currency = 'USD'", [plan_id]
-            ).fetchone():
-                price_id = _next_id(conn, "app_plan_price")
-                conn.execute(
-                    """
-                    INSERT INTO app_plan_price
-                        (id, plan_id, currency, billing_period, amount, status, created_at, updated_at)
-                    VALUES (?, ?, 'USD', 'monthly', 0.00, 'active', ?, ?)
-                    """,
-                    [price_id, plan_id, now, now],
-                )
+            if _table_exists(conn, "app_plan_price"):
+                existing_price = conn.execute(
+                    "SELECT id, amount FROM app_plan_price WHERE plan_id = ? AND currency = 'USD' LIMIT 1",
+                    [plan_id],
+                ).fetchone()
+                if not existing_price:
+                    price_id = _next_id(conn, "app_plan_price")
+                    conn.execute(
+                        """
+                        INSERT INTO app_plan_price
+                            (id, plan_id, currency, billing_period, amount, status, created_at, updated_at)
+                        VALUES (?, ?, 'USD', 'monthly', 99.00, 'active', ?, ?)
+                        """,
+                        [price_id, plan_id, now, now],
+                    )
+                    result["plan_price_id"] = price_id
+                else:
+                    result["plan_price_id"] = int(existing_price[0])
+                    if float(existing_price[1] or 0) <= 0:
+                        conn.execute(
+                            "UPDATE app_plan_price SET amount = 99.00, updated_at = ? WHERE id = ?",
+                            [now, int(existing_price[0])],
+                        )
         else:
             result["skipped"].append("app_plan")
 
@@ -183,14 +194,27 @@ def seed_enterprise_demo() -> dict[str, object]:
                 sub_id = int(sub_row[0])
             else:
                 sub_id = _next_id(conn, "app_subscription")
+                price_id = result.get("plan_price_id")
                 conn.execute(
                     """
                     INSERT INTO app_subscription
-                        (id, organization_id, plan_id, status, billing_currency,
+                        (id, organization_id, plan_id, plan_price_id, status, billing_currency,
                          activation_source, access_state, created_at, updated_at)
-                    VALUES (?, ?, ?, 'trialing', 'USD', 'demo_seed_synthetic', 'full', ?, ?)
+                    VALUES (?, ?, ?, ?, 'active', 'USD', 'demo_seed_synthetic', 'full', ?, ?)
                     """,
-                    [sub_id, org_id, plan_id, now, now],
+                    [sub_id, org_id, plan_id, price_id, now, now],
+                )
+            # Keep existing demo sub linked to a priced plan when possible
+            if sub_id and result.get("plan_price_id"):
+                conn.execute(
+                    """
+                    UPDATE app_subscription
+                    SET plan_price_id = COALESCE(plan_price_id, ?),
+                        status = CASE WHEN status = 'trialing' THEN 'active' ELSE status END,
+                        updated_at = ?
+                    WHERE id = ? AND organization_id = ?
+                    """,
+                    [result["plan_price_id"], now, sub_id, org_id],
                 )
             result["subscription_id"] = sub_id
             result["entities"]["subscription"] = sub_id

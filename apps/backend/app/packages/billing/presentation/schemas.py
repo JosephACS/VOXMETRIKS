@@ -284,6 +284,30 @@ class PaymentAttemptRetryRequest(BaseModel):
     idempotency_key: str
 
 
+class PaymentAttemptFailRequest(BaseModel):
+    failure_reason: Optional[str] = None
+
+
+class DunningOut(BaseModel):
+    id: int
+    organization_id: int
+    invoice_id: int
+    subscription_id: Optional[int] = None
+    status: str
+    retry_count: int
+    next_retry_at: Optional[datetime] = None
+    grace_until: Optional[datetime] = None
+    last_error_sanitized: Optional[str] = None
+    last_attempt_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PaginatedDunning(BaseModel):
+    items: List[DunningOut]
+    total: int
+
+
 class ProviderEventOut(BaseModel):
     id: int
     provider_code: str

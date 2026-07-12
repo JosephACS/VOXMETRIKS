@@ -128,6 +128,7 @@ export class SubscriptionsApiService {
     plan_id: number;
     plan_price_id: number;
     billing_currency: string;
+    activation_source?: string;
   }): Observable<Subscription> {
     return this.http.post<Subscription>(`${this.base}/subscriptions`, body, {
       headers: this.orgHeaders(organizationId),
@@ -140,6 +141,7 @@ export class SubscriptionsApiService {
     billing_currency: string;
     plan_price_id?: number;
     trial_days?: number;
+    activation_source?: string;
   }): Observable<Subscription> {
     return this.http.post<Subscription>(`${this.base}/subscriptions/trial`, body, {
       headers: this.orgHeaders(organizationId),

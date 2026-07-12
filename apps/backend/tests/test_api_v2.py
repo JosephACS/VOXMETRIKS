@@ -159,24 +159,42 @@ def api_v2_db(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(db_path))
     get_settings.cache_clear()
 
+    from app.core.database import close_read_pool, open_read_pool
     from app.db.duckdb_client import shutdown_duckdb_client
 
     shutdown_duckdb_client()
+    close_read_pool()
     yield db_path
     shutdown_duckdb_client()
+    close_read_pool()
     get_settings.cache_clear()
+    # Restore session warehouse read pool for subsequent tests.
+    try:
+        open_read_pool(get_settings().db_path_resolved)
+    except Exception:
+        pass
 
 
 @pytest.fixture()
 def v2_client(api_v2_db):
     from app.main import app
     from app.packages.identity.services.auth_deps import require_user_id
+    from app.core.schema_bootstrap import mark_schema_ready, reset_schema_ready_for_tests, schema_ready
+
+    was_ready = schema_ready()
+    reset_schema_ready_for_tests()
 
     # Isolated warehouse has no app_user (schema_ready already true from session client).
     app.dependency_overrides[require_user_id] = lambda: 1
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.pop(require_user_id, None)
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.pop(require_user_id, None)
+        if was_ready:
+            mark_schema_ready()
+        else:
+            reset_schema_ready_for_tests()
 
 
 def test_analytics_daily_streams(v2_client):

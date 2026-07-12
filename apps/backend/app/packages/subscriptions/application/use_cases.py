@@ -840,6 +840,22 @@ class SubscriptionUseCases:
         if plan.status == "archived":
             raise PlanRetiredError(f"Plan {plan.code!r} is archived")
 
+        billing = billing_currency.strip().upper()
+        if plan_price_id is not None:
+            price_row = self._conn.execute(
+                "SELECT id, status, currency FROM app_plan_price WHERE id = ? AND plan_id = ?",
+                [plan_price_id, plan_id],
+            ).fetchone()
+            if not price_row:
+                raise NotFoundError(f"plan_price id={plan_price_id} for plan id={plan_id}")
+            if str(price_row[1]) == "retired":
+                raise PlanRetiredError(f"plan_price id={plan_price_id} is retired")
+            price_currency = str(price_row[2] or "").strip().upper()
+            if price_currency and billing != price_currency:
+                raise ValidationError(
+                    f"billing_currency {billing} does not match plan_price currency {price_currency}"
+                )
+
         effective_trial_days = trial_days if trial_days is not None else plan.trial_days_default
         now = _now()
         trial_ends_at = now + timedelta(days=effective_trial_days) if effective_trial_days > 0 else None
@@ -851,7 +867,7 @@ class SubscriptionUseCases:
             VALUES (?, ?, ?, ?, 'trialing', ?, ?, NULL, NULL, FALSE, NULL, ?, 'full', ?, ?)
             """,
             [sid, organization_id, plan_id, plan_price_id,
-             billing_currency.strip().upper(),
+             billing,
              trial_ends_at, activation_source or "trial", now, now],
         )
         sub = self._get_or_raise(sid)
@@ -904,13 +920,19 @@ class SubscriptionUseCases:
             raise PlanRetiredError(f"Plan {plan.code!r} is archived")
 
         price_row = self._conn.execute(
-            "SELECT id, status FROM app_plan_price WHERE id = ? AND plan_id = ?",
+            "SELECT id, status, currency FROM app_plan_price WHERE id = ? AND plan_id = ?",
             [plan_price_id, plan_id],
         ).fetchone()
         if not price_row:
             raise NotFoundError(f"plan_price id={plan_price_id} for plan id={plan_id}")
         if str(price_row[1]) == "retired":
             raise PlanRetiredError(f"plan_price id={plan_price_id} is retired")
+        price_currency = str(price_row[2] or "").strip().upper()
+        billing = billing_currency.strip().upper()
+        if price_currency and billing != price_currency:
+            raise ValidationError(
+                f"billing_currency {billing} does not match plan_price currency {price_currency}"
+            )
 
         now = _now()
         ps = period_start or now.date()
@@ -1295,10 +1317,12 @@ class SubscriptionUseCases:
         access_state: str,
         reason: Optional[str] = None,
         also_set_past_due: bool = False,
+        also_restore_active: bool = False,
         request_id: Optional[str] = None,
     ) -> Subscription:
         """Update access state. also_set_past_due=True marks subscription past_due
-        (only callable from orchestration hooks / Billing events, stub for 019).
+        (only callable from orchestration hooks / Billing events).
+        also_restore_active=True restores past_due → active on recovery.
         """
         if access_state not in ("full", "limited", "blocked"):
             raise ValidationError("access_state must be full|limited|blocked")
@@ -1306,10 +1330,16 @@ class SubscriptionUseCases:
 
         now = _now()
         new_status = sub.status
-        if also_set_past_due and sub.status == "active":
+        if also_set_past_due and sub.status in ("active", "trialing"):
             new_status = "past_due"
             self._conn.execute(
                 "UPDATE app_subscription SET status = 'past_due', updated_at = ? WHERE id = ?",
+                [now, subscription_id],
+            )
+        if also_restore_active and sub.status == "past_due" and access_state == "full":
+            new_status = "active"
+            self._conn.execute(
+                "UPDATE app_subscription SET status = 'active', updated_at = ? WHERE id = ?",
                 [now, subscription_id],
             )
 

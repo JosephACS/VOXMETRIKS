@@ -67,7 +67,7 @@ def require_org_permission(permission_code: str):
             FROM app_organization_member m
             JOIN app_member_role mr ON mr.member_id = m.id AND mr.status = 'active'
             JOIN app_business_role br ON br.id = mr.role_id
-            JOIN app_business_role_permission brp ON brp.role_id = br.id
+            JOIN app_role_permission brp ON brp.role_id = br.id
             JOIN app_permission p ON p.id = brp.permission_id AND p.code = ?
             WHERE m.organization_id = ? AND m.user_id = ? AND m.status = 'active'
             LIMIT 1

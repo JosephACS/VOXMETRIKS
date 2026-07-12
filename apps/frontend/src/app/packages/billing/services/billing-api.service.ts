@@ -117,6 +117,56 @@ export class BillingApiService {
     });
   }
 
+  failPaymentAttempt(orgId: number, id: number, failureReason?: string): Observable<PaymentAttempt> {
+    return this.http.post<PaymentAttempt>(`${BASE}/billing/payment-attempts/${id}/fail`, {
+      failure_reason: failureReason ?? null,
+    }, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  retryPaymentAttempt(orgId: number, id: number, idempotencyKey: string): Observable<PaymentAttempt> {
+    return this.http.post<PaymentAttempt>(`${BASE}/billing/payment-attempts/${id}/retry`, {
+      idempotency_key: idempotencyKey,
+    }, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  getDunningByInvoice(orgId: number, invoiceId: number): Observable<{
+    id: number;
+    status: string;
+    retry_count: number;
+    next_retry_at?: string | null;
+    grace_until?: string | null;
+    last_error_sanitized?: string | null;
+    last_attempt_id?: number | null;
+  } | null> {
+    return this.http.get<{
+      id: number;
+      status: string;
+      retry_count: number;
+      next_retry_at?: string | null;
+      grace_until?: string | null;
+      last_error_sanitized?: string | null;
+      last_attempt_id?: number | null;
+    } | null>(`${BASE}/billing/dunning/by-invoice/${invoiceId}`, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  expireDunningGrace(orgId: number, dunningId: number) {
+    return this.http.post(`${BASE}/billing/dunning/${dunningId}/expire-grace`, {}, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
+  markInvoicePastDue(orgId: number, invoiceId: number): Observable<Invoice> {
+    return this.http.post<Invoice>(`${BASE}/billing/invoices/${invoiceId}/mark-past-due`, {}, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
   // ── Payments ──────────────────────────────────────────────────────────────
 
   listPayments(

@@ -4,12 +4,14 @@ How to populate and present honest demo/synthetic data.
 
 ## Built-in users
 
-Seeded by `ensure_user_tables` on boot:
+Seeded by `ensure_user_tables` on boot (credentials live in local seed/bootstrap only — not republished here):
 
-| Login | Password | Use |
-|-------|----------|-----|
-| `demo` | `demo123` | Standard user journey |
-| `admin` | `admin123` | Platform admin, engineer routes |
+| Login | Use |
+|-------|-----|
+| `demo` | Standard user journey |
+| `admin` | Platform admin, engineer routes |
+| `sales_agent@voxmetrik.io` | CRM agent (platform RBAC demo seed) |
+| `sales_manager@voxmetrik.io` | CRM manager (platform RBAC demo seed) |
 
 ## Warehouse data
 
@@ -29,9 +31,9 @@ Creates (all tagged demo/synthetic; skips missing tables gracefully):
 | Entity | Identifier / notes | Flags |
 |--------|--------------------|-------|
 | Organization | slug `enterprise-demo-s028` | `is_demo=TRUE` |
-| Plan + subscription | `demo-enterprise-starter` | `activation_source=demo_seed_synthetic` |
-| CRM | prospect → contact (linked) → opportunity → quotation → accepted version + item → commercial contract | SYNTHETIC |
-| Billing | profile, invoice, payment_attempt + payment mock | provider `mock` |
+| Plan + USD monthly price ($99) + active subscription with `plan_price_id` | `demo-enterprise-starter` | MRR-calculable |
+| CRM | prospect → contact → opportunity → quotation → contract | SYNTHETIC |
+| Billing | profile, invoice, payment mock; dunning recoverable via mock fail/retry | provider `academic_mock` |
 | Artists / rights | artist profile, catalog asset, rights row | demo labels |
 | Campaign | campaign + budget + expense | demo |
 | Reporting | definition, generation, snapshot, executive report, decision | academic disclaimer |

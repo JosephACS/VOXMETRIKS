@@ -27,12 +27,26 @@ BILLING_TABLES = (
     "app_credit_note",
     "app_payment_provider_event",
     "app_billing_ledger_entry",
+    "app_billing_dunning",
 )
 
 
 def ensure_billing_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all billing tables (idempotent)."""
     if schema_ready():
+        # Additive: create any missing tables (IF NOT EXISTS) including dunning.
+        _create_billing_profile(conn)
+        _create_invoice(conn)
+        _create_invoice_item(conn)
+        _create_payment_method_reference(conn)
+        _create_payment_attempt(conn)
+        _create_payment(conn)
+        _create_payment_allocation(conn)
+        _create_refund(conn)
+        _create_credit_note(conn)
+        _create_payment_provider_event(conn)
+        _create_billing_ledger_entry(conn)
+        _create_billing_dunning(conn)
         return
 
     _create_billing_profile(conn)
@@ -46,6 +60,7 @@ def ensure_billing_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_credit_note(conn)
     _create_payment_provider_event(conn)
     _create_billing_ledger_entry(conn)
+    _create_billing_dunning(conn)
 
     logger.info("Billing schema ensured (%s tables)", len(BILLING_TABLES))
 
@@ -328,4 +343,38 @@ def _create_billing_ledger_entry(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_ledger_org
         ON app_billing_ledger_entry(organization_id)
+    """)
+
+
+def _create_billing_dunning(conn: duckdb.DuckDBPyConnection) -> None:
+    """Academic dunning / mora state for invoices (mock/manual only)."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_billing_dunning (
+            id                   INTEGER PRIMARY KEY,
+            organization_id      INTEGER NOT NULL,
+            invoice_id           INTEGER NOT NULL,
+            subscription_id      INTEGER,
+            status               VARCHAR NOT NULL DEFAULT 'open',
+            retry_count          INTEGER NOT NULL DEFAULT 0,
+            next_retry_at        TIMESTAMP,
+            grace_until          TIMESTAMP,
+            last_error_sanitized VARCHAR,
+            last_attempt_id      INTEGER,
+            retry_lock_token     VARCHAR,
+            created_at           TIMESTAMP NOT NULL,
+            updated_at           TIMESTAMP NOT NULL,
+            CHECK (status IN (
+                'open', 'grace', 'retry_in_progress', 'limited',
+                'blocked', 'recovered', 'canceled'
+            )),
+            CHECK (retry_count >= 0)
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_billing_dunning_invoice
+        ON app_billing_dunning(invoice_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_billing_dunning_org
+        ON app_billing_dunning(organization_id)
     """)

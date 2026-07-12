@@ -167,6 +167,34 @@ class KpiSnapshotUseCases:
             else:
                 value = None
                 quality = "roi_unavailable"
+        elif kpi_code in ("active_mrr", "active_arr", "past_due_mrr"):
+            if organization_id is None:
+                value = None
+                quality = "org_required"
+                source_label = "subscriptions:plan_price"
+            else:
+                from app.packages.business_analytics.application.recurring_revenue import (
+                    compute_recurring_revenue,
+                )
+                rev = compute_recurring_revenue(self._conn, organization_id=organization_id)
+                source_label = rev["source_label"]
+                if kpi_code == "active_mrr":
+                    value = rev["active_mrr"]
+                    quality = rev["quality_status"] if value is None else "ok"
+                elif kpi_code == "active_arr":
+                    value = rev["active_arr"]
+                    quality = rev["quality_status"] if value is None else "ok"
+                else:
+                    past = rev["past_due_by_currency"]
+                    if len(past) == 1:
+                        value = past[0]["mrr"]
+                        quality = "ok"
+                    elif len(past) == 0:
+                        value = None
+                        quality = "no_past_due_recurring"
+                    else:
+                        value = None
+                        quality = "multi_currency_no_fx"
         elif kpi.source_type.startswith("warehouse"):
             value, source_label, quality = _warehouse_value(self._conn, kpi_code)
             if value is None and kpi.null_handling == "zero":
@@ -420,7 +448,10 @@ class AnalyticsDashboardUseCases:
         snap_uc = KpiSnapshotUseCases(self._conn)
         period = _now().date().isoformat()
         kpis = {}
-        for code in ("total_streams", "daily_streams", "skip_rate"):
+        for code in (
+            "total_streams", "daily_streams", "skip_rate",
+            "active_mrr", "active_arr", "past_due_mrr",
+        ):
             s = snap_uc.capture(code, organization_id=organization_id, period=period)
             kpis[code] = {
                 "value": s.value,
@@ -435,10 +466,15 @@ class AnalyticsDashboardUseCases:
             "quality_status": roi_snap.quality_status,
             "is_synthetic": roi_snap.is_synthetic,
         }
+        from app.packages.business_analytics.application.recurring_revenue import (
+            compute_recurring_revenue,
+        )
+        recurring = compute_recurring_revenue(self._conn, organization_id=organization_id)
         return {
             "organization_id": organization_id,
             "period": period,
             "kpis": kpis,
+            "recurring_revenue": recurring,
             "trends_stub": {"message": "Trend series available when historical snapshots exist"},
             "comparatives_stub": {"message": "Comparative views require multiple periods"},
         }

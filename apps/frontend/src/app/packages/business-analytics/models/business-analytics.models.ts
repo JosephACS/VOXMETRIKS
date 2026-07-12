@@ -39,4 +39,13 @@ export interface DashboardOverview {
   organization_id: number;
   period: string;
   kpis: Record<string, { value?: number | null; source_label: string; quality_status: string; is_synthetic: boolean }>;
+  recurring_revenue?: {
+    active_mrr?: number | null;
+    active_arr?: number | null;
+    primary_currency?: string | null;
+    past_due_by_currency?: Array<{ currency: string; mrr: number; arr: number }>;
+    total_recurring_exposure_by_currency?: Array<{ currency: string; mrr: number; arr: number }>;
+    quality_status?: string;
+    policy?: Record<string, string>;
+  } | null;
 }

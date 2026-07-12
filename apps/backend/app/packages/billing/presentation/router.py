@@ -23,6 +23,7 @@ from app.packages.billing.application.use_cases import (
     ProviderEventUseCases,
     RefundUseCases,
 )
+from app.packages.billing.application.dunning import DunningUseCases
 from app.packages.billing.domain.errors import BillingError
 from app.packages.billing.presentation.dependencies import (
     get_authenticated_billing_user,
@@ -35,6 +36,7 @@ from app.packages.billing.presentation.schemas import (
     BillingProfileUpdateRequest,
     CreditNoteCreateRequest,
     CreditNoteOut,
+    DunningOut,
     InvoiceCreateRequest,
     InvoiceItemAddRequest,
     InvoiceItemOut,
@@ -44,6 +46,7 @@ from app.packages.billing.presentation.schemas import (
     ManualTransferRequest,
     PaginatedAttempts,
     PaginatedCreditNotes,
+    PaginatedDunning,
     PaginatedInvoices,
     PaginatedLedger,
     PaginatedPayments,
@@ -51,6 +54,7 @@ from app.packages.billing.presentation.schemas import (
     PaymentAllocationOut,
     PaymentAllocateRequest,
     PaymentAttemptCreateRequest,
+    PaymentAttemptFailRequest,
     PaymentAttemptOut,
     PaymentAttemptRetryRequest,
     PaymentMethodCreateRequest,
@@ -408,6 +412,26 @@ def confirm_mock_attempt(
     return _attempt_out(attempt)
 
 
+@billing_router.post("/payment-attempts/{attempt_id}/fail", response_model=PaymentAttemptOut)
+def fail_payment_attempt(
+    attempt_id: int,
+    body: PaymentAttemptFailRequest | None = None,
+    ctx: dict = Depends(require_org_billing_permission("payment.manage")),
+) -> PaymentAttemptOut:
+    """Academic mock failure — opens dunning / mora for the invoice."""
+    try:
+        attempt = PaymentAttemptUseCases(ctx["conn"]).fail(
+            attempt_id,
+            actor_user_id=ctx["user_id"],
+            organization_id=ctx["organization_id"],
+            failure_reason=(body.failure_reason if body else None),
+            request_id=ctx["request_id"],
+        )
+    except BillingError as e:
+        raise_billing_http(e)
+    return _attempt_out(attempt)
+
+
 @billing_router.post("/payment-attempts/{attempt_id}/cancel", response_model=PaymentAttemptOut)
 def cancel_payment_attempt(
     attempt_id: int,
@@ -430,17 +454,104 @@ def retry_payment_attempt(
     body: PaymentAttemptRetryRequest,
     ctx: dict = Depends(require_org_billing_permission("payment.manage")),
 ) -> PaymentAttemptOut:
+    """Retry a failed attempt with dunning lock to prevent concurrent double retry."""
+    org_id = ctx["organization_id"]
+    dunning_uc = DunningUseCases(ctx["conn"])
+    dunning = None
+    lock_acquired = False
     try:
+        failed = PaymentAttemptUseCases(ctx["conn"]).get(attempt_id, organization_id=org_id)
+        dunning = dunning_uc.get_by_invoice(org_id, failed.invoice_id)
+        if dunning and dunning.status not in ("recovered", "canceled"):
+            dunning_uc.begin_retry(
+                dunning.id,
+                organization_id=org_id,
+                actor_user_id=ctx["user_id"],
+                request_id=ctx["request_id"],
+            )
+            lock_acquired = True
         attempt = PaymentAttemptUseCases(ctx["conn"]).retry(
             attempt_id,
             actor_user_id=ctx["user_id"],
-            organization_id=ctx["organization_id"],
+            organization_id=org_id,
             idempotency_key=body.idempotency_key,
+            request_id=ctx["request_id"],
+        )
+        if lock_acquired and dunning:
+            dunning_uc.complete_retry_started(
+                dunning.id,
+                organization_id=org_id,
+                attempt_id=attempt.id,
+                request_id=ctx["request_id"],
+            )
+    except BillingError as e:
+        if lock_acquired and dunning:
+            try:
+                dunning_uc.complete_retry_failed(
+                    dunning.id,
+                    organization_id=org_id,
+                    attempt_id=attempt_id,
+                    failure_reason=str(e),
+                    actor_user_id=ctx["user_id"],
+                    request_id=ctx["request_id"],
+                )
+            except Exception:
+                pass
+        raise_billing_http(e)
+    return _attempt_out(attempt)
+
+
+def _dunning_out(d) -> DunningOut:
+    return DunningOut(
+        id=d.id,
+        organization_id=d.organization_id,
+        invoice_id=d.invoice_id,
+        subscription_id=d.subscription_id,
+        status=d.status,
+        retry_count=d.retry_count,
+        next_retry_at=d.next_retry_at,
+        grace_until=d.grace_until,
+        last_error_sanitized=d.last_error_sanitized,
+        last_attempt_id=d.last_attempt_id,
+        created_at=d.created_at,
+        updated_at=d.updated_at,
+    )
+
+
+@billing_router.get("/dunning", response_model=PaginatedDunning)
+def list_dunning(
+    status: Optional[str] = Query(default=None),
+    ctx: dict = Depends(require_org_billing_permission("payment.view")),
+) -> PaginatedDunning:
+    items = DunningUseCases(ctx["conn"]).list(ctx["organization_id"], status=status)
+    return PaginatedDunning(items=[_dunning_out(d) for d in items], total=len(items))
+
+
+@billing_router.get("/dunning/by-invoice/{invoice_id}", response_model=DunningOut | None)
+def get_dunning_by_invoice(
+    invoice_id: int,
+    ctx: dict = Depends(require_org_billing_permission("payment.view")),
+) -> DunningOut | None:
+    d = DunningUseCases(ctx["conn"]).get_by_invoice(ctx["organization_id"], invoice_id)
+    return _dunning_out(d) if d else None
+
+
+@billing_router.post("/dunning/{dunning_id}/expire-grace", response_model=DunningOut)
+def expire_dunning_grace(
+    dunning_id: int,
+    ctx: dict = Depends(require_org_billing_permission("payment.manage")),
+) -> DunningOut:
+    """Academic trigger: after grace → blocked access."""
+    try:
+        d = DunningUseCases(ctx["conn"]).apply_grace_expiry(
+            dunning_id,
+            organization_id=ctx["organization_id"],
+            actor_user_id=ctx["user_id"],
             request_id=ctx["request_id"],
         )
     except BillingError as e:
         raise_billing_http(e)
-    return _attempt_out(attempt)
+    return _dunning_out(d)
 
 
 # ── Payments ───────────────────────────────────────────────────────────────────

@@ -1,10 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CustomerConversion } from '../models/crm.models';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
 type WizardStep = 'view' | 'confirm-link' | 'claim';
 
@@ -70,6 +71,22 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
               <dt class="crm-muted">Creado</dt><dd>{{ conv()!.created_at | date:'medium' }}</dd>
             </dl>
           </div>
+
+          @if (conv()!.status === 'completed' && conv()!.organization_id) {
+            <div class="crm-card">
+              <h2>Siguiente paso comercial</h2>
+              <p class="crm-muted">
+                La conversión está completa. Continúa con la selección explícita de plan
+                (no se crea suscripción automáticamente).
+              </p>
+              <div class="crm-actions">
+                <button type="button" class="crm-btn" [disabled]="saving()"
+                  (click)="continueToPlan()">
+                  Continuar con plan y suscripción
+                </button>
+              </div>
+            </div>
+          }
 
           @if (conv()!.status === 'pending' || conv()!.status === 'prepared') {
             <div class="crm-card">
@@ -168,6 +185,8 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
 export class CrmConversionWizardPageComponent implements OnInit {
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly orgCtx = inject(OrganizationContextService);
 
   conversionId = 0;
   step: WizardStep = 'view';
@@ -243,6 +262,27 @@ export class CrmConversionWizardPageComponent implements OnInit {
       this.success.set('Conversión reclamada. Organización creada.');
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al reclamar conversión');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async continueToPlan(): Promise<void> {
+    const c = this.conv();
+    const orgId = c?.organization_id;
+    if (!orgId) {
+      this.error.set('La conversión no tiene organización vinculada.');
+      return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      await this.orgCtx.activate(orgId);
+      await this.router.navigate(['/subscriptions/select-plan'], {
+        queryParams: { organizationId: orgId, conversionId: this.conversionId },
+      });
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : 'No se pudo activar la organización');
     } finally {
       this.saving.set(false);
     }

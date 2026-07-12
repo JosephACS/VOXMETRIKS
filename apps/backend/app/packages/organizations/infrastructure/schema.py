@@ -39,6 +39,10 @@ ORG_TABLES = (
 def ensure_organization_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create organization tables and seed role catalogs (idempotent)."""
     if schema_ready():
+        # Additive: keep catalogs current only when org tables already exist
+        # (isolated temp DBs may share process-level schema_ready without tables).
+        if table_exists(conn, "app_business_role") and table_exists(conn, "app_permission"):
+            ensure_organization_role_catalogs(conn)
         return
 
     _create_organization(conn)

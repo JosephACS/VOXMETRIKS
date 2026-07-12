@@ -11,17 +11,10 @@
 | Platform RBAC | 016/017 | **IMPLEMENTED** | `platform_rbac` |
 | CRM | 017 | **IMPLEMENTED** | `crm` |
 | Commercial contracts | 017 | **IMPLEMENTED** | `contracts` |
-| Plans & subscriptions | 018 | **IMPLEMENTED** | `subscriptions` |
-| Billing & reconciliation | 019 | **IMPLEMENTED** | `billing`, MOCK payment |
-| Artists & team | 020 | **IMPLEMENTED** | `artists` |
-| Catalog rights | 021 | **IMPLEMENTED** | `catalog_rights` |
-| Campaigns & ROI | 022 | **IMPLEMENTED** | `campaigns` |
-| Business analytics | 023 | **IMPLEMENTED** | `business_analytics` |
-| Executive reporting & decisions | **024** | **IMPLEMENTED** | `reporting` — `/api/v1/reports`, `/business-decisions` |
-| Customer Success & Support | **025** | **IMPLEMENTED** | `customer_success` — `/customer-success`, `/support` |
-| Compliance & audit | 026 | **IMPLEMENTED** | `compliance` |
-| Platform operations | 027 | **IMPLEMENTED** | `platform_ops` |
-| Integration validation | 028 | **IMPLEMENTED** | golden path includes 024/025 |
+| Billing & reconciliation | 019 | **IMPLEMENTED** | `billing`, MOCK payment, dunning/mora |
+| Plans & subscriptions | 018 | **IMPLEMENTED** | `subscriptions`, CRM plan handoff |
+| Business analytics | 023 | **IMPLEMENTED** | `business_analytics`, Active/Past-due MRR/ARR |
+| Integration validation | 028 | **IMPLEMENTED** | commercial golden path + gap closure |
 | Royalties / payouts | — | **OUT_OF_SCOPE** | Future unnumbered specs; **not** 024/025 |
 | Music streaming UX | 001–004 | **IMPLEMENTED** | Catalog, player, playlists |
 | ELT / warehouse | 008/014 | **IMPLEMENTED** | `analytics/elt` |

@@ -97,9 +97,17 @@ def dash_db(tmp_path, monkeypatch):
     get_settings.cache_clear()
     shutdown_duckdb_client()
     cache_invalidate()
+    from app.core.database import close_read_pool, open_read_pool
+
+    close_read_pool()
     yield db_path
     shutdown_duckdb_client()
+    close_read_pool()
     get_settings.cache_clear()
+    try:
+        open_read_pool(get_settings().db_path_resolved)
+    except Exception:
+        pass
 
 
 def test_dashboard_overview(dash_db):
@@ -120,7 +128,10 @@ def test_dashboard_engagement(dash_db):
 def test_dashboard_api_routes(dash_db):
     from app.main import app
     from app.packages.identity.services.auth_deps import require_user_id
+    from app.core.schema_bootstrap import mark_schema_ready, reset_schema_ready_for_tests, schema_ready
 
+    was_ready = schema_ready()
+    reset_schema_ready_for_tests()
     app.dependency_overrides[require_user_id] = lambda: 1
     try:
         with TestClient(app) as client:
@@ -134,3 +145,7 @@ def test_dashboard_api_routes(dash_db):
             assert "weekly_growth_pct" in growth.json()
     finally:
         app.dependency_overrides.pop(require_user_id, None)
+        if was_ready:
+            mark_schema_ready()
+        else:
+            reset_schema_ready_for_tests()
