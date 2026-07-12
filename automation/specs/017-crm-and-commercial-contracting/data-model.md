@@ -19,7 +19,7 @@
 | crm_quotation_version | `app_crm_quotation_version` | crm |
 | crm_quotation_item | `app_crm_quotation_item` | crm |
 | crm_approval_request | `app_crm_approval_request` | crm |
-| crm_commercial_contract | `app_crm_commercial_contract` | crm *(capacidad 017; 015 decía dominio contracts)* |
+| commercial_contract | `app_commercial_contract` | **contracts** (paquete separado; CRM pasa quotation_version_id + terms_snapshot) |
 | crm_customer_conversion | `app_crm_customer_conversion` | crm |
 | crm_audit_reference | `app_crm_audit_event` **o** reutilizar `app_organization_audit`-style / audit global | crm |
 

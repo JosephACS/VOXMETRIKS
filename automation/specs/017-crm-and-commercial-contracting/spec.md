@@ -3,21 +3,21 @@
 **Feature Branch**: `017-crm-and-commercial-contracting` *(propuesta; Git manual)*  
 **Feature Directory**: `automation/specs/017-crm-and-commercial-contracting/`  
 **Created**: 2026-07-11  
-**Status**: **DESIGN_APPROVED** (borrador documental) — **IMPLEMENTATION_PENDING**  
+**Status**: **DESIGN_APPROVED** — **IMPLEMENTATION_COMPLETE** · **CLOSED_WITH_ACCEPTED_DEBT** (J6 2026-07-11)  
 **Input**: Segunda capacidad de implementación tras 016 Identity & Organizations (mapa 015 orden 2).  
-**Readiness:** Borrador documental listo para revisión humana. **Sin código.**
+**Readiness:** CLOSED_WITH_ACCEPTED_DEBT. **J0–J6 COMPLETE**. Playwright E2E = NOT_VERIFIED (accepted debt).
 
-**Número de spec:** **017** (confirmado disponible; 016 cerrada).
+**Número de spec:** **017**
 
-**Prerrequisitos:** Constitución v2.0.0; spec 015 `CLOSED_WITH_DEFERRED_DECISIONS`; spec 016 `CLOSED_WITH_ACCEPTED_DEBT` (Organizations implementado).
+**Prerrequisitos:** Constitución v2.0.0; spec 015 `CLOSED_WITH_DEFERRED_DECISIONS`; spec 016 `CLOSED_WITH_ACCEPTED_DEBT`.
 
-**feature.json:** **no** se cambia en este borrador (permanece en 016 hasta autorización de implementación).
+**feature.json:** apunta a 017 (activado en J0).
 
 ---
 
 ## Objetivo
 
-Diseñar el **CRM interno sales-assisted de VOXMETRIKS** y el cierre comercial hasta **conversión a organización** (dominio 016), sin activar suscripción, factura ni pago.
+Implementar el **CRM interno sales-assisted de VOXMETRIKS** y el cierre comercial hasta **conversión a organización** (dominio 016), sin activar suscripción, factura ni pago.
 
 ```text
 prospecto → contacto → oportunidad → actividades → cotización → negociación

@@ -1,11 +1,220 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 2.2.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-11  
-**Alcance:** Specs operativas `001`–`011` (capa operativa) + fundamento empresarial **015** + Identity & Organizations **016**  
+**Versión:** 3.1.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-12  
+**Alcance:** Specs operativas `001`–`011` (capa operativa) + fundamento empresarial **015** + Identity & Organizations **016** + CRM & Commercial Contracting **017** + Plans & Subscriptions **018** + Billing, Payments & Reconciliation **019** + Artists & Team Management **020** + Catalog Rights & Contracts **021** + Campaigns, Budgets & ROI **022** + Engagement & Business Analytics **023** + Compliance, Privacy & Global Audit **026** + Platform Operations & Integrations **027** + Enterprise Integration & Final Validation **028**  
+**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (cierre Spec 028, 2026-07-12)  
+**Nota:** Specs **024** (Royalties) y **025** (Payouts) **no presentes** en este workspace — trazabilidad honesta; cadena salta de 023 → 026. Customer Success, Support y Executive reporting: **diseñados en 015, diferidos** (028 no autoriza implementación).  
 **Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia  
 **Constitución vigente:** 2.0.0 (`.specify/memory/constitution.md`)
 
 Referencia: Constitución §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+
+### Enterprise Integration and Final Validation — Spec 028 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `028-enterprise-integration-and-final-validation` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado del sistema | **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** |
+| Alcance | Integración/validación/cierre — sin nuevos dominios |
+| Gates | golden-path pytest PASS · FE lint 0e/15w · FE unit 179 PASS · FE build PASS · BE ~737 revalidando |
+| Código | `test_enterprise_golden_path_s028.py` · `scripts/seed_enterprise_demo.py` (opt-in) |
+| Evidencia | `automation/specs/028-enterprise-integration-and-final-validation/` |
+| feature.json | apunta a **028** |
+
+Debt aceptada consolidada: Playwright enterprise NOT_VERIFIED; Docker gate NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; 024/025 absent; CS/support/exec report deferred (404).
+
+### Platform Operations and Integrations — Spec 027 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `027-platform-operations-and-integrations` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest R1–R3, R5 PASS · FE unit L4 PASS |
+| Código | `packages/platform_ops` BE · `packages/platform-ops` FE |
+| API | `/api/v1/platform-ops` |
+| Integración | Reuses `platform/jobs`, `billing.PaymentProvider`; MOCK console email/notification |
+| Evidencia | `automation/specs/027-platform-operations-and-integrations/evidence/` |
+
+Debt aceptada: Playwright NOT_VERIFIED; conceptual backup; MOCK adapters only; no production HA claims.
+
+### Compliance, Privacy and Global Audit — Spec 026 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `026-compliance-privacy-and-global-audit` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest Q1–Q3, Q5 PASS · FE unit L4 PASS |
+| Código | `packages/compliance` BE · `packages/compliance` FE |
+| API | `/api/v1/compliance` |
+| Permisos | `compliance.*`, `privacy.*`, `incident.manage`, `audit.search` (org + platform) |
+| Evidencia | `automation/specs/026-compliance-privacy-and-global-audit/evidence/` |
+
+Debt aceptada: Playwright NOT_VERIFIED; no automated warehouse purge; 024/025 absent.
+
+### Engagement and Business Analytics — Spec 023 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `023-engagement-and-business-analytics` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest P1–P3, P5 PASS · FE unit L4 PASS |
+| Código | `packages/business_analytics` BE · `packages/business-analytics` FE |
+| API | `/api/v1/business-analytics` |
+| Integración | Reuses `fact_streaming`, `agg_daily_streams`; links `campaign_roi` from Spec 022 |
+| Evidencia | `automation/specs/023-engagement-and-business-analytics/evidence/` |
+
+Debt aceptada: trends/comparatives stubs; no AI recommendations; Playwright NOT_VERIFIED.
+
+### Campaigns, Budgets and ROI — Spec 022 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `022-campaigns-budgets-and-roi` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest O1–O3, O5 PASS (44 tests) · FE unit L4 PASS |
+| Código | `packages/campaigns` BE · `packages/campaigns` FE |
+| API | `/api/v1/campaigns` |
+| Permisos | `campaign.view/create/update/approve/expense/close` seeded |
+| ROI | Honest unavailable state when prerequisites missing; streams ≠ money |
+| Evidencia | `automation/specs/022-campaigns-budgets-and-roi/evidence/` |
+
+Debt aceptada: Playwright NOT_VERIFIED; no FX conversion.
+
+### Catalog Rights and Contracts — Spec 021 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `021-catalog-rights-and-contracts` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest **98 PASS** (catalog_rights) · schema N1 32 · use_cases N2 36 · api N3 19 · security N5 11 · FE unit L4 PASS |
+| E2E Playwright | **NOT_VERIFIED** (no browser framework; accepted debt) |
+| Código | `packages/catalog_rights` BE · `packages/catalog-rights` FE · `organizations/catalogs` (rights perms) |
+| Integración 020 | `app_artist_profile` linkage for assets/parties |
+| Evidencia | `automation/specs/021-catalog-rights-and-contracts/evidence/` |
+| feature.json | apunta a **021** |
+
+Debt aceptada:
+- Playwright / E2E browser tests no implementados
+- `valid_to` no auto-transiciona a `expired`
+- `warehouse_album_id` sin validación (no existe `dim_album`)
+- Coverage/aprobaciones como secciones en páginas de detalle (no rutas top-level)
+
+Relación 015→016→017→018→019→020→021:
+
+```text
+015 DESIGN_APPROVED (fundamento)
+  → 016 CLOSED_WITH_ACCEPTED_DEBT (Identity & Organizations)
+  → 017 CLOSED_WITH_ACCEPTED_DEBT (CRM & commercial contracting)
+  → 018 CLOSED_WITH_ACCEPTED_DEBT (Plans & Subscriptions)
+  → 019 CLOSED_WITH_ACCEPTED_DEBT (Billing, Payments & Reconciliation)
+  → 020 CLOSED_WITH_ACCEPTED_DEBT (Artists & Team Management)
+  → 021 CLOSED_WITH_ACCEPTED_DEBT (Catalog Rights & Contracts)
+  → 022 CLOSED_WITH_ACCEPTED_DEBT (Campaigns, Budgets & ROI)
+  → 023 CLOSED_WITH_ACCEPTED_DEBT (Engagement & Business Analytics)
+  → 024/025 NOT_PRESENT_IN_WORKSPACE (Royalties/Payouts)
+  → 026 CLOSED_WITH_ACCEPTED_DEBT (Compliance, Privacy & Global Audit)
+  → 027 CLOSED_WITH_ACCEPTED_DEBT (Platform Operations & Integrations)
+  → 028 CLOSED_WITH_ACCEPTED_DEBT (Integration & Final Validation)
+  → ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT
+  → futuras (029+) según roadmap 015 — CS/Support/Exec report diferidos; 024/025 ausentes
+```
+
+### Artists and Team Management — Spec 020 (cierre 2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `020-artists-and-team-management` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest **70 PASS** (artists) · schema M1 · use_cases M2 · api M3 · security M5 · FE unit L4 PASS |
+| E2E Playwright | **NOT_VERIFIED** (accepted debt) |
+| Código | `packages/artists` BE · `packages/artists` FE · `organizations/catalogs` (artist perms) |
+| API | Business profiles at **`/api/v1/artists`**; analytics catalog at **`/api/v1/catalog/artists`** |
+| Evidencia | `automation/specs/020-artists-and-team-management/evidence/` |
+
+Debt aceptada:
+- Playwright E2E NOT_VERIFIED
+- Frontend UI routes remain `/artist-profiles` (distinct from streaming `/artists`)
+- No SQL compound UNIQUE; DELETE+INSERT for profile mutations (DuckDB)
+- No UnlinkWarehouseArtist endpoint
+
+### Billing, Payments and Reconciliation — Spec 019 (cierre 2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `019-billing-payments-and-reconciliation` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest **451 PASS** (61 billing) · schema L1 25 · use_cases L2 18 · api L3 11 · security L5 7 · FE unit L4 PASS |
+| E2E Playwright | **NOT_VERIFIED** (no browser framework; accepted debt) |
+| Código | `packages/billing` BE · `packages/billing` FE · `organizations/catalogs` (billing perms) |
+| Integración 018 | `notify_subscription_past_due` / `notify_subscription_recovered` via orchestration |
+| Evidencia | `automation/specs/019-billing-payments-and-reconciliation/evidence/` |
+| feature.json | apunta a **019** |
+
+Debt aceptada:
+- Playwright / E2E browser tests no implementados (sin framework de browser configurado)
+- `platform_finance` break-glass role: deferred
+- `platform_admin` billing access: deferred
+
+Relación 015→016→017→018→019:
+
+```text
+015 DESIGN_APPROVED (fundamento)
+  → 016 CLOSED_WITH_ACCEPTED_DEBT (Identity & Organizations)
+  → 017 CLOSED_WITH_ACCEPTED_DEBT (CRM & commercial contracting)
+  → 018 CLOSED_WITH_ACCEPTED_DEBT (Plans & Subscriptions)
+  → 019 CLOSED_WITH_ACCEPTED_DEBT (Billing, Payments & Reconciliation)
+  → futuras (artists empresariales, campaigns, …) aún IMPLEMENTATION_PENDING
+```
+
+### Plans and Subscriptions — Spec 018 (cierre 2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `018-plans-and-subscriptions` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest 390+ PASS · schema K1 23 · use_cases K2 28 · api K3 15 · security K5 20 |
+| E2E Playwright | **NOT_VERIFIED** (no browser framework; accepted debt) |
+| Código | `packages/subscriptions` BE · `packages/subscriptions` FE · `organizations/catalogs` (subscription perms) |
+| Evidencia | `automation/specs/018-plans-and-subscriptions/evidence/` |
+| feature.json | avanzado a **019** en J0 de Spec 019 |
+
+### CRM and Commercial Contracting — Spec 017 (cierre 2026-07-11)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `017-crm-and-commercial-contracting` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Estado de diseño | **DESIGN_APPROVED** |
+| Estado de implementación | **IMPLEMENTATION_COMPLETE** |
+| Gates | pytest **304 PASS** · FE lint 0 err / unit **111** / build PASS · warehouse validate PASS · security J5 PASS |
+| E2E Playwright | **NOT_VERIFIED** (0 CRM specs; accepted debt) |
+| Código | `packages/platform_rbac` · `packages/crm` · `packages/contracts` · FE `packages/crm` |
+| Evidencia | `automation/specs/017-crm-and-commercial-contracting/evidence/spec-closure.md` |
+| feature.json | apunta a **017** |
+
+**MUST NOT** afirmar subscriptions/billing/pagos/campañas como implementados. 017 entrega CRM + commercial contract + conversión a Organizations.
+
+Relación 015→016→017:
+
+```text
+015 DESIGN_APPROVED (fundamento)
+  → 016 CLOSED_WITH_ACCEPTED_DEBT (Identity & Organizations)
+  → 017 CLOSED_WITH_ACCEPTED_DEBT (CRM & commercial contracting)
+  → futuras (plans/subscriptions, billing, …) aún IMPLEMENTATION_PENDING
+```
 
 ### Identity & Organizations — Spec 016 (cierre 2026-07-11)
 
@@ -19,16 +228,17 @@ Referencia: Constitución §12. Documento canónico transversal; las specs indiv
 | E2E Playwright | **NOT_VERIFIED** (0 specs; accepted debt) |
 | Código | `apps/backend/app/packages/organizations/` · `apps/frontend/src/app/packages/organizations/` · identity reutilizado |
 | Evidencia | `automation/specs/016-identity-and-organizations/evidence/spec-closure.md` |
-| feature.json | permanece en 016 (017 no creada) |
+| feature.json | permanece en 016 al cierre I6; **activado a 017 en J0** |
 
-**MUST NOT** afirmar CRM/billing/campañas/artistas empresariales como implementados. 016 entrega solo identity+organizations.
+**MUST NOT** afirmar CRM/billing/campañas/artistas empresariales como implementados **en 016**. 016 entrega solo identity+organizations. CRM = **017**.
 
 Relación 015→016:
 
 ```text
 015 DESIGN_APPROVED (fundamento)
   → 016 CLOSED_WITH_ACCEPTED_DEBT (primera capacidad implementada)
-    → futuras specs (CRM, billing, …) aún IMPLEMENTATION_PENDING
+  → 017 CLOSED_WITH_ACCEPTED_DEBT (CRM & contracts)
+  → futuras specs (subscriptions, billing, …) aún IMPLEMENTATION_PENDING
 ```
 
 ### Fundamento empresarial — Spec 015 (2026-07-11)
@@ -61,7 +271,9 @@ Producto B2B (015)
 | Dominio empresarial (015) | Estado |
 |---------------------------|--------|
 | organizations | **IMPLEMENTED** (016 CLOSED_WITH_ACCEPTED_DEBT) |
-| crm, contracts, subscriptions, billing | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
+| crm, contracts (commercial) | **IMPLEMENTED** (017 CLOSED_WITH_ACCEPTED_DEBT) |
+| subscriptions | **IMPLEMENTED** (018 CLOSED_WITH_ACCEPTED_DEBT) |
+| billing, payments, reconciliation | **IMPLEMENTED** (019 CLOSED_WITH_ACCEPTED_DEBT) |
 | artists empresariales, catalog_rights, campaigns | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
 | reporting empresarial, customer_success, support, compliance | DESIGN_APPROVED / IMPLEMENTATION_PENDING |
 
@@ -92,6 +304,10 @@ Actualización fila-a-fila de las 248 evidencias = **deuda aceptada** (spec post
 **Cierre Spec 015:** `CLOSED_WITH_DEFERRED_DECISIONS` — fundamento empresarial **DESIGN_APPROVED**; CRM/billing/etc. siguen **IMPLEMENTATION_PENDING**.
 
 **Cierre Spec 016:** `CLOSED_WITH_ACCEPTED_DEBT` — Identity & Organizations **IMPLEMENTATION_COMPLETE**; Playwright E2E NOT_VERIFIED; ver `accepted-debt.md`.
+
+**Cierre Spec 018:** `CLOSED_WITH_ACCEPTED_DEBT` — Plans & Subscriptions **IMPLEMENTATION_COMPLETE**; pytest K1+K2+K3+K5 PASS; Playwright NOT_VERIFIED.
+
+**Cierre Spec 019:** `CLOSED_WITH_ACCEPTED_DEBT` — Billing, Payments & Reconciliation **IMPLEMENTATION_COMPLETE**; pytest 451 PASS (61 billing); Playwright NOT_VERIFIED; platform_finance/admin deferred.
 
 ### Leyenda Impl
 

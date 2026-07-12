@@ -1,6 +1,6 @@
-# Frontend Flows (diseño) — Spec 017
+# Frontend Flows — Spec 017
 
-**Status**: DESIGN_APPROVED · **IMPLEMENTATION_PENDING**  
+**Status**: DESIGN_APPROVED · **IMPLEMENTED** (J4) · CLOSED_WITH_ACCEPTED_DEBT  
 CRM **interno** VOXMETRIKS. Sin billing UI. Sin portal cliente CRM.
 
 ---

@@ -4,6 +4,15 @@ import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { engineerGuard } from './core/guards/engineer.guard';
 import { ORGANIZATIONS_ROUTES } from './packages/organizations/organizations.routes';
+import { CRM_ROUTES } from './packages/crm/crm.routes';
+import { SUBSCRIPTIONS_ROUTES } from './packages/subscriptions/subscriptions.routes';
+import { BILLING_ROUTES } from './packages/billing/billing.routes';
+import { ARTIST_PROFILES_ROUTES } from './packages/artists/artists.routes';
+import { CATALOG_RIGHTS_ROUTES } from './packages/catalog-rights/catalog-rights.routes';
+import { CAMPAIGNS_ROUTES } from './packages/campaigns/campaigns.routes';
+import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/business-analytics.routes';
+import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
+import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
 
 export const APP_ROUTES: Routes = [
   {
@@ -231,6 +240,15 @@ export const APP_ROUTES: Routes = [
           ),
       },
       ...ORGANIZATIONS_ROUTES,
+      ...CRM_ROUTES,
+      ...SUBSCRIPTIONS_ROUTES,
+      ...BILLING_ROUTES,
+      ...ARTIST_PROFILES_ROUTES,
+      ...CATALOG_RIGHTS_ROUTES,
+      ...CAMPAIGNS_ROUTES,
+      ...BUSINESS_ANALYTICS_ROUTES,
+      ...COMPLIANCE_ROUTES,
+      ...PLATFORM_OPS_ROUTES,
       {
         path: '**',
         title: 'notFound.title',

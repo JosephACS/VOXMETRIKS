@@ -26,6 +26,12 @@ def _init_test_database(db_path: Path) -> None:
     if db_path.exists():
         db_path.unlink()
 
+    # Spec 028: clear process-level schema_ready so ensure_* always creates tables
+    # on a freshly wiped test database (avoids skipping CREATE after prior TestClient).
+    from app.core.schema_bootstrap import reset_schema_ready_for_tests
+
+    reset_schema_ready_for_tests()
+
     conn = duckdb.connect(str(db_path))
     conn.execute("""
         CREATE TABLE dim_artista (
@@ -126,10 +132,32 @@ def _init_test_database(db_path: Path) -> None:
     from app.packages.streaming.services.app_storage import ensure_app_tables
     from app.packages.identity.services.user_storage import ensure_user_tables
     from app.packages.organizations.infrastructure.schema import ensure_organization_tables
+    from app.packages.platform_rbac.infrastructure.schema import ensure_platform_rbac_tables
+    from app.packages.crm.infrastructure.schema import ensure_crm_tables
+    from app.packages.contracts.infrastructure.schema import ensure_commercial_contract_tables
+    from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
+    from app.packages.billing.infrastructure.schema import ensure_billing_tables
+    from app.packages.artists.infrastructure.schema import ensure_artist_tables
+    from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
+    from app.packages.campaigns.infrastructure.schema import ensure_campaign_tables
+    from app.packages.business_analytics.infrastructure.schema import ensure_business_analytics_tables
+    from app.packages.compliance.infrastructure.schema import ensure_compliance_tables
+    from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
 
     ensure_user_tables(conn)
     ensure_app_tables(conn)
     ensure_organization_tables(conn)
+    ensure_platform_rbac_tables(conn)
+    ensure_crm_tables(conn)
+    ensure_commercial_contract_tables(conn)
+    ensure_subscription_tables(conn)
+    ensure_billing_tables(conn)
+    ensure_artist_tables(conn)
+    ensure_catalog_rights_tables(conn)
+    ensure_campaign_tables(conn)
+    ensure_business_analytics_tables(conn)
+    ensure_compliance_tables(conn)
+    ensure_platform_ops_tables(conn)
     conn.close()
 
 

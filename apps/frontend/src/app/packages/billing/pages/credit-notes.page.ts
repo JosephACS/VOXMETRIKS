@@ -1,0 +1,96 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { BillingApiService } from '../services/billing-api.service';
+import { CreditNote } from '../models/billing.models';
+
+@Component({
+  selector: 'app-credit-notes',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  template: `
+    <div class="credit-notes-page">
+      <h1>Credit Notes</h1>
+      <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
+        {{ showForm ? 'Cancel' : 'New Credit Note' }}
+      </button>
+      @if (showForm) {
+        <form [formGroup]="form" (ngSubmit)="submit()" class="form-card">
+          <input type="number" formControlName="invoice_id" placeholder="Invoice ID" class="input">
+          <input type="number" formControlName="amount" placeholder="Amount" step="0.01" class="input">
+          <input formControlName="reason" placeholder="Reason" class="input">
+          <button type="submit" class="btn btn--primary" [disabled]="form.invalid">Create Credit Note</button>
+        </form>
+      }
+      @if (creditNotes.length) {
+        <table class="data-table">
+          <thead>
+            <tr><th>Number</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (cn of creditNotes; track cn.id) {
+              <tr>
+                <td>{{ cn.credit_note_number }}</td>
+                <td>{{ cn.invoice_id }}</td>
+                <td>{{ cn.amount | number:'1.2-2' }} {{ cn.currency }}</td>
+                <td><span class="badge" [class]="'badge--' + cn.status">{{ cn.status }}</span></td>
+                <td>
+                  @if (cn.status === 'issued') {
+                    <button class="btn btn--sm"
+                            (click)="apply(cn.id)">Apply</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="empty-state">No credit notes.</p>
+      }
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+    </div>
+  `,
+})
+export class CreditNotesPage implements OnInit {
+  private api = inject(BillingApiService);
+  private fb = inject(FormBuilder);
+
+  creditNotes: CreditNote[] = [];
+  error: string | null = null;
+  showForm = false;
+  orgId = 1;
+
+  form = this.fb.group({
+    invoice_id: [null, Validators.required],
+    amount: [null, [Validators.required, Validators.min(0.01)]],
+    reason: [''],
+  });
+
+  ngOnInit(): void {
+    this.loadCreditNotes();
+  }
+
+  loadCreditNotes(): void {
+    this.api.listCreditNotes(this.orgId).subscribe({
+      next: (res) => (this.creditNotes = res.items),
+      error: (e) => (this.error = e.error?.message ?? 'Error loading credit notes'),
+    });
+  }
+
+  submit(): void {
+    if (this.form.invalid) return;
+    this.api.createCreditNote(this.orgId, this.form.value).subscribe({
+      next: () => { this.showForm = false; this.loadCreditNotes(); },
+      error: (e) => (this.error = e.error?.message ?? 'Error creating credit note'),
+    });
+  }
+
+  apply(id: number): void {
+    this.api.applyCreditNote(this.orgId, id).subscribe({
+      next: () => this.loadCreditNotes(),
+      error: (e) => (this.error = e.error?.message ?? 'Error applying credit note'),
+    });
+  }
+}

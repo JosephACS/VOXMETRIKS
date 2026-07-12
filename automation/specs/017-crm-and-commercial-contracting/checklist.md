@@ -1,39 +1,29 @@
-# Checklist — Spec 017 CRM (borrador documental)
+# Checklist — Spec 017 CRM
 
-**Status**: DESIGN_APPROVED (borrador) · IMPLEMENTATION_PENDING
+**Status**: CLOSED_WITH_ACCEPTED_DEBT · J0–J6 COMPLETE
 
-## Criterios de revisión del borrador
+## Criterios de revisión
 
-- [x] CHK001 CRM platform-scoped pre-conversión
-- [x] CHK002 Procesos con estados (prospect…contract…conversion)
-- [x] CHK003 Roles sales separados de roles org-cliente 016
-- [x] CHK004 Cotizaciones versionadas e inmutables post-sent
-- [x] CHK005 Aprobaciones con separación de funciones
-- [x] CHK006 Contrato comercial ≠ subscription ≠ rights_contract
-- [x] CHK007 Conversión diseñada vía Organizations 016
-- [x] CHK008 Sin billing/pago/factura ocultos
-- [x] CHK009 APIs futuras trazadas a casos/permisos
-- [x] CHK010 Frontend futuro sin billing UI
-- [x] CHK011 Pruebas futuras de aislamiento y doble conversión
-- [x] CHK012 Nada marcado IMPLEMENTED sin serlo
-- [x] CHK013 Contactos externos no se convierten en users automáticamente
-- [x] CHK014 Probabilidad no presentada como IA
-- [x] CHK015 feature.json / Constitución / 018 / Git intactos
+- [x] CHK001 CRM platform-scoped
+- [x] CHK002 Estados implementados
+- [x] CHK003 Roles sales separados de org-cliente
+- [x] CHK004 Cotizaciones versionadas / sent immutable
+- [x] CHK005 Aprobaciones separation of duties
+- [x] CHK006 Contrato ≠ subscription
+- [x] CHK007 Conversión vía Organizations 016
+- [x] CHK008 Sin billing oculto
+- [x] CHK009 APIs `/api/v1/crm` live
+- [x] CHK010 Frontend CRM sin billing UI
+- [x] CHK011 Pruebas aislamiento + doble conversión
+- [x] CHK012 Estado marcado IMPLEMENTED con evidencia
+- [x] CHK013 Contactos no auto-user
+- [x] CHK014 Probabilidad no IA
+- [x] CHK015 feature.json → 017; Constitución/018/Git intactos (Git no ejecutado)
 
-## Decisiones humanas abiertas
+## Gates J6
 
-- [ ] HUM001 Umbrales de descuento
-- [ ] HUM002 Naming físico `app_*`
-- [ ] HUM003 lead vs new
-- [ ] HUM004 platform_finance en v1
-- [ ] HUM005 Política owner/invite en conversión
-- [ ] HUM006 Prefijo API unificado vs split
-- [ ] HUM007 Package crm vs contracts
-- [ ] HUM008 Whitelist monedas
-- [ ] HUM009 Retención PII
-- [ ] HUM010 Probabilidad: manual vs reglas por stage
-
-## Gate formal
-
-- [ ] REV001 Revisión humana aprueba DESIGN_APPROVED sin NEEDS_CORRECTIONS
-- [ ] REV002 Autorización explícita para D0 (feature.json → 017)
+- [x] pytest 304 PASS
+- [x] FE lint 0 errors · unit 111 · build PASS
+- [x] warehouse validate PASS
+- [x] E2E NOT_VERIFIED (accepted debt)
+- [x] Evidence + TRACEABILITY-MASTER updated

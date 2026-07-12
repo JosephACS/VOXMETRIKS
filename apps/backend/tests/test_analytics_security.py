@@ -138,7 +138,7 @@ class TestRoleBasedAccessControl:
         token = login.json()["token"]
         headers = {"Authorization": f"Bearer {token}"}
         resp = client.post(
-            "/api/v1/artists",
+            "/api/v1/catalog/artists",
             json={"nombre_artista": "Engineer Should Fail"},
             headers=headers,
         )

@@ -122,6 +122,13 @@ class Settings(BaseSettings):
     pagination_default_page_size: int = 25
     pagination_max_page_size: int = 200
 
+    # CRM — Spec 017
+    # If None (default), any discount > 0 requires sales_manager approval.
+    # If set to a float, discounts exceeding this % require approval.
+    crm_discount_approval_threshold: float | None = None
+    # Seed demo CRM users (sales_agent@voxmetrik.io / sales_manager@voxmetrik.io)
+    seed_demo_crm_users: bool = True
+
     # Audio playback — YouTube Data API v3 key (resolves real, full-length
     # playback via the official IFrame player). Leave blank to disable.
     youtube_api_key: str = ""
@@ -154,6 +161,13 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return not self.is_production
+
+    @property
+    def seed_demo_crm_users_enabled(self) -> bool:
+        """Seed demo CRM users only in development."""
+        if self.is_production:
+            return False
+        return self.seed_demo_crm_users
 
     @property
     def seed_demo_users_enabled(self) -> bool:

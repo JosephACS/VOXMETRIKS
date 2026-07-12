@@ -1,7 +1,7 @@
 # Traceability — Spec 017
 
-**Status**: DESIGN_APPROVED · IMPLEMENTATION_PENDING  
-Cadena: objetivo 015 → capacidad 017 → proceso → actor → CU → regla → estado → entidad → (repo/API/UI/test **futuros**).
+**Status**: DESIGN_APPROVED · **IMPLEMENTATION_COMPLETE** · CLOSED_WITH_ACCEPTED_DEBT  
+Cadena: objetivo 015 → capacidad 017 → proceso → actor → CU → regla → estado → entidad → repo → API → UI → test → evidencia.
 
 ---
 
@@ -17,12 +17,12 @@ Cadena: objetivo 015 → capacidad 017 → proceso → actor → CU → regla �
 | Reglas | business-rules.md |
 | Estados | lifecycle-state-machines.md |
 | Entidades | data-model.md |
-| Repositorio | FUTURO D1 |
-| Endpoint | api-contracts.md (diseñado) |
-| Pantalla | frontend-flows.md (diseñado) |
-| Permiso | role-and-permission-model.md |
-| Prueba | test-strategy.md (diseñado) |
-| Evidencia | FUTURO D6 |
+| Repositorio | `packages/crm` + `packages/contracts` + `packages/platform_rbac` |
+| Endpoint | `/api/v1/crm/*` **IMPLEMENTED** |
+| Pantalla | `packages/crm` Angular **IMPLEMENTED** |
+| Permiso | platform RBAC **IMPLEMENTED** |
+| Prueba | test_crm_*_j1/j2/j3/j5 + crm-j4.spec **IMPLEMENTED** |
+| Evidencia | `evidence/spec-closure.md` |
 
 ---
 

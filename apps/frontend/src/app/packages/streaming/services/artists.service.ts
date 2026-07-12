@@ -11,7 +11,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ArtistsService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = `${environment.apiUrl}/artists`;
+  private readonly API_URL = `${environment.apiUrl}/catalog/artists`;
 
   listArtists(page = 1, limit = 50, search?: string): Observable<PaginatedResponse<Artista>> {
     let params = new HttpParams().set('page', page).set('limit', limit);

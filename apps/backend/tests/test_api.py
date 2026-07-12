@@ -182,7 +182,7 @@ class TestCatalogSteward:
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         response = client.post(
-            "/api/v1/artists",
+            "/api/v1/catalog/artists",
             json={"nombre_artista": "Forbidden Artist"},
             headers=auth_headers,
         )
@@ -212,7 +212,7 @@ class TestCatalogSteward:
         self, client: TestClient, admin_auth_headers: dict[str, str]
     ) -> None:
         response = client.post(
-            "/api/v1/artists",
+            "/api/v1/catalog/artists",
             json={"nombre_artista": "Steward Artist"},
             headers=admin_auth_headers,
         )
@@ -222,7 +222,7 @@ class TestCatalogSteward:
     def test_demo_can_list_artists(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
-        response = client.get("/api/v1/artists", headers=auth_headers)
+        response = client.get("/api/v1/catalog/artists", headers=auth_headers)
         assert response.status_code == 200
         assert "items" in response.json()
 

@@ -2,8 +2,10 @@
 
 **Branch**: `017-crm-and-commercial-contracting` *(propuesta)* | **Date**: 2026-07-11 | **Spec**: [spec.md](./spec.md)
 
-**Status**: **DESIGN_APPROVED** (borrador) — **IMPLEMENTATION_PENDING**  
-**Código / SQL / feature.json / Constitución / TRACEABILITY-MASTER:** **no** modificados en este borrador.
+**Status**: **DESIGN_APPROVED** — **IMPLEMENTATION_COMPLETE** · **CLOSED_WITH_ACCEPTED_DEBT** · J0–J6 COMPLETE.  
+**Cierre:** `evidence/spec-closure.md` · deudas `evidence/accepted-debt.md`.  
+**Código:** `packages/platform_rbac`, `packages/crm`, `packages/contracts` + FE `packages/crm`.  
+**feature.json:** apunta a 017. Constitución **no** tocada.
 
 ## Summary
 
@@ -41,17 +43,17 @@ apps/frontend/src/app/packages/crm/       # NUEVO (implementación futura)
 # organizations / identity: existentes — consumir, no duplicar
 ```
 
-## Fases futuras de implementación (no autorizadas aún)
+## Fases de implementación (J0–J6)
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
-| D0 | Activación feature.json → 017 + baseline | NOT STARTED |
-| D1 | Schema `app_crm_*` + repos | NOT STARTED |
-| D2 | Dominio / use cases | NOT STARTED |
-| D3 | API platform-scoped + permisos | NOT STARTED |
-| D4 | Frontend CRM | NOT STARTED |
-| D5 | Conversión ↔ Organizations + seguridad | NOT STARTED |
-| D6 | Validación integral y cierre | NOT STARTED |
+| **J0** | Baseline + feature.json + platform RBAC + decisiones | **COMPLETE** |
+| **J1** | Schema + persistencia CRM/contracts | **COMPLETE** |
+| **J2** | Dominio / use cases / conversión | **COMPLETE** |
+| **J3** | API + autorización platform | **COMPLETE** |
+| **J4** | Frontend CRM | **COMPLETE** |
+| **J5** | Seguridad + integración Organizations | **COMPLETE** |
+| **J6** | Validación integral y cierre | **COMPLETE** |
 
 ## Decisiones humanas pendientes
 

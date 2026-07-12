@@ -1,0 +1,82 @@
+{
+  "subscriptions": {
+    "plans": {
+      "title": "Plans Catalog",
+      "subtitle": "Available plans for organizations",
+      "viewDetail": "View details",
+      "empty": "No plans available."
+    },
+    "plan": {
+      "prices": "Prices",
+      "features": "Features"
+    },
+    "prices": {
+      "empty": "No prices configured."
+    },
+    "price": {
+      "currency": "Currency",
+      "period": "Period",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "features": {
+      "empty": "No features configured."
+    },
+    "overview": {
+      "title": "My Subscription"
+    },
+    "trial": {
+      "title": "Start Trial",
+      "plan": "Plan",
+      "price": "Price (optional)",
+      "currency": "Billing currency",
+      "submit": "Start Trial"
+    },
+    "cancel": {
+      "title": "Cancel Subscription",
+      "warning": "Are you sure you want to cancel your subscription?",
+      "mode": "Mode",
+      "periodEnd": "At end of billing period",
+      "immediate": "Immediate",
+      "reason": "Reason (optional)",
+      "confirm": "Confirm cancellation"
+    },
+    "addons": {
+      "title": "Subscription Addons",
+      "active": "Active addons",
+      "available": "Available addons",
+      "none": "No active addons.",
+      "add": "Add",
+      "remove": "Remove"
+    },
+    "usage": {
+      "title": "Subscription Usage",
+      "feature": "Feature",
+      "quantity": "Quantity",
+      "period": "Period",
+      "recorded": "Recorded",
+      "empty": "No usage records."
+    },
+    "entitlements": {
+      "title": "Active entitlements",
+      "empty": "No active entitlements."
+    },
+    "access": {
+      "limited": "⚠️ Limited access.",
+      "blocked": "🚫 Blocked access."
+    },
+    "currency": "Billing currency",
+    "trialEnds": "Trial ends",
+    "period": "Current period",
+    "cancelAtEnd": "Cancels at period end",
+    "history": "Change history",
+    "noActive": "You have no active subscription.",
+    "pickPlan": "Choose a plan"
+  },
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Back",
+    "none": "None",
+    "selectOption": "Select..."
+  }
+}

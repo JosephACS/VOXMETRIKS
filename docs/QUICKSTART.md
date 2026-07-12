@@ -195,7 +195,9 @@ docker compose -f infrastructure/docker/docker-compose.yml up --build
 | Área | Ejemplos |
 |------|----------|
 | Identidad | `POST /api/v1/users/login`, `POST /api/v1/users/register`, `GET /api/v1/users/me` |
-| Catálogo | `GET /api/v1/artists`, `/genres`, `/tracks` |
+| Catálogo (streaming) | `GET /api/v1/catalog/artists`, `/genres`, `/tracks` |
+| Artistas (negocio) | `GET/POST /api/v1/artists` (perfiles B2B; UI `/artist-profiles`) |
+| Empresa (ejemplos) | `/organizations`, `/crm`, `/plans`, `/billing`, `/campaigns`, `/compliance`, `/platform-ops` |
 | Biblioteca | `GET/POST /api/v1/playlists`, `GET/POST /api/v1/favorites/{id}` |
 | Analítica | `GET /api/v1/stats/summary`, `/api/v1/analytics/trending` |
 | Ingeniería | `GET /api/v1/analytics/warehouse`, `POST /api/v1/stats/synthetic` |
@@ -229,9 +231,31 @@ Confirma `CORS_ORIGINS` e incluye `http://localhost:4200`. Verifica también que
 
 ---
 
+## 9. Capa empresarial (opcional)
+
+Estado de cierre: **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (Spec 028).
+
+Documentación: [automation/specs/028-enterprise-integration-and-final-validation/](../automation/specs/028-enterprise-integration-and-final-validation/). Guion demo: [`demo-script.md`](../automation/specs/028-enterprise-integration-and-final-validation/demo-script.md).
+
+Seed demo **explícito y opt-in** (marcado synthetic; no usar en producción):
+
+```bash
+cd apps/backend
+# Windows PowerShell
+$env:VOXMETRIKS_SEED_ENTERPRISE_DEMO="1"; python scripts/seed_enterprise_demo.py
+# Linux / macOS
+VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python scripts/seed_enterprise_demo.py
+```
+
+Detalle: [`demo-data-guide.md`](../automation/specs/028-enterprise-integration-and-final-validation/demo-data-guide.md).
+
+Nota: rutas `/api/v1/artists` de negocio ≠ catálogo streaming (`/api/v1/catalog/artists`). UI empresarial de artistas: `/artist-profiles`.
+
+---
+
 ## Documentación relacionada
 
 - [README.md](../README.md) — visión y estructura del repo  
-- [automation/specs/README.md](../README.md) — índice de specs SDD  
-- [docs/uml/README.md](../README.md) — diagramas PlantUML  
+- [automation/specs/028-enterprise-integration-and-final-validation/](../automation/specs/028-enterprise-integration-and-final-validation/) — cierre empresarial  
+- [docs/uml/README.md](uml/README.md) — diagramas PlantUML  
 - [../voxmetriks-entregas](../voxmetriks-entregas) — entrega académica TGA07 (docx)

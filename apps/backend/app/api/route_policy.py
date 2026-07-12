@@ -27,7 +27,8 @@ ROUTE_POLICY: dict[str, str] = {
     # Catalog reads (streaming UX; FE auth-guarded but API remains readable)
     "GET /api/v1/tracks": "PUBLIC_INTENTIONAL",
     "GET /api/v1/tracks/{id}": "PUBLIC_INTENTIONAL",
-    "GET /api/v1/artists": "PUBLIC_INTENTIONAL",
+    "GET /api/v1/catalog/artists": "PUBLIC_INTENTIONAL",
+    "GET /api/v1/artists": "AUTH_REQUIRED",
     "GET /api/v1/genres": "PUBLIC_INTENTIONAL",
     # Canonical enterprise contracts (FE ApiService)
     "GET /api/v1/dashboard/overview": "CANONICAL+AUTH_REQUIRED",

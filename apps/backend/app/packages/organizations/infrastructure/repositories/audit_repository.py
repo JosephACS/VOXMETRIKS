@@ -28,6 +28,10 @@ _FORBIDDEN_KEYS = frozenset(
         "cvv",
         "card_number",
         "secret",
+        # CRM / Spec 017 — claim token must never appear in audit logs
+        "claim_token",
+        "token_hash",
+        "claim_token_hash",
     }
 )
 

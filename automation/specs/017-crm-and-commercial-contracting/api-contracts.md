@@ -1,8 +1,7 @@
-# API Contracts (diseño) — Spec 017
+# API Contracts — Spec 017
 
-**Status**: DESIGN_APPROVED · **IMPLEMENTATION_PENDING**  
-**Base:** `/api/v1` · Auth: Bearer session opaca · Scope: **platform CRM**  
-**No implementado.**
+**Status**: DESIGN_APPROVED · **IMPLEMENTED** (J3) · CLOSED_WITH_ACCEPTED_DEBT  
+**Base:** `/api/v1/crm` · Auth: Bearer + platform RBAC permission
 
 Prefijo propuesto: `/api/v1/crm/...` (+ opcional `/api/v1/crm/contracts` — HUM006).
 

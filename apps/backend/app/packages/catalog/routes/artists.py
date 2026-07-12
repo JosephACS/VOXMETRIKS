@@ -32,7 +32,7 @@ from app.packages.catalog.services.cover_art_service import (
     resolve_artist_cover,
 )
 
-router = APIRouter(prefix="/artists", tags=["Artists"])
+router = APIRouter(prefix="/catalog/artists", tags=["Catalog Artists"])
 
 
 @router.get("", response_model=PaginatedResponse, summary="List artists")

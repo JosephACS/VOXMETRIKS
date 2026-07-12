@@ -11,6 +11,8 @@
 
 Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
 
+**Capa empresarial (specs 016–023, 026–027):** implementada con deuda aceptada — cierre documental **spec 028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/).
+
 ---
 
 ## Arquitectura (resumen)
@@ -30,9 +32,13 @@ flowchart LR
 | `analytics/elt` | Pipeline ELT canónico | **Implementado** |
 | `apps/backend/app/etl` | Refresh runtime / tests | **Parcial** (adaptador; no rebuild completo) |
 | `playback-core` | Dirección futura del player | **Parcial** / propuesto V2 |
-| Dominios CRM/billing/orgs | — | **No implementado** (fuera de 014) |
+| Organizations / CRM / billing / subscriptions | 016–019 | **Implementado** (MOCK payment; deuda aceptada) |
+| Artists / catalog-rights / campaigns / biz-analytics | 020–023 | **Implementado** |
+| Compliance / platform-ops | 026–027 | **Implementado** (integraciones MOCK) |
+| Royalties / Payouts | 024–025 | **No presentes** en este workspace |
+| Customer Success / Support / Exec report | 015 diseño | **Diferido** (028 no autoriza build) |
 
-Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md) · Playback: [docs/playback/SPEC_014_PHASE_F_DECISION.md](docs/playback/SPEC_014_PHASE_F_DECISION.md)
+Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md) · Empresa: [automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md](automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md)
 
 ---
 

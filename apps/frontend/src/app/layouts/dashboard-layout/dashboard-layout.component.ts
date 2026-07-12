@@ -191,6 +191,180 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      id: 'crm',
+      titleKey: 'nav.section.crm',
+      items: [
+        {
+          path: '/crm/dashboard',
+          labelKey: 'nav.crm.dashboard',
+          icon: this.svgIcon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 10h2l2-3 2 5 2-2h2"/>'),
+        },
+        {
+          path: '/crm/prospects',
+          labelKey: 'nav.crm.prospects',
+          icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        },
+        {
+          path: '/crm/opportunities',
+          labelKey: 'nav.crm.opportunities',
+          icon: this.svgIcon('<line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>'),
+        },
+        {
+          path: '/crm/approvals',
+          labelKey: 'nav.crm.approvals',
+          icon: this.svgIcon('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'),
+        },
+        {
+          path: '/crm/audit',
+          labelKey: 'nav.crm.audit',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        },
+      ],
+    },
+    {
+      id: 'subscriptions',
+      titleKey: 'nav.section.subscriptions',
+      items: [
+        {
+          path: '/subscriptions/overview',
+          labelKey: 'nav.subscriptions.overview',
+          icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
+        {
+          path: '/subscriptions/plans',
+          labelKey: 'nav.subscriptions.plans',
+          icon: this.svgIcon('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
+        },
+        {
+          path: '/subscriptions/trial',
+          labelKey: 'nav.subscriptions.trial',
+          icon: this.svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
+        },
+      ],
+    },
+    {
+      id: 'billing',
+      titleKey: 'nav.section.billing',
+      items: [
+        {
+          path: '/billing/invoices',
+          labelKey: 'nav.billing.invoices',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
+        },
+        {
+          path: '/billing/reconciliation',
+          labelKey: 'nav.billing.reconciliation',
+          icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+        },
+        {
+          path: '/billing/profile',
+          labelKey: 'nav.billing.profile',
+          icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
+        {
+          path: '/billing/ledger',
+          labelKey: 'nav.billing.ledger',
+          icon: this.svgIcon('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'),
+        },
+      ],
+    },
+    {
+      id: 'artistProfiles',
+      titleKey: 'nav.section.artistProfiles',
+      items: [
+        {
+          path: '/artist-profiles',
+          labelKey: 'nav.artistProfiles.list',
+          icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        },
+      ],
+    },
+    {
+      id: 'catalogRights',
+      titleKey: 'nav.section.catalogRights',
+      items: [
+        {
+          path: '/catalog-rights/assets',
+          labelKey: 'nav.catalogRights.assets',
+          icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+        },
+        {
+          path: '/catalog-rights/releases',
+          labelKey: 'nav.catalogRights.releases',
+          icon: this.svgIcon('<rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/>'),
+        },
+        {
+          path: '/catalog-rights/contracts',
+          labelKey: 'nav.catalogRights.contracts',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        },
+        {
+          path: '/catalog-rights/conflicts',
+          labelKey: 'nav.catalogRights.conflicts',
+          icon: this.svgIcon('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+        },
+      ],
+    },
+    {
+      id: 'campaigns',
+      titleKey: 'nav.section.campaigns',
+      items: [
+        {
+          path: '/campaigns',
+          labelKey: 'nav.campaigns.list',
+          icon: this.svgIcon('<path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/>'),
+        },
+      ],
+    },
+    {
+      id: 'businessAnalytics',
+      titleKey: 'nav.section.businessAnalytics',
+      items: [
+        {
+          path: '/business-analytics',
+          labelKey: 'nav.businessAnalytics.dashboard',
+          icon: this.svgIcon('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
+        },
+        {
+          path: '/business-analytics/kpis',
+          labelKey: 'nav.businessAnalytics.kpis',
+          icon: this.svgIcon('<path d="M21 21H3V3"/><path d="M7 16l4-8 4 5 5-9"/>'),
+        },
+        {
+          path: '/business-analytics/alerts',
+          labelKey: 'nav.businessAnalytics.alerts',
+          icon: this.svgIcon('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'),
+        },
+      ],
+    },
+    {
+      id: 'compliance',
+      titleKey: 'nav.section.compliance',
+      items: [
+        {
+          path: '/compliance',
+          labelKey: 'nav.compliance.privacy',
+          icon: this.svgIcon('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
+        },
+        {
+          path: '/compliance/admin',
+          labelKey: 'nav.compliance.admin',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
+        },
+      ],
+    },
+    {
+      id: 'platformOps',
+      titleKey: 'nav.section.platformOps',
+      items: [
+        {
+          path: '/platform-ops',
+          labelKey: 'nav.platformOps.dashboard',
+          icon: this.svgIcon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
+        },
+      ],
+    },
+    {
       id: 'system',
       titleKey: 'nav.section.system',
       items: [

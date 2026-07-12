@@ -56,6 +56,31 @@ from app.packages.identity.routes import users_router
 from app.packages.identity.services.user_storage import ensure_user_tables
 from app.packages.organizations.infrastructure.schema import ensure_organization_tables
 from app.packages.organizations.routes import organizations_router
+from app.packages.platform_rbac.infrastructure.schema import ensure_platform_rbac_tables
+from app.packages.crm.infrastructure.schema import ensure_crm_tables
+from app.packages.contracts.infrastructure.schema import ensure_commercial_contract_tables
+from app.packages.crm.routes import crm_router
+from app.packages.contracts.presentation.router import router as contracts_router
+from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
+from app.packages.subscriptions.presentation.router import (
+    addons_router,
+    plans_router,
+    subscriptions_router,
+)
+from app.packages.billing.infrastructure.schema import ensure_billing_tables
+from app.packages.billing.presentation.router import billing_router
+from app.packages.artists.infrastructure.schema import ensure_artist_tables
+from app.packages.artists.presentation.router import artists_profiles_router
+from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
+from app.packages.catalog_rights.presentation.router import catalog_rights_router
+from app.packages.campaigns.infrastructure.schema import ensure_campaign_tables
+from app.packages.campaigns.presentation.router import campaigns_router
+from app.packages.business_analytics.infrastructure.schema import ensure_business_analytics_tables
+from app.packages.business_analytics.presentation.router import business_analytics_router
+from app.packages.compliance.infrastructure.schema import ensure_compliance_tables
+from app.packages.compliance.presentation.router import compliance_router
+from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
+from app.packages.platform_ops.presentation.router import platform_ops_router
 
 setup_logging()
 logger = get_logger("voxmetrik.main")
@@ -90,6 +115,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 ensure_app_tables(conn)
                 # Critical for Spec 016 I1 — must not be swallowed.
                 ensure_organization_tables(conn)
+                # Spec 017: Platform RBAC + CRM + Contracts
+                ensure_platform_rbac_tables(conn)
+                ensure_crm_tables(conn)
+                ensure_commercial_contract_tables(conn)
+                # Spec 018: Plans and Subscriptions
+                ensure_subscription_tables(conn)
+                # Spec 019: Billing, Payments and Reconciliation
+                ensure_billing_tables(conn)
+                # Spec 020: Artists and Team Management
+                ensure_artist_tables(conn)
+                # Spec 021: Catalog Rights and Contracts
+                ensure_catalog_rights_tables(conn)
+                # Spec 022: Campaigns, Budgets and ROI
+                ensure_campaign_tables(conn)
+                # Spec 023: Engagement and Business Analytics
+                ensure_business_analytics_tables(conn)
+                # Spec 026: Compliance, Privacy and Global Audit
+                ensure_compliance_tables(conn)
+                # Spec 027: Platform Operations and Integrations
+                ensure_platform_ops_tables(conn)
                 try:
                     ensure_secondary_indexes(conn)
                     ensure_search_fold(conn)
@@ -187,6 +232,18 @@ def create_app() -> FastAPI:
     application.include_router(platform_router, prefix="/api/v1")
     application.include_router(users_router, prefix="/api/v1")
     application.include_router(organizations_router, prefix="/api/v1")
+    application.include_router(crm_router, prefix="/api/v1")
+    application.include_router(contracts_router, prefix="/api/v1")
+    application.include_router(plans_router, prefix="/api/v1")
+    application.include_router(addons_router, prefix="/api/v1")
+    application.include_router(subscriptions_router, prefix="/api/v1")
+    application.include_router(billing_router, prefix="/api/v1")
+    application.include_router(artists_profiles_router, prefix="/api/v1")
+    application.include_router(catalog_rights_router, prefix="/api/v1")
+    application.include_router(campaigns_router, prefix="/api/v1")
+    application.include_router(business_analytics_router, prefix="/api/v1")
+    application.include_router(compliance_router, prefix="/api/v1")
+    application.include_router(platform_ops_router, prefix="/api/v1")
 
     @application.get("/", tags=["Root"], summary="Service metadata")
     def root():

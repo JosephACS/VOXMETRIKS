@@ -1,0 +1,82 @@
+{
+  "subscriptions": {
+    "plans": {
+      "title": "Catálogo de Planes",
+      "subtitle": "Planes disponibles para organizaciones",
+      "viewDetail": "Ver detalle",
+      "empty": "No hay planes disponibles."
+    },
+    "plan": {
+      "prices": "Precios",
+      "features": "Características"
+    },
+    "prices": {
+      "empty": "Sin precios configurados."
+    },
+    "price": {
+      "currency": "Moneda",
+      "period": "Periodo",
+      "amount": "Monto",
+      "status": "Estado"
+    },
+    "features": {
+      "empty": "Sin características configuradas."
+    },
+    "overview": {
+      "title": "Mi Suscripción"
+    },
+    "trial": {
+      "title": "Iniciar Trial",
+      "plan": "Plan",
+      "price": "Precio (opcional)",
+      "currency": "Moneda de facturación",
+      "submit": "Iniciar Trial"
+    },
+    "cancel": {
+      "title": "Cancelar Suscripción",
+      "warning": "¿Estás seguro que deseas cancelar tu suscripción?",
+      "mode": "Modo",
+      "periodEnd": "Al final del periodo",
+      "immediate": "Inmediato",
+      "reason": "Razón (opcional)",
+      "confirm": "Confirmar cancelación"
+    },
+    "addons": {
+      "title": "Addons de Suscripción",
+      "active": "Addons activos",
+      "available": "Addons disponibles",
+      "none": "Sin addons activos.",
+      "add": "Agregar",
+      "remove": "Quitar"
+    },
+    "usage": {
+      "title": "Uso de Suscripción",
+      "feature": "Característica",
+      "quantity": "Cantidad",
+      "period": "Periodo",
+      "recorded": "Registrado",
+      "empty": "Sin registros de uso."
+    },
+    "entitlements": {
+      "title": "Entitlements activos",
+      "empty": "Sin entitlements activos."
+    },
+    "access": {
+      "limited": "⚠️ Acceso limitado.",
+      "blocked": "🚫 Acceso bloqueado."
+    },
+    "currency": "Moneda de facturación",
+    "trialEnds": "Trial expira",
+    "period": "Periodo actual",
+    "cancelAtEnd": "Cancela al fin del periodo",
+    "history": "Historial de cambios",
+    "noActive": "No tienes una suscripción activa.",
+    "pickPlan": "Elegir un plan"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "cancel": "Volver",
+    "none": "Ninguno",
+    "selectOption": "Seleccionar..."
+  }
+}

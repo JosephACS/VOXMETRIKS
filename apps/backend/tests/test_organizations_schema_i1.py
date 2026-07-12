@@ -117,8 +117,8 @@ def test_seed_roles_permissions_exact(org_conn):
     }
     assert perm_codes == {c for c, _, _ in PERMISSIONS}
 
-    # No FUTURE permissions
-    for banned in ("billing.view", "artist.view", "campaign.view"):
+    # No FUTURE permissions (billing.view Spec 019, artist.view Spec 020, campaign.view Spec 022)
+    for banned in ():
         assert banned not in perm_codes
 
 
