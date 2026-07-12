@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Subscription, SubscriptionEntitlement, AccessStateInfo } from '../models/subscriptions.models';
 
 /** Org subscription overview — requires organizationId from context/route. */
@@ -62,10 +63,11 @@ import { Subscription, SubscriptionEntitlement, AccessStateInfo } from '../model
           </dl>
 
           <div class="sub-card__actions">
-            <a [routerLink]="['/subscriptions', subscription.id, 'changes']"
-               i18n="subscriptions.history">Historial de cambios</a>
             <a [routerLink]="['/subscriptions', subscription.id, 'usage']"
                i18n="subscriptions.usage">Uso</a>
+            <a [routerLink]="['/subscriptions', subscription.id, 'addons']"
+               i18n="subscriptions.addons">Addons</a>
+            <a [routerLink]="['/billing/invoices']">Facturas</a>
           </div>
         </div>
 
@@ -110,8 +112,9 @@ import { Subscription, SubscriptionEntitlement, AccessStateInfo } from '../model
 })
 export class SubscriptionOverviewPageComponent implements OnInit {
   private readonly api = inject(SubscriptionsApiService);
+  private readonly orgCtx = inject(OrganizationContextService);
 
-  organizationId = 0; // Set from route or context service
+  organizationId: number | null = null;
   subscription: Subscription | null = null;
   entitlements: SubscriptionEntitlement[] = [];
   accessState: AccessStateInfo | null = null;
@@ -119,16 +122,21 @@ export class SubscriptionOverviewPageComponent implements OnInit {
   error: string | null = null;
 
   ngOnInit(): void {
-    if (!this.organizationId) return;
+    const orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.organizationId = orgId;
+    if (orgId == null) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loading = true;
-    this.api.listSubscriptions(this.organizationId, { page: 1, limit: 10 }).subscribe({
+    this.api.listSubscriptions(orgId, { page: 1, limit: 10 }).subscribe({
       next: (r) => {
         const active = r.items.find((s) =>
           ['active', 'trialing', 'past_due'].includes(s.status),
         );
         this.subscription = active ?? null;
         if (active) {
-          this.loadDetails(active.id);
+          this.loadDetails(orgId, active.id);
         } else {
           this.loading = false;
         }
@@ -140,14 +148,14 @@ export class SubscriptionOverviewPageComponent implements OnInit {
     });
   }
 
-  private loadDetails(subId: number): void {
-    this.api.listEntitlements(this.organizationId, subId).subscribe({
+  private loadDetails(orgId: number, subId: number): void {
+    this.api.listEntitlements(orgId, subId).subscribe({
       next: (ents) => (this.entitlements = ents),
       error: () => {
         this.entitlements = [];
       },
     });
-    this.api.getAccessState(this.organizationId, subId).subscribe({
+    this.api.getAccessState(orgId, subId).subscribe({
       next: (s) => {
         this.accessState = s;
         this.loading = false;

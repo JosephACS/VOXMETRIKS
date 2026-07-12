@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
 @Component({
   selector: 'app-subscription-cancel',
@@ -46,11 +47,12 @@ import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 })
 export class SubscriptionCancelPageComponent implements OnInit {
   private readonly api = inject(SubscriptionsApiService);
+  private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  organizationId = 0;
+  organizationId: number | null = null;
   subscriptionId = 0;
   saving = false;
   error: string | null = null;
@@ -61,14 +63,20 @@ export class SubscriptionCancelPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.organizationId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));
   }
 
   onSubmit(): void {
-    if (this.form.invalid) return;
+    const orgId = this.organizationId;
+    if (this.form.invalid || orgId == null) return;
     this.saving = true;
     const { mode, reason } = this.form.value;
-    this.api.cancelSubscription(this.organizationId, this.subscriptionId, {
+    this.api.cancelSubscription(orgId, this.subscriptionId, {
       mode: mode!,
       reason: reason ?? undefined,
     }).subscribe({

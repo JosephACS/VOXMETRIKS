@@ -20,18 +20,25 @@ Seeded by `ensure_user_tables` on boot:
 ## Enterprise demo seed (optional)
 
 ```bash
-VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python apps/backend/scripts/seed_enterprise_demo.py
+cd apps/backend
+VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python scripts/seed_enterprise_demo.py
 ```
 
-Creates:
+Creates (all tagged demo/synthetic; skips missing tables gracefully):
 
-| Entity | Identifier | Flags |
-|--------|------------|-------|
+| Entity | Identifier / notes | Flags |
+|--------|--------------------|-------|
 | Organization | slug `enterprise-demo-s028` | `is_demo=TRUE` |
-| Plan | code `demo-enterprise-starter` | description tagged SYNTHETIC |
-| Subscription | trialing stub | `activation_source=demo_seed_synthetic` |
+| Plan + subscription | `demo-enterprise-starter` | `activation_source=demo_seed_synthetic` |
+| CRM | prospect, opportunity, quotation (best-effort) | SYNTHETIC notes |
+| Billing | profile, invoice, payment_attempt + payment mock | provider `mock` |
+| Artists / rights | artist profile, catalog asset, rights row | demo labels |
+| Campaign | synthetic campaign | demo |
+| Reporting | definition, generation, snapshot, executive report, decision | academic disclaimer |
+| Customer Success | onboarding + health snapshot | rule-based |
+| Support | case + messages | demo |
 
-Safe if tables missing — skips with message.
+Does **not** run on boot. Does **not** write warehouse facts.
 
 ## MOCK integrations
 
@@ -46,11 +53,11 @@ All labeled academic:
 - No real revenue, MRR, or customer counts
 - No GDPR certification
 - No licensed streaming catalog
-- Royalties/payouts data — specs 024/025 absent
+- Royalties/payouts — **OUT_OF_SCOPE** (future; **not** Specs 024/025)
 
 ## Demo flow suggestions
 
-See `demo-script.md` for presenter steps.
+See `demo-script.md` for presenter steps. Seed enables the full commercial → reporting → CS golden path when org schema is present.
 
 ## Frontend demo indicators
 

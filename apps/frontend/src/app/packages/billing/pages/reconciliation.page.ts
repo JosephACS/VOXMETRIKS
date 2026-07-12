@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Payment } from '../models/billing.models';
 
 @Component({
@@ -50,30 +51,36 @@ import { Payment } from '../models/billing.models';
 })
 export class ReconciliationPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   payments: Payment[] = [];
   error: string | null = null;
-  orgId = 1;
+  orgId: number | null = null;
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadPayments();
   }
 
   loadPayments(): void {
-    this.api.listPayments(this.orgId).subscribe({
+    this.api.listPayments(this.orgId!).subscribe({
       next: (res) => (this.payments = res.items),
       error: (e) => (this.error = e.error?.message ?? 'Error loading payments'),
     });
   }
 
   settle(id: number): void {
-    this.api.settlePayment(this.orgId, id).subscribe({
+    this.api.settlePayment(this.orgId!, id).subscribe({
       next: () => this.loadPayments(),
       error: (e) => (this.error = e.error?.message ?? 'Error settling payment'),
     });
   }
 
   reconcile(id: number): void {
-    this.api.reconcilePayment(this.orgId, id).subscribe({
+    this.api.reconcilePayment(this.orgId!, id).subscribe({
       next: () => this.loadPayments(),
       error: (e) => (this.error = e.error?.message ?? 'Error reconciling payment'),
     });

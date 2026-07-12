@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Invoice, InvoiceItem } from '../models/billing.models';
 
 @Component({
@@ -61,22 +62,28 @@ import { Invoice, InvoiceItem } from '../models/billing.models';
 })
 export class InvoiceDetailPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   private route = inject(ActivatedRoute);
   invoice: Invoice | null = null;
   items: InvoiceItem[] = [];
   error: string | null = null;
-  orgId = 1;
+  orgId: number | null = null;
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
       this.error = 'Invalid invoice id';
       return;
     }
-    this.api.getInvoice(this.orgId, id).subscribe({
+    this.api.getInvoice(this.orgId!, id).subscribe({
       next: (inv) => {
         this.invoice = inv;
-        this.api.getInvoiceItems(this.orgId, id).subscribe({
+        this.api.getInvoiceItems(this.orgId!, id).subscribe({
           next: (items) => (this.items = items),
           error: () => (this.items = []),
         });

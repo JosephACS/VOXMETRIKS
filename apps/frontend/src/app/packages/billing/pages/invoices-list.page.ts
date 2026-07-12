@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Invoice } from '../models/billing.models';
 
 @Component({
@@ -17,7 +18,7 @@ import { Invoice } from '../models/billing.models';
       }
       <div class="page-header">
         <h1>Invoices</h1>
-        <a routerLink="../invoices/new" class="btn btn--primary">New Invoice</a>
+        <a routerLink="/billing/payment-attempts" class="btn btn--secondary">Payment attempts</a>
       </div>
       <div class="filter-bar">
         <select (change)="onStatusFilter($event)" class="select">
@@ -31,7 +32,9 @@ import { Invoice } from '../models/billing.models';
           <option value="credited">Credited</option>
         </select>
       </div>
-      @if (invoices.length) {
+      @if (loading) {
+        <p>Loading…</p>
+      } @else if (invoices.length) {
         <table class="data-table">
           <thead>
             <tr>
@@ -51,8 +54,8 @@ import { Invoice } from '../models/billing.models';
             }
           </tbody>
         </table>
-      } @else {
-        <p class="empty-state">No invoices found.</p>
+      } @else if (!error) {
+        <p class="empty-state">No invoices found. Use the demo seed or billing API to create synthetic invoices.</p>
       }
       @if (error) {
         <p class="error">{{ error }}</p>
@@ -62,23 +65,37 @@ import { Invoice } from '../models/billing.models';
 })
 export class InvoicesListPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   invoices: Invoice[] = [];
   hasPastDue = false;
   error: string | null = null;
   statusFilter = '';
-  orgId = 1;
+  orgId: number | null = null;
+  loading = false;
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadInvoices();
   }
 
   loadInvoices(): void {
-    this.api.listInvoices(this.orgId, { status: this.statusFilter || undefined }).subscribe({
+    if (!this.orgId) return;
+    this.loading = true;
+    this.error = null;
+    this.api.listInvoices(this.orgId!, { status: this.statusFilter || undefined }).subscribe({
       next: (res) => {
         this.invoices = res.items;
         this.hasPastDue = res.items.some((i) => i.status === 'past_due');
+        this.loading = false;
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error loading invoices'),
+      error: (e) => {
+        this.error = e.error?.detail?.message ?? e.error?.message ?? 'Error loading invoices';
+        this.loading = false;
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Refund } from '../models/billing.models';
 
 @Component({
@@ -49,12 +50,13 @@ import { Refund } from '../models/billing.models';
 })
 export class RefundsPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
 
   refunds: Refund[] = [];
   error: string | null = null;
   showForm = false;
-  orgId = 1;
+  orgId: number | null = null;
 
   form = this.fb.group({
     payment_id: [null, Validators.required],
@@ -63,11 +65,16 @@ export class RefundsPage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadRefunds();
   }
 
   loadRefunds(): void {
-    this.api.listRefunds(this.orgId).subscribe({
+    this.api.listRefunds(this.orgId!).subscribe({
       next: (res) => (this.refunds = res.items),
       error: (e) => (this.error = e.error?.message ?? 'Error loading refunds'),
     });
@@ -75,7 +82,7 @@ export class RefundsPage implements OnInit {
 
   submit(): void {
     if (this.form.invalid) return;
-    this.api.createRefund(this.orgId, this.form.value).subscribe({
+    this.api.createRefund(this.orgId!, this.form.value).subscribe({
       next: () => { this.showForm = false; this.loadRefunds(); },
       error: (e) => (this.error = e.error?.message ?? 'Error creating refund'),
     });

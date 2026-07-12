@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { BillingProfile } from '../models/billing.models';
 
 @Component({
@@ -50,13 +51,14 @@ import { BillingProfile } from '../models/billing.models';
 })
 export class BillingProfilePage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
 
   profile: BillingProfile | null = null;
   error: string | null = null;
   editMode = false;
 
-  orgId = 1; // In production: from org context service
+  orgId: number | null = null;
 
   createForm = this.fb.group({
     default_currency: ['', [Validators.required, Validators.maxLength(3), Validators.minLength(3)]],
@@ -72,11 +74,16 @@ export class BillingProfilePage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadProfile();
   }
 
   loadProfile(): void {
-    this.api.getProfile(this.orgId).subscribe({
+    this.api.getProfile(this.orgId!).subscribe({
       next: (p) => (this.profile = p),
       error: (e) => {
         if (e.status === 404) this.profile = null;
@@ -87,14 +94,14 @@ export class BillingProfilePage implements OnInit {
 
   createProfile(): void {
     if (this.createForm.invalid) return;
-    this.api.createProfile(this.orgId, this.createForm.value as Partial<BillingProfile>).subscribe({
+    this.api.createProfile(this.orgId!, this.createForm.value as Partial<BillingProfile>).subscribe({
       next: (p) => { this.profile = p; this.error = null; },
       error: (e) => (this.error = e.error?.message ?? 'Error creating profile'),
     });
   }
 
   saveProfile(): void {
-    this.api.updateProfile(this.orgId, this.editForm.value as Partial<BillingProfile>).subscribe({
+    this.api.updateProfile(this.orgId!, this.editForm.value as Partial<BillingProfile>).subscribe({
       next: (p) => { this.profile = p; this.editMode = false; },
       error: (e) => (this.error = e.error?.message ?? 'Error updating profile'),
     });

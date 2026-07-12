@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { LedgerEntry } from '../models/billing.models';
 
 @Component({
@@ -54,17 +55,23 @@ import { LedgerEntry } from '../models/billing.models';
 })
 export class LedgerPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   entries: LedgerEntry[] = [];
   error: string | null = null;
   typeFilter = '';
-  orgId = 1;
+  orgId: number | null = null;
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadLedger();
   }
 
   loadLedger(): void {
-    this.api.getLedger(this.orgId, { entry_type: this.typeFilter || undefined }).subscribe({
+    this.api.getLedger(this.orgId!, { entry_type: this.typeFilter || undefined }).subscribe({
       next: (res) => (this.entries = res.items),
       error: (e) => (this.error = e.error?.message ?? 'Error loading ledger'),
     });

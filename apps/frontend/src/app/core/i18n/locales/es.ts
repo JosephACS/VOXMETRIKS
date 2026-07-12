@@ -912,6 +912,7 @@ export const LOCALE_ES = {
     'nav.section.billing': 'Facturación',
     'nav.billing.invoices': 'Facturas',
     'nav.billing.reconciliation': 'Conciliación',
+    'nav.billing.paymentAttempts': 'Intentos de pago',
     'nav.billing.profile': 'Perfil fiscal',
     'nav.billing.ledger': 'Libro mayor',
     'nav.section.artistProfiles': 'Artistas y Equipo',

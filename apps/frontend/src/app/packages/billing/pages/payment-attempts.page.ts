@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { PaymentAttempt } from '../models/billing.models';
 
 @Component({
@@ -45,12 +46,18 @@ import { PaymentAttempt } from '../models/billing.models';
 })
 export class PaymentAttemptsPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   attempts: PaymentAttempt[] = [];
   error: string | null = null;
-  orgId = 1;
+  orgId: number | null = null;
 
   ngOnInit(): void {
-    this.api.listPaymentAttempts(this.orgId).subscribe({
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
+    this.api.listPaymentAttempts(this.orgId!).subscribe({
       next: (res) => (this.attempts = res.items),
       error: (e) => (this.error = e.error?.message ?? 'Error loading payment attempts'),
     });

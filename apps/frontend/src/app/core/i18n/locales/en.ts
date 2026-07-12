@@ -871,6 +871,7 @@ export const LOCALE_EN = {
     'nav.section.billing': 'Billing',
     'nav.billing.invoices': 'Invoices',
     'nav.billing.reconciliation': 'Reconciliation',
+    'nav.billing.paymentAttempts': 'Payment attempts',
     'nav.billing.profile': 'Billing profile',
     'nav.billing.ledger': 'Ledger',
     'nav.section.artistProfiles': 'Artists & Team',

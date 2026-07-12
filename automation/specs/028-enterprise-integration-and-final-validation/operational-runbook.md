@@ -38,7 +38,7 @@ cd apps/backend
 VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python scripts/seed_enterprise_demo.py
 ```
 
-Creates synthetic org `enterprise-demo-s028` with demo plan/subscription stubs. **Never runs automatically.**
+Creates synthetic org `enterprise-demo-s028` plus demo plan/subscription, CRM stubs, billing invoice/payment mock, artist/rights, campaign, report/decision, CS health, and support case — all tagged synthetic. **Never runs automatically.** See `demo-data-guide.md`.
 
 ## Test gates
 

@@ -26,3 +26,14 @@
 ## Acceptance
 
 System remains **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** after integrating 024/025.
+
+## Polish-pass notes (no Spec 029)
+
+| Item | Status |
+|------|--------|
+| Org-scoped billing/subscriptions UI (was hardcoded org id) | Fixed |
+| CRM context cleared on org switch | Fixed |
+| Expanded opt-in demo seed (CRM→CS path) | Done — still opt-in only |
+| Dead FE links (`/billing/invoices/new`, subscription changes) | Removed |
+| Bundle size / CSS budget warnings | Accepted historical debt |
+| Playwright / Docker | Still **NOT_VERIFIED** |

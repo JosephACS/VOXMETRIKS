@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
 
 @Component({
@@ -58,15 +59,21 @@ import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
 })
 export class SubscriptionAddonsPageComponent implements OnInit {
   private readonly api = inject(SubscriptionsApiService);
+  private readonly orgCtx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);
 
-  organizationId = 0;
+  organizationId: number | null = null;
   subscriptionId = 0;
   activeAddons: SubscriptionAddon[] = [];
   availableAddons: Addon[] = [];
   error: string | null = null;
 
   ngOnInit(): void {
+    this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.organizationId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));
     this.refresh();
     this.api.listAddons({ status: 'active', limit: 50 }).subscribe({
@@ -82,21 +89,27 @@ export class SubscriptionAddonsPageComponent implements OnInit {
   }
 
   add(addonId: number): void {
-    this.api.addAddon(this.organizationId, this.subscriptionId, addonId).subscribe({
+    const orgId = this.organizationId;
+    if (orgId == null) return;
+    this.api.addAddon(orgId, this.subscriptionId, addonId).subscribe({
       next: () => this.refresh(),
       error: (e) => (this.error = e?.error?.detail?.message ?? 'Error al agregar addon'),
     });
   }
 
   remove(addonId: number): void {
-    this.api.removeAddon(this.organizationId, this.subscriptionId, addonId).subscribe({
+    const orgId = this.organizationId;
+    if (orgId == null) return;
+    this.api.removeAddon(orgId, this.subscriptionId, addonId).subscribe({
       next: () => this.refresh(),
       error: (e) => (this.error = e?.error?.detail?.message ?? 'Error al quitar addon'),
     });
   }
 
   private refresh(): void {
-    this.api.listSubscriptionAddons(this.organizationId, this.subscriptionId).subscribe({
+    const orgId = this.organizationId;
+    if (orgId == null) return;
+    this.api.listSubscriptionAddons(orgId, this.subscriptionId).subscribe({
       next: (addons) => (this.activeAddons = addons.filter((a) => a.status === 'active')),
       error: () => {
         this.activeAddons = [];

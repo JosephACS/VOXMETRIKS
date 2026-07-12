@@ -9,16 +9,33 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="biz-quality">
+    <div class="page biz-quality">
       <a routerLink="/business-analytics">← Dashboard</a>
       <h1>Data Quality</h1>
-      @if (results.length === 0) { <p>No quality checks run yet.</p> }
-      @else {
-        <ul>
-          @for (q of results; track $index) {
-            <li>{{ q | json }}</li>
-          }
-        </ul>
+      <p class="subtitle">Warehouse / KPI quality checks — sources labeled.</p>
+      @if (!orgId) {
+        <p class="error">Select an organization context.</p>
+      } @else if (loading) {
+        <p>Loading…</p>
+      } @else if (error) {
+        <p class="error">{{ error }}</p>
+      } @else if (results.length === 0) {
+        <p class="empty-state">No quality checks available.</p>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          </thead>
+          <tbody>
+            @for (q of rows; track $index) {
+              <tr>
+                <td>{{ q.name }}</td>
+                <td><span class="badge">{{ q.status }}</span></td>
+                <td>{{ q.detail }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </div>
   `,
@@ -26,11 +43,36 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 export class BizQualityPage implements OnInit {
   private api = inject(BusinessAnalyticsApiService);
   private orgCtx = inject(OrganizationContextService);
+  orgId: number | null = null;
   results: unknown[] = [];
+  rows: Array<{ name: string; status: string; detail: string }> = [];
+  loading = false;
+  error = '';
 
   ngOnInit(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id;
-    if (!orgId) return;
-    this.api.listQuality(orgId).subscribe((r) => (this.results = r));
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) return;
+    this.loading = true;
+    this.api.listQuality(this.orgId).subscribe({
+      next: (r) => {
+        this.results = r || [];
+        this.rows = this.results.map((item, i) => {
+          if (item && typeof item === 'object') {
+            const o = item as Record<string, unknown>;
+            return {
+              name: String(o['code'] ?? o['name'] ?? o['check'] ?? `check-${i + 1}`),
+              status: String(o['status'] ?? o['quality_status'] ?? 'No disponible'),
+              detail: String(o['message'] ?? o['detail'] ?? o['source_label'] ?? '—'),
+            };
+          }
+          return { name: `check-${i + 1}`, status: 'No disponible', detail: String(item) };
+        });
+        this.loading = false;
+      },
+      error: (e) => {
+        this.error = e?.error?.detail?.message || 'Failed to load quality checks';
+        this.loading = false;
+      },
+    });
   }
 }

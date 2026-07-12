@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { UsageRecord } from '../models/subscriptions.models';
 
 @Component({
@@ -51,9 +52,10 @@ import { UsageRecord } from '../models/subscriptions.models';
 })
 export class SubscriptionUsagePageComponent implements OnInit {
   private readonly api = inject(SubscriptionsApiService);
+  private readonly orgCtx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);
 
-  organizationId = 0;
+  organizationId: number | null = null;
   subscriptionId = 0;
   records: UsageRecord[] = [];
   total = 0;
@@ -61,9 +63,15 @@ export class SubscriptionUsagePageComponent implements OnInit {
   error: string | null = null;
 
   ngOnInit(): void {
+    const orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.organizationId = orgId;
+    if (orgId == null) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));
     this.loading = true;
-    this.api.listUsage(this.organizationId, this.subscriptionId).subscribe({
+    this.api.listUsage(orgId, this.subscriptionId).subscribe({
       next: (r) => {
         this.records = r.items;
         this.total = r.total;

@@ -5,6 +5,7 @@ import {
   Organization,
 } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from './organizations-api.service';
+import { CrmContextService } from '../../crm/services/crm-context.service';
 
 export type OrgContextState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -15,6 +16,7 @@ export type OrgContextState = 'idle' | 'loading' | 'ready' | 'error';
 @Injectable({ providedIn: 'root' })
 export class OrganizationContextService {
   private readonly api = inject(OrganizationsApiService);
+  private readonly crmCtx = inject(CrmContextService, { optional: true });
 
   private readonly _status = signal<OrgContextState>('idle');
   private readonly _error = signal<string | null>(null);
@@ -47,6 +49,7 @@ export class OrganizationContextService {
     this._roles.set([]);
     this._permissions.set([]);
     this._contextKind.set('none');
+    this.crmCtx?.clearState();
   }
 
   async bootstrap(): Promise<void> {

@@ -257,6 +257,11 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
         },
         {
+          path: '/billing/payment-attempts',
+          labelKey: 'nav.billing.paymentAttempts',
+          icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
+        {
           path: '/billing/profile',
           labelKey: 'nav.billing.profile',
           icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),

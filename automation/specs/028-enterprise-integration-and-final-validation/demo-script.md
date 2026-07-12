@@ -32,12 +32,13 @@ VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python apps/backend/scripts/seed_enterprise_de
 
 ## Act 3 — Commercial stack (4 min)
 
-1. **Subscriptions → Plans** — catalog (platform admin)
-2. **Billing → Invoices** — list/create (MOCK labeled)
-3. **Billing → Reconciliation** — ledger view
-4. **CRM → Prospects** — pipeline demo record
+1. **CRM → Prospects / Opportunities** — pipeline (seed or create)
+2. **Quotations / Contracts** — show linked commercial record
+3. **Subscriptions → Plans / My subscription** — entitlements
+4. **Billing → Invoices** — list (MOCK labeled)
+5. **Billing → Payment attempts / Reconciliation** — mock payment path
 
-*Talking point:* MOCK payment; no real money. Billing 019 + CRM 017.
+*Talking point:* MOCK payment; no real money. Billing 019 + CRM 017. UI uses active org context (`X-Organization-Id`).
 
 ## Act 4 — Catalog & campaigns (3 min)
 

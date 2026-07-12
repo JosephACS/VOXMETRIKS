@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { CreditNote } from '../models/billing.models';
 
 @Component({
@@ -55,12 +56,13 @@ import { CreditNote } from '../models/billing.models';
 })
 export class CreditNotesPage implements OnInit {
   private api = inject(BillingApiService);
+  private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
 
   creditNotes: CreditNote[] = [];
   error: string | null = null;
   showForm = false;
-  orgId = 1;
+  orgId: number | null = null;
 
   form = this.fb.group({
     invoice_id: [null, Validators.required],
@@ -69,11 +71,16 @@ export class CreditNotesPage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.loadCreditNotes();
   }
 
   loadCreditNotes(): void {
-    this.api.listCreditNotes(this.orgId).subscribe({
+    this.api.listCreditNotes(this.orgId!).subscribe({
       next: (res) => (this.creditNotes = res.items),
       error: (e) => (this.error = e.error?.message ?? 'Error loading credit notes'),
     });
@@ -81,14 +88,14 @@ export class CreditNotesPage implements OnInit {
 
   submit(): void {
     if (this.form.invalid) return;
-    this.api.createCreditNote(this.orgId, this.form.value).subscribe({
+    this.api.createCreditNote(this.orgId!, this.form.value).subscribe({
       next: () => { this.showForm = false; this.loadCreditNotes(); },
       error: (e) => (this.error = e.error?.message ?? 'Error creating credit note'),
     });
   }
 
   apply(id: number): void {
-    this.api.applyCreditNote(this.orgId, id).subscribe({
+    this.api.applyCreditNote(this.orgId!, id).subscribe({
       next: () => this.loadCreditNotes(),
       error: (e) => (this.error = e.error?.message ?? 'Error applying credit note'),
     });

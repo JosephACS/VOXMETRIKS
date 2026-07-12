@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
+import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Plan, PlanPrice } from '../models/subscriptions.models';
 
 @Component({
@@ -59,10 +60,11 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
 })
 export class TrialStartPageComponent implements OnInit {
   private readonly api = inject(SubscriptionsApiService);
+  private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
 
-  organizationId = 0;
+  organizationId: number | null = null;
   plans: Plan[] = [];
   prices: PlanPrice[] = [];
   saving = false;
@@ -75,6 +77,11 @@ export class TrialStartPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.organizationId) {
+      this.error = 'Select an organization context.';
+      return;
+    }
     this.api.listPlans({ status: 'active' }).subscribe({
       next: (r) => (this.plans = r.items),
       error: (e) => {
@@ -96,12 +103,13 @@ export class TrialStartPageComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.form.invalid) return;
+    const orgId = this.organizationId;
+    if (this.form.invalid || orgId == null) return;
     this.saving = true;
     this.error = null;
     const { planId, planPriceId, billingCurrency } = this.form.value;
-    this.api.startTrial(this.organizationId, {
-      organization_id: this.organizationId,
+    this.api.startTrial(orgId, {
+      organization_id: orgId,
       plan_id: planId!,
       plan_price_id: planPriceId ?? undefined,
       billing_currency: billingCurrency!,
