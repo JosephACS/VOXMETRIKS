@@ -1,28 +1,46 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 3.1.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-12  
-**Alcance:** Specs operativas `001`–`011` (capa operativa) + fundamento empresarial **015** + Identity & Organizations **016** + CRM & Commercial Contracting **017** + Plans & Subscriptions **018** + Billing, Payments & Reconciliation **019** + Artists & Team Management **020** + Catalog Rights & Contracts **021** + Campaigns, Budgets & ROI **022** + Engagement & Business Analytics **023** + Compliance, Privacy & Global Audit **026** + Platform Operations & Integrations **027** + Enterprise Integration & Final Validation **028**  
-**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (cierre Spec 028, 2026-07-12)  
-**Nota:** Specs **024** (Royalties) y **025** (Payouts) **no presentes** en este workspace — trazabilidad honesta; cadena salta de 023 → 026. Customer Success, Support y Executive reporting: **diseñados en 015, diferidos** (028 no autoriza implementación).  
+**Versión:** 3.2.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-12  
+**Alcance:** Specs operativas `001`–`011` + fundamento **015** + **016–028** (incluye **024** Executive Reporting y **025** Customer Success & Support)  
+**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (reapertura documental 028 tras 024/025, 2026-07-12)  
+**Nota:** Numeración corregida — **024 ≠ Royalties**, **025 ≠ Payouts**. Royalties/Payouts quedan **OUT_OF_SCOPE** (specs futuras no numeradas).  
 **Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia  
 **Constitución vigente:** 2.0.0 (`.specify/memory/constitution.md`)
 
 Referencia: Constitución §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
 
-### Enterprise Integration and Final Validation — Spec 028 (cierre 2026-07-12)
+### Enterprise Integration and Final Validation — Spec 028 (reopen 2026-07-12)
 
 | Campo | Valor |
 |-------|-------|
 | Spec | `028-enterprise-integration-and-final-validation` |
 | Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
 | Estado del sistema | **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** |
-| Alcance | Integración/validación/cierre — sin nuevos dominios |
-| Gates | golden-path pytest PASS · FE lint 0e/15w · FE unit 179 PASS · FE build PASS · BE ~737 revalidando |
-| Código | `test_enterprise_golden_path_s028.py` · `scripts/seed_enterprise_demo.py` (opt-in) |
+| Alcance | Integración 024/025 + golden path ampliado + trazabilidad corregida |
+| Gates | golden-path pytest PASS · reporting R* · CS S* · FE lint/unit/build |
+| Código | `test_enterprise_golden_path_s028.py` · packages `reporting`, `customer_success` |
 | Evidencia | `automation/specs/028-enterprise-integration-and-final-validation/` |
 | feature.json | apunta a **028** |
 
-Debt aceptada consolidada: Playwright enterprise NOT_VERIFIED; Docker gate NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; 024/025 absent; CS/support/exec report deferred (404).
+Debt: Playwright/Docker NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; royalties/payouts OUT_OF_SCOPE.
+
+### Executive Reporting and Business Decisions — Spec 024 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `024-executive-reporting-and-business-decisions` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Código | `packages/reporting` BE · `packages/reporting` FE |
+| API | `/api/v1/reports`, `/api/v1/business-decisions` |
+
+### Customer Success and Support — Spec 025 (cierre 2026-07-12)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `025-customer-success-and-support` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Código | `packages/customer_success` BE · `packages/customer-success` FE |
+| API | `/api/v1/customer-success`, `/api/v1/support` |
 
 ### Platform Operations and Integrations — Spec 027 (cierre 2026-07-12)
 

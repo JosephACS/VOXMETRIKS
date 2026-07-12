@@ -47,21 +47,27 @@ VOXMETRIKS_SEED_ENTERPRISE_DEMO=1 python apps/backend/scripts/seed_enterprise_de
 
 *Talking point:* ROI may show unavailable — honest UX from 022.
 
-## Act 5 — Analytics & compliance (3 min)
+## Act 5 — Analytics, reporting & compliance (4 min)
 
 1. **Business Analytics** dashboard — KPIs from warehouse
-2. **Compliance** — terms list, DSR submit (synthetic)
-3. **Platform Ops** — health endpoint shows `labeled_academic`
+2. **Reports** — generate executive snapshot, approve, publish, export CSV (academic disclaimer)
+3. **Business Decisions** — record decision linked to report
+4. **Compliance** — terms list, DSR submit (synthetic)
+5. **Platform Ops** — health endpoint shows `labeled_academic`
 
-*Talking point:* Privacy tooling demo-grade; no GDPR cert claim.
+## Act 6 — Customer Success & Support (3 min)
 
-## Act 6 — Honest limits (1 min)
+1. **Customer Success** — calculate health (rule-based, not AI); show No disponible honesty if needed
+2. **Support** — create ticket, internal note, resolve
+3. **Renewal / Expansion** — evaluate renewal; create expansion opportunity
+
+## Act 7 — Honest limits (1 min)
 
 State explicitly:
 
-- No Customer Success / Support / Executive reports (404)
-- No Royalties/Payouts (024/025 absent)
-- DuckDB academic limits; Playwright E2E not verified in CI
+- Royalties/Payouts OUT_OF_SCOPE (not Specs 024/025)
+- MOCK payment/email; DuckDB academic; Playwright E2E not verified
+- SLA configs are academic, not contractual
 
 ## Q&A references
 

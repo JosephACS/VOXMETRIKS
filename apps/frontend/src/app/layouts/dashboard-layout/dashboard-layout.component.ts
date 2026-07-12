@@ -354,6 +354,38 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      id: 'reporting',
+      titleKey: 'nav.section.reporting',
+      items: [
+        {
+          path: '/reports',
+          labelKey: 'nav.reporting.reports',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
+        },
+        {
+          path: '/business-decisions',
+          labelKey: 'nav.reporting.decisions',
+          icon: this.svgIcon('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'),
+        },
+      ],
+    },
+    {
+      id: 'customerSuccess',
+      titleKey: 'nav.section.customerSuccess',
+      items: [
+        {
+          path: '/customer-success',
+          labelKey: 'nav.customerSuccess.dashboard',
+          icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
+        },
+        {
+          path: '/support',
+          labelKey: 'nav.customerSuccess.support',
+          icon: this.svgIcon('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+        },
+      ],
+    },
+    {
       id: 'platformOps',
       titleKey: 'nav.section.platformOps',
       items: [

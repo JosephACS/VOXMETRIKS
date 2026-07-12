@@ -143,6 +143,8 @@ def _init_test_database(db_path: Path) -> None:
     from app.packages.business_analytics.infrastructure.schema import ensure_business_analytics_tables
     from app.packages.compliance.infrastructure.schema import ensure_compliance_tables
     from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
+    from app.packages.reporting.infrastructure.schema import ensure_reporting_tables
+    from app.packages.customer_success.infrastructure.schema import ensure_customer_success_tables
 
     ensure_user_tables(conn)
     ensure_app_tables(conn)
@@ -158,6 +160,8 @@ def _init_test_database(db_path: Path) -> None:
     ensure_business_analytics_tables(conn)
     ensure_compliance_tables(conn)
     ensure_platform_ops_tables(conn)
+    ensure_reporting_tables(conn)
+    ensure_customer_success_tables(conn)
     conn.close()
 
 

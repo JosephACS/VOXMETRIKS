@@ -13,6 +13,8 @@ import { CAMPAIGNS_ROUTES } from './packages/campaigns/campaigns.routes';
 import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/business-analytics.routes';
 import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
 import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
+import { REPORTING_ROUTES } from './packages/reporting/reporting.routes';
+import { CUSTOMER_SUCCESS_ROUTES } from './packages/customer-success/customer-success.routes';
 
 export const APP_ROUTES: Routes = [
   {
@@ -249,6 +251,8 @@ export const APP_ROUTES: Routes = [
       ...BUSINESS_ANALYTICS_ROUTES,
       ...COMPLIANCE_ROUTES,
       ...PLATFORM_OPS_ROUTES,
+      ...REPORTING_ROUTES,
+      ...CUSTOMER_SUCCESS_ROUTES,
       {
         path: '**',
         title: 'notFound.title',

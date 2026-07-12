@@ -932,4 +932,10 @@ export const LOCALE_ES = {
     'nav.compliance.admin': 'Admin Cumplimiento',
     'nav.section.platformOps': 'Operaciones de Plataforma',
     'nav.platformOps.dashboard': 'Panel de Ops',
+    'nav.section.reporting': 'Reportes ejecutivos',
+    'nav.reporting.reports': 'Reportes',
+    'nav.reporting.decisions': 'Decisiones',
+    'nav.section.customerSuccess': 'Customer Success',
+    'nav.customerSuccess.dashboard': 'Panel CS',
+    'nav.customerSuccess.support': 'Soporte',
   } as const;

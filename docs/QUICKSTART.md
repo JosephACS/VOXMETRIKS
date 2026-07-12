@@ -233,7 +233,7 @@ Confirma `CORS_ORIGINS` e incluye `http://localhost:4200`. Verifica también que
 
 ## 9. Capa empresarial (opcional)
 
-Estado de cierre: **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (Spec 028).
+Estado de cierre: **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (Spec 028, con 024 reporting + 025 CS/support).
 
 Documentación: [automation/specs/028-enterprise-integration-and-final-validation/](../automation/specs/028-enterprise-integration-and-final-validation/). Guion demo: [`demo-script.md`](../automation/specs/028-enterprise-integration-and-final-validation/demo-script.md).
 

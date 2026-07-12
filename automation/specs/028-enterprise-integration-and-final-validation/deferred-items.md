@@ -1,40 +1,33 @@
-# Deferred Items — Spec 028
+# Deferred Items — Spec 028 (updated after 024/025)
 
-Items explicitly **not built** in this workspace closure.
+## Corrected numbering
 
-## Specs not present
-
-| Spec | Domain | Reason |
+| Spec | Domain | Status |
 |------|--------|--------|
-| 024 | Royalties accrual & statements | Spec file absent |
-| 025 | Payout runs & banking | Spec file absent |
-| 029 | (any follow-on) | Out of 028 scope per charter |
+| 024 | Executive Reporting and Business Decisions | **IMPLEMENTED** (reopen) |
+| 025 | Customer Success and Support | **IMPLEMENTED** (reopen) |
 
-## Designed in 015, deferred implementation
+## Out of scope / future (not numbered 024/025)
 
-| Capability | Planned API | Current state |
-|------------|-------------|---------------|
-| Customer Success | `/api/v1/customer-success` | **404** — no package |
-| Support / ticketing | `/api/v1/support` | **404** — no package |
-| Executive reports | `/api/v1/reporting/reports` | **404** — no package |
+| Topic | Status |
+|-------|--------|
+| Royalties accrual & statements | **OUT_OF_SCOPE** — future unnumbered spec |
+| Payout runs & banking | **OUT_OF_SCOPE** — future unnumbered spec |
+| Spec 029+ | Not authorized by this reopen |
 
-Validated by `test_enterprise_golden_path_s028.py::TestDeferredDomainsS028`.
+## Still deferred / not verified
 
-## Golden-path steps deferred (implemented elsewhere, not chained)
+| Item | Status |
+|------|--------|
+| Playwright enterprise E2E | **NOT_VERIFIED** |
+| Docker compose CI gate | **NOT_VERIFIED** |
+| Contractual SLA / GDPR certification | **OUT_OF_SCOPE** |
+| Production payment/email providers | MOCK only |
+
+## Golden-path steps covered in domain suites (not fully chained)
 
 | Step | Covered by |
 |------|------------|
-| Subscription lifecycle E2E | 018 K* tests |
-| Invoice + MOCK payment | 019 L* tests |
-| CRM → contract win | 017 J* tests |
-| Full catalog-rights workflow | 021 N* tests |
-| Playwright UI journey | automation/playwright (NOT_VERIFIED) |
-| Docker full-stack smoke | infrastructure compose (NOT_VERIFIED) |
-
-## Future spec candidates (informative only)
-
-- 024 Royalties (requires 021 rights + warehouse $)
-- 025 Payouts (requires 024 + banking)
-- 029+ CS/Support/Exec report (if product prioritizes)
-
-**028 does not authorize implementation of the above.**
+| Full CRM → contract → invoice | 017/018/019 suites |
+| Catalog-rights full workflow | 021 N* |
+| Playwright UI journey | NOT_VERIFIED |

@@ -10,7 +10,6 @@ from fastapi import Depends, Header
 
 from app.core.database import get_write_conn
 from app.packages.identity.services.auth_deps import require_user_id
-from app.packages.platform_rbac.infrastructure import repository as rbac_repo
 
 from .error_mapping import http_error
 
@@ -22,6 +21,8 @@ def request_id_header(
 
 
 def require_org_reporting_permission(permission_code: str):
+    """Require org membership + reporting/decision permission via X-Organization-Id."""
+
     def _dep(
         user_id: int = Depends(require_user_id),
         conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
@@ -35,7 +36,6 @@ def require_org_reporting_permission(permission_code: str):
         except ValueError:
             raise http_error(400, "Invalid X-Organization-Id", code="bad_header")
 
-        # Platform admin break-glass via platform_rbac when org perm missing
         perm_row = conn.execute(
             """
             SELECT 1
@@ -50,26 +50,9 @@ def require_org_reporting_permission(permission_code: str):
             [permission_code, org_id, user_id],
         ).fetchone()
         if not perm_row:
-            if not rbac_repo.has_permission(conn, user_id, "platform.admin"):
-                # also accept platform_admin role via has_permission codes used in project
-                try:
-                    ok = rbac_repo.has_permission(conn, user_id, "ops.view") and False
-                except Exception:
-                    ok = False
-                # Check platform_admin role assignment
-                role_ok = conn.execute(
-                    """
-                    SELECT 1 FROM app_platform_user_role ur
-                    JOIN app_platform_role r ON r.id = ur.role_id
-                    WHERE ur.user_id = ? AND r.code = 'platform_admin' AND ur.status = 'active'
-                    LIMIT 1
-                    """,
-                    [user_id],
-                ).fetchone()
-                if not role_ok:
-                    raise http_error(
-                        403, f"Missing reporting permission: {permission_code}", code="permission_denied",
-                    )
+            raise http_error(
+                403, f"Missing reporting permission: {permission_code}", code="permission_denied",
+            )
 
         return {
             "user_id": user_id,

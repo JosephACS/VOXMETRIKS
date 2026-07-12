@@ -11,7 +11,7 @@
 
 Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
 
-**Capa empresarial (specs 016–023, 026–027):** implementada con deuda aceptada — cierre documental **spec 028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/).
+**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`. Royalties/Payouts: **OUT_OF_SCOPE**. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/).
 
 ---
 
@@ -35,8 +35,9 @@ flowchart LR
 | Organizations / CRM / billing / subscriptions | 016–019 | **Implementado** (MOCK payment; deuda aceptada) |
 | Artists / catalog-rights / campaigns / biz-analytics | 020–023 | **Implementado** |
 | Compliance / platform-ops | 026–027 | **Implementado** (integraciones MOCK) |
-| Royalties / Payouts | 024–025 | **No presentes** en este workspace |
-| Customer Success / Support / Exec report | 015 diseño | **Diferido** (028 no autoriza build) |
+| Executive Reporting / Decisions | 024 | **IMPLEMENTED** (`/api/v1/reports`, `/business-decisions`) |
+| Customer Success / Support | 025 | **IMPLEMENTED** (`/customer-success`, `/support`) |
+| Royalties / Payouts | — | **OUT_OF_SCOPE** (futuro; no son 024/025) |
 
 Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md) · Empresa: [automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md](automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md)
 

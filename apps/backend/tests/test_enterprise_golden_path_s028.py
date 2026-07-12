@@ -4,15 +4,13 @@ Chains implemented enterprise steps via TestClient where feasible:
 
   login → org context → list plans → campaigns list → business-analytics dashboard
   → compliance terms list → platform-ops health
+  → executive report + business decision (024)
+  → customer health + support + renewal/expansion (025)
 
-Deferred domains (designed in Spec 015, not built; Spec 028 forbids new packages)
-must return **404** for:
+Canonical APIs: /api/v1/reports, /api/v1/business-decisions,
+/api/v1/customer-success, /api/v1/support.
 
-  - ``/api/v1/support``
-  - ``/api/v1/customer-success``
-  - ``/api/v1/reporting/reports``
-
-Specs 024 (Royalties) and 025 (Payouts) are NOT_PRESENT in this workspace.
+Royalties/Payouts remain OUT_OF_SCOPE (not Spec 024/025).
 
 Fixture is function-scoped to avoid DuckDB/session pollution when run after other suites.
 """
@@ -107,6 +105,10 @@ def golden_path_ctx(client: TestClient) -> dict:
     )
     from app.packages.compliance.infrastructure.schema import ensure_compliance_tables
     from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
+    from app.packages.reporting.infrastructure.schema import ensure_reporting_tables
+    from app.packages.customer_success.infrastructure.schema import (
+        ensure_customer_success_tables,
+    )
 
     resp = client.post(
         "/api/v1/users/login",
@@ -125,6 +127,8 @@ def golden_path_ctx(client: TestClient) -> dict:
         ensure_business_analytics_tables(conn)
         ensure_compliance_tables(conn)
         ensure_platform_ops_tables(conn)
+        ensure_reporting_tables(conn)
+        ensure_customer_success_tables(conn)
         ensure_organization_role_catalogs(conn)
         _seed_platform_rbac_catalogs(conn)
         if was_ready:
@@ -237,20 +241,69 @@ class TestEnterpriseGoldenPathS028:
             "degraded",
         )
 
-
-class TestDeferredDomainsS028:
-    """Domains designed in 015 but deferred — must not expose routes."""
-
-    @pytest.mark.parametrize(
-        "path",
-        [
-            "/api/v1/support",
-            "/api/v1/customer-success",
-            "/api/v1/reporting/reports",
-        ],
-    )
-    def test_deferred_domain_returns_404(
-        self, client: TestClient, golden_path_ctx: dict, path: str
+    def test_step_executive_report_and_decision(
+        self, client: TestClient, golden_path_ctx: dict
     ) -> None:
-        resp = client.get(path, headers=golden_path_ctx["headers"])
-        assert resp.status_code == 404, f"{path} should be absent (deferred), got {resp.status_code}"
+        h = golden_path_ctx["org_headers"]
+        d = client.post(
+            "/api/v1/reports/definitions",
+            headers=h,
+            json={"code": f"gp-{uuid.uuid4().hex[:6]}", "title": "Golden Path Report"},
+        )
+        assert d.status_code == 201, d.text
+        g = client.post(
+            "/api/v1/reports/generations",
+            headers=h,
+            json={"definition_id": d.json()["id"]},
+        )
+        assert g.status_code == 201, g.text
+        gen = client.post(
+            f"/api/v1/reports/generations/{g.json()['id']}/generate", headers=h
+        )
+        assert gen.status_code == 200, gen.text
+        report_id = gen.json()["executive_report"]["id"]
+        assert client.post(f"/api/v1/reports/executive/{report_id}/approve", headers=h, json={}).status_code == 200
+        assert client.post(f"/api/v1/reports/executive/{report_id}/publish", headers=h).status_code == 200
+        dec = client.post(
+            "/api/v1/business-decisions",
+            headers=h,
+            json={"title": "GP Decision", "proposal": "Act on report", "executive_report_id": report_id},
+        )
+        assert dec.status_code == 201, dec.text
+
+    def test_step_customer_success_and_support(
+        self, client: TestClient, golden_path_ctx: dict
+    ) -> None:
+        h = golden_path_ctx["org_headers"]
+        health = client.post("/api/v1/customer-success/health/calculate", headers=h)
+        assert health.status_code == 200, health.text
+        case = client.post(
+            "/api/v1/support/cases",
+            headers=h,
+            json={"subject": "Golden path support", "priority": "normal"},
+        )
+        assert case.status_code == 201, case.text
+        cid = case.json()["id"]
+        assert client.post(f"/api/v1/support/cases/{cid}/resolve", headers=h).status_code == 200
+        ren = client.post("/api/v1/customer-success/renewal/evaluate", headers=h)
+        assert ren.status_code == 200, ren.text
+        exp = client.post(
+            "/api/v1/customer-success/expansions",
+            headers=h,
+            json={"title": "GP Expansion"},
+        )
+        assert exp.status_code == 201, exp.text
+
+
+class TestLegacyReportingPathAbsentS028:
+    """Old 015 path /api/v1/reporting/reports remains unused; canonical is /api/v1/reports."""
+
+    def test_legacy_reporting_prefix_not_required(
+        self, client: TestClient, golden_path_ctx: dict
+    ) -> None:
+        # Canonical surface must exist
+        r = client.get("/api/v1/reports/executive", headers=golden_path_ctx["org_headers"])
+        assert r.status_code == 200, r.text
+        # Legacy design path may 404 — acceptable
+        legacy = client.get("/api/v1/reporting/reports", headers=golden_path_ctx["headers"])
+        assert legacy.status_code in (404, 401, 403, 422)

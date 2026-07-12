@@ -10,6 +10,8 @@ Spec 021 adds: rights.* org-scoped permissions (Catalog Rights and Contracts).
 Spec 022 adds: campaign.* org-scoped permissions (Campaigns, Budgets and ROI).
 Spec 023 adds: biz_analytics.* org-scoped permissions (Engagement and Business Analytics).
 Spec 026 adds: compliance.*, privacy.*, incident.manage, audit.search org-scoped permissions.
+Spec 024 adds: report.generate/approve/publish/export, decision.* (Executive Reporting).
+Spec 025 adds: customer_success.*, customer_health.*, support.*, and CS/support roles.
 """
 
 from __future__ import annotations
@@ -27,6 +29,9 @@ BUSINESS_ROLES: Final[tuple[tuple[str, str, str], ...]] = (
     ("analyst", "Analyst", "Analytics and reports; read-only membership"),
     ("artist", "Artist", "Limited artist self-scope when domain exists"),
     ("viewer", "Viewer", "Read-only organization and analytics"),
+    ("auditor", "Auditor", "Read-only audit and reporting access"),
+    ("customer_success_manager", "Customer Success Manager", "CS onboarding, health, risk, renewal"),
+    ("support_agent", "Support Agent", "Support case handling within organization"),
 )
 
 # (code, description, domain)
@@ -46,6 +51,34 @@ PERMISSIONS: Final[tuple[tuple[str, str, str], ...]] = (
     ("audit.view", "View organization audit log", "audit"),
     ("analytics.view", "View organization analytics", "analytics"),
     ("report.view", "View organization reports", "report"),
+    # Spec 024 — executive reporting & business decisions
+    ("report.generate", "Create report definitions and generate snapshots", "report"),
+    ("report.approve", "Approve executive reports", "report"),
+    ("report.publish", "Publish or archive executive reports", "report"),
+    ("report.export", "Export executive reports (CSV)", "report"),
+    ("decision.view", "View business decisions and follow-ups", "decision"),
+    ("decision.create", "Record business decisions", "decision"),
+    ("decision.approve", "Approve business decisions", "decision"),
+    ("decision.update", "Update decision actions and follow-ups", "decision"),
+    ("decision.complete", "Complete business decisions", "decision"),
+    # Spec 025 — customer success & support
+    ("customer_success.view", "View CS onboarding and dashboard", "customer_success"),
+    ("customer_success.manage", "Manage CS onboarding steps", "customer_success"),
+    ("customer_health.view", "View customer health snapshots", "customer_success"),
+    ("customer_health.calculate", "Calculate customer health scores", "customer_success"),
+    ("customer_risk.manage", "Create and update customer risks", "customer_success"),
+    ("customer_intervention.manage", "Assign and complete interventions", "customer_success"),
+    ("renewal_readiness.view", "View renewal readiness evaluations", "customer_success"),
+    ("expansion.manage", "Create expansion opportunities", "customer_success"),
+    ("support.view", "View support cases", "support"),
+    ("support.create", "Create support cases", "support"),
+    ("support.assign", "Assign support cases", "support"),
+    ("support.respond", "Add customer-visible support messages", "support"),
+    ("support.internal_note", "Add internal support notes", "support"),
+    ("support.escalate", "Escalate support cases", "support"),
+    ("support.resolve", "Resolve support cases", "support"),
+    ("support.close", "Close or reopen support cases", "support"),
+    ("support.audit.view", "View support audit and SLA events", "support"),
     # Spec 018 — subscription permissions (org-scoped)
     ("subscription.view", "View organization subscriptions and entitlements", "subscription"),
     ("subscription.create", "Start subscription or trial", "subscription"),
@@ -115,6 +148,32 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "audit.view",
             "analytics.view",
             "report.view",
+            "report.generate",
+            "report.approve",
+            "report.publish",
+            "report.export",
+            "decision.view",
+            "decision.create",
+            "decision.approve",
+            "decision.update",
+            "decision.complete",
+            "customer_success.view",
+            "customer_success.manage",
+            "customer_health.view",
+            "customer_health.calculate",
+            "customer_risk.manage",
+            "customer_intervention.manage",
+            "renewal_readiness.view",
+            "expansion.manage",
+            "support.view",
+            "support.create",
+            "support.assign",
+            "support.respond",
+            "support.internal_note",
+            "support.escalate",
+            "support.resolve",
+            "support.close",
+            "support.audit.view",
             # Spec 018
             "subscription.view",
             "subscription.create",
@@ -181,6 +240,32 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "audit.view",
             "analytics.view",
             "report.view",
+            "report.generate",
+            "report.approve",
+            "report.publish",
+            "report.export",
+            "decision.view",
+            "decision.create",
+            "decision.approve",
+            "decision.update",
+            "decision.complete",
+            "customer_success.view",
+            "customer_success.manage",
+            "customer_health.view",
+            "customer_health.calculate",
+            "customer_risk.manage",
+            "customer_intervention.manage",
+            "renewal_readiness.view",
+            "expansion.manage",
+            "support.view",
+            "support.create",
+            "support.assign",
+            "support.respond",
+            "support.internal_note",
+            "support.escalate",
+            "support.resolve",
+            "support.close",
+            "support.audit.view",
             # Spec 018
             "subscription.view",
             "subscription.change",
@@ -251,6 +336,8 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "member.view",
             "audit.view",
             "report.view",
+            "report.export",
+            "decision.view",
             # Spec 019
             "billing.view",
             "invoice.view",
@@ -289,6 +376,10 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "member.view",
             "analytics.view",
             "report.view",
+            "report.generate",
+            "report.export",
+            "decision.view",
+            "decision.create",
             # Spec 022
             "campaign.view",
             "campaign.create",
@@ -306,11 +397,20 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "member.view",
             "analytics.view",
             "report.view",
+            "report.generate",
+            "report.export",
+            "decision.view",
+            "decision.create",
+            "decision.update",
             # Spec 022
             "campaign.view",
             # Spec 023
             "biz_analytics.view",
             "biz_analytics.manage",
+            "customer_success.view",
+            "customer_health.view",
+            "renewal_readiness.view",
+            "support.view",
         }
     ),
     "artist": frozenset(
@@ -320,6 +420,8 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "artist.view",
             # Spec 026
             "privacy.request",
+            "support.create",
+            "support.view",
         }
     ),
     "viewer": frozenset(
@@ -327,6 +429,8 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "organization.view",
             "member.view",
             "analytics.view",
+            "report.view",
+            "decision.view",
             # Spec 020
             "artist.view",
             # Spec 021
@@ -338,6 +442,68 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             # Spec 026
             "compliance.view",
             "privacy.request",
+            "customer_success.view",
+            "customer_health.view",
+            "renewal_readiness.view",
+            "support.view",
+            "support.create",
+        }
+    ),
+    "auditor": frozenset(
+        {
+            "organization.view",
+            "member.view",
+            "audit.view",
+            "report.view",
+            "decision.view",
+            "biz_analytics.view",
+            "compliance.view",
+            "audit.search",
+            "customer_success.view",
+            "customer_health.view",
+            "renewal_readiness.view",
+            "support.view",
+            "support.audit.view",
+        }
+    ),
+    "customer_success_manager": frozenset(
+        {
+            "organization.view",
+            "member.view",
+            "customer_success.view",
+            "customer_success.manage",
+            "customer_health.view",
+            "customer_health.calculate",
+            "customer_risk.manage",
+            "customer_intervention.manage",
+            "renewal_readiness.view",
+            "expansion.manage",
+            "support.view",
+            "support.create",
+            "support.assign",
+            "support.respond",
+            "support.internal_note",
+            "support.escalate",
+            "subscription.view",
+            "report.view",
+            "decision.view",
+        }
+    ),
+    "support_agent": frozenset(
+        {
+            "organization.view",
+            "member.view",
+            "support.view",
+            "support.create",
+            "support.assign",
+            "support.respond",
+            "support.internal_note",
+            "support.escalate",
+            "support.resolve",
+            "support.close",
+            "support.audit.view",
+            "customer_success.view",
+            "customer_health.view",
         }
     ),
 }

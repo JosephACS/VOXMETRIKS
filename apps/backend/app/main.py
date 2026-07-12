@@ -81,6 +81,10 @@ from app.packages.compliance.infrastructure.schema import ensure_compliance_tabl
 from app.packages.compliance.presentation.router import compliance_router
 from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
 from app.packages.platform_ops.presentation.router import platform_ops_router
+from app.packages.reporting.infrastructure.schema import ensure_reporting_tables
+from app.packages.reporting.presentation.router import business_decisions_router, reports_router
+from app.packages.customer_success.infrastructure.schema import ensure_customer_success_tables
+from app.packages.customer_success.presentation.router import customer_success_router, support_router
 
 setup_logging()
 logger = get_logger("voxmetrik.main")
@@ -135,6 +139,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 ensure_compliance_tables(conn)
                 # Spec 027: Platform Operations and Integrations
                 ensure_platform_ops_tables(conn)
+                # Spec 024: Executive Reporting and Business Decisions
+                ensure_reporting_tables(conn)
+                # Spec 025: Customer Success and Support
+                ensure_customer_success_tables(conn)
                 try:
                     ensure_secondary_indexes(conn)
                     ensure_search_fold(conn)
@@ -244,6 +252,10 @@ def create_app() -> FastAPI:
     application.include_router(business_analytics_router, prefix="/api/v1")
     application.include_router(compliance_router, prefix="/api/v1")
     application.include_router(platform_ops_router, prefix="/api/v1")
+    application.include_router(reports_router, prefix="/api/v1")
+    application.include_router(business_decisions_router, prefix="/api/v1")
+    application.include_router(customer_success_router, prefix="/api/v1")
+    application.include_router(support_router, prefix="/api/v1")
 
     @application.get("/", tags=["Root"], summary="Service metadata")
     def root():
