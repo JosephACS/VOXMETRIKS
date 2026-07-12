@@ -8,15 +8,20 @@ import {
 } from '../models/campaigns.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="campaign-detail-page">
       <a routerLink="/campaigns">← Back to campaigns</a>
 
-      @if (loading) { <p>Loading…</p> }
+      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
       @else if (!orgId) { <p class="error">Select an organization context.</p> }
       @else if (campaign) {
         <h1>{{ campaign.name }}</h1>
@@ -31,15 +36,15 @@ import { OrganizationContextService } from '../../organizations/services/organiz
                 <p>Budget utilization: {{ roi.budget_utilization * 100 | number:'1.0-0' }}%</p>
               }
             } @else {
-              <p class="roi-unavailable">No disponible</p>
+              <p class="roi-unavailable">{{ 'common.notAvailable' | t:lang() }}</p>
               <p class="roi-reason">{{ roi.unavailable_reason || 'Insufficient data for monetary ROI' }}</p>
             }
             @if (roi.engagement_lift != null) {
               <p>Engagement (streams): {{ roi.engagement_lift | number }} — not monetary</p>
             }
           } @else {
-            <p class="roi-unavailable">No disponible — no snapshot yet</p>
-            <button type="button" (click)="computeRoi()" [disabled]="busy">Compute ROI</button>
+            <p class="roi-unavailable">{{ 'common.notAvailable' | t:lang() }} — no snapshot yet</p>
+            <button type="button" (click)="computeRoi()" [disabled]="busy">{{ 'campaigns.detail.roi' | t:lang() }}</button>
           }
         </section>
 
@@ -51,7 +56,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
             <form [formGroup]="budgetForm" (ngSubmit)="setBudget()">
               <input formControlName="amount" type="number" placeholder="Amount" />
               <input formControlName="currency" placeholder="Currency" />
-              <button type="submit" [disabled]="budgetForm.invalid || busy">Set Budget</button>
+              <button type="submit" [disabled]="budgetForm.invalid || busy">{{ 'campaigns.detail.budget' | t:lang() }}</button>
             </form>
           }
         </section>
@@ -77,7 +82,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         <section>
           <h2>Approvals</h2>
           <div class="actions">
-            <button type="button" (click)="requestApproval()" [disabled]="busy">Request approval</button>
+            <button type="button" (click)="requestApproval()" [disabled]="busy">{{ 'campaigns.detail.requestApproval' | t:lang() }}</button>
           </div>
           @if (approvals.length === 0) { <p>No approval requests.</p> }
           @else {
@@ -104,6 +109,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class CampaignDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CampaignsApiService);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);

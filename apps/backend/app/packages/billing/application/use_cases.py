@@ -438,7 +438,49 @@ class InvoiceUseCases:
             new_values={"invoice_number": inv_num, "currency": currency},
             request_id=request_id,
         )
+        if subscription_id is not None:
+            try:
+                self.add_subscription_plan_item(
+                    iid,
+                    actor_user_id=actor_user_id,
+                    organization_id=organization_id,
+                    subscription_id=subscription_id,
+                    period_start=period_start,
+                    period_end=period_end,
+                )
+            except Exception:
+                pass
         return inv
+
+    def add_subscription_plan_item(
+        self,
+        invoice_id: int,
+        *,
+        actor_user_id: int,
+        organization_id: int,
+        subscription_id: int,
+        period_start: Optional[date] = None,
+        period_end: Optional[date] = None,
+    ) -> Optional[InvoiceItem]:
+        """Add a line item describing plan + billing period for new invoices."""
+        from app.packages.subscriptions.application.commercial_catalog import (
+            subscription_line_description,
+        )
+
+        line = subscription_line_description(self._conn, subscription_id=subscription_id)
+        if not line:
+            return None
+        description, unit_price, _currency = line
+        return self.add_item(
+            invoice_id,
+            actor_user_id=actor_user_id,
+            organization_id=organization_id,
+            description=description,
+            quantity=Decimal("1"),
+            unit_price=unit_price,
+            period_start=period_start,
+            period_end=period_end,
+        )
 
     def add_item(
         self,
@@ -520,6 +562,26 @@ class InvoiceUseCases:
             new_values={"status": "issued", "total": str(inv.total)},
             request_id=request_id,
         )
+        try:
+            from app.core.money_format import format_due_date, format_money
+            from app.packages.platform_ops.application.notify import billing_contact_email, notify_billing
+            notify_billing(
+                self._conn,
+                to_email=billing_contact_email(self._conn, organization_id),
+                organization_id=organization_id,
+                template_code="billing.invoice_issued",
+                subject="Factura emitida",
+                title="Factura emitida",
+                paragraphs=[
+                    f"Se emitio la factura {inv.invoice_number}.",
+                    f"Total: {format_money(inv.total, inv.currency)}",
+                    f"Vence: {format_due_date(inv.due_date)}",
+                ],
+                related_type="invoice",
+                related_id=str(invoice_id),
+            )
+        except Exception:
+            pass
         return inv
 
     def void(
@@ -850,6 +912,45 @@ class PaymentAttemptUseCases:
             new_values={"status": "succeeded", "payment_id": pay_id},
             request_id=request_id,
         )
+        try:
+            from app.core.money_format import format_money
+            from app.packages.billing.application.dunning import DunningUseCases
+            from app.packages.platform_ops.application.notify import billing_contact_email, notify_billing
+            DunningUseCases(self._conn).mark_recovered(
+                organization_id=organization_id,
+                invoice_id=attempt.invoice_id,
+                actor_user_id=actor_user_id,
+                request_id=request_id,
+            )
+            contact = billing_contact_email(self._conn, organization_id)
+            notify_billing(
+                self._conn,
+                to_email=contact,
+                organization_id=organization_id,
+                template_code="billing.payment_confirmed",
+                subject="Pago confirmado (simulado)",
+                title="Pago confirmado",
+                paragraphs=[
+                    "[PAGO SIMULADO] Se registro un pago academico mock.",
+                    f"Monto: {format_money(attempt.amount, attempt.currency)}",
+                    "El acceso se recupera cuando la factura queda pagada.",
+                ],
+                related_type="payment_attempt",
+                related_id=str(attempt_id),
+            )
+            notify_billing(
+                self._conn,
+                to_email=contact,
+                organization_id=organization_id,
+                template_code="billing.access_recovered",
+                subject="Acceso recuperado",
+                title="Acceso recuperado",
+                paragraphs=["La mora quedo recuperada tras el pago simulado."],
+                related_type="payment_attempt",
+                related_id=str(attempt_id),
+            )
+        except Exception:
+            pass
         return updated_attempt
 
     def fail(
@@ -896,7 +997,149 @@ class PaymentAttemptUseCases:
                 failure_reason=sanitized,
                 request_id=request_id,
             )
+        try:
+            from app.packages.platform_ops.application.notify import billing_contact_email, notify_billing
+            contact = billing_contact_email(self._conn, organization_id)
+            notify_billing(
+                self._conn,
+                to_email=contact,
+                organization_id=organization_id,
+                template_code="billing.payment_rejected",
+                subject="Pago rechazado (simulado)",
+                title="Pago rechazado",
+                paragraphs=[
+                    "[PAGO SIMULADO] El intento de pago fue rechazado.",
+                    f"Motivo: {sanitized}",
+                ],
+                related_type="payment_attempt",
+                related_id=str(attempt_id),
+            )
+            if open_dunning:
+                notify_billing(
+                    self._conn,
+                    to_email=contact,
+                    organization_id=organization_id,
+                    template_code="billing.invoice_past_due",
+                    subject="Factura vencida / mora",
+                    title="Factura en mora",
+                    paragraphs=[
+                        "La factura paso a past_due y se abrio dunning academico.",
+                        "Se programara un reintento simulado.",
+                    ],
+                    related_type="invoice",
+                    related_id=str(attempt.invoice_id),
+                )
+                notify_billing(
+                    self._conn,
+                    to_email=contact,
+                    organization_id=organization_id,
+                    template_code="billing.next_retry",
+                    subject="Proximo reintento de cobro",
+                    title="Proximo reintento",
+                    paragraphs=["Se programo el siguiente reintento de cobro (simulado)."],
+                    related_type="invoice",
+                    related_id=str(attempt.invoice_id),
+                )
+        except Exception:
+            pass
         return updated
+
+
+    def simulate_mock(
+        self,
+        attempt_id: int,
+        *,
+        scenario: str,
+        actor_user_id: int,
+        organization_id: int,
+        request_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Apply a demo mock scenario to an attempt (dev only). Never real money."""
+        import json
+        from app.core.config import get_settings
+        from app.packages.billing.domain.providers import (
+            MockPaymentProvider,
+            ProviderChargeRequest,
+            event_payload_dict,
+        )
+
+        if get_settings().is_production:
+            raise ValidationError("Mock payment scenarios disabled in production")
+        attempt = self._get_or_raise_for_org(attempt_id, organization_id)
+        if attempt.provider_code != self.MOCK_PROVIDER:
+            raise ValidationError("simulate_mock only valid for academic_mock provider")
+        if attempt.status not in ("created", "processing", "failed"):
+            raise InvalidTransitionError(
+                f"Cannot simulate attempt in status={attempt.status}"
+            )
+
+        provider = MockPaymentProvider()
+        req = ProviderChargeRequest(
+            amount=attempt.amount,
+            currency=attempt.currency,
+            idempotency_key=attempt.idempotency_key,
+            invoice_id=attempt.invoice_id,
+            organization_id=organization_id,
+            scenario=scenario,
+            payment_attempt_id=attempt_id,
+        )
+        result, event = provider.simulate(req, scenario)
+
+        ProviderEventUseCases(self._conn).process(
+            provider_code=self.MOCK_PROVIDER,
+            provider_event_id=event.provider_event_id,
+            event_type=event.event_type,
+            payload=json.dumps(event_payload_dict(event)),
+        )
+
+        scenario_n = (scenario or "succeeded").strip().lower()
+        if scenario_n in {"succeeded", "duplicate_event", "partial_payment"}:
+            if attempt.status in ("created", "processing"):
+                updated = self.confirm_mock(
+                    attempt_id,
+                    actor_user_id=actor_user_id,
+                    organization_id=organization_id,
+                    request_id=request_id,
+                )
+            else:
+                updated = self._get_or_raise(attempt_id)
+        elif scenario_n in {"declined", "insufficient_funds", "invalid_method", "timeout"}:
+            if attempt.status in ("created", "processing"):
+                updated = self.fail(
+                    attempt_id,
+                    actor_user_id=actor_user_id,
+                    organization_id=organization_id,
+                    failure_reason=result.error_code or scenario_n,
+                    request_id=request_id,
+                )
+            else:
+                updated = self._get_or_raise(attempt_id)
+        elif scenario_n == "processing":
+            now = _now()
+            self._conn.execute(
+                "UPDATE app_payment_attempt SET status='processing', provider_attempt_id=?, updated_at=? WHERE id=?",
+                [result.provider_attempt_id, now, attempt_id],
+            )
+            updated = self._get_or_raise(attempt_id)
+        elif scenario_n == "canceled":
+            if attempt.status == "created":
+                updated = self.cancel(
+                    attempt_id,
+                    actor_user_id=actor_user_id,
+                    organization_id=organization_id,
+                )
+            else:
+                updated = self._get_or_raise(attempt_id)
+        else:
+            updated = self._get_or_raise(attempt_id)
+
+        return {
+            "attempt": updated,
+            "scenario": scenario_n,
+            "labeled_mock": True,
+            "provider_event": event_payload_dict(event),
+            "message": result.message,
+        }
 
     def cancel(
         self,

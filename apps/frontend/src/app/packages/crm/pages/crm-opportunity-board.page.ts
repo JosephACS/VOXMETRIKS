@@ -6,14 +6,19 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Opportunity, OPPORTUNITY_STAGES, OpportunityCreateRequest, Prospect } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-opportunity-board-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-opportunity-board-page">
-      <h1>Pipeline de oportunidades</h1>
+      <h1>{{ 'crm.opportunities.board' | t:lang() }}</h1>
       <p class="lede">Vista kanban por etapa.</p>
 
       @if (error()) {
@@ -68,7 +73,7 @@ import { Opportunity, OPPORTUNITY_STAGES, OpportunityCreateRequest, Prospect } f
             <div class="crm-board-col">
               <h3>{{ stage }} <span class="crm-muted">({{ byStage(stage).length }})</span></h3>
               @if (!byStage(stage).length) {
-                <p class="crm-muted" style="font-size:0.78rem">Sin oportunidades</p>
+                <p class="crm-muted" style="font-size:0.78rem">{{ 'crm.opportunities.empty' | t:lang() }}</p>
               }
               @for (opp of byStage(stage); track opp.id) {
                 <a class="crm-board-item" [routerLink]="['/crm/opportunities', opp.id]">
@@ -92,6 +97,9 @@ import { Opportunity, OPPORTUNITY_STAGES, OpportunityCreateRequest, Prospect } f
   `,
 })
 export class CrmOpportunityBoardPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
 
   readonly stages = [...OPPORTUNITY_STAGES];

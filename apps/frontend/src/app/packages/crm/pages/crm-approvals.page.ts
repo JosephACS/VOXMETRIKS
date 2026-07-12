@@ -5,14 +5,19 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { ApprovalRequest } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-approvals-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-approvals-page">
-      <h1>Aprobaciones pendientes</h1>
+      <h1>{{ 'crm.approvals.title' | t:lang() }}</h1>
       <p class="lede">Solicitudes de aprobación de descuento sobre cotizaciones.</p>
 
       @if (error()) {
@@ -23,7 +28,7 @@ import { ApprovalRequest } from '../models/crm.models';
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!items().length) {
         <div class="crm-card"><p class="crm-muted">No hay solicitudes de aprobación pendientes.</p></div>
       } @else {
@@ -84,6 +89,9 @@ import { ApprovalRequest } from '../models/crm.models';
   `,
 })
 export class CrmApprovalsPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
 
   page = 1;

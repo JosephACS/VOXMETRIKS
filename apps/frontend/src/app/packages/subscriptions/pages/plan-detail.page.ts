@@ -5,10 +5,15 @@ import { switchMap } from 'rxjs';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { Plan, PlanPrice, PlanFeature } from '../models/subscriptions.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-plan-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     @if (plan) {
       <div class="plan-detail">
@@ -27,15 +32,15 @@ import { Plan, PlanPrice, PlanFeature } from '../models/subscriptions.models';
         </div>
 
         <section class="plan-prices">
-          <h2 i18n="subscriptions.plan.prices">Precios</h2>
+          <h2>Precios</h2>
           @if (prices.length > 0) {
             <table>
               <thead>
                 <tr>
-                  <th i18n="subscriptions.price.currency">Moneda</th>
-                  <th i18n="subscriptions.price.period">Periodo</th>
-                  <th i18n="subscriptions.price.amount">Monto</th>
-                  <th i18n="subscriptions.price.status">Estado</th>
+                  <th>Moneda</th>
+                  <th>Periodo</th>
+                  <th>Monto</th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -50,12 +55,12 @@ import { Plan, PlanPrice, PlanFeature } from '../models/subscriptions.models';
               </tbody>
             </table>
           } @else {
-            <p i18n="subscriptions.prices.empty">Sin precios configurados.</p>
+            <p>{{ 'subscriptions.planDetail.noPrices' | t:lang() }}.</p>
           }
         </section>
 
         <section class="plan-features">
-          <h2 i18n="subscriptions.plan.features">Características</h2>
+          <h2>Características</h2>
           @if (features.length > 0) {
             <ul>
               @for (f of features; track f.feature_code) {
@@ -71,14 +76,14 @@ import { Plan, PlanPrice, PlanFeature } from '../models/subscriptions.models';
               }
             </ul>
           } @else {
-            <p i18n="subscriptions.features.empty">Sin características configuradas.</p>
+            <p>Sin características configuradas.</p>
           }
         </section>
       </div>
     }
 
     @if (loading) {
-      <div i18n="common.loading">Cargando...</div>
+      <div>{{ 'common.loading' | t:lang() }}</div>
     }
     @if (error) {
       <div class="error">{{ error }}</div>
@@ -86,6 +91,9 @@ import { Plan, PlanPrice, PlanFeature } from '../models/subscriptions.models';
   `,
 })
 export class PlanDetailPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(SubscriptionsApiService);
   private readonly route = inject(ActivatedRoute);
 

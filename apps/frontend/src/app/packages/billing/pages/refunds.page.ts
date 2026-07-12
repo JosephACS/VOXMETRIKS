@@ -5,13 +5,18 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Refund } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-refunds',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="refunds-page">
-      <h1>Refunds</h1>
+      <h1>{{ 'billing.refunds.title' | t:lang() }}</h1>
       <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
         {{ showForm ? 'Cancel' : 'New Refund' }}
       </button>
@@ -20,7 +25,7 @@ import { Refund } from '../models/billing.models';
           <input type="number" formControlName="payment_id" placeholder="Payment ID" class="input">
           <input type="number" formControlName="amount" placeholder="Amount" step="0.01" class="input">
           <input formControlName="reason" placeholder="Reason (optional)" class="input">
-          <button type="submit" class="btn btn--primary" [disabled]="form.invalid">Issue Refund</button>
+          <button type="submit" class="btn btn--primary" [disabled]="form.invalid">{{ 'billing.refunds.issue' | t:lang() }}</button>
         </form>
       }
       @if (refunds.length) {
@@ -40,7 +45,7 @@ import { Refund } from '../models/billing.models';
           </tbody>
         </table>
       } @else {
-        <p class="empty-state">No refunds issued.</p>
+        <p class="empty-state">{{ 'billing.refunds.empty' | t:lang() }}</p>
       }
       @if (error) {
         <p class="error">{{ error }}</p>
@@ -49,6 +54,9 @@ import { Refund } from '../models/billing.models';
   `,
 })
 export class RefundsPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
@@ -67,7 +75,7 @@ export class RefundsPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loadRefunds();

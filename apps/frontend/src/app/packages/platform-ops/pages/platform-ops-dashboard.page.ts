@@ -3,13 +3,18 @@ import { CommonModule } from '@angular/common';
 import { PlatformOpsApiService } from '../services/platform-ops-api.service';
 import { BackupRecord, BackgroundJob, FeatureFlag, HealthStatus, ProviderConfig } from '../models/platform-ops.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-platform-ops-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="platform-ops-dashboard">
-      <h1>Platform Operations</h1>
+      <h1>{{ 'platformOps.dashboard.title' | t:lang() }}</h1>
       <p class="subtitle">Academic/local ops console — not production HA. Secrets redacted in UI.</p>
 
       @if (health) {
@@ -22,7 +27,7 @@ import { BackupRecord, BackgroundJob, FeatureFlag, HealthStatus, ProviderConfig 
 
       <section>
         <h2>Providers</h2>
-        @if (providers.length === 0) { <p>No providers configured.</p> }
+        @if (providers.length === 0) { <p>{{ 'platformOps.dashboard.noProviders' | t:lang() }}</p> }
         @else {
           <table>
             <thead><tr><th>Code</th><th>Name</th><th>Mock</th><th>Secret</th></tr></thead>
@@ -69,6 +74,9 @@ import { BackupRecord, BackgroundJob, FeatureFlag, HealthStatus, ProviderConfig 
   `,
 })
 export class PlatformOpsDashboardPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(PlatformOpsApiService);
 
   health: HealthStatus | null = null;

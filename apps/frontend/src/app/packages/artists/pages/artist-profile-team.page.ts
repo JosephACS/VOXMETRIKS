@@ -6,14 +6,19 @@ import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistAssignment, ArtistTeamMember } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-artist-profile-team',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="artist-profile-team-page">
       <a [routerLink]="['/artist-profiles', artistId]">&larr; Back to profile</a>
-      <h1>Team & Assignments</h1>
+      <h1>{{ 'artists.team.title' | t:lang() }}</h1>
 
       <section class="assignments">
         <h2>Manager Assignments</h2>
@@ -74,6 +79,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class ArtistProfileTeamPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ArtistsApiService);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);

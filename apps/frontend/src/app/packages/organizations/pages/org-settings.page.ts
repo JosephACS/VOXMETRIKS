@@ -7,18 +7,23 @@ import { Organization } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-settings-page">
-      <h1>Perfil de organización</h1>
+      <h1>{{ 'organizations.settings.title' | t:lang() }}</h1>
       <p class="lede">Consulta y actualiza campos autorizados. El slug no es editable.</p>
 
       @if (loading()) {
-        <p class="org-muted">Cargando…</p>
+        <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
       }
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
@@ -67,13 +72,13 @@ import { OrganizationContextService } from '../services/organization-context.ser
             @if (canUpdate()) {
               <button class="org-btn" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
             }
-            <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', o.id, 'members']">Miembros</a>
+            <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', o.id, 'members']">{{ 'organizations.members.title' | t:lang() }}</a>
           </div>
         </form>
 
         @if (canClose() && o.status === 'active') {
           <div class="org-card">
-            <h2>Cerrar organización</h2>
+            <h2>{{ 'organizations.settings.closeOrg' | t:lang() }}</h2>
             <p class="org-muted">Acción irreversible a nivel lógico. Requiere confirmación explícita.</p>
             <label>
               Escribe CLOSE para confirmar
@@ -89,7 +94,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
               [disabled]="closeConfirm !== 'CLOSE' || closing()"
               (click)="closeOrg()"
             >
-              Cerrar organización
+              {{ 'organizations.settings.closeOrg' | t:lang() }}
             </button>
           </div>
         }
@@ -98,6 +103,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgSettingsPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   private readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);

@@ -5,15 +5,20 @@ import { BusinessAnalyticsApiService } from '../services/business-analytics-api.
 import { BusinessAlert } from '../models/business-analytics.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-biz-alerts',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="biz-alerts">
       <a routerLink="/business-analytics">← Dashboard</a>
-      <h1>Business Alerts</h1>
-      @if (alerts.length === 0) { <p>No alerts.</p> }
+      <h1>{{ 'businessAnalytics.alerts.title' | t:lang() }}</h1>
+      @if (alerts.length === 0) { <p>{{ 'businessAnalytics.alerts.empty' | t:lang() }}</p> }
       @else {
         <ul>
           @for (a of alerts; track a.id) {
@@ -25,6 +30,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class BizAlertsPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BusinessAnalyticsApiService);
   private orgCtx = inject(OrganizationContextService);
   alerts: BusinessAlert[] = [];

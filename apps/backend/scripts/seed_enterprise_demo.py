@@ -136,34 +136,28 @@ def seed_enterprise_demo() -> dict[str, object]:
 
         assert org_id is not None
 
-        # ── Plan + subscription ───────────────────────────────────────────
+        # ── Plan + subscription (commercial Professional $99 monthly) ─────
         plan_id: int | None = None
+        price_id: int | None = None
         if _table_exists(conn, "app_plan"):
+            from app.packages.subscriptions.application.commercial_catalog import (
+                ensure_commercial_catalog,
+                get_active_price_id,
+            )
+
+            ensure_commercial_catalog(conn)
             plan_row = conn.execute(
-                "SELECT id FROM app_plan WHERE code = 'demo-enterprise-starter'"
+                "SELECT id FROM app_plan WHERE code = 'professional' AND status = 'active'"
             ).fetchone()
             if plan_row:
                 plan_id = int(plan_row[0])
-            else:
-                plan_id = _next_id(conn, "app_plan")
-                conn.execute(
-                    """
-                    INSERT INTO app_plan
-                        (id, code, display_name, description, status, trial_days_default,
-                         sort_order, created_at, updated_at)
-                    VALUES (?, 'demo-enterprise-starter', 'Demo Enterprise Starter',
-                            '[SYNTHETIC] Academic demo plan — not a commercial offer.',
-                            'active', 14, 0, ?, ?)
-                    """,
-                    [plan_id, now, now],
-                )
             result["plan_id"] = plan_id
-            if _table_exists(conn, "app_plan_price"):
-                existing_price = conn.execute(
-                    "SELECT id, amount FROM app_plan_price WHERE plan_id = ? AND currency = 'USD' LIMIT 1",
-                    [plan_id],
-                ).fetchone()
-                if not existing_price:
+            if plan_id and _table_exists(conn, "app_plan_price"):
+                price_id = get_active_price_id(
+                    conn, plan_code="professional", billing_period="monthly", currency="USD"
+                )
+                if price_id is None:
+                    # Fallback create should not be needed after ensure_commercial_catalog
                     price_id = _next_id(conn, "app_plan_price")
                     conn.execute(
                         """
@@ -173,14 +167,7 @@ def seed_enterprise_demo() -> dict[str, object]:
                         """,
                         [price_id, plan_id, now, now],
                     )
-                    result["plan_price_id"] = price_id
-                else:
-                    result["plan_price_id"] = int(existing_price[0])
-                    if float(existing_price[1] or 0) <= 0:
-                        conn.execute(
-                            "UPDATE app_plan_price SET amount = 99.00, updated_at = ? WHERE id = ?",
-                            [now, int(existing_price[0])],
-                        )
+                result["plan_price_id"] = price_id
         else:
             result["skipped"].append("app_plan")
 

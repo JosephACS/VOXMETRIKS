@@ -5,37 +5,40 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-subscription-cancel',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="subscription-cancel">
-      <h1 i18n="subscriptions.cancel.title">Cancelar Suscripción</h1>
+      <h1>{{ 'subscriptions.cancel.title' | t:lang() }}</h1>
 
-      <p class="warning" i18n="subscriptions.cancel.warning">
+      <p class="warning">
         ¿Estás seguro que deseas cancelar tu suscripción?
       </p>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-field">
-          <label i18n="subscriptions.cancel.mode">Modo</label>
+          <label>Modo</label>
           <select formControlName="mode">
-            <option value="period_end" i18n="subscriptions.cancel.periodEnd">Al final del periodo</option>
-            <option value="immediate" i18n="subscriptions.cancel.immediate">Inmediato</option>
+            <option value="period_end">Al final del periodo</option>
+            <option value="immediate">Inmediato</option>
           </select>
         </div>
 
         <div class="form-field">
-          <label i18n="subscriptions.cancel.reason">Razón (opcional)</label>
+          <label>Razón (opcional)</label>
           <input formControlName="reason" />
         </div>
 
         <div class="form-actions">
-          <button type="submit" [disabled]="saving" class="btn btn--danger"
-                  i18n="subscriptions.cancel.confirm">Confirmar cancelación</button>
-          <button type="button" (click)="goBack()" class="btn"
-                  i18n="common.cancel">Volver</button>
+          <button type="submit" [disabled]="saving" class="btn btn--danger">Confirmar cancelación</button>
+          <button type="button" (click)="goBack()" class="btn">Volver</button>
         </div>
 
         @if (error) {
@@ -46,6 +49,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class SubscriptionCancelPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(SubscriptionsApiService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
@@ -65,7 +71,7 @@ export class SubscriptionCancelPageComponent implements OnInit {
   ngOnInit(): void {
     this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.organizationId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));

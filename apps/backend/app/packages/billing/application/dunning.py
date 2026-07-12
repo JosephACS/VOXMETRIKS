@@ -332,4 +332,22 @@ class DunningUseCases:
             target_id=str(dunning_id), actor_user_id=actor_user_id, organization_id=organization_id,
             request_id=request_id,
         )
+        try:
+            from app.packages.platform_ops.application.notify import billing_contact_email, notify_billing
+            notify_billing(
+                self._conn,
+                to_email=billing_contact_email(self._conn, organization_id),
+                organization_id=organization_id,
+                template_code="billing.access_limited",
+                subject="Acceso limitado por mora",
+                title="Acceso limitado / bloqueado",
+                paragraphs=[
+                    "El periodo de gracia finalizo. El acceso queda limitado/bloqueado hasta regularizar el pago.",
+                    "[PAGO SIMULADO] Este aviso es academico.",
+                ],
+                related_type="billing_dunning",
+                related_id=str(dunning_id),
+            )
+        except Exception:
+            pass
         return self._get(dunning_id, organization_id)

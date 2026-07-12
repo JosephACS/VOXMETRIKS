@@ -5,15 +5,20 @@ import { BusinessAnalyticsApiService } from '../services/business-analytics-api.
 import { KpiDefinition } from '../models/business-analytics.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-kpi-explorer',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="kpi-explorer">
       <a routerLink="/business-analytics">← Dashboard</a>
-      <h1>KPI Explorer</h1>
-      @if (loading) { <p>Loading…</p> }
+      <h1>{{ 'businessAnalytics.kpis.title' | t:lang() }}</h1>
+      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
       @else {
         <table>
           <thead><tr><th>Code</th><th>Name</th><th>Formula</th><th>Source</th><th>Null handling</th></tr></thead>
@@ -34,6 +39,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class KpiExplorerPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BusinessAnalyticsApiService);
   private orgCtx = inject(OrganizationContextService);
   kpis: KpiDefinition[] = [];

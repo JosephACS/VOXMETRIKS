@@ -7,14 +7,19 @@ import { OrganizationsApiError, OrganizationsApiService } from '../services/orga
 import { OrganizationContextService } from '../services/organization-context.service';
 import { AuthService } from '../../../core/services/auth.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-accept-invite-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-accept-invite-page">
-      <h1>Aceptar invitación</h1>
+      <h1>{{ 'organizations.acceptInvite.title' | t:lang() }}</h1>
       <p class="lede">
         Debes estar autenticado. El token solo se conserva en memoria durante este flujo y no se guarda en localStorage.
       </p>
@@ -54,6 +59,9 @@ import { AuthService } from '../../../core/services/auth.service';
   `,
 })
 export class OrgAcceptInvitePageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   private readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);

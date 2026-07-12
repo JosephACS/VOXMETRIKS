@@ -4,19 +4,24 @@ import { RouterLink } from '@angular/router';
 import { BusinessAnalyticsApiService } from '../services/business-analytics-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-biz-quality',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page biz-quality">
       <a routerLink="/business-analytics">← Dashboard</a>
-      <h1>Data Quality</h1>
+      <h1>{{ 'businessAnalytics.quality.title' | t:lang() }}</h1>
       <p class="subtitle">Warehouse / KPI quality checks — sources labeled.</p>
       @if (!orgId) {
         <p class="error">Select an organization context.</p>
       } @else if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (error) {
         <p class="error">{{ error }}</p>
       } @else if (results.length === 0) {
@@ -41,6 +46,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class BizQualityPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BusinessAnalyticsApiService);
   private orgCtx = inject(OrganizationContextService);
   orgId: number | null = null;

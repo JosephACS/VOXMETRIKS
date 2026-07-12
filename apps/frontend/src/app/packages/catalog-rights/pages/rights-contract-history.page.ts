@@ -5,23 +5,28 @@ import { CatalogRightsApiService } from '../services/catalog-rights-api.service'
 import { RightsStatusHistoryEntry } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-rights-contract-history',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="rights-contract-history-page">
       <a [routerLink]="['/catalog-rights/contracts', contractId]">&larr; Back to contract</a>
-      <h1>Contract #{{ contractId }} — Status History</h1>
+      <h1>Contract #{{ contractId }} — {{ 'artists.history.title' | t:lang() }}</h1>
 
       @if (error) {
         <p class="error">{{ error }}</p>
       }
 
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (history.length === 0) {
-        <p>No status changes recorded yet.</p>
+        <p>{{ 'artists.history.empty' | t:lang() }}</p>
       } @else {
         <ul class="timeline">
           @for (h of history; track h.id) {
@@ -40,6 +45,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class RightsContractHistoryPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CatalogRightsApiService);
   private route = inject(ActivatedRoute);
   private orgCtx = inject(OrganizationContextService);

@@ -11,25 +11,30 @@ import { CrmApiService } from '../../crm/services/crm-api.service';
 import { SubscriptionsApiService } from '../../subscriptions/services/subscriptions-api.service';
 import { CustomerSuccessApiService } from '../../customer-success/services/customer-success-api.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-biz-analytics-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="biz-analytics-dashboard">
-      <h1>Enterprise Analytics</h1>
+      <h1>{{ 'businessAnalytics.dashboard.title' | t:lang() }}</h1>
       <p class="subtitle">
-        Warehouse KPIs plus commercial counts from live APIs. Null values show as No disponible — never invented.
+        Warehouse KPIs plus commercial counts from live APIs. Null values show as {{ 'common.notAvailable' | t:lang() }} — never invented.
       </p>
       <nav class="subnav">
         <a routerLink="/business-analytics">Dashboard</a> |
-        <a routerLink="/business-analytics/kpis">KPI Explorer</a> |
+        <a routerLink="/business-analytics/kpis">{{ 'businessAnalytics.kpis.title' | t:lang() }}</a> |
         <a routerLink="/business-analytics/alerts">Alerts</a> |
         <a routerLink="/business-analytics/recommendations">Recommendations</a> |
-        <a routerLink="/business-analytics/quality">Data Quality</a>
+        <a routerLink="/business-analytics/quality">{{ 'businessAnalytics.quality.title' | t:lang() }}</a>
       </nav>
 
-      @if (loading) { <p>Loading…</p> }
+      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
       @else {
         <section class="commercial-summary">
           <h2>Commercial &amp; CS snapshot</h2>
@@ -44,20 +49,20 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
               <p class="kpi-value">{{ fmt(commercial.activeSubscriptions) }}</p>
             </div>
             <div class="kpi-card">
-              <h3>Invoices (total listed)</h3>
+              <h3>{{ 'billing.invoices.title' | t:lang() }} (total listed)</h3>
               <p class="kpi-value">{{ fmt(commercial.invoiceCount) }}</p>
             </div>
             <div class="kpi-card">
-              <h3>Invoices past due</h3>
+              <h3>{{ 'billing.invoices.title' | t:lang() }} past due</h3>
               <p class="kpi-value">{{ fmt(commercial.pastDueCount) }}</p>
             </div>
             <div class="kpi-card">
               <h3>Amount due (sum listed)</h3>
-              <p class="kpi-value">{{ commercial.amountDueSum == null ? 'No disponible' : (commercial.amountDueSum | number:'1.2-2') }}</p>
+              <p class="kpi-value">{{ commercial.amountDueSum == null ? ('common.notAvailable' | t:lang()) : (commercial.amountDueSum | number:'1.2-2') }}</p>
             </div>
             <div class="kpi-card">
               <h3>Amount paid (sum listed)</h3>
-              <p class="kpi-value">{{ commercial.amountPaidSum == null ? 'No disponible' : (commercial.amountPaidSum | number:'1.2-2') }}</p>
+              <p class="kpi-value">{{ commercial.amountPaidSum == null ? ('common.notAvailable' | t:lang()) : (commercial.amountPaidSum | number:'1.2-2') }}</p>
             </div>
             <div class="kpi-card">
               <h3>Active MRR</h3>
@@ -68,7 +73,7 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
                 </p>
                 <p class="kpi-source">{{ overview!.kpis['active_mrr'].source_label }}</p>
               } @else {
-                <p class="kpi-null">No disponible</p>
+                <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
                 <p class="kpi-source">{{ overview?.kpis?.['active_mrr']?.quality_status || 'subscriptions:plan_price' }}</p>
               }
             </div>
@@ -80,7 +85,7 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
                   {{ recurring?.primary_currency || '' }}
                 </p>
               } @else {
-                <p class="kpi-null">No disponible</p>
+                <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
               }
             </div>
             <div class="kpi-card">
@@ -88,7 +93,7 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
               @if (overview?.kpis?.['past_due_mrr']?.value != null) {
                 <p class="kpi-value">{{ overview!.kpis['past_due_mrr'].value | number:'1.2-2' }}</p>
               } @else {
-                <p class="kpi-null">No disponible</p>
+                <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
               }
               <p class="kpi-source">Métrica separada — no incluida en Active MRR</p>
             </div>
@@ -101,7 +106,7 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
 
         @if (overview) {
           <h2>Warehouse KPI catalog</h2>
-          <p>Period: {{ overview.period || 'No disponible' }}</p>
+          <p>Period: {{ overview.period || ('common.notAvailable' | t:lang()) }}</p>
           <div class="kpi-grid">
             @for (entry of kpiEntries; track entry.code) {
               <div class="kpi-card">
@@ -109,9 +114,9 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
                 @if (entry.data.value != null) {
                   <p class="kpi-value">{{ entry.data.value | number }}</p>
                 } @else {
-                  <p class="kpi-null">No disponible ({{ entry.data.quality_status || 'null' }})</p>
+                  <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }} ({{ entry.data.quality_status || 'null' }})</p>
                 }
-                <p class="kpi-source">{{ entry.data.source_label || 'No disponible' }}</p>
+                <p class="kpi-source">{{ entry.data.source_label || ('common.notAvailable' | t:lang()) }}</p>
                 @if (entry.data.is_synthetic) { <span class="badge">synthetic</span> }
               </div>
             }
@@ -123,6 +128,9 @@ import { CustomerSuccessApiService } from '../../customer-success/services/custo
   `,
 })
 export class BizAnalyticsDashboardPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BusinessAnalyticsApiService);
   private billing = inject(BillingApiService);
   private crm = inject(CrmApiService);
@@ -161,7 +169,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
 
   load(): void {
     const orgId = this.orgCtx.activeOrganization()?.id;
-    if (!orgId) { this.error = 'Select an organization'; return; }
+    if (!orgId) { this.error = this.i18n.t('common.orgRequired'); return; }
     this.loading = true;
     this.error = null;
 

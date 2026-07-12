@@ -4,13 +4,18 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Payment } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-reconciliation',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="reconciliation-page">
-      <h1>Reconciliation</h1>
+      <h1>{{ 'billing.reconciliation.title' | t:lang() }}</h1>
       <p class="subtitle">Settle and reconcile payments from bank statements.</p>
       @if (payments.length) {
         <table class="data-table">
@@ -41,7 +46,7 @@ import { Payment } from '../models/billing.models';
           </tbody>
         </table>
       } @else {
-        <p class="empty-state">No payments to reconcile.</p>
+        <p class="empty-state">{{ 'billing.reconciliation.empty' | t:lang() }}</p>
       }
       @if (error) {
         <p class="error">{{ error }}</p>
@@ -50,6 +55,9 @@ import { Payment } from '../models/billing.models';
   `,
 })
 export class ReconciliationPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   payments: Payment[] = [];
@@ -59,7 +67,7 @@ export class ReconciliationPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loadPayments();

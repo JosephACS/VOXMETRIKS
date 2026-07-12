@@ -288,6 +288,19 @@ class PaymentAttemptFailRequest(BaseModel):
     failure_reason: Optional[str] = None
 
 
+class PaymentAttemptSimulateRequest(BaseModel):
+    """Demo-only mock outcome. Never real money."""
+    scenario: str
+
+
+class MockSimulateOut(BaseModel):
+    attempt: PaymentAttemptOut
+    scenario: str
+    labeled_mock: bool = True
+    message: str
+    provider_event: dict
+
+
 class DunningOut(BaseModel):
     id: int
     organization_id: int

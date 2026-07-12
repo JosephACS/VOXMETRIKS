@@ -57,6 +57,8 @@ from app.packages.billing.presentation.schemas import (
     PaymentAttemptFailRequest,
     PaymentAttemptOut,
     PaymentAttemptRetryRequest,
+    PaymentAttemptSimulateRequest,
+    MockSimulateOut,
     PaymentMethodCreateRequest,
     PaymentMethodOut,
     PaymentOut,
@@ -430,6 +432,43 @@ def fail_payment_attempt(
     except BillingError as e:
         raise_billing_http(e)
     return _attempt_out(attempt)
+
+
+@billing_router.post(
+    "/payment-attempts/{attempt_id}/simulate",
+    response_model=MockSimulateOut,
+    summary="Simulate mock payment outcome (demo only)",
+)
+def simulate_payment_attempt(
+    attempt_id: int,
+    body: PaymentAttemptSimulateRequest,
+    ctx: dict = Depends(require_org_billing_permission("payment.manage")),
+) -> MockSimulateOut:
+    """Demo/dev only. Never moves real money. Always labeled [MOCK]."""
+    from app.core.config import get_settings
+    from fastapi import HTTPException
+
+    if get_settings().is_production:
+        raise HTTPException(status_code=403, detail="Mock payment simulation disabled in production")
+    try:
+        result = PaymentAttemptUseCases(ctx["conn"]).simulate_mock(
+            attempt_id,
+            scenario=body.scenario,
+            actor_user_id=ctx["user_id"],
+            organization_id=ctx["organization_id"],
+            request_id=ctx["request_id"],
+        )
+    except BillingError as e:
+        raise_billing_http(e)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return MockSimulateOut(
+        attempt=_attempt_out(result["attempt"]),
+        scenario=result["scenario"],
+        labeled_mock=True,
+        message=result["message"],
+        provider_event=result["provider_event"],
+    )
 
 
 @billing_router.post("/payment-attempts/{attempt_id}/cancel", response_model=PaymentAttemptOut)

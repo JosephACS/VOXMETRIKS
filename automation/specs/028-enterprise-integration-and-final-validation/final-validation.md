@@ -1,34 +1,34 @@
-# Final Validation — Spec 028 (internal gap closure)
+# Final Validation — Spec 028 (email + mock payment integration)
 
 **Date:** 2026-07-12  
 **Outcome:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT**
 
-## Gate results (gap-closure pass)
+## Gate results
 
 | Gate | Result |
 |------|--------|
-| Backend `pytest tests/ -q` (isolated DuckDB, Uvicorn stopped) | **PASS** (full suite, exit 0) |
-| Golden path commercial S028 (CRM→plan→sub→invoice→dunning→recover→MRR→report→CS) | **PASS** |
+| Backend `pytest tests/ -q` (isolated DuckDB; console email forced in tests) | **PASS** (767) |
+| Email + mock payment tests (`test_email_and_mock_payments_s027.py`) | **PASS** (8) |
+| SMTP smoke (`scripts/email_smtp_smoke.py`) | **PASS** (real SMTP send) |
 | Backend startup + `/health` | **PASS** (`healthy`) |
-| Login → `/me` → logout → `/me` 401 | **PASS** (API) |
-| FE lint | **PASS** (0 errors, 15 historical warnings) |
+| Auth verification flow (register → code → verify) | **PASS** |
+| FE lint | **PASS** (0 errors, 15 warnings) |
 | FE unit | **PASS** (179) |
 | FE build | **PASS** (budget warnings accepted) |
-| Browser `/login` | **VERIFIED** |
-| Browser protected route without session | **VERIFIED** (`/organizations` → `/login`) |
-| Browser authenticated UI walkthrough | **PARTIAL** — credential auto-entry blocked in session; auth covered by API + golden path |
 | Playwright E2E | **NOT_VERIFIED** |
 | Docker | **NOT_VERIFIED** |
 
-## Internal gaps closed (no Spec 029)
+## Delivered
 
-1. **Suite isolation** — additive `schema_ready` safety; TestClient override cleanup; read-pool restore after isolated DB fixtures
-2. **CRM → plan → subscription** — CTA “Continuar con plan y suscripción”; explicit plan/price selection; no auto-subscribe; currency validation; duplicate guard
-3. **Dunning / mora** — `app_billing_dunning`; fail→past_due→grace→limited→blocked; mock retry with lock; recovery on allocate
-4. **MRR / ARR** — Active MRR (active only), Past-due MRR separate, ARR = MRR×12, no FX; dashboard KPIs
-5. **Golden Path** — extended commercial chain + negatives (dup sub, currency, cross-tenant, anon, concurrent retry)
+1. **EmailPort** — `EMAIL_PROVIDER=console|smtp|resend` (default console; pytest always console)
+2. Transactional emails — verification, resend, password reset, org invitation, billing/dunning, support, report ready
+3. Security — hashed codes/tokens, TTL, attempts, rate limit, generic responses, delivery log (`app_email_delivery`)
+4. **MockPaymentProvider** scenarios (demo/dev) + `POST /billing/payment-attempts/{id}/simulate`
+5. FE — verify email, resend countdown, password reset, “Pago simulado” simulator
 
 ## Specs
 
 **Present & closed:** 014–028  
-**OUT_OF_SCOPE:** Royalties/Payouts; Spec 029; real payment/email gateways; Docker/Playwright CI
+**OUT_OF_SCOPE:** Royalties/Payouts; Spec 029; real payment gateway; Docker/Playwright CI  
+**Email:** real SMTP smoke **PASS** — mock-email debt removed  
+**Payment:** remains labeled mock (never real money)

@@ -6,16 +6,21 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Prospect, ProspectCreateRequest } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
 
 @Component({
   selector: 'app-crm-prospects-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-prospects-list-page">
-      <h1>Prospectos</h1>
+      <h1>{{ 'crm.prospects.title' | t:lang() }}</h1>
       <p class="lede">Lista de prospectos comerciales.</p>
 
       @if (error()) {
@@ -80,9 +85,9 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
 
       <!-- Table -->
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!items().length) {
-        <div class="crm-card"><p class="crm-muted">Sin prospectos.</p></div>
+        <div class="crm-card"><p class="crm-muted">{{ 'crm.prospects.empty' | t:lang() }}.</p></div>
       } @else {
         <div class="crm-card" style="overflow-x:auto">
           <table class="crm-table">
@@ -128,6 +133,9 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
   `,
 })
 export class CrmProspectsListPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
 
   readonly statuses = PROSPECT_STATUSES;

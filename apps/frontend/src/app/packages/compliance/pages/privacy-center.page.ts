@@ -5,18 +5,23 @@ import { ComplianceApiService } from '../services/compliance-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { ConsentRecord, DataRequest } from '../models/compliance.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-privacy-center',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="privacy-center">
-      <h1>Privacy Center</h1>
+      <h1>{{ 'compliance.privacy.title' | t:lang() }}</h1>
       <p class="subtitle">Manage your consent and data subject requests.</p>
 
       <section>
         <h2>My Consent Records</h2>
-        @if (loading) { <p>Loading…</p> }
+        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
         @else if (consents.length === 0) { <p>No consent records.</p> }
         @else {
           <ul>
@@ -47,6 +52,9 @@ import { ConsentRecord, DataRequest } from '../models/compliance.models';
   `,
 })
 export class PrivacyCenterPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ComplianceApiService);
   private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
@@ -71,7 +79,7 @@ export class PrivacyCenterPage implements OnInit {
 
   submitDsr(): void {
     const orgId = this.orgCtx.activeOrganization()?.id;
-    if (!orgId || this.dsrForm.invalid) { this.error = 'Select an organization'; return; }
+    if (!orgId || this.dsrForm.invalid) { this.error = this.i18n.t('common.orgRequired'); return; }
     const v = this.dsrForm.value;
     this.api.submitDsr(orgId, { request_type: v.request_type!, reason: v.reason || undefined }).subscribe({
       next: (r) => { this.dsrSuccess = r; this.error = null; },

@@ -5,6 +5,11 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CrmContextService } from '../services/crm-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 interface DashStats {
   prospects: number;
   opportunities: number;
@@ -15,11 +20,11 @@ interface DashStats {
 @Component({
   selector: 'app-crm-dashboard-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-dashboard-page">
-      <h1>Panel CRM</h1>
+      <h1>{{ 'crm.dashboard.title' | t:lang() }}</h1>
       <p class="lede">
         Resumen comercial. Roles activos:
         <strong>{{ roles().join(', ') || '—' }}</strong>
@@ -35,7 +40,7 @@ interface DashStats {
         <div class="crm-stats-grid">
           <div class="crm-stat">
             <div class="crm-stat__value">{{ stats().prospects }}</div>
-            <div class="crm-stat__label">Prospectos</div>
+            <div class="crm-stat__label">{{ 'crm.prospects.title' | t:lang() }}</div>
           </div>
           <div class="crm-stat">
             <div class="crm-stat__value">{{ stats().opportunities }}</div>
@@ -43,7 +48,7 @@ interface DashStats {
           </div>
           <div class="crm-stat">
             <div class="crm-stat__value">{{ stats().approvalsPending }}</div>
-            <div class="crm-stat__label">Aprobaciones pendientes</div>
+            <div class="crm-stat__label">{{ 'crm.approvals.title' | t:lang() }}</div>
           </div>
           <div class="crm-stat">
             <div class="crm-stat__value">{{ stats().activities }}</div>
@@ -58,13 +63,16 @@ interface DashStats {
           <a class="crm-btn crm-btn--ghost" routerLink="/crm/prospects">Ver prospectos</a>
           <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">Pipeline</a>
           <a class="crm-btn crm-btn--ghost" routerLink="/crm/approvals">Aprobaciones</a>
-          <a class="crm-btn crm-btn--ghost" routerLink="/crm/audit">Auditoría</a>
+          <a class="crm-btn crm-btn--ghost" routerLink="/crm/audit">{{ 'organizations.audit.title' | t:lang() }}</a>
         </div>
       </div>
     </section>
   `,
 })
 export class CrmDashboardPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly ctx = inject(CrmContextService);
 

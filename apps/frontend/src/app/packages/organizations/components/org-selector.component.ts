@@ -4,10 +4,15 @@ import { Router, RouterLink } from '@angular/router';
 import { OrganizationContextService } from '../services/organization-context.service';
 import { OrganizationsApiError } from '../services/organizations-api.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-selector',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styles: [
     `
       .org-selector {
@@ -97,7 +102,7 @@ import { OrganizationsApiError } from '../services/organizations-api.service';
         class="org-selector-btn"
         [attr.aria-expanded]="open()"
         aria-haspopup="listbox"
-        aria-label="Selector de organización"
+        aria-label="{{ 'organizations.selector.title' | t:lang() }}"
         (click)="toggle($event)"
       >
         <span class="org-selector-name">
@@ -120,7 +125,7 @@ import { OrganizationsApiError } from '../services/organizations-api.service';
             <div class="org-selector-error" role="alert">{{ ctx.error() }}</div>
           }
           @if (!ctx.organizations().length) {
-            <div class="org-selector-item" role="option" aria-disabled="true">No hay organizaciones</div>
+            <div class="org-selector-item" role="option" aria-disabled="true">{{ 'organizations.selector.empty' | t:lang() }}</div>
           }
           @for (o of ctx.organizations(); track o.id) {
             <button
@@ -135,7 +140,7 @@ import { OrganizationsApiError } from '../services/organizations-api.service';
               <div class="org-selector-status">{{ o.status }}</div>
             </button>
           }
-          <a class="org-selector-link" routerLink="/organizations/new" (click)="open.set(false)">Crear organización</a>
+          <a class="org-selector-link" routerLink="/organizations/new" (click)="open.set(false)">{{ 'organizations.create.title' | t:lang() }}</a>
           @if (!ctx.hasOrganization()) {
             <a class="org-selector-link" routerLink="/organizations/none" (click)="open.set(false)">Estado sin organización</a>
           }
@@ -148,6 +153,9 @@ import { OrganizationsApiError } from '../services/organizations-api.service';
   `,
 })
 export class OrgSelectorComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   readonly ctx = inject(OrganizationContextService);
   private readonly router = inject(Router);
 

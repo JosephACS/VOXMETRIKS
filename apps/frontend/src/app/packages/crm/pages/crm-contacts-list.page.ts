@@ -6,18 +6,23 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-contacts-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-contacts-list-page">
       <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
         <a class="crm-btn crm-btn--ghost" routerLink="/crm/dashboard">← CRM</a>
-        <h1 style="margin:0">Contactos</h1>
+        <h1 style="margin:0">{{ 'crm.contacts.title' | t:lang() }}</h1>
       </div>
-      <p class="crm-muted">Contactos comerciales vinculados a prospectos. Requiere permiso CRM.</p>
+      <p class="crm-muted">{{ 'crm.contacts.title' | t:lang() }} comerciales vinculados a prospectos. Requiere permiso CRM.</p>
 
       @if (error()) {
         <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
@@ -52,9 +57,9 @@ import { Contact } from '../models/crm.models';
       <div class="crm-card">
         <h2>Listado</h2>
         @if (loading()) {
-          <p class="crm-muted">Cargando…</p>
+          <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
         } @else if (contacts().length === 0) {
-          <p class="crm-muted">Sin contactos. Crea el primero arriba.</p>
+          <p class="crm-muted">{{ 'crm.contacts.empty' | t:lang() }}. Crea el primero arriba.</p>
         } @else {
           <table class="crm-table">
             <thead>
@@ -64,9 +69,9 @@ import { Contact } from '../models/crm.models';
               @for (c of contacts(); track c.id) {
                 <tr>
                   <td>{{ c.full_name }}</td>
-                  <td>{{ c.email || 'No disponible' }}</td>
-                  <td>{{ c.phone || 'No disponible' }}</td>
-                  <td>{{ c.company_name || 'No disponible' }}</td>
+                  <td>{{ c.email || ('common.notAvailable' | t:lang()) }}</td>
+                  <td>{{ c.phone || ('common.notAvailable' | t:lang()) }}</td>
+                  <td>{{ c.company_name || ('common.notAvailable' | t:lang()) }}</td>
                 </tr>
               }
             </tbody>
@@ -77,6 +82,9 @@ import { Contact } from '../models/crm.models';
   `,
 })
 export class CrmContactsListPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
 
   form = { full_name: '', email: '', phone: '', company_name: '' };

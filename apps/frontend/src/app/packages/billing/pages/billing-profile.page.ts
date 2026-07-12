@@ -5,17 +5,22 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { BillingProfile } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-billing-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="billing-profile-page">
-      <h1>Billing Profile</h1>
+      <h1>{{ 'billing.profile.title' | t:lang() }}</h1>
       @if (profile) {
         <div class="profile-card">
           <div class="field"><label>Currency</label><span>{{ profile.default_currency }}</span></div>
-          <div class="field"><label>Legal Name</label><span>{{ profile.legal_name ?? '—' }}</span></div>
+          <div class="field"><label>{{ 'billing.profile.legalName' | t:lang() }}</label><span>{{ profile.legal_name ?? '—' }}</span></div>
           <div class="field"><label>Tax ID</label><span>{{ profile.tax_id ?? '—' }}</span></div>
           <div class="field"><label>Email</label><span>{{ profile.email ?? '—' }}</span></div>
           <div class="field"><label>Status</label>
@@ -29,7 +34,7 @@ import { BillingProfile } from '../models/billing.models';
             <input formControlName="tax_id" placeholder="Tax ID" class="input">
             <input formControlName="billing_address" placeholder="Address" class="input">
             <input formControlName="email" placeholder="Email" class="input">
-            <button type="submit" class="btn btn--primary">Save</button>
+            <button type="submit" class="btn btn--primary">{{ 'common.save' | t:lang() }}</button>
           </form>
         }
       } @else {
@@ -39,7 +44,7 @@ import { BillingProfile } from '../models/billing.models';
           <input formControlName="legal_name" placeholder="Legal name" class="input">
           <input formControlName="email" placeholder="Billing email" class="input">
           <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
-            Create Billing Profile
+            Create {{ 'billing.profile.title' | t:lang() }}
           </button>
         </form>
       }
@@ -50,6 +55,9 @@ import { BillingProfile } from '../models/billing.models';
   `,
 })
 export class BillingProfilePage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
@@ -76,7 +84,7 @@ export class BillingProfilePage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loadProfile();

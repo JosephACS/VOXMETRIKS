@@ -5,22 +5,27 @@ import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { UsageRecord } from '../models/subscriptions.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-subscription-usage',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="subscription-usage">
-      <h1 i18n="subscriptions.usage.title">Uso de Suscripción</h1>
+      <h1>{{ 'subscriptions.usage.title' | t:lang() }}</h1>
 
       @if (records.length > 0) {
         <table>
           <thead>
             <tr>
-              <th i18n="subscriptions.usage.feature">Característica</th>
-              <th i18n="subscriptions.usage.quantity">Cantidad</th>
-              <th i18n="subscriptions.usage.period">Periodo</th>
-              <th i18n="subscriptions.usage.recorded">Registrado</th>
+              <th>Característica</th>
+              <th>Cantidad</th>
+              <th>Periodo</th>
+              <th>Registrado</th>
             </tr>
           </thead>
           <tbody>
@@ -37,12 +42,12 @@ import { UsageRecord } from '../models/subscriptions.models';
       }
 
       @if (records.length === 0 && !loading) {
-        <p i18n="subscriptions.usage.empty">
+        <p>
           Sin registros de uso.
         </p>
       }
       @if (loading) {
-        <div i18n="common.loading">Cargando...</div>
+        <div>{{ 'common.loading' | t:lang() }}</div>
       }
       @if (error) {
         <div class="error">{{ error }}</div>
@@ -51,6 +56,9 @@ import { UsageRecord } from '../models/subscriptions.models';
   `,
 })
 export class SubscriptionUsagePageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(SubscriptionsApiService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);
@@ -66,7 +74,7 @@ export class SubscriptionUsagePageComponent implements OnInit {
     const orgId = this.orgCtx.activeOrganization()?.id ?? null;
     this.organizationId = orgId;
     if (orgId == null) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));

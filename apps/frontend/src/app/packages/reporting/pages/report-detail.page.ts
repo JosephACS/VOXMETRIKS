@@ -7,15 +7,20 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-report-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
       <p><a routerLink="/reports">← Reports</a></p>
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (error) {
         <p class="error">{{ error }}</p>
       } @else if (report) {
@@ -26,13 +31,13 @@ import { environment } from '../../../../environments/environment';
         </p>
         <p>
           Period:
-          {{ report.period_start || 'No disponible' }} → {{ report.period_end || 'No disponible' }}
+          {{ report.period_start || ('common.notAvailable' | t:lang()) }} → {{ report.period_end || ('common.notAvailable' | t:lang()) }}
         </p>
         <div class="actions">
           <button type="button" (click)="approve()" [disabled]="busy">Approve</button>
           <button type="button" (click)="publish()" [disabled]="busy">Publish</button>
           <button type="button" (click)="archive()" [disabled]="busy">Archive</button>
-          <button type="button" (click)="exportCsv()" [disabled]="busy">Export CSV</button>
+          <button type="button" (click)="exportCsv()" [disabled]="busy">{{ 'reporting.detail.exportCsv' | t:lang() }}</button>
         </div>
 
         @if (snapshotLoading) {
@@ -56,7 +61,7 @@ import { environment } from '../../../../environments/environment';
                       <td>{{ k.code }}</td>
                       <td>
                         @if (k.value == null) {
-                          <em>No disponible</em>
+                          <em>{{ 'common.notAvailable' | t:lang() }}</em>
                         } @else {
                           {{ k.value }}
                         }
@@ -80,6 +85,9 @@ import { environment } from '../../../../environments/environment';
   `,
 })
 export class ReportDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ReportingApiService);
   private orgCtx = inject(OrganizationContextService);
   private route = inject(ActivatedRoute);

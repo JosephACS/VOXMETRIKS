@@ -27,6 +27,8 @@ PLATFORM_OPS_TABLES = (
 
 def ensure_platform_ops_tables(conn: duckdb.DuckDBPyConnection) -> None:
     if schema_ready():
+        from app.packages.platform_ops.application.email_service import ensure_email_delivery_table
+        ensure_email_delivery_table(conn)
         return
 
     _create_notification(conn)
@@ -40,6 +42,8 @@ def ensure_platform_ops_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_operational_incident(conn)
     _create_backup_record(conn)
     _create_restore_verification(conn)
+    from app.packages.platform_ops.application.email_service import ensure_email_delivery_table
+    ensure_email_delivery_table(conn)
 
     logger.info("Platform ops schema ensured (%s tables)", len(PLATFORM_OPS_TABLES))
 

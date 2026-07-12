@@ -106,8 +106,8 @@ def test_create_plan_draft(conn):
     from app.packages.subscriptions.application.use_cases import PlanUseCases
     p = PlanUseCases(conn).create(
         actor_user_id=200,
-        code="starter",
-        display_name="Starter",
+        code="k2-draft-plan",
+        display_name="K2 Draft",
         trial_days_default=14,
     )
     assert p.id > 0
@@ -118,13 +118,16 @@ def test_create_plan_draft(conn):
 def test_plan_code_unique(conn):
     from app.packages.subscriptions.application.use_cases import PlanUseCases
     from app.packages.subscriptions.domain.errors import ConflictError
+    PlanUseCases(conn).create(actor_user_id=200, code="k2-unique", display_name="Once")
     with pytest.raises(ConflictError):
-        PlanUseCases(conn).create(actor_user_id=200, code="starter", display_name="Dup")
+        PlanUseCases(conn).create(actor_user_id=200, code="k2-unique", display_name="Dup")
 
 
 def test_activate_plan(conn):
     from app.packages.subscriptions.application.use_cases import PlanUseCases
-    plan = PlanUseCases(conn).get_by_code("starter")
+    plan = PlanUseCases(conn).create(
+        actor_user_id=200, code="k2-to-activate", display_name="K2 Activate"
+    )
     p = PlanUseCases(conn).activate(plan.id, actor_user_id=200)
     assert p.status == "active"
 

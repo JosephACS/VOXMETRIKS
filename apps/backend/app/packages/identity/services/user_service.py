@@ -150,24 +150,38 @@ def login(
 
 
 def _issue_verification_code(conn: duckdb.DuckDBPyConnection, email: str) -> Dict[str, Any]:
-    """Generate, store and email a code. Returns dev metadata for the route."""
+    """Generate, store and email a code. Returns delivery metadata for the route."""
     cfg = get_settings()
+    existing = get_email_code(conn, email, purpose="verify")
+    if existing and existing.get("created_at"):
+        age = (utc_now() - existing["created_at"]).total_seconds()
+        if age < cfg.email_resend_cooldown_sec:
+            return {
+                "verification_required": True,
+                "email": email,
+                "email_sent": False,
+                "provider": cfg.email_provider,
+                "rate_limited": True,
+                "retry_after_sec": int(cfg.email_resend_cooldown_sec - age),
+            }
+
     code = generate_code()
     upsert_email_code(
         conn, email, hash_password(code),
         purpose="verify", ttl_minutes=cfg.email_code_ttl_min,
     )
-    sent = send_verification_email(email, code)
+    delivery = send_verification_email(email, code, conn=conn)
     out: Dict[str, Any] = {
         "verification_required": True,
         "email": email,
-        "email_sent": sent,
+        "email_sent": bool(delivery.get("email_sent")),
+        "provider": delivery.get("provider") or cfg.email_provider,
+        "rate_limited": False,
     }
-    # Dev mode (no SMTP configured): surface the code so localhost can test.
-    # Never expose the code in production, even if SMTP is misconfigured.
-    if not cfg.email_enabled and not cfg.is_production:
+    if cfg.email_is_console and not cfg.is_production:
         out["dev_code"] = code
     return out
+
 
 
 def register(
@@ -220,7 +234,7 @@ def verify_email(
     ensure_user_tables(conn)
     email = email.strip().lower()
     code = (code or "").strip()
-    record = get_email_code(conn, email)
+    record = get_email_code(conn, email, purpose="verify")
     if not record:
         raise ValueError("no pending verification for this email")
     if record["expires_at"] and record["expires_at"] < utc_now():
@@ -248,16 +262,128 @@ def verify_email(
 
 
 def resend_verification(conn: duckdb.DuckDBPyConnection, email: str) -> Dict[str, Any]:
+    """Resend verification. Generic success for unknown emails (anti-enumeration)."""
     ensure_user_tables(conn)
     email = email.strip().lower()
     row = conn.execute(
         "SELECT email_verified FROM app_user WHERE LOWER(email) = ?", [email]
     ).fetchone()
+    generic = {
+        "ok": True,
+        "email": email,
+        "email_sent": False,
+        "message": "If an unverified account exists, a code was sent.",
+    }
     if not row:
-        raise ValueError("no account for this email")
+        return generic
     if bool(row[0]):
-        raise ValueError("email already verified")
-    return _issue_verification_code(conn, email)
+        return {**generic, "message": "If an unverified account exists, a code was sent."}
+    issued = _issue_verification_code(conn, email)
+    return {
+        "ok": True,
+        "email": email,
+        "email_sent": issued.get("email_sent", False),
+        "provider": issued.get("provider"),
+        "rate_limited": issued.get("rate_limited", False),
+        "retry_after_sec": issued.get("retry_after_sec"),
+        "dev_code": issued.get("dev_code"),
+        "message": "If an unverified account exists, a code was sent.",
+        "verification_required": True,
+    }
+
+
+def request_password_reset(conn: duckdb.DuckDBPyConnection, email: str) -> Dict[str, Any]:
+    """Issue a one-time reset code. Always returns a generic response."""
+    from app.packages.platform_ops.application.email_service import send_rendered_email
+    from app.packages.platform_ops.application.email_templates import password_reset_email
+
+    ensure_user_tables(conn)
+    cfg = get_settings()
+    email = email.strip().lower()
+    generic = {
+        "ok": True,
+        "message": "If an account exists for that email, reset instructions were sent.",
+    }
+    row = conn.execute(
+        "SELECT id FROM app_user WHERE LOWER(email) = ?", [email]
+    ).fetchone()
+    if not row:
+        return generic
+
+    existing = get_email_code(conn, email, purpose="password_reset")
+    if existing and existing.get("created_at"):
+        age = (utc_now() - existing["created_at"]).total_seconds()
+        if age < cfg.email_resend_cooldown_sec:
+            return {
+                **generic,
+                "rate_limited": True,
+                "retry_after_sec": int(cfg.email_resend_cooldown_sec - age),
+            }
+
+    code = generate_code(length=8)
+    upsert_email_code(
+        conn, email, hash_password(code),
+        purpose="password_reset", ttl_minutes=cfg.password_reset_ttl_min,
+    )
+    reset_url = None
+    base = cfg.resolved_frontend_base_url
+    if base:
+        reset_url = f"{base}/login?mode=reset"
+    rendered = password_reset_email(
+        code=code,
+        expires_min=cfg.password_reset_ttl_min,
+        reset_url=reset_url,
+        locale="es",
+    )
+    result = send_rendered_email(
+        to_address=email,
+        rendered=rendered,
+        conn=conn,
+        related_type="password_reset",
+        related_id=email,
+    )
+    out = {
+        **generic,
+        "email_sent": bool(result.success),
+        "provider": result.provider_code,
+        "console": bool(result.labeled_mock),
+    }
+    if cfg.email_is_console and not cfg.is_production:
+        out["dev_code"] = code
+    return out
+
+
+def reset_password(
+    conn: duckdb.DuckDBPyConnection,
+    email: str,
+    code: str,
+    new_password: str,
+) -> Dict[str, Any]:
+    """Consume a one-time reset code and set a new password."""
+    ensure_user_tables(conn)
+    email = email.strip().lower()
+    code = (code or "").strip()
+    if len(new_password or "") < 4:
+        raise ValueError("password must be at least 4 characters")
+    record = get_email_code(conn, email, purpose="password_reset")
+    if not record:
+        raise ValueError("invalid or expired reset code")
+    if record["expires_at"] and record["expires_at"] < utc_now():
+        delete_email_code(conn, email)
+        raise ValueError("invalid or expired reset code")
+    if record["attempts"] >= get_settings().email_code_max_attempts:
+        delete_email_code(conn, email)
+        raise ValueError("too many attempts, request a new code")
+    if not verify_password(code, record["code_hash"]):
+        increment_email_code_attempts(conn, email)
+        raise ValueError("invalid or expired reset code")
+
+    conn.execute(
+        "UPDATE app_user SET password_hash = ? WHERE LOWER(email) = ?",
+        [hash_password(new_password), email],
+    )
+    delete_email_code(conn, email)
+    return {"ok": True, "message": "Password updated"}
 
 
 def google_login(conn: duckdb.DuckDBPyConnection, credential: str) -> Optional[Dict[str, Any]]:

@@ -7,14 +7,19 @@ import { Invitation } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-invitations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-invitations-page">
-      <h1>Invitaciones</h1>
+      <h1>{{ 'organizations.invitations.title' | t:lang() }}</h1>
       <p class="lede">
         Modo académico: el email no se envía. El token returned-once solo se muestra una vez y nunca se guarda en localStorage.
       </p>
@@ -60,7 +65,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
       }
 
       @if (loading()) {
-        <p class="org-muted">Cargando…</p>
+        <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else {
         <div class="org-card" style="overflow-x:auto">
           <table class="org-table">
@@ -106,6 +111,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgInvitationsPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);

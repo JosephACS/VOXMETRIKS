@@ -5,14 +5,19 @@ import { BusinessAnalyticsApiService } from '../services/business-analytics-api.
 import { Recommendation } from '../models/business-analytics.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-biz-recommendations',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="biz-recommendations">
       <a routerLink="/business-analytics">← Dashboard</a>
-      <h1>Rule-Based Recommendations</h1>
+      <h1>{{ 'businessAnalytics.recommendations.title' | t:lang() }}</h1>
       <p class="subtitle">Honest rule-based insights — not AI.</p>
       <button type="button" (click)="generate()">Generate</button>
       @if (recs.length === 0) { <p>No recommendations yet.</p> }
@@ -31,6 +36,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class BizRecommendationsPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BusinessAnalyticsApiService);
   private orgCtx = inject(OrganizationContextService);
   recs: Recommendation[] = [];

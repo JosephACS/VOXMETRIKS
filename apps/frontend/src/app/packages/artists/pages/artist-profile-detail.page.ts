@@ -6,13 +6,18 @@ import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistOrganizationLink, ArtistProfile } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-artist-profile-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="artist-profile-detail-page">
-      <a routerLink="/artist-profiles">&larr; Back to list</a>
+      <a routerLink="/artist-profiles">&larr; {{ 'artists.detail.back' | t:lang() }}</a>
 
       @if (artist) {
         <h1>{{ artist.display_name }}</h1>
@@ -20,13 +25,13 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           <div class="field"><label>Status</label>
             <span class="badge" [class]="'badge--' + artist.status">{{ artist.status }}</span>
           </div>
-          <div class="field"><label>Legal Name</label><span>{{ artist.legal_name ?? '—' }}</span></div>
+          <div class="field"><label>{{ 'billing.profile.legalName' | t:lang() }}</label><span>{{ artist.legal_name ?? '—' }}</span></div>
           <div class="field"><label>Normalized Name</label><span>{{ artist.normalized_name }}</span></div>
           <div class="field"><label>Warehouse Link</label>
             @if (artist.warehouse_artist_id) {
               <span class="badge badge--linked">Linked to catalog artist #{{ artist.warehouse_artist_id }}</span>
             } @else {
-              <span class="badge badge--unlinked">Not linked to catalog</span>
+              <span class="badge badge--unlinked">{{ 'artists.detail.notLinked' | t:lang() }}</span>
             }
           </div>
         </div>
@@ -41,7 +46,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           @if (artist.status !== 'archived') {
             <button class="btn btn--danger" (click)="archive()">Archive</button>
           }
-          <a class="btn btn--secondary" [routerLink]="['/artist-profiles', artist.id, 'team']">Manage Team</a>
+          <a class="btn btn--secondary" [routerLink]="['/artist-profiles', artist.id, 'team']">{{ 'artists.detail.team' | t:lang() }}</a>
           <a class="btn btn--secondary" [routerLink]="['/artist-profiles', artist.id, 'history']">View History</a>
         </div>
 
@@ -92,7 +97,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           }
         </section>
       } @else if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       }
 
       @if (error) {
@@ -102,6 +107,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class ArtistProfileDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ArtistsApiService);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);

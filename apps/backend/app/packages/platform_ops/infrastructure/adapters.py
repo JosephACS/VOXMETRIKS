@@ -1,19 +1,39 @@
-"""Platform ops infrastructure adapters — Spec 027."""
+"""Platform ops infrastructure adapters — Spec 027.
+
+Email providers live in email_providers.py (console | smtp | resend).
+This module keeps notification adapters and re-exports email helpers.
+"""
 
 from __future__ import annotations
 
 import logging
 
 from app.packages.platform_ops.domain.ports import (
-    EmailMessage,
-    EmailPort,
-    EmailResult,
     NotificationMessage,
     NotificationPort,
     NotificationResult,
 )
+from app.packages.platform_ops.infrastructure.email_providers import (
+    ConsoleMockEmailAdapter,
+    ConsoleEmailAdapter,
+    ResendEmailAdapter,
+    SmtpEmailAdapter,
+    get_email_adapter,
+    get_configured_email_port,
+)
 
 logger = logging.getLogger("voxmetrik.platform_ops.adapters")
+
+__all__ = [
+    "ConsoleNotificationAdapter",
+    "ConsoleMockEmailAdapter",
+    "ConsoleEmailAdapter",
+    "SmtpEmailAdapter",
+    "ResendEmailAdapter",
+    "get_notification_adapter",
+    "get_email_adapter",
+    "get_configured_email_port",
+]
 
 
 class ConsoleNotificationAdapter(NotificationPort):
@@ -34,30 +54,7 @@ class ConsoleNotificationAdapter(NotificationPort):
         )
 
 
-class ConsoleMockEmailAdapter(EmailPort):
-    """MOCK email adapter — explicitly labeled, not real email."""
-
-    code = "console_mock_email"
-
-    def send(self, message: EmailMessage) -> EmailResult:
-        logger.info(
-            "[MOCK EMAIL] to=%s subject=%s — NOT REAL EMAIL",
-            message.to_address, message.subject,
-        )
-        return EmailResult(
-            success=True,
-            labeled_mock=True,
-            message="[MOCK] Email logged to console — not a real email service",
-        )
-
-
 def get_notification_adapter(code: str = "console") -> NotificationPort:
     if code == "console":
         return ConsoleNotificationAdapter()
     raise ValueError(f"Unknown notification adapter: {code}")
-
-
-def get_email_adapter(code: str = "console_mock_email") -> EmailPort:
-    if code == "console_mock_email":
-        return ConsoleMockEmailAdapter()
-    raise ValueError(f"Unknown email adapter: {code}")

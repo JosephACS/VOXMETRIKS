@@ -5,16 +5,21 @@ import { ComplianceApiService } from '../services/compliance-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { DataRequest, TermsVersion } from '../models/compliance.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-compliance-admin',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="compliance-admin">
-      <h1>Compliance Admin</h1>
+      <h1>{{ 'compliance.admin.title' | t:lang() }}</h1>
       <p class="subtitle">Terms, DSR, retention, incidents, and audit search.</p>
       <nav class="subnav">
-        <a routerLink="/compliance">Privacy Center</a>
+        <a routerLink="/compliance">{{ 'compliance.privacy.title' | t:lang() }}</a>
       </nav>
 
       <section>
@@ -52,6 +57,9 @@ import { DataRequest, TermsVersion } from '../models/compliance.models';
   `,
 })
 export class ComplianceAdminPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ComplianceApiService);
   private orgCtx = inject(OrganizationContextService);
 
@@ -63,7 +71,7 @@ export class ComplianceAdminPage implements OnInit {
 
   load(): void {
     const orgId = this.orgCtx.activeOrganization()?.id;
-    if (!orgId) { this.error = 'Select an organization'; return; }
+    if (!orgId) { this.error = this.i18n.t('common.orgRequired'); return; }
     this.api.listTerms(orgId).subscribe({
       next: (r) => { this.terms = r.items; },
       error: (e) => { this.error = e?.error?.message || 'Failed to load terms'; },

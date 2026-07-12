@@ -7,12 +7,17 @@ import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CustomerConversion } from '../models/crm.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 type WizardStep = 'view' | 'confirm-link' | 'claim';
 
 @Component({
   selector: 'app-crm-conversion-wizard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-conversion-wizard-page">
@@ -41,7 +46,7 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
       </div>
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (conv()) {
 
         <!-- Step 1: View conversion state -->
@@ -183,6 +188,9 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
   `,
 })
 export class CrmConversionWizardPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

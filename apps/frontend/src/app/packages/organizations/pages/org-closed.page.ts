@@ -1,15 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, inject} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 
 @Component({
   selector: 'app-org-closed-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-closed">
-      <h1>Organización cerrada o contexto inválido</h1>
+      <h1>{{ 'organizations.closed.title' | t:lang() }} o contexto inválido</h1>
       <p class="lede">
         Esta organización ya no está disponible para operaciones. Puedes cambiar de organización
         o continuar en modo personal.
@@ -21,4 +26,7 @@ import { RouterLink } from '@angular/router';
     </section>
   `,
 })
-export class OrgClosedPageComponent {}
+export class OrgClosedPageComponent {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+}

@@ -6,19 +6,24 @@ import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Plan, PlanPrice } from '../models/subscriptions.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-trial-start',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="trial-start">
-      <h1 i18n="subscriptions.trial.title">Iniciar Trial</h1>
+      <h1>{{ 'subscriptions.trial.title' | t:lang() }}</h1>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-field">
-          <label i18n="subscriptions.trial.plan">Plan</label>
+          <label>Plan</label>
           <select formControlName="planId" (change)="onPlanChange()">
-            <option value="" i18n="common.selectOption">Seleccionar...</option>
+            <option value="">Seleccionar...</option>
             @for (p of plans; track p.id) {
               <option [value]="p.id">
                 {{ p.display_name }} ({{ p.trial_days_default }} días trial)
@@ -29,9 +34,9 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
 
         @if (prices.length > 0) {
           <div class="form-field">
-            <label i18n="subscriptions.trial.price">Precio (opcional)</label>
+            <label>Precio (opcional)</label>
             <select formControlName="planPriceId">
-              <option value="" i18n="common.none">Ninguno</option>
+              <option value="">Ninguno</option>
               @for (p of prices; track p.id) {
                 <option [value]="p.id">
                   {{ p.currency }} {{ p.amount }} / {{ p.billing_period }}
@@ -42,13 +47,12 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
         }
 
         <div class="form-field">
-          <label i18n="subscriptions.trial.currency">Moneda</label>
+          <label>Moneda</label>
           <input formControlName="billingCurrency" placeholder="USD" maxlength="3" />
         </div>
 
         <div class="form-actions">
-          <button type="submit" [disabled]="form.invalid || saving" class="btn btn--primary"
-                  i18n="subscriptions.trial.submit">Iniciar Trial</button>
+          <button type="submit" [disabled]="form.invalid || saving" class="btn btn--primary">{{ 'subscriptions.trial.title' | t:lang() }}</button>
         </div>
 
         @if (error) {
@@ -59,6 +63,9 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
   `,
 })
 export class TrialStartPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(SubscriptionsApiService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
@@ -79,7 +86,7 @@ export class TrialStartPageComponent implements OnInit {
   ngOnInit(): void {
     this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.organizationId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.api.listPlans({ status: 'active' }).subscribe({

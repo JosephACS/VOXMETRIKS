@@ -6,13 +6,18 @@ import { ReportingApiService } from '../services/reporting-api.service';
 import { ExecutiveReport, ReportDefinition } from '../models/reporting.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-reports-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
-      <h1>Executive Reports</h1>
+      <h1>{{ 'reporting.list.title' | t:lang() }}</h1>
       <p class="subtitle">Generate immutable executive snapshots from versioned KPIs. Not a certified statement.</p>
       <nav class="subnav">
         <a routerLink="/reports">Reports</a> |
@@ -28,9 +33,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           <button type="button" (click)="createAndGenerate()" [disabled]="busy">Create &amp; generate</button>
         </section>
 
-        @if (loading) { <p>Loading…</p> }
+        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
         @else if (error) { <p class="error">{{ error }}</p> }
-        @else if (!reports.length) { <p>No executive reports yet.</p> }
+        @else if (!reports.length) { <p>{{ 'reporting.list.empty' | t:lang() }}</p> }
         @else {
           <ul>
             @for (r of reports; track r.id) {
@@ -46,6 +51,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class ReportsListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ReportingApiService);
   private orgCtx = inject(OrganizationContextService);
 

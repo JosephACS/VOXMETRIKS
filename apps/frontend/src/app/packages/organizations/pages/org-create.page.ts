@@ -6,14 +6,19 @@ import { firstValueFrom } from 'rxjs';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-create-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-create-page">
-      <h1>Crear organización</h1>
+      <h1>{{ 'organizations.create.title' | t:lang() }}</h1>
       <p class="lede">Completa el perfil básico. No se solicita información fiscal en esta etapa.</p>
 
       @if (error()) {
@@ -72,7 +77,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
         </label>
         <div class="org-actions">
           <button class="org-btn" type="submit" [disabled]="submitting() || !displayName.trim() || !slug.trim()">
-            {{ submitting() ? 'Creando…' : 'Crear organización' }}
+            {{ submitting() ? ('organizations.create.submitting' | t:lang()) : ('organizations.create.title' | t:lang()) }}
           </button>
           <a class="org-btn org-btn--ghost" routerLink="/organizations/none">Cancelar</a>
         </div>
@@ -81,6 +86,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgCreatePageComponent {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   private readonly ctx = inject(OrganizationContextService);
   private readonly router = inject(Router);

@@ -6,17 +6,22 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact, Prospect } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
 
 @Component({
   selector: 'app-crm-prospect-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-prospect-detail-page">
       <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/prospects">← Prospectos</a>
+        <a class="crm-btn crm-btn--ghost" routerLink="/crm/prospects">← {{ 'crm.prospects.title' | t:lang() }}</a>
         <h1 style="margin:0">
           {{ prospect()?.display_name || 'Prospecto #' + prospectId }}
         </h1>
@@ -33,7 +38,7 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (prospect()) {
         <!-- Edit form -->
         <div class="crm-card">
@@ -126,6 +131,9 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
   `,
 })
 export class CrmProspectDetailPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
 

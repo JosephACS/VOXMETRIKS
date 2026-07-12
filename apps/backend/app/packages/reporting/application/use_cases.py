@@ -494,7 +494,19 @@ class ExecutiveReportUseCases:
         )
         _audit(self._conn, action="report.published", target_type="executive_report", target_id=str(report_id),
                actor_user_id=actor_user_id, organization_id=organization_id, request_id=request_id)
-        return self.get(organization_id, report_id)
+        published = self.get(organization_id, report_id)
+        try:
+            from app.packages.platform_ops.application.notify import notify_report_ready, user_email
+            notify_report_ready(
+                self._conn,
+                to_email=user_email(self._conn, actor_user_id),
+                organization_id=organization_id,
+                report_title=published.title,
+                report_id=report_id,
+            )
+        except Exception:
+            pass
+        return published
 
     def archive(self, *, organization_id: int, report_id: int, actor_user_id: Optional[int] = None, request_id: Optional[str] = None) -> ExecutiveReport:
         report = self.get(organization_id, report_id)

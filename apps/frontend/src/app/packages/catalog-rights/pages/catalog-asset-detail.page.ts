@@ -11,10 +11,15 @@ import {
 } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-catalog-asset-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="catalog-asset-detail-page">
       <a routerLink="/catalog-rights/assets">&larr; Back to assets</a>
@@ -36,7 +41,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 
         <div class="actions">
           <a class="btn btn--secondary" [routerLink]="['/catalog-rights/contracts']" [queryParams]="{ asset_id: asset.id }">
-            View Rights Contracts
+            View {{ 'catalogRights.contracts.title' | t:lang() }}
           </a>
         </div>
 
@@ -157,7 +162,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           }
         </section>
       } @else if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       }
 
       @if (error) {
@@ -167,6 +172,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class CatalogAssetDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CatalogRightsApiService);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);

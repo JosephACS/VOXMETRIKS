@@ -5,15 +5,20 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-support-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
-      <p><a routerLink="/support">← Support</a></p>
+      <p><a routerLink="/support">← {{ 'support.list.title' | t:lang() }}</a></p>
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (error && !caseData) {
         <p class="error">{{ error }}</p>
       } @else if (!caseData) {
@@ -25,11 +30,11 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         @if (success) {
           <p class="success">{{ success }}</p>
         }
-        <h1>{{ $any(caseData).subject || 'No disponible' }}</h1>
+        <h1>{{ $any(caseData).subject || ('common.notAvailable' | t:lang()) }}</h1>
         <p>
-          <span class="badge">{{ $any(caseData).status || 'No disponible' }}</span>
+          <span class="badge">{{ $any(caseData).status || ('common.notAvailable' | t:lang()) }}</span>
           /
-          {{ $any(caseData).priority || 'No disponible' }}
+          {{ $any(caseData).priority || ('common.notAvailable' | t:lang()) }}
         </p>
         <div class="actions">
           <button type="button" (click)="resolve()" [disabled]="busy">Resolve</button>
@@ -42,7 +47,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
           <ul>
             @for (m of messages; track $index) {
               <li [class.internal]="$any(m).is_internal">
-                {{ $any(m).is_internal ? '[internal] ' : '' }}{{ $any(m).body || 'No disponible' }}
+                {{ $any(m).is_internal ? '[internal] ' : '' }}{{ $any(m).body || ('common.notAvailable' | t:lang()) }}
               </li>
             }
           </ul>
@@ -50,13 +55,16 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         <div class="form-actions">
           <input [(ngModel)]="body" placeholder="message" />
           <button type="button" (click)="send(false)" [disabled]="busy || !body.trim()">Send</button>
-          <button type="button" (click)="send(true)" [disabled]="busy || !body.trim()">Internal note</button>
+          <button type="button" (click)="send(true)" [disabled]="busy || !body.trim()">{{ 'support.detail.internalNote' | t:lang() }}</button>
         </div>
       }
     </div>
   `,
 })
 export class SupportDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
   private route = inject(ActivatedRoute);
@@ -74,7 +82,7 @@ export class SupportDetailPage implements OnInit {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.orgId && this.id) this.reload();
-    else this.error = 'Select an organization context.';
+    else this.error = this.i18n.t('common.orgRequiredContext');
   }
 
   reload(): void {

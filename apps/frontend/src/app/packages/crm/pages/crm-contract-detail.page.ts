@@ -5,10 +5,15 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CommercialContract } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-contract-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-contract-detail-page">
@@ -28,7 +33,7 @@ import { CommercialContract } from '../models/crm.models';
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (contract()) {
         <div class="crm-card">
           <h2>Información del contrato</h2>
@@ -131,6 +136,9 @@ import { CommercialContract } from '../models/crm.models';
   `,
 })
 export class CrmContractDetailPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
 

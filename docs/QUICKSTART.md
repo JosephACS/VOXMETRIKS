@@ -54,6 +54,12 @@ Variables relevantes (`.env`):
 | `POCKETBASE_EMAIL` / `PASSWORD` | Credenciales PocketBase |
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend, separados por coma |
 | `HEALTH_VERBOSE` | `true` solo en dev/ops si necesitas ver ruta DB y tablas en `/health` |
+| `EMAIL_PROVIDER` | `console` (default, tests) · `smtp` · `resend` |
+| `SMTP_*` / `EMAIL_FROM_*` | SMTP real (Gmail: **app password**, nunca la contraseña de cuenta) |
+| `RESEND_API_KEY` | Opcional si usas Resend |
+| `EMAIL_SMOKE_TEST_TO` | Destinatario del smoke real (`python apps/backend/scripts/email_smtp_smoke.py --send`) |
+| `FRONTEND_BASE_URL` | Base URL del frontend para enlaces en correos (p. ej. `http://127.0.0.1:4200`) |
+| `APP_PUBLIC_BASE_URL` | Alias legado de `FRONTEND_BASE_URL` |
 
 Sin PocketBase, coloca Parquet en:
 

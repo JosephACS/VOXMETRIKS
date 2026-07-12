@@ -226,6 +226,7 @@ def upsert_email_code(
 ) -> None:
     ensure_user_tables(conn)
     expires = utc_now() + timedelta(minutes=ttl_minutes)
+    # Invalidate prior codes for this email+purpose (and any other purpose on same email).
     conn.execute("DELETE FROM app_email_code WHERE LOWER(email) = ?", [email.lower()])
     conn.execute(
         """
@@ -236,12 +237,25 @@ def upsert_email_code(
     )
 
 
-def get_email_code(conn: duckdb.DuckDBPyConnection, email: str) -> Optional[Dict[str, Any]]:
+def get_email_code(
+    conn: duckdb.DuckDBPyConnection,
+    email: str,
+    *,
+    purpose: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     ensure_user_tables(conn)
-    row = conn.execute(
-        "SELECT email, code_hash, purpose, expires_at, attempts FROM app_email_code WHERE LOWER(email) = ?",
-        [email.lower()],
-    ).fetchone()
+    if purpose:
+        row = conn.execute(
+            "SELECT email, code_hash, purpose, expires_at, attempts, created_at "
+            "FROM app_email_code WHERE LOWER(email) = ? AND purpose = ?",
+            [email.lower(), purpose],
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT email, code_hash, purpose, expires_at, attempts, created_at "
+            "FROM app_email_code WHERE LOWER(email) = ?",
+            [email.lower()],
+        ).fetchone()
     if not row:
         return None
     return {
@@ -250,6 +264,7 @@ def get_email_code(conn: duckdb.DuckDBPyConnection, email: str) -> Optional[Dict
         "purpose": row[2],
         "expires_at": row[3],
         "attempts": int(row[4]) if row[4] is not None else 0,
+        "created_at": row[5] if len(row) > 5 else None,
     }
 
 

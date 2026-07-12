@@ -6,10 +6,15 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-quotation-editor-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-quotation-editor-page">
@@ -29,7 +34,7 @@ import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest 
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (quotation()) {
         <!-- Quotation summary -->
         <div class="crm-card">
@@ -166,6 +171,9 @@ import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest 
   `,
 })
 export class CrmQuotationEditorPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

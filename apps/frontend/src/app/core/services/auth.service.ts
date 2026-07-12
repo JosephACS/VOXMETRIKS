@@ -131,15 +131,52 @@ export class AuthService {
     }
   }
 
-  async resendCode(email: string): Promise<{ ok: boolean; devCode?: string; error?: string }> {
+  async resendCode(email: string): Promise<{ ok: boolean; devCode?: string; retryAfterSec?: number; error?: string }> {
     try {
       const res = await firstValueFrom(
-        this.http.post<{ dev_code?: string }>(`${this.API}/resend-code`, { email })
+        this.http.post<{ dev_code?: string; rate_limited?: boolean; retry_after_sec?: number }>(
+          `${this.API}/resend-code`,
+          { email },
+        )
       );
-      return { ok: true, devCode: res.dev_code };
+      return {
+        ok: true,
+        devCode: res.dev_code,
+        retryAfterSec: res.retry_after_sec,
+      };
     } catch (e: unknown) {
       const err = e as { error?: { detail?: string } };
       return { ok: false, error: err?.error?.detail ?? 'No se pudo reenviar el código' };
+    }
+  }
+
+  async forgotPassword(email: string): Promise<{ ok: boolean; message?: string; devCode?: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ ok?: boolean; message?: string; dev_code?: string }>(
+          `${this.API}/forgot-password`,
+          { email },
+        )
+      );
+      return { ok: true, message: res.message, devCode: res.dev_code };
+    } catch {
+      return { ok: true, message: 'If an account exists for that email, reset instructions were sent.' };
+    }
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.API}/reset-password`, {
+          email,
+          code,
+          new_password: newPassword,
+        })
+      );
+      return { ok: true };
+    } catch (e: unknown) {
+      const err = e as { error?: { detail?: string } };
+      return { ok: false, error: err?.error?.detail ?? 'No se pudo restablecer la contraseña' };
     }
   }
 

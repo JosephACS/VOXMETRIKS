@@ -6,13 +6,18 @@ import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistProfile } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-artist-profiles-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="artist-profiles-list-page">
-      <h1>Artist Profiles</h1>
+      <h1>{{ 'artists.list.title' | t:lang() }}</h1>
 
       <div class="filters">
         <label>
@@ -40,9 +45,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
       }
 
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (artists.length === 0) {
-        <p>No artist profiles yet.</p>
+        <p>{{ 'artists.list.empty' | t:lang() }}</p>
       } @else {
         <table class="artists-table">
           <thead>
@@ -78,6 +83,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class ArtistProfilesListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ArtistsApiService);
   private fb = inject(FormBuilder);
   private orgCtx = inject(OrganizationContextService);
@@ -108,7 +116,7 @@ export class ArtistProfilesListPage implements OnInit {
 
   load(): void {
     if (!this.orgId) {
-      this.error = 'No active organization selected.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loading = true;

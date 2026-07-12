@@ -308,6 +308,16 @@ class ResendCodeRequest(BaseModel):
     email: str
 
 
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+class PasswordResetConfirm(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+
 class GoogleLoginRequest(BaseModel):
     credential: str
 

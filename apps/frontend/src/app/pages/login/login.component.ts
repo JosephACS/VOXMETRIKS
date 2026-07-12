@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { StatsService } from '../../packages/analytics/services/stats.service';
 import { StatsSummary } from '../../shared/models/api.models';
 
-type AuthMode = 'login' | 'register' | 'verify';
+type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
 declare global {
   interface Window {
@@ -58,6 +58,8 @@ export class LoginComponent implements OnInit {
   protected readonly pendingEmail = signal('');
   protected readonly devCode = signal('');
   protected readonly infoMessage = signal('');
+  protected readonly resendCountdown = signal(0);
+  private resendTimer: ReturnType<typeof setInterval> | null = null;
 
   // Google Sign-In
   protected readonly googleClientId = signal('');
@@ -81,6 +83,16 @@ export class LoginComponent implements OnInit {
     code: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
   });
 
+  protected readonly forgotForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+  });
+
+  protected readonly resetForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    code: ['', [Validators.required, Validators.minLength(6)]],
+    newPassword: ['', [Validators.required, Validators.minLength(4)]],
+  });
+
   ngOnInit(): void {
     this.stats.getSummary().subscribe({
       next: (data) => this.summary.set(data),
@@ -92,6 +104,17 @@ export class LoginComponent implements OnInit {
         this.loadGoogleScript();
       }
     }).catch((err) => console.error('[LoginComponent] getAuthConfig failed', err));
+
+    // Deep-link: /login?mode=reset&email=...
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const email = params.get('email');
+    if (mode === 'reset') {
+      this.setMode('reset');
+      if (email) this.resetForm.patchValue({ email });
+    } else if (mode === 'forgot') {
+      this.setMode('forgot');
+    }
   }
 
   protected setLanguage(lang: AppLanguage): void {
@@ -147,6 +170,7 @@ export class LoginComponent implements OnInit {
         this.devCode.set(res.devCode ?? '');
         this.setMode('verify');
         this.infoMessage.set(this.i18n.t('verify.sent'));
+        this.startResendCountdown(60);
       } else if (res.ok) {
         this.router.navigate(['/discover']);
       } else {
@@ -174,16 +198,69 @@ export class LoginComponent implements OnInit {
   }
 
   protected onResendCode(): void {
+    if (this.resendCountdown() > 0) return;
     this.errorMessage.set('');
     this.infoMessage.set('');
     this.auth.resendCode(this.pendingEmail()).then((res) => {
       if (res.ok) {
         this.devCode.set(res.devCode ?? '');
         this.infoMessage.set(this.i18n.t('verify.resent'));
+        this.startResendCountdown(res.retryAfterSec ?? 60);
       } else {
         this.errorMessage.set(res.error ?? this.i18n.t('verify.resendError'));
       }
     });
+  }
+
+  protected onForgotSubmit(): void {
+    if (this.forgotForm.invalid) {
+      this.forgotForm.markAllAsTouched();
+      return;
+    }
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    const email = this.forgotForm.getRawValue().email!;
+    this.auth.forgotPassword(email).then((res) => {
+      this.isLoading.set(false);
+      this.infoMessage.set(res.message ?? this.i18n.t('reset.generic'));
+      this.devCode.set(res.devCode ?? '');
+      this.resetForm.patchValue({ email });
+      this.setMode('reset');
+    });
+  }
+
+  protected onResetSubmit(): void {
+    if (this.resetForm.invalid) {
+      this.resetForm.markAllAsTouched();
+      return;
+    }
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    const { email, code, newPassword } = this.resetForm.getRawValue();
+    this.auth.resetPassword(email!, code!, newPassword!).then((res) => {
+      this.isLoading.set(false);
+      if (res.ok) {
+        this.infoMessage.set(this.i18n.t('reset.success'));
+        this.setMode('login');
+      } else {
+        this.errorMessage.set(res.error ?? this.i18n.t('reset.error'));
+      }
+    });
+  }
+
+  private startResendCountdown(seconds: number): void {
+    if (this.resendTimer) clearInterval(this.resendTimer);
+    this.resendCountdown.set(seconds);
+    this.resendTimer = setInterval(() => {
+      const next = this.resendCountdown() - 1;
+      if (next <= 0) {
+        this.resendCountdown.set(0);
+        if (this.resendTimer) clearInterval(this.resendTimer);
+        this.resendTimer = null;
+      } else {
+        this.resendCountdown.set(next);
+      }
+    }, 1000);
   }
 
   // ── Google Sign-In ─────────────────────────────────────────────

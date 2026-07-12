@@ -144,15 +144,25 @@ class InvitationUseCases:
                     "email_normalized": email_n,
                     "initial_role_code": role_code,
                     "expires_at": str(expires),
-                    "email_delivery_status": token.email_delivery_status,
                 },
                 request_id=actor.request_id,
             )
+
+        delivery = self._deliver_invitation_email(
+            invitation_id=invitation.id,
+            organization_id=organization_id,
+            org_name=org.display_name,
+            email=email_n,
+            role_code=role_code,
+            invite_token=token.plaintext,
+            expires_at=expires,
+            invited_by=actor.user_id,
+        )
         return InvitationCreateResult(
             invitation=invitation,
             invite_token=token.plaintext,
             returned_once=True,
-            email_delivery_status=token.email_delivery_status,
+            email_delivery_status=delivery,
             events=[
                 ev.evt(
                     ev.INVITATION_CREATED,
@@ -372,15 +382,24 @@ class InvitationUseCases:
                 previous_values={"replaced_invitation_id": invitation_id},
                 new_values={
                     "expires_at": str(expires),
-                    "email_delivery_status": token.email_delivery_status,
                 },
                 request_id=actor.request_id,
             )
+        delivery = self._deliver_invitation_email(
+            invitation_id=replacement.id,
+            organization_id=organization_id,
+            org_name=org.display_name,
+            email=invitation.email_normalized,
+            role_code=invitation.initial_role_code,
+            invite_token=token.plaintext,
+            expires_at=expires,
+            invited_by=actor.user_id,
+        )
         return InvitationCreateResult(
             invitation=replacement,
             invite_token=token.plaintext,
             returned_once=True,
-            email_delivery_status=token.email_delivery_status,
+            email_delivery_status=delivery,
             events=[
                 ev.evt(
                     ev.INVITATION_RESENT,
@@ -392,6 +411,38 @@ class InvitationUseCases:
                     payload={"replaced_invitation_id": invitation_id},
                 )
             ],
+        )
+
+    def _deliver_invitation_email(
+        self,
+        *,
+        invitation_id: int,
+        organization_id: int,
+        org_name: str,
+        email: str,
+        role_code: str,
+        invite_token: str,
+        expires_at,
+        invited_by: int,
+    ) -> str:
+        from app.packages.platform_ops.application.notify import notify_organization_invitation
+
+        inviter_row = self._conn.execute(
+            "SELECT username, email FROM app_user WHERE id = ?", [invited_by]
+        ).fetchone()
+        inviter_name = (
+            str(inviter_row[0] or inviter_row[1]) if inviter_row else f"user:{invited_by}"
+        )
+        return notify_organization_invitation(
+            self._conn,
+            to_email=email,
+            org_name=org_name,
+            inviter_name=inviter_name,
+            role_name=role_code,
+            invite_token=invite_token,
+            expires_label=str(expires_at),
+            organization_id=organization_id,
+            invitation_id=invitation_id,
         )
 
     def _get_invite(self, invitation_id: int, organization_id: int):

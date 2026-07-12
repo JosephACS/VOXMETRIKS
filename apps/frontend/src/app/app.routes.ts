@@ -254,6 +254,24 @@ export const APP_ROUTES: Routes = [
       ...REPORTING_ROUTES,
       ...CUSTOMER_SUCCESS_ROUTES,
       {
+        path: 'error/401',
+        title: 'errors.401.title',
+        loadComponent: () =>
+          import('./pages/http-errors/http-error.pages').then((m) => m.Error401PageComponent),
+      },
+      {
+        path: 'error/403',
+        title: 'errors.403.title',
+        loadComponent: () =>
+          import('./pages/http-errors/http-error.pages').then((m) => m.Error403PageComponent),
+      },
+      {
+        path: 'error/500',
+        title: 'errors.500.title',
+        loadComponent: () =>
+          import('./pages/http-errors/http-error.pages').then((m) => m.Error500PageComponent),
+      },
+      {
         path: '**',
         title: 'notFound.title',
         loadComponent: () =>

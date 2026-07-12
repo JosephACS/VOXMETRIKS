@@ -138,20 +138,31 @@ class Settings(BaseSettings):
     # the ID token returned by Google Identity Services. Blank → button hidden.
     google_client_id: str = ""
 
-    # ── Email (SMTP) for verification codes ──────────────────────
-    # Configure with a Gmail/Outlook/etc. account (use an app password).
-    # If smtp_host/smtp_user are blank, registration runs in dev mode:
-    # the code is logged server-side and returned in the API response so it
-    # can be tested on localhost without a real mailbox.
+    # ── Email (SMTP) — console | smtp | resend ──────────────────
+    # EMAIL_PROVIDER=console (default) never sends real mail.
+    # smtp: use Gmail *app password*, never the account password.
+    # resend: optional HTTP API via RESEND_API_KEY.
+    email_provider: str = "console"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
+    smtp_username: str = ""  # alias preferred over smtp_user
     smtp_password: str = ""
     smtp_from: str = ""
+    email_from_address: str = ""  # preferred From address
+    email_from_name: str = "VOXMETRIKS"
     smtp_use_tls: bool = True
-    app_public_name: str = "VOXMETRIK"
+    resend_api_key: str = ""
+    resend_from_address: str = ""
+    email_smoke_test_to: str = ""
+    app_public_name: str = "VOXMETRIKS"
     email_code_ttl_min: int = 15
     email_code_max_attempts: int = 5
+    email_resend_cooldown_sec: int = 60
+    password_reset_ttl_min: int = 30
+    # Frontend base for email links. Prefer FRONTEND_BASE_URL; APP_PUBLIC_BASE_URL kept as alias.
+    frontend_base_url: str = ""
+    app_public_base_url: str = ""
 
     @property
     def is_production(self) -> bool:
@@ -186,12 +197,43 @@ class Settings(BaseSettings):
         return not self.is_production
 
     @property
-    def email_enabled(self) -> bool:
-        return bool(self.smtp_host.strip() and self.smtp_user.strip())
+    def resolved_frontend_base_url(self) -> str:
+        """Public frontend origin for email deep-links (FRONTEND_BASE_URL preferred)."""
+        raw = (self.frontend_base_url or self.app_public_base_url or "").strip()
+        return raw.rstrip("/") if raw else ""
 
     @property
-    def email_from_address(self) -> str:
-        return self.smtp_from.strip() or self.smtp_user.strip()
+    def resolved_email_from_name(self) -> str:
+        """Always present VOXMETRIKS as the transactional From display name."""
+        return "VOXMETRIKS"
+
+    @property
+    def email_enabled(self) -> bool:
+        """True when a real provider is selected and credentials exist."""
+        provider = (self.email_provider or "console").strip().lower()
+        if provider == "smtp":
+            user = (self.smtp_username or self.smtp_user or "").strip()
+            return bool(self.smtp_host.strip() and user)
+        if provider == "resend":
+            return bool((self.resend_api_key or "").strip())
+        return False
+
+    @property
+    def email_is_console(self) -> bool:
+        if self.is_test_runtime:
+            return True
+        return (self.email_provider or "console").strip().lower() in {
+            "console", "console_mock_email", "mock", "",
+        }
+
+    @property
+    def resolved_email_from_address(self) -> str:
+        return (
+            (self.email_from_address or "").strip()
+            or (self.smtp_from or "").strip()
+            or (self.smtp_username or self.smtp_user or "").strip()
+            or "noreply@localhost"
+        )
 
     @property
     def cors_origin_list(self) -> list[str]:

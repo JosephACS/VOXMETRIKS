@@ -12,10 +12,15 @@ import {
 } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-rights-contract-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="rights-contract-detail-page">
       <a routerLink="/catalog-rights/contracts">&larr; Back to contracts</a>
@@ -49,7 +54,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         </div>
 
         <section class="parties">
-          <h2>Contract Parties</h2>
+          <h2>{{ 'catalogRights.contractDetail.parties' | t:lang() }}</h2>
           <p class="hint">
             Ownership percentages are validated per rights type + territory + overlapping period,
             not as a single global sum.
@@ -144,13 +149,13 @@ import { OrganizationContextService } from '../../organizations/services/organiz
             </table>
           }
           <div class="approval-actions">
-            <button class="btn btn--secondary" (click)="submitForApproval()">Submit for Approval</button>
+            <button class="btn btn--secondary" (click)="submitForApproval()">{{ 'catalogRights.contractDetail.submit' | t:lang() }}</button>
             <button class="btn btn--primary" (click)="decide(true)">Approve</button>
             <button class="btn btn--danger" (click)="decide(false)">Reject</button>
           </div>
         </section>
       } @else if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       }
 
       @if (error) {
@@ -160,6 +165,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class RightsContractDetailPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CatalogRightsApiService);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);

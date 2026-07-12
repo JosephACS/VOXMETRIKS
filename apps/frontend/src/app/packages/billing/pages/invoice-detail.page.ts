@@ -1,89 +1,135 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Invoice, InvoiceItem, PaymentAttempt } from '../models/billing.models';
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 
 @Component({
   selector: 'app-invoice-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    TranslatePipe,
+    StatusLabelPipe,
+    LocaleMoneyPipe,
+    LocaleDatePipe,
+  ],
   template: `
     <div class="invoice-detail-page">
-      <a routerLink="/billing/invoices" class="back-link">← Invoices</a>
+      <a routerLink="/billing/invoices" class="back-link">{{ 'billing.invoiceDetail.back' | t:lang() }}</a>
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'billing.invoiceDetail.loading' | t:lang() }}</p>
       } @else if (error && !invoice) {
         <p class="error">{{ error }}</p>
       } @else if (!invoice) {
-        <p class="empty-state">Invoice not found.</p>
+        <p class="empty-state">{{ 'billing.invoiceDetail.notFound' | t:lang() }}</p>
       } @else {
         <div class="page-header">
           <h1>{{ invoice.invoice_number }}</h1>
-          <span class="badge" [class]="'badge--' + invoice.status">{{ invoice.status }}</span>
+          <span class="badge" [class]="'badge--' + invoice.status">{{ invoice.status | statusLabel }}</span>
         </div>
         @if (invoice.status === 'past_due') {
           <div class="alert alert--danger">
-            Past due — settle outstanding balance to restore full subscription access.
+            {{ 'billing.invoiceDetail.pastDueAlert' | t:lang() }}
           </div>
         }
         <dl class="meta">
-          <dt>Currency</dt><dd>{{ invoice.currency || 'No disponible' }}</dd>
-          <dt>Subtotal</dt><dd>{{ invoice.subtotal | number:'1.2-2' }}</dd>
-          <dt>Total</dt><dd>{{ invoice.total | number:'1.2-2' }}</dd>
-          <dt>Paid</dt><dd>{{ invoice.amount_paid | number:'1.2-2' }}</dd>
-          <dt>Due</dt><dd>{{ invoice.amount_due | number:'1.2-2' }}</dd>
-          <dt>Due date</dt>
-          <dd>{{ invoice.due_date ? (invoice.due_date | date:'mediumDate') : 'No disponible' }}</dd>
-          <dt>Issued</dt>
-          <dd>{{ invoice.issued_at ? (invoice.issued_at | date:'short') : 'No disponible' }}</dd>
+          <dt>{{ 'common.currency' | t:lang() }}</dt>
+          <dd>{{ invoice.currency || ('common.notAvailable' | t:lang()) }}</dd>
+          <dt>{{ 'billing.invoiceDetail.subtotal' | t:lang() }}</dt>
+          <dd>{{ invoice.subtotal | localeMoney:invoice.currency }}</dd>
+          <dt>{{ 'billing.invoiceDetail.total' | t:lang() }}</dt>
+          <dd>{{ invoice.total | localeMoney:invoice.currency }}</dd>
+          <dt>{{ 'billing.invoiceDetail.paid' | t:lang() }}</dt>
+          <dd>{{ invoice.amount_paid | localeMoney:invoice.currency }}</dd>
+          <dt>{{ 'billing.invoiceDetail.due' | t:lang() }}</dt>
+          <dd>{{ invoice.amount_due | localeMoney:invoice.currency }}</dd>
+          <dt>{{ 'billing.invoiceDetail.dueDate' | t:lang() }}</dt>
+          <dd>{{ invoice.due_date | localeDate }}</dd>
+          <dt>{{ 'billing.invoiceDetail.issued' | t:lang() }}</dt>
+          <dd>{{ invoice.issued_at | localeDate:true }}</dd>
         </dl>
 
         <section class="dunning-panel">
-          <h2>Dunning / mora</h2>
+          <h2>{{ 'billing.invoiceDetail.dunning' | t:lang() }}</h2>
           @if (dunning) {
             <dl class="meta">
-              <dt>Estado</dt><dd>{{ dunning.status }}</dd>
-              <dt>Reintentos</dt><dd>{{ dunning.retry_count }}</dd>
-              <dt>Próximo reintento</dt>
-              <dd>{{ dunning.next_retry_at ? (dunning.next_retry_at | date:'short') : 'No disponible' }}</dd>
-              <dt>Gracia hasta</dt>
-              <dd>{{ dunning.grace_until ? (dunning.grace_until | date:'short') : 'No disponible' }}</dd>
-              <dt>Último error</dt>
-              <dd>{{ dunning.last_error_sanitized || 'No disponible' }}</dd>
+              <dt>{{ 'common.status' | t:lang() }}</dt>
+              <dd>{{ dunning.status | statusLabel }}</dd>
+              <dt>{{ 'billing.invoiceDetail.retries' | t:lang() }}</dt>
+              <dd>{{ dunning.retry_count }}</dd>
+              <dt>{{ 'billing.invoiceDetail.nextRetry' | t:lang() }}</dt>
+              <dd>{{ dunning.next_retry_at | localeDate:true }}</dd>
+              <dt>{{ 'billing.invoiceDetail.graceUntil' | t:lang() }}</dt>
+              <dd>{{ dunning.grace_until | localeDate:true }}</dd>
+              <dt>{{ 'billing.invoiceDetail.lastError' | t:lang() }}</dt>
+              <dd>{{ dunning.last_error_sanitized || ('common.notAvailable' | t:lang()) }}</dd>
             </dl>
             @if (dunning.status === 'grace' || dunning.status === 'limited') {
               <button type="button" class="btn btn--secondary" [disabled]="busy"
-                (click)="expireGrace()">Expirar gracia (mock → blocked)</button>
+                (click)="expireGrace()">{{ 'billing.invoiceDetail.expireGrace' | t:lang() }}</button>
             }
           } @else {
-            <p class="muted">Sin registro de mora para esta factura.</p>
+            <p class="muted">{{ 'billing.invoiceDetail.noDunning' | t:lang() }}</p>
           }
         </section>
 
-        <h2>Payment attempts</h2>
+        <h2>
+          {{ 'billing.invoiceDetail.attempts' | t:lang() }}
+          <span class="badge badge--mock">{{ 'billing.invoiceDetail.mockBadge' | t:lang() }}</span>
+        </h2>
+        <p class="muted">{{ 'billing.invoiceDetail.mockHint' | t:lang() }}</p>
         @if (attempts.length) {
+          <div class="simulate-bar">
+            <label for="mock-scenario">{{ 'billing.invoiceDetail.mockResult' | t:lang() }}</label>
+            <select id="mock-scenario" [(ngModel)]="selectedScenario">
+              @for (s of mockScenarios; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+              <tr>
+                <th>{{ 'common.id' | t:lang() }}</th>
+                <th>{{ 'common.amount' | t:lang() }}</th>
+                <th>{{ 'common.status' | t:lang() }}</th>
+                <th>{{ 'common.actions' | t:lang() }}</th>
+              </tr>
             </thead>
             <tbody>
               @for (a of attempts; track a.id) {
                 <tr>
-                  <td>{{ a.id }} @if (a.is_mock) { <span class="badge badge--mock">[MOCK]</span> }</td>
-                  <td>{{ a.amount | number:'1.2-2' }} {{ a.currency }}</td>
-                  <td>{{ a.status }}</td>
+                  <td>{{ a.id }} @if (a.is_mock) { <span class="badge badge--mock">[{{ 'common.mock' | t:lang() }}]</span> }</td>
+                  <td>{{ a.amount | localeMoney:a.currency }}</td>
+                  <td>
+                    <span [class.ok]="a.status === 'succeeded'"
+                          [class.err]="a.status === 'failed'"
+                          [class.warn]="a.status === 'processing'">
+                      {{ a.status | statusLabel }}
+                    </span>
+                  </td>
                   <td class="actions">
                     @if (a.status === 'created' || a.status === 'processing') {
                       <button type="button" class="btn btn--danger" [disabled]="busy"
-                        (click)="failAttempt(a.id)">Marcar fallido (mock)</button>
+                        (click)="failAttempt(a.id)">{{ 'billing.invoiceDetail.markFailed' | t:lang() }}</button>
                       <button type="button" class="btn btn--primary" [disabled]="busy"
-                        (click)="confirmAttempt(a.id)">Confirmar (mock)</button>
+                        (click)="confirmAttempt(a.id)">{{ 'billing.invoiceDetail.confirmMock' | t:lang() }}</button>
+                      <button type="button" class="btn btn--secondary" [disabled]="busy"
+                        (click)="simulateAttempt(a.id)">{{ 'billing.invoiceDetail.simulateResult' | t:lang() }}</button>
                     }
                     @if (a.status === 'failed') {
                       <button type="button" class="btn btn--secondary" [disabled]="busy"
-                        (click)="retryAttempt(a.id)">Reintentar pago (mock)</button>
+                        (click)="retryAttempt(a.id)">{{ 'billing.invoiceDetail.retryMock' | t:lang() }}</button>
                     }
                   </td>
                 </tr>
@@ -91,32 +137,37 @@ import { Invoice, InvoiceItem, PaymentAttempt } from '../models/billing.models';
             </tbody>
           </table>
         } @else {
-          <p class="empty-state">No payment attempts.</p>
+          <p class="empty-state">{{ 'billing.invoiceDetail.noAttempts' | t:lang() }}</p>
           @if (invoice.status === 'issued' || invoice.status === 'past_due' || invoice.status === 'partially_paid') {
             <button type="button" class="btn btn--primary" [disabled]="busy"
-              (click)="createAttempt()">Crear intento mock</button>
+              (click)="createAttempt()">{{ 'billing.invoiceDetail.createAttempt' | t:lang() }}</button>
           }
         }
 
-        <h2>Line items</h2>
+        <h2>{{ 'billing.invoiceDetail.lineItems' | t:lang() }}</h2>
         @if (items.length) {
           <table class="data-table">
             <thead>
-              <tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>
+              <tr>
+                <th>{{ 'billing.invoiceDetail.description' | t:lang() }}</th>
+                <th>{{ 'billing.invoiceDetail.qty' | t:lang() }}</th>
+                <th>{{ 'billing.invoiceDetail.unit' | t:lang() }}</th>
+                <th>{{ 'common.amount' | t:lang() }}</th>
+              </tr>
             </thead>
             <tbody>
               @for (it of items; track it.id) {
                 <tr>
-                  <td>{{ it.description || 'No disponible' }}</td>
+                  <td>{{ it.description || ('common.notAvailable' | t:lang()) }}</td>
                   <td>{{ it.quantity }}</td>
-                  <td>{{ it.unit_price | number:'1.2-2' }}</td>
-                  <td>{{ it.amount | number:'1.2-2' }}</td>
+                  <td>{{ it.unit_price | localeMoney:invoice.currency }}</td>
+                  <td>{{ it.amount | localeMoney:invoice.currency }}</td>
                 </tr>
               }
             </tbody>
           </table>
         } @else {
-          <p class="empty-state">No line items.</p>
+          <p class="empty-state">{{ 'billing.invoiceDetail.noLines' | t:lang() }}</p>
         }
         @if (error) {
           <p class="error">{{ error }}</p>
@@ -132,6 +183,9 @@ export class InvoiceDetailPage implements OnInit {
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   private route = inject(ActivatedRoute);
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   invoice: Invoice | null = null;
   items: InvoiceItem[] = [];
   attempts: PaymentAttempt[] = [];
@@ -149,16 +203,22 @@ export class InvoiceDetailPage implements OnInit {
   busy = false;
   orgId: number | null = null;
   invoiceId = 0;
+  selectedScenario = 'succeeded';
+  readonly mockScenarios = [
+    'succeeded', 'declined', 'insufficient_funds', 'invalid_method', 'timeout',
+    'processing', 'canceled', 'duplicate_event', 'partial_payment',
+    'full_refund', 'partial_refund', 'reversal',
+  ];
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.invoiceId = Number(this.route.snapshot.paramMap.get('id'));
     if (!this.invoiceId) {
-      this.error = 'Invalid invoice id';
+      this.error = this.i18n.t('billing.invoiceDetail.invalidId');
       return;
     }
     this.reload();
@@ -185,7 +245,7 @@ export class InvoiceDetailPage implements OnInit {
         });
       },
       error: (e) => {
-        this.error = e.error?.detail?.message ?? e.error?.message ?? 'Error loading invoice';
+        this.error = userFacingHttpError(this.i18n, e) || this.i18n.t('billing.invoiceDetail.loadError');
         this.loading = false;
       },
     });
@@ -202,10 +262,14 @@ export class InvoiceDetailPage implements OnInit {
       amount: this.invoice.amount_due,
       currency: this.invoice.currency,
     }).subscribe({
-      next: () => { this.busy = false; this.info = 'Intento mock creado'; this.reload(); },
+      next: () => {
+        this.busy = false;
+        this.info = this.i18n.t('billing.invoiceDetail.attemptCreated');
+        this.reload();
+      },
       error: (e) => {
         this.busy = false;
-        this.error = e.error?.detail?.message ?? 'No se pudo crear el intento';
+        this.error = userFacingHttpError(this.i18n, e);
       },
     });
   }
@@ -214,10 +278,14 @@ export class InvoiceDetailPage implements OnInit {
     if (!this.orgId) return;
     this.busy = true;
     this.api.failPaymentAttempt(this.orgId, id, 'mock_card_declined').subscribe({
-      next: () => { this.busy = false; this.info = 'Intento fallido → dunning abierto'; this.reload(); },
+      next: () => {
+        this.busy = false;
+        this.info = this.i18n.t('billing.invoiceDetail.attemptFailed');
+        this.reload();
+      },
       error: (e) => {
         this.busy = false;
-        this.error = e.error?.detail?.message ?? 'Fail falló';
+        this.error = userFacingHttpError(this.i18n, e);
       },
     });
   }
@@ -226,10 +294,31 @@ export class InvoiceDetailPage implements OnInit {
     if (!this.orgId) return;
     this.busy = true;
     this.api.confirmMockAttempt(this.orgId, id).subscribe({
-      next: () => { this.busy = false; this.info = 'Pago mock confirmado'; this.reload(); },
+      next: () => {
+        this.busy = false;
+        this.info = this.i18n.t('billing.invoiceDetail.paymentConfirmed');
+        this.reload();
+      },
       error: (e) => {
         this.busy = false;
-        this.error = e.error?.detail?.message ?? 'Confirm falló';
+        this.error = userFacingHttpError(this.i18n, e);
+      },
+    });
+  }
+
+  simulateAttempt(id: number): void {
+    if (!this.orgId) return;
+    this.busy = true;
+    this.error = null;
+    this.api.simulateMockAttempt(this.orgId, id, this.selectedScenario).subscribe({
+      next: (res) => {
+        this.busy = false;
+        this.info = `[${this.i18n.t('billing.invoiceDetail.mockBadge')}] ${res.scenario}: ${res.message}`;
+        this.reload();
+      },
+      error: (e) => {
+        this.busy = false;
+        this.error = userFacingHttpError(this.i18n, e);
       },
     });
   }
@@ -238,10 +327,14 @@ export class InvoiceDetailPage implements OnInit {
     if (!this.orgId) return;
     this.busy = true;
     this.api.retryPaymentAttempt(this.orgId, id, `retry-${id}-${Date.now()}`).subscribe({
-      next: () => { this.busy = false; this.info = 'Reintento mock creado'; this.reload(); },
+      next: () => {
+        this.busy = false;
+        this.info = this.i18n.t('billing.invoiceDetail.retryCreated');
+        this.reload();
+      },
       error: (e) => {
         this.busy = false;
-        this.error = e.error?.detail?.message ?? 'Retry falló (¿doble concurrente?)';
+        this.error = userFacingHttpError(this.i18n, e);
       },
     });
   }
@@ -250,10 +343,14 @@ export class InvoiceDetailPage implements OnInit {
     if (!this.orgId || !this.dunning) return;
     this.busy = true;
     this.api.expireDunningGrace(this.orgId, this.dunning.id).subscribe({
-      next: () => { this.busy = false; this.info = 'Gracia expirada → acceso blocked'; this.reload(); },
+      next: () => {
+        this.busy = false;
+        this.info = this.i18n.t('billing.invoiceDetail.graceExpired');
+        this.reload();
+      },
       error: (e) => {
         this.busy = false;
-        this.error = e.error?.detail?.message ?? 'Expire grace falló';
+        this.error = userFacingHttpError(this.i18n, e);
       },
     });
   }

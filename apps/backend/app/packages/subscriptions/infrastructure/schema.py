@@ -30,7 +30,7 @@ SUBSCRIPTION_TABLES = (
 
 
 def ensure_subscription_tables(conn: duckdb.DuckDBPyConnection) -> None:
-    """Create all subscription tables (idempotent)."""
+    """Create all subscription tables (idempotent) and sync commercial catalog."""
     if schema_ready():
         # Additive IF NOT EXISTS for isolated DBs sharing process-level ready flag.
         _create_plan(conn)
@@ -43,20 +43,27 @@ def ensure_subscription_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_subscription_addon(conn)
         _create_usage_record(conn)
         _create_subscription_access_state(conn)
-        return
+    else:
+        _create_plan(conn)
+        _create_plan_price(conn)
+        _create_plan_feature(conn)
+        _create_addon(conn)
+        _create_subscription(conn)
+        _create_subscription_change(conn)
+        _create_subscription_entitlement(conn)
+        _create_subscription_addon(conn)
+        _create_usage_record(conn)
+        _create_subscription_access_state(conn)
+        logger.info("Subscriptions schema ensured (%s tables)", len(SUBSCRIPTION_TABLES))
 
-    _create_plan(conn)
-    _create_plan_price(conn)
-    _create_plan_feature(conn)
-    _create_addon(conn)
-    _create_subscription(conn)
-    _create_subscription_change(conn)
-    _create_subscription_entitlement(conn)
-    _create_subscription_addon(conn)
-    _create_usage_record(conn)
-    _create_subscription_access_state(conn)
+    try:
+        from app.packages.subscriptions.application.commercial_catalog import (
+            ensure_commercial_catalog,
+        )
 
-    logger.info("Subscriptions schema ensured (%s tables)", len(SUBSCRIPTION_TABLES))
+        ensure_commercial_catalog(conn)
+    except Exception as exc:  # noqa: BLE001 — catalog must not block schema
+        logger.warning("commercial catalog ensure skipped: %s", exc.__class__.__name__)
 
 
 def _create_plan(conn: duckdb.DuckDBPyConnection) -> None:

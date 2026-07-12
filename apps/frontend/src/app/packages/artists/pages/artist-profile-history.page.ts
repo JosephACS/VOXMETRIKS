@@ -5,17 +5,22 @@ import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistStatusHistoryEntry } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-artist-profile-history',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="artist-profile-history-page">
       <a [routerLink]="['/artist-profiles', artistId]">&larr; Back to profile</a>
-      <h1>Status History</h1>
+      <h1>{{ 'artists.history.title' | t:lang() }}</h1>
 
       @if (history.length === 0) {
-        <p>No status changes recorded yet.</p>
+        <p>{{ 'artists.history.empty' | t:lang() }}</p>
       } @else {
         <table class="history-table">
           <thead>
@@ -48,6 +53,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class ArtistProfileHistoryPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ArtistsApiService);
   private route = inject(ActivatedRoute);
   private orgCtx = inject(OrganizationContextService);

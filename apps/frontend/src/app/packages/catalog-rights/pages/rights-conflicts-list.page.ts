@@ -5,13 +5,18 @@ import { CatalogRightsApiService } from '../services/catalog-rights-api.service'
 import { RightsConflict } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-rights-conflicts-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="rights-conflicts-list-page">
-      <h1>Rights Conflicts</h1>
+      <h1>{{ 'catalogRights.conflicts.title' | t:lang() }}</h1>
       <p class="subtitle">
         Conflicts are opened automatically when ownership percentages exceed 100% for the same
         asset, rights type, territory, and overlapping period. Review and resolve below.
@@ -53,7 +58,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
       }
 
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (conflicts.length === 0) {
         <p>No conflicts.</p>
       } @else {
@@ -84,6 +89,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class RightsConflictsListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CatalogRightsApiService);
   private fb = inject(FormBuilder);
   private orgCtx = inject(OrganizationContextService);
@@ -122,7 +130,7 @@ export class RightsConflictsListPage implements OnInit {
 
   load(): void {
     if (!this.orgId) {
-      this.error = 'No active organization selected.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loading = true;

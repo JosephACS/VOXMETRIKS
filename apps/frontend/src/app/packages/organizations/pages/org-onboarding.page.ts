@@ -6,14 +6,19 @@ import { firstValueFrom } from 'rxjs';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-onboarding-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-onboarding-page">
-      <h1>Onboarding inicial</h1>
+      <h1>{{ 'organizations.onboarding.title' | t:lang() }}</h1>
       <p class="lede">
         Solo perfil básico e invitación opcional. Sin plan, pago, billing, artista ni campaña.
         Puedes salir y seguir usando la app en modo personal.
@@ -129,6 +134,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgOnboardingPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   readonly ctx = inject(OrganizationContextService);
   private readonly api = inject(OrganizationsApiService);
 

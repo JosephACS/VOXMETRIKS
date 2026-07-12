@@ -17,13 +17,17 @@ from app.packages.identity.services.user_service import (
     login,
     logout,
     register,
+    request_password_reset,
     resend_verification,
+    reset_password,
     update_preferences,
     verify_email,
 )
 from app.shared.schemas.models import (
     AuthConfig,
     GoogleLoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     ResendCodeRequest,
     UserLogin,
     UserPreferencesUpdate,
@@ -107,6 +111,31 @@ def resend_code_route(
     check_auth_rate_limit(request, cfg.effective_auth_rate_limit, cfg.auth_rate_window_sec)
     try:
         return resend_verification(conn, body.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/forgot-password", summary="Request password reset (generic response)")
+def forgot_password_route(
+    body: PasswordResetRequest,
+    request: Request,
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    cfg = get_settings()
+    check_auth_rate_limit(request, cfg.effective_auth_rate_limit, cfg.auth_rate_window_sec)
+    return request_password_reset(conn, body.email)
+
+
+@router.post("/reset-password", summary="Confirm password reset with one-time code")
+def reset_password_route(
+    body: PasswordResetConfirm,
+    request: Request,
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    cfg = get_settings()
+    check_auth_rate_limit(request, cfg.effective_auth_rate_limit, cfg.auth_rate_window_sec)
+    try:
+        return reset_password(conn, body.email, body.code, body.new_password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

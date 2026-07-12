@@ -5,19 +5,24 @@ import { RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-cs-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
-      <h1>Customer Success</h1>
+      <h1>{{ 'customerSuccess.dashboard.title' | t:lang() }}</h1>
       <p class="subtitle">
         Rule-based health score (not AI). Academic SLA configs are not contractual.
       </p>
       <nav class="subnav">
         <a routerLink="/customer-success">Dashboard</a> |
-        <a routerLink="/support">Support</a>
+        <a routerLink="/support">{{ 'support.list.title' | t:lang() }}</a>
       </nav>
 
       @if (!orgId) {
@@ -30,7 +35,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         </div>
 
         @if (loading) {
-          <p>Loading…</p>
+          <p>{{ 'common.loading' | t:lang() }}</p>
         } @else if (error) {
           <p class="error">{{ error }}</p>
         } @else if (success) {
@@ -42,12 +47,12 @@ import { OrganizationContextService } from '../../organizations/services/organiz
             <h2>Health</h2>
             <p>
               State:
-              <span class="badge">{{ health.score_state || 'No disponible' }}</span>
+              <span class="badge">{{ health.score_state || ('common.notAvailable' | t:lang()) }}</span>
             </p>
             <p>
               Score:
               @if (health.score == null) {
-                <em>No disponible</em>
+                <em>{{ 'common.notAvailable' | t:lang() }}</em>
               } @else {
                 {{ health.score | number: '1.2-4' }}
               }
@@ -61,9 +66,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         @if (dashboard) {
           <section class="cs-card">
             <h2>Overview</h2>
-            <p>Open risks: {{ dashboard.open_risks ?? 'No disponible' }}</p>
-            <p>Expansion opportunities: {{ dashboard.expansions ?? 'No disponible' }}</p>
-            <p class="muted">{{ dashboard.label || 'Customer Success academic dashboard' }}</p>
+            <p>Open risks: {{ dashboard.open_risks ?? ('common.notAvailable' | t:lang()) }}</p>
+            <p>Expansion opportunities: {{ dashboard.expansions ?? ('common.notAvailable' | t:lang()) }}</p>
+            <p class="muted">{{ dashboard.label || ('customerSuccess.dashboard.title' | t:lang()) }}</p>
           </section>
         }
 
@@ -79,7 +84,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
             <button type="submit" [disabled]="busy || !riskTitle.trim()">Create risk</button>
           </form>
           @if (risks.length === 0) {
-            <p class="empty-state">No risks.</p>
+            <p class="empty-state">{{ 'customerSuccess.dashboard.noRisks' | t:lang() }}</p>
           } @else {
             <ul>
               @for (r of risks; track $any(r).id) {
@@ -129,7 +134,7 @@ import { OrganizationContextService } from '../../organizations/services/organiz
                 <li>
                   {{ $any(e).title }} — {{ $any(e).status }}
                   @if ($any(e).estimated_value == null) {
-                    <em>No disponible</em>
+                    <em>{{ 'common.notAvailable' | t:lang() }}</em>
                   } @else {
                     ({{ $any(e).estimated_value }})
                   }
@@ -143,6 +148,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class CsDashboardPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
 

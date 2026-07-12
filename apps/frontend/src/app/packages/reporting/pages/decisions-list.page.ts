@@ -6,13 +6,18 @@ import { ReportingApiService } from '../services/reporting-api.service';
 import { BusinessDecision } from '../models/reporting.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-decisions-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
-      <h1>Business Decisions</h1>
+      <h1>{{ 'decisions.list.title' | t:lang() }}</h1>
       <nav class="subnav">
         <a routerLink="/reports">Reports</a> |
         <a routerLink="/business-decisions">Decisions</a>
@@ -22,11 +27,11 @@ import { OrganizationContextService } from '../../organizations/services/organiz
         <section>
           <input [(ngModel)]="title" placeholder="title" />
           <input [(ngModel)]="proposal" placeholder="proposal" />
-          <button type="button" (click)="create()" [disabled]="busy">Record decision</button>
+          <button type="button" (click)="create()" [disabled]="busy">{{ 'decisions.list.record' | t:lang() }}</button>
         </section>
-        @if (loading) { <p>Loading…</p> }
+        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
         @else if (error) { <p class="error">{{ error }}</p> }
-        @else if (!items.length) { <p>No decisions yet.</p> }
+        @else if (!items.length) { <p>{{ 'decisions.list.empty' | t:lang() }}</p> }
         @else {
           <ul>
             @for (d of items; track d.id) {
@@ -42,6 +47,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class DecisionsListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(ReportingApiService);
   private orgCtx = inject(OrganizationContextService);
 

@@ -6,13 +6,18 @@ import { CatalogRightsApiService } from '../services/catalog-rights-api.service'
 import { CatalogAsset } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-catalog-assets-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="catalog-assets-list-page">
-      <h1>Catalog Assets</h1>
+      <h1>{{ 'catalogRights.assets.title' | t:lang() }}</h1>
       <p class="subtitle">
         Rights-tracking records for songs/works. This is not a legal registry — it does not
         assert legal validity or ownership.
@@ -45,9 +50,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
       }
 
       @if (loading) {
-        <p>Loading…</p>
+        <p>{{ 'common.loading' | t:lang() }}</p>
       } @else if (assets.length === 0) {
-        <p>No catalog assets yet.</p>
+        <p>{{ 'catalogRights.assets.empty' | t:lang() }}</p>
       } @else {
         <table class="assets-table">
           <thead>
@@ -83,6 +88,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class CatalogAssetsListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CatalogRightsApiService);
   private fb = inject(FormBuilder);
   private orgCtx = inject(OrganizationContextService);
@@ -114,7 +122,7 @@ export class CatalogAssetsListPage implements OnInit {
 
   load(): void {
     if (!this.orgId) {
-      this.error = 'No active organization selected.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loading = true;

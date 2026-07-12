@@ -5,14 +5,19 @@ import { firstValueFrom } from 'rxjs';
 import { AuditEntry } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-audit-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-audit-page">
-      <h1>Auditoría</h1>
+      <h1>{{ 'organizations.audit.title' | t:lang() }}</h1>
       <p class="lede">
         Vista sanitizada: sin tokens, hashes ni secretos. Los JSON sensibles se resumen.
       </p>
@@ -22,9 +27,9 @@ import { OrganizationsApiError, OrganizationsApiService } from '../services/orga
       }
 
       @if (loading()) {
-        <p class="org-muted">Cargando…</p>
+        <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!items().length) {
-        <div class="org-card"><p class="org-muted">Sin eventos de auditoría.</p></div>
+        <div class="org-card"><p class="org-muted">{{ 'organizations.audit.empty' | t:lang() }}.</p></div>
       } @else {
         <div class="org-card" style="overflow-x:auto">
           <table class="org-table">
@@ -66,6 +71,9 @@ import { OrganizationsApiError, OrganizationsApiService } from '../services/orga
   `,
 })
 export class OrgAuditPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   private readonly route = inject(ActivatedRoute);
 

@@ -5,35 +5,39 @@ import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-subscription-addons',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="subscription-addons">
-      <h1 i18n="subscriptions.addons.title">Addons de Suscripción</h1>
+      <h1>{{ 'subscriptions.addons.title' | t:lang() }}</h1>
 
       <section class="active-addons">
-        <h2 i18n="subscriptions.addons.active">Addons activos</h2>
+        <h2>Addons activos</h2>
         @if (activeAddons.length > 0) {
           <ul>
             @for (sa of activeAddons; track sa.addon_id) {
               <li>
                 Addon #{{ sa.addon_id }} — {{ sa.status }}
-                <button (click)="remove(sa.addon_id)"
-                        i18n="subscriptions.addons.remove">Quitar</button>
+                <button (click)="remove(sa.addon_id)">Quitar</button>
               </li>
             }
           </ul>
         } @else {
-          <p i18n="subscriptions.addons.none">
+          <p>
             Sin addons activos.
           </p>
         }
       </section>
 
       <section class="available-addons">
-        <h2 i18n="subscriptions.addons.available">Addons disponibles</h2>
+        <h2>Addons disponibles</h2>
         @if (availableAddons.length > 0) {
           <ul>
             @for (addon of availableAddons; track addon.id) {
@@ -43,8 +47,7 @@ import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
                   <span> — {{ addon.currency }} {{ addon.amount }}/{{ addon.billing_period }}</span>
                 }
                 <button (click)="add(addon.id)"
-                        [disabled]="isAdded(addon.id)"
-                        i18n="subscriptions.addons.add">Agregar</button>
+                        [disabled]="isAdded(addon.id)">Agregar</button>
               </li>
             }
           </ul>
@@ -58,6 +61,9 @@ import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
   `,
 })
 export class SubscriptionAddonsPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(SubscriptionsApiService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);
@@ -71,7 +77,7 @@ export class SubscriptionAddonsPageComponent implements OnInit {
   ngOnInit(): void {
     this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.organizationId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));

@@ -506,6 +506,8 @@ class PlanPriceUseCases:
     ) -> PlanPrice:
         if not currency or len(currency.strip()) != 3:
             raise ValidationError("currency must be a 3-char ISO code")
+        if billing_period in {"yearly", "year", "y"}:
+            billing_period = "annual"
         if billing_period not in self.VALID_PERIODS:
             raise ValidationError(f"billing_period must be one of {self.VALID_PERIODS}")
         if amount < 0:

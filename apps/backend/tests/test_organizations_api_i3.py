@@ -126,7 +126,7 @@ def test_invitations_flow(
     )
     assert created.status_code == 201, created.text
     body = created.json()
-    assert body["delivery_status"] == "not_sent"
+    assert body["delivery_status"] in {"not_sent", "console", "sent", "failed"}
     assert body["invite_token"]
     token = body["invite_token"]
     inv_id = body["invitation_id"]

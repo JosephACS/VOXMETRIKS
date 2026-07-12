@@ -7,14 +7,19 @@ import { BusinessRole, Permission } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-roles-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-roles-page">
-      <h1>Roles y permisos</h1>
+      <h1>{{ 'organizations.roles.title' | t:lang() }}</h1>
       <p class="lede">
         Catálogo del sistema (solo lectura). No se editan roles técnicos user/admin/engineer aquí.
         No hay custom roles en 016.
@@ -30,7 +35,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
       <div class="org-card">
         <h2>Roles del sistema</h2>
         @if (loading()) {
-          <p class="org-muted">Cargando…</p>
+          <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
         } @else {
           <ul>
             @for (r of roles(); track r.code) {
@@ -84,6 +89,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgRolesPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);

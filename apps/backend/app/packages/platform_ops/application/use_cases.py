@@ -690,14 +690,15 @@ class EmailUseCases:
         body: str,
         request_id: Optional[str] = None,
     ) -> dict[str, Any]:
-        adapter = get_email_adapter()
-        result = adapter.send(EmailMessage(to_address=to_address, subject=subject, body=body))
+        adapter = get_email_adapter("console")
+        result = adapter.send(EmailMessage(to_address=to_address, subject=subject, body_text=body))
         _audit(self._conn, action="email.mock_sent", target_type="email",
                target_id=to_address, actor_user_id=actor_user_id, request_id=request_id)
         return {
             "success": result.success,
             "labeled_mock": result.labeled_mock,
             "message": result.message,
+            "provider_code": getattr(result, "provider_code", "console"),
         }
 
     def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:

@@ -5,25 +5,30 @@ import { RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-support-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="page">
-      <h1>Support</h1>
-      <p class="subtitle">Organization-scoped tickets. Internal notes require staff permission.</p>
-      <nav class="subnav"><a routerLink="/customer-success">CS</a> | <a routerLink="/support">Support</a></nav>
+      <h1>{{ 'support.list.title' | t:lang() }}</h1>
+      <p class="subtitle">Organization-scoped tickets. {{ 'support.detail.internalNote' | t:lang() }}s require staff permission.</p>
+      <nav class="subnav"><a routerLink="/customer-success">CS</a> | <a routerLink="/support">{{ 'support.list.title' | t:lang() }}</a></nav>
       @if (!orgId) {
         <p class="error">Select an organization context.</p>
       } @else {
         <section>
           <input [(ngModel)]="subject" placeholder="subject" />
-          <button type="button" (click)="create()" [disabled]="busy || !subject">Create ticket</button>
+          <button type="button" (click)="create()" [disabled]="busy || !subject">{{ 'support.list.create' | t:lang() }}</button>
         </section>
-        @if (loading) { <p>Loading…</p> }
+        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
         @else if (error) { <p class="error">{{ error }}</p> }
-        @else if (!cases.length) { <p class="empty-state">No support cases yet.</p> }
+        @else if (!cases.length) { <p class="empty-state">{{ 'support.list.empty' | t:lang() }}</p> }
         @else {
           <ul>
             @for (c of cases; track $index) {
@@ -39,6 +44,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class SupportListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
   orgId: number | null = null;

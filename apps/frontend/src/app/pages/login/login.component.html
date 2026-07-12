@@ -30,7 +30,7 @@
       </picture>
     </div>
 
-    @if (mode() !== 'verify') {
+    @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset') {
       <div class="auth-tabs">
         <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t:lang() }}</button>
         <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t:lang() }}</button>
@@ -73,6 +73,7 @@
             <input type="checkbox" formControlName="remember" />
             {{ 'login.remember' | t:lang() }}
           </label>
+          <button type="button" class="link-btn" (click)="setMode('forgot')">{{ 'reset.forgotLink' | t:lang() }}</button>
         </div>
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
@@ -154,13 +155,76 @@
           @if (isLoading()) { {{ 'verify.submitting' | t:lang() }} } @else { {{ 'verify.submit' | t:lang() }} }
         </button>
         <div class="verify-actions">
-          <button type="button" class="link-btn" (click)="onResendCode()">{{ 'verify.resend' | t:lang() }}</button>
+          <button type="button" class="link-btn" [disabled]="resendCountdown() > 0" (click)="onResendCode()">
+            @if (resendCountdown() > 0) {
+              {{ 'verify.resendWait' | t: { sec: resendCountdown() }:lang() }}
+            } @else {
+              {{ 'verify.resend' | t:lang() }}
+            }
+          </button>
+          <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t:lang() }}</button>
+        </div>
+      </form>
+    } @else if (mode() === 'forgot') {
+      <h1 class="login-title">{{ 'reset.forgotTitle' | t:lang() }}</h1>
+      <p class="login-subtitle">{{ 'reset.forgotSubtitle' | t:lang() }}</p>
+      <form [formGroup]="forgotForm" (ngSubmit)="onForgotSubmit()" class="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="forgot-email">{{ 'login.email' | t | uppercase }}</label>
+          <div class="input-wrap">
+            <input id="forgot-email" type="email" formControlName="email" class="field-input" />
+          </div>
+        </div>
+        @if (infoMessage()) {
+          <div class="info-banner" role="status">{{ infoMessage() }}</div>
+        }
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+        }
+        <button type="submit" class="submit-btn" [disabled]="isLoading()">{{ 'reset.sendCode' | t:lang() }}</button>
+        <div class="verify-actions">
+          <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t:lang() }}</button>
+        </div>
+      </form>
+    } @else if (mode() === 'reset') {
+      <h1 class="login-title">{{ 'reset.title' | t:lang() }}</h1>
+      <p class="login-subtitle">{{ 'reset.subtitle' | t:lang() }}</p>
+      <form [formGroup]="resetForm" (ngSubmit)="onResetSubmit()" class="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="reset-email">{{ 'login.email' | t | uppercase }}</label>
+          <div class="input-wrap">
+            <input id="reset-email" type="email" formControlName="email" class="field-input" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reset-code">{{ 'reset.codeLabel' | t | uppercase }}</label>
+          <div class="input-wrap">
+            <input id="reset-code" type="text" formControlName="code" class="field-input" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reset-pw">{{ 'reset.newPassword' | t | uppercase }}</label>
+          <div class="input-wrap">
+            <input id="reset-pw" type="password" formControlName="newPassword" class="field-input" />
+          </div>
+        </div>
+        @if (devCode()) {
+          <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() }:lang() }}</div>
+        }
+        @if (infoMessage()) {
+          <div class="info-banner" role="status">{{ infoMessage() }}</div>
+        }
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+        }
+        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">{{ 'reset.submit' | t:lang() }}</button>
+        <div class="verify-actions">
           <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t:lang() }}</button>
         </div>
       </form>
     }
 
-    @if (mode() !== 'verify' && googleClientId()) {
+    @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset' && googleClientId()) {
       <div class="auth-divider"><span>{{ 'login.or' | t:lang() }}</span></div>
       <div class="google-btn-wrap">
         <div #googleBtn class="google-btn-host"></div>

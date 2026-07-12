@@ -3,34 +3,36 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrganizationContextService } from '../services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-none-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-none-page">
-      <h1>Sin organización empresarial</h1>
-      <p class="lede">
-        Tu cuenta personal y las funciones demo siguen disponibles. Las rutas empresariales
-        requieren una organización activa. No se crea ninguna organización automáticamente.
-      </p>
+      <h1>{{ 'organizations.none.title' | t:lang() }}</h1>
+      <p class="lede">{{ 'organizations.none.lede' | t:lang() }}</p>
       <div class="org-card">
-        <p>Puedes crear una organización o aceptar una invitación si te enviaron un enlace.</p>
+        <p>{{ 'organizations.none.hint' | t:lang() }}</p>
         <div class="org-actions">
-          <a class="org-btn" routerLink="/organizations/new">Crear organización</a>
-          <a class="org-btn org-btn--ghost" routerLink="/invitations/accept">Aceptar invitación</a>
-          <a class="org-btn org-btn--ghost" routerLink="/discover">Seguir en modo personal</a>
+          <a class="org-btn" routerLink="/organizations/new">{{ 'organizations.create.title' | t:lang() }}</a>
+          <a class="org-btn org-btn--ghost" routerLink="/invitations/accept">{{ 'organizations.acceptInvite.title' | t:lang() }}</a>
+          <a class="org-btn org-btn--ghost" routerLink="/discover">{{ 'organizations.none.personal' | t:lang() }}</a>
         </div>
       </div>
       @if (ctx.organizations().length) {
         <div class="org-card">
-          <h2>Organizaciones accesibles</h2>
+          <h2>{{ 'organizations.none.accessible' | t:lang() }}</h2>
           <ul>
             @for (o of ctx.organizations(); track o.id) {
               <li>
                 {{ o.display_name }}
-                <span class="org-badge" [class.org-badge--suspended]="o.status !== 'active'">{{ o.status }}</span>
+                <span class="org-badge" [class.org-badge--suspended]="o.status !== 'active'">{{ o.status | statusLabel }}</span>
               </li>
             }
           </ul>
@@ -40,6 +42,9 @@ import { OrganizationContextService } from '../services/organization-context.ser
   `,
 })
 export class OrgNonePageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   readonly ctx = inject(OrganizationContextService);
 
   ngOnInit(): void {

@@ -125,6 +125,25 @@ export class BillingApiService {
     });
   }
 
+  /** Demo-only mock outcome simulator. Always labeled [MOCK] — never real money. */
+  simulateMockAttempt(orgId: number, id: number, scenario: string): Observable<{
+    attempt: PaymentAttempt;
+    scenario: string;
+    labeled_mock: boolean;
+    message: string;
+    provider_event: Record<string, unknown>;
+  }> {
+    return this.http.post<{
+      attempt: PaymentAttempt;
+      scenario: string;
+      labeled_mock: boolean;
+      message: string;
+      provider_event: Record<string, unknown>;
+    }>(`${BASE}/billing/payment-attempts/${id}/simulate`, { scenario }, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
   retryPaymentAttempt(orgId: number, id: number, idempotencyKey: string): Observable<PaymentAttempt> {
     return this.http.post<PaymentAttempt>(`${BASE}/billing/payment-attempts/${id}/retry`, {
       idempotency_key: idempotencyKey,

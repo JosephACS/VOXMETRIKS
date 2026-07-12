@@ -5,13 +5,18 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Payment } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-manual-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="manual-transfer-page">
-      <h1>Record Manual Transfer</h1>
+      <h1>{{ 'billing.manualTransfer.title' | t:lang() }}</h1>
       <p class="subtitle">MOCK / academic transfer recording — not a real bank payment.</p>
       @if (!orgId) {
         <p class="error">Select an organization context.</p>
@@ -50,6 +55,9 @@ import { Payment } from '../models/billing.models';
   `,
 })
 export class ManualTransferPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   private fb = inject(FormBuilder);
@@ -69,7 +77,7 @@ export class ManualTransferPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
     }
   }
 

@@ -1,14 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, inject} from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 
 @Component({
   selector: 'app-crm-access-denied-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-access-denied-page">
-      <h1>Acceso CRM no autorizado</h1>
+      <h1>{{ 'crm.accessDenied.title' | t:lang() }}</h1>
       <p class="lede">
         Tu cuenta no tiene ningún rol CRM asignado en esta plataforma.
         Contacta a un administrador para obtener acceso de <em>sales_agent</em> o <em>sales_manager</em>.
@@ -23,4 +28,7 @@ import { RouterLink } from '@angular/router';
     </section>
   `,
 })
-export class CrmAccessDeniedPageComponent {}
+export class CrmAccessDeniedPageComponent {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+}

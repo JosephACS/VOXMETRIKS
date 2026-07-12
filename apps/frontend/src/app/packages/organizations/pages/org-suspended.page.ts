@@ -1,15 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, inject} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 
 @Component({
   selector: 'app-org-suspended-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-suspended">
-      <h1>Organización suspendida o acceso revocado</h1>
+      <h1>{{ 'organizations.suspended.title' | t:lang() }} o acceso revocado</h1>
       <p class="lede">
         El contexto empresarial no está operativo. Las funciones personales siguen disponibles.
       </p>
@@ -20,4 +25,7 @@ import { RouterLink } from '@angular/router';
     </section>
   `,
 })
-export class OrgSuspendedPageComponent {}
+export class OrgSuspendedPageComponent {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+}

@@ -6,10 +6,15 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, CommercialContract, CustomerConversion, OPPORTUNITY_STAGES } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-opportunity-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-opportunity-detail-page">
@@ -29,7 +34,7 @@ import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, Commerc
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (opp()) {
         <!-- Opportunity data -->
         <div class="crm-card">
@@ -177,7 +182,7 @@ import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, Commerc
                 @for (c of contracts(); track c.id) {
                   <tr>
                     <td><a [routerLink]="['/crm/contracts', c.id]">C-{{ c.id }}</a></td>
-                    <td>{{ c.legal_name || 'No disponible' }}</td>
+                    <td>{{ c.legal_name || ('common.notAvailable' | t:lang()) }}</td>
                     <td><span class="crm-badge">{{ c.status }}</span></td>
                   </tr>
                 }
@@ -203,7 +208,7 @@ import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, Commerc
                     <td><a [routerLink]="['/crm/conversions', cv.id]">CV-{{ cv.id }}</a></td>
                     <td>{{ cv.mode }}</td>
                     <td><span class="crm-badge">{{ cv.status }}</span></td>
-                    <td>{{ cv.organization_id ?? 'No disponible' }}</td>
+                    <td>{{ cv.organization_id ?? ('common.notAvailable' | t:lang()) }}</td>
                   </tr>
                 }
               </tbody>
@@ -283,6 +288,9 @@ import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, Commerc
   `,
 })
 export class CrmOpportunityDetailPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

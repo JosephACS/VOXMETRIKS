@@ -4,13 +4,18 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { LedgerEntry } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-ledger',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="ledger-page">
-      <h1>Billing Ledger</h1>
+      <h1>{{ 'billing.ledger.title' | t:lang() }}</h1>
       <p class="subtitle read-only-notice">Read-only — append-only financial record.</p>
       <div class="filter-bar">
         <select (change)="onTypeFilter($event)" class="select">
@@ -54,6 +59,9 @@ import { LedgerEntry } from '../models/billing.models';
   `,
 })
 export class LedgerPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   entries: LedgerEntry[] = [];
@@ -64,7 +72,7 @@ export class LedgerPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.loadLedger();

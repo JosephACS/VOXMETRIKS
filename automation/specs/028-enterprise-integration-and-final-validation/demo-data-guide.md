@@ -31,7 +31,7 @@ Creates (all tagged demo/synthetic; skips missing tables gracefully):
 | Entity | Identifier / notes | Flags |
 |--------|--------------------|-------|
 | Organization | slug `enterprise-demo-s028` | `is_demo=TRUE` |
-| Plan + USD monthly price ($99) + active subscription with `plan_price_id` | `demo-enterprise-starter` | MRR-calculable |
+| Plan + USD monthly price ($99) + active subscription with `plan_price_id` | `professional` (commercial catalog) | MRR-calculable |
 | CRM | prospect → contact → opportunity → quotation → contract | SYNTHETIC |
 | Billing | profile, invoice, payment mock; dunning recoverable via mock fail/retry | provider `academic_mock` |
 | Artists / rights | artist profile, catalog asset, rights row | demo labels |

@@ -4,13 +4,18 @@ import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { PaymentAttempt } from '../models/billing.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-payment-attempts',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="payment-attempts-page">
-      <h1>Payment Attempts</h1>
+      <h1>{{ 'billing.paymentAttempts.title' | t:lang() }}</h1>
       @if (attempts.length) {
         <table class="data-table">
           <thead>
@@ -36,7 +41,7 @@ import { PaymentAttempt } from '../models/billing.models';
           </tbody>
         </table>
       } @else {
-        <p class="empty-state">No payment attempts found.</p>
+        <p class="empty-state">{{ 'billing.paymentAttempts.empty' | t:lang() }}</p>
       }
       @if (error) {
         <p class="error">{{ error }}</p>
@@ -45,6 +50,9 @@ import { PaymentAttempt } from '../models/billing.models';
   `,
 })
 export class PaymentAttemptsPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(BillingApiService);
   private orgCtx = inject(OrganizationContextService);
   attempts: PaymentAttempt[] = [];
@@ -54,7 +62,7 @@ export class PaymentAttemptsPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     if (!this.orgId) {
-      this.error = 'Select an organization context.';
+      this.error = this.i18n.t('common.orgRequiredContext');
       return;
     }
     this.api.listPaymentAttempts(this.orgId!).subscribe({

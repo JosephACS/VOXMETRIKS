@@ -522,7 +522,25 @@ class SupportUseCases:
         )
         _audit(self._conn, action="support.case.created", target_type="support_case", target_id=str(cid),
                actor_user_id=actor_user_id, organization_id=organization_id, request_id=request_id)
-        return self._get_case(organization_id, cid)
+        case = self._get_case(organization_id, cid)
+        try:
+            from app.packages.platform_ops.application.notify import notify_support, user_email
+            notify_support(
+                self._conn,
+                to_email=user_email(self._conn, actor_user_id),
+                organization_id=organization_id,
+                template_code="support.ticket_created",
+                subject="Ticket de soporte creado",
+                title="Ticket creado",
+                paragraphs=[
+                    f"Se creo el ticket #{cid}: {subject.strip()}",
+                    f"Prioridad: {priority}",
+                ],
+                related_id=str(cid),
+            )
+        except Exception:
+            pass
+        return case
 
     def triage(self, *, organization_id: int, case_id: int, actor_user_id: Optional[int] = None, request_id: Optional[str] = None) -> SupportCase:
         case = self._get_case(organization_id, case_id)
@@ -570,7 +588,29 @@ class SupportUseCases:
             "SELECT id, case_id, author_user_id, body, is_internal, created_at FROM app_support_message WHERE id = ?",
             [mid],
         ).fetchone()
-        return SupportMessage(*row)
+        msg = SupportMessage(*row)
+        if not is_internal:
+            try:
+                case = self._get_case(organization_id, case_id)
+                from app.packages.platform_ops.application.notify import notify_support, user_email
+                # Agent reply → notify requester when author differs
+                if case.requester_user_id and case.requester_user_id != actor_user_id:
+                    notify_support(
+                        self._conn,
+                        to_email=user_email(self._conn, case.requester_user_id),
+                        organization_id=organization_id,
+                        template_code="support.agent_reply",
+                        subject="Nueva respuesta de soporte",
+                        title="Respuesta del agente",
+                        paragraphs=[
+                            f"Hay una nueva respuesta en el ticket #{case_id}.",
+                            "Ingresa a la plataforma para leerla.",
+                        ],
+                        related_id=str(case_id),
+                    )
+            except Exception:
+                pass
+        return msg
 
     def list_messages(self, organization_id: int, case_id: int, *, include_internal: bool) -> list[SupportMessage]:
         self._get_case(organization_id, case_id)
@@ -605,7 +645,22 @@ class SupportUseCases:
         )
         _audit(self._conn, action="support.case.resolved", target_type="support_case", target_id=str(case_id),
                actor_user_id=actor_user_id, organization_id=organization_id, request_id=request_id)
-        return self._get_case(organization_id, case_id)
+        updated = self._get_case(organization_id, case_id)
+        try:
+            from app.packages.platform_ops.application.notify import notify_support, user_email
+            notify_support(
+                self._conn,
+                to_email=user_email(self._conn, case.requester_user_id),
+                organization_id=organization_id,
+                template_code="support.ticket_resolved",
+                subject="Ticket resuelto",
+                title="Ticket resuelto",
+                paragraphs=[f"El ticket #{case_id} fue marcado como resuelto."],
+                related_id=str(case_id),
+            )
+        except Exception:
+            pass
+        return updated
 
     def close(self, *, organization_id: int, case_id: int, actor_user_id: Optional[int] = None, request_id: Optional[str] = None) -> SupportCase:
         case = self._get_case(organization_id, case_id)

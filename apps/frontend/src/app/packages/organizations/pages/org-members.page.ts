@@ -7,14 +7,19 @@ import { OrganizationsApiError, OrganizationsApiService } from '../services/orga
 import { OrganizationContextService } from '../services/organization-context.service';
 import { AuthService } from '../../../core/services/auth.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-org-members-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-members-page">
-      <h1>Miembros</h1>
+      <h1>{{ 'organizations.members.title' | t:lang() }}</h1>
       <p class="lede">El backend es la autoridad; la UI solo oculta acciones no permitidas.</p>
 
       @if (error()) {
@@ -23,7 +28,7 @@ import { AuthService } from '../../../core/services/auth.service';
 
       <div class="org-actions" style="margin-bottom: 1rem">
         @if (ctx.hasPermission('member.invite')) {
-          <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">Invitaciones</a>
+          <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">{{ 'organizations.invitations.title' | t:lang() }}</a>
         }
         @if (ctx.hasPermission('role.view')) {
           <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']">Roles</a>
@@ -90,6 +95,9 @@ import { AuthService } from '../../../core/services/auth.service';
   `,
 })
 export class OrgMembersPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(OrganizationsApiService);
   readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);

@@ -16,6 +16,8 @@ sys.path.insert(0, str(BACKEND))
 os.environ.setdefault("AUTH_RATE_LIMIT", "0")
 os.environ.setdefault("GLOBAL_RATE_LIMIT", "0")
 os.environ.setdefault("LOG_TO_FILES", "false")
+# Never send real email during pytest (user .env may set smtp/resend).
+os.environ["EMAIL_PROVIDER"] = "console"
 
 _TEST_DB_DIR = BACKEND / "tests" / ".pytest_db"
 _TEST_DB_PATH = _TEST_DB_DIR / "voxmetrik_test.duckdb"

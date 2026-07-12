@@ -6,24 +6,29 @@ import { CampaignsApiService } from '../services/campaigns-api.service';
 import { Campaign } from '../models/campaigns.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-campaigns-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
     <div class="campaigns-list-page">
-      <h1>Campaigns</h1>
+      <h1>{{ 'campaigns.list.title' | t:lang() }}</h1>
       <p class="subtitle">Marketing campaigns with budgets, expenses, and ROI tracking.</p>
 
       <form [formGroup]="createForm" (ngSubmit)="createCampaign()" class="create-form">
         <input formControlName="name" placeholder="Campaign name" class="input" />
         <input formControlName="market" placeholder="Market (optional)" class="input" />
-        <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">Create Campaign</button>
+        <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">{{ 'campaigns.list.create' | t:lang() }}</button>
       </form>
 
       @if (error) { <p class="error">{{ error }}</p> }
-      @if (loading) { <p>Loading…</p> }
-      @else if (campaigns.length === 0) { <p>No campaigns yet.</p> }
+      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
+      @else if (campaigns.length === 0) { <p>{{ 'campaigns.list.empty' | t:lang() }}</p> }
       @else {
         <table class="campaigns-table">
           <thead>
@@ -46,6 +51,9 @@ import { OrganizationContextService } from '../../organizations/services/organiz
   `,
 })
 export class CampaignsListPage implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private api = inject(CampaignsApiService);
   private fb = inject(FormBuilder);
   private orgCtx = inject(OrganizationContextService);
@@ -61,7 +69,7 @@ export class CampaignsListPage implements OnInit {
 
   load(): void {
     const orgId = this.orgCtx.activeOrganization()?.id;
-    if (!orgId) { this.error = 'Select an organization'; return; }
+    if (!orgId) { this.error = this.i18n.t('common.orgRequired'); return; }
     this.loading = true;
     this.api.list(orgId).subscribe({
       next: (r) => { this.campaigns = r.items; this.total = r.total; this.loading = false; },

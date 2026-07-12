@@ -4,14 +4,19 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CrmAuditEntry } from '../models/crm.models';
 
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+
 @Component({
   selector: 'app-crm-audit-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-audit-page">
-      <h1>Auditoría CRM</h1>
+      <h1>{{ 'crm.audit.title' | t:lang() }}</h1>
       <p class="lede">
         Registro de eventos CRM y contratos. Vista sanitizada: sin tokens, hashes ni secretos.
       </p>
@@ -21,9 +26,9 @@ import { CrmAuditEntry } from '../models/crm.models';
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando…</p>
+        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else if (!items().length) {
-        <div class="crm-card"><p class="crm-muted">Sin eventos de auditoría CRM.</p></div>
+        <div class="crm-card"><p class="crm-muted">{{ 'organizations.audit.empty' | t:lang() }} CRM.</p></div>
       } @else {
         <div class="crm-card" style="overflow-x:auto">
           <table class="crm-table">
@@ -73,6 +78,9 @@ import { CrmAuditEntry } from '../models/crm.models';
   `,
 })
 export class CrmAuditPageComponent implements OnInit {
+  private i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
+
   private readonly api = inject(CrmApiService);
 
   page = 1;
