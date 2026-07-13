@@ -23,6 +23,7 @@ class Organization:
     updated_at: datetime
     closed_at: Optional[datetime]
     is_demo: bool = False
+    is_test: bool = False
 
 
 @dataclass(frozen=True)

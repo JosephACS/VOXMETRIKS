@@ -9,8 +9,6 @@ import { DataSourceBadgeComponent } from '../../../shared/components/data-source
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
-type TableKind = 'dimension' | 'fact' | 'aggregation' | 'control' | 'application' | 'other';
-
 @Component({
   selector: 'app-explorer',
   standalone: true,

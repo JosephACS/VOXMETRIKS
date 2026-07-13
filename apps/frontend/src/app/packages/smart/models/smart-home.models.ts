@@ -4,17 +4,27 @@ export interface SmartTrackItem {
   id_track: number;
   nombre_track?: string;
   nombre_artista?: string;
+  id_artista?: number;
   popularity?: number;
   score?: number;
   reason?: string;
   similarity?: number;
   content_similarity?: number;
+  cover_url?: string | null;
+  mix_tag?: string;
 }
+
 export interface SmartHomeSection {
   id: string;
   type: 'track_rail' | 'playlist' | 'because';
-  title: string;
+  /** Stable system code (e.g. discover_weekly). Prefer over title for i18n. */
+  code?: string;
+  /** Legacy display title — only used when code is absent (user content / old API). */
+  title?: string;
   subtitle?: string;
+  subtitle_code?: string;
+  week?: string;
+  title_params?: Record<string, string | number>;
   reason_type?: string;
   tracks: SmartTrackItem[];
 }
@@ -57,6 +67,7 @@ export function smartItemToTrack(item: SmartTrackItem): Track {
     id_track: item.id_track,
     nombre_track: item.nombre_track ?? `Track ${item.id_track}`,
     nombre_artista: item.nombre_artista ?? undefined,
+    id_artista: item.id_artista,
     popularity: item.popularity,
   };
 }

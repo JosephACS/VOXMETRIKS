@@ -37,7 +37,10 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         settings = get_settings()
-        if settings.effective_global_rate_limit > 0 and request.url.path.startswith(("/api/", "/health")):
+        if (
+            settings.effective_global_rate_limit > 0
+            and request.url.path.startswith(("/api/", "/health"))
+        ):
             check_global_rate_limit(
                 request,
                 max_calls=settings.effective_global_rate_limit,

@@ -6,7 +6,6 @@ import {
   TrackSearchResult,
 } from '../../shared/models/api.models';
 import { PlayableTrack } from '../../shared/models/player.models';
-import { demoAudioUrlForTrack } from '../../shared/config/demo-audio.config';
 import { CoverArtService } from '../../shared/services/cover-art.service';
 import {
   playableFromTopTrack,
@@ -33,7 +32,7 @@ export function toPlayableFromHistory(coverArt: CoverArtService, h: HistoryEntry
     id: h.id_track,
     title: displayTrackTitle(h.nombre_track),
     artist: primaryArtistName(h.nombre_artista) || '—',
-    audioUrl: demoAudioUrlForTrack(h.id_track),
+    audioUrl: '',
     coverGradient: coverArt.gradientFor(h.id_track),
   };
 }
@@ -45,7 +44,7 @@ export function toPlayableFromSearch(coverArt: CoverArtService, r: TrackSearchRe
     artist: primaryArtistName(r.nombre_artista) || '—',
     artistId: r.id_artista,
     durationMs: r.duration_ms,
-    audioUrl: demoAudioUrlForTrack(r.id_track),
+    audioUrl: '',
     coverGradient: coverArt.gradientFor(r.id_track),
   };
 }
@@ -56,7 +55,7 @@ export function toPlayableFromFavorite(coverArt: CoverArtService, t: FavoriteTra
     title: t.nombre_track ?? '—',
     artist: t.nombre_artista ?? '—',
     durationMs: t.duration_ms,
-    audioUrl: demoAudioUrlForTrack(t.id_track),
+    audioUrl: '',
     coverGradient: coverArt.gradientFor(t.id_track),
   };
 }

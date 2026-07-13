@@ -10,7 +10,7 @@ function track(id = 1): PlayableTrack {
     id,
     title: 'Song',
     artist: 'Artist',
-    audioUrl: '/assets/audio/demo-01.wav',
+    audioUrl: '',
     coverGradient: 'g',
   };
 }
@@ -39,7 +39,7 @@ describe('AudioResolver Phase 3', () => {
         onResolving: vi.fn(),
         onYoutube,
         onStream: vi.fn(),
-        onDemo: vi.fn(),
+        onPreview: vi.fn(),
         onNotFound: vi.fn(),
         onTrackUpdated: vi.fn(),
         isStale: () => false,
@@ -49,7 +49,7 @@ describe('AudioResolver Phase 3', () => {
     expect(getAudioSource).not.toHaveBeenCalled();
   });
 
-  it('2. resolves uncached track via API', () => {
+  it('2. resolves uncached track via API (sync wait)', () => {
     getAudioSource.mockReturnValue(
       of({
         track_id: 1,
@@ -59,17 +59,19 @@ describe('AudioResolver Phase 3', () => {
       }),
     );
     const onYoutube = vi.fn();
+    const onPreview = vi.fn();
     resolver.resolvePlayableSource(track(), {
       onResolving: vi.fn(),
       onYoutube,
       onStream: vi.fn(),
-      onDemo: vi.fn(),
+      onPreview,
       onNotFound: vi.fn(),
       onTrackUpdated: vi.fn(),
       isStale: () => false,
     });
-    expect(getAudioSource).toHaveBeenCalled();
+    expect(getAudioSource).toHaveBeenCalledWith(1, { asyncResolve: false });
     expect(onYoutube).toHaveBeenCalledWith('new-id');
+    expect(onPreview).not.toHaveBeenCalled();
   });
 
   it('3. falls back to stream when Audius resolves', () => {
@@ -87,7 +89,7 @@ describe('AudioResolver Phase 3', () => {
       onResolving: vi.fn(),
       onYoutube: vi.fn(),
       onStream,
-      onDemo: vi.fn(),
+      onPreview: vi.fn(),
       onNotFound: vi.fn(),
       onTrackUpdated: vi.fn(),
       isStale: () => false,
@@ -95,21 +97,26 @@ describe('AudioResolver Phase 3', () => {
     expect(onStream).toHaveBeenCalledWith('https://api.audius.co/v1/tracks/55/stream');
   });
 
-  it('4. not_found triggers onNotFound callback', () => {
+  it('4. not_found triggers onNotFound (never generic demo)', () => {
     getAudioSource.mockReturnValue(
       of({ track_id: 1, provider: 'youtube', status: 'not_found' }),
     );
     const onNotFound = vi.fn();
-    resolver.resolvePlayableSource(track(), {
-      onResolving: vi.fn(),
-      onYoutube: vi.fn(),
-      onStream: vi.fn(),
-      onDemo: vi.fn(),
-      onNotFound,
-      onTrackUpdated: vi.fn(),
-      isStale: () => false,
-    });
+    const onPreview = vi.fn();
+    resolver.resolvePlayableSource(
+      { ...track(), audioUrl: '/assets/audio/demo-01.wav' },
+      {
+        onResolving: vi.fn(),
+        onYoutube: vi.fn(),
+        onStream: vi.fn(),
+        onPreview,
+        onNotFound,
+        onTrackUpdated: vi.fn(),
+        isStale: () => false,
+      },
+    );
     expect(onNotFound).toHaveBeenCalled();
+    expect(onPreview).not.toHaveBeenCalled();
   });
 
   it('5. recovery skips failed provider', () => {
@@ -125,26 +132,78 @@ describe('AudioResolver Phase 3', () => {
       onResolving: vi.fn(),
       onYoutube: vi.fn(),
       onStream: vi.fn(),
-      onDemo: vi.fn(),
+      onPreview: vi.fn(),
       onNotFound: vi.fn(),
       onTrackUpdated: vi.fn(),
       isStale: () => false,
     });
-    expect(getAudioSource).toHaveBeenCalledWith(1, true, 'youtube');
+    expect(getAudioSource).toHaveBeenCalledWith(1, {
+      force: true,
+      skipProvider: 'youtube',
+      asyncResolve: false,
+    });
   });
 
-  it('6. API error falls back to demo', () => {
+  it('6. API error becomes unavailable (not generic demo)', () => {
     getAudioSource.mockReturnValue(throwError(() => ({ status: 500 })));
-    const onDemo = vi.fn();
+    const onPreview = vi.fn();
+    const onNotFound = vi.fn();
     resolver.resolvePlayableSource(track(), {
       onResolving: vi.fn(),
       onYoutube: vi.fn(),
       onStream: vi.fn(),
-      onDemo,
-      onNotFound: vi.fn(),
+      onPreview,
+      onNotFound,
       onTrackUpdated: vi.fn(),
       isStale: () => false,
     });
-    expect(onDemo).toHaveBeenCalled();
+    expect(onNotFound).toHaveBeenCalled();
+    expect(onPreview).not.toHaveBeenCalled();
+  });
+
+  it('7. track-specific preview URL is allowed', () => {
+    getAudioSource.mockReturnValue(
+      of({
+        track_id: 1,
+        provider: 'preview',
+        playable_url: 'https://cdn.example/track-1-preview.mp3',
+        status: 'ok',
+      }),
+    );
+    const onPreview = vi.fn();
+    const onNotFound = vi.fn();
+    resolver.resolvePlayableSource(track(), {
+      onResolving: vi.fn(),
+      onYoutube: vi.fn(),
+      onStream: vi.fn(),
+      onPreview,
+      onNotFound,
+      onTrackUpdated: vi.fn(),
+      isStale: () => false,
+    });
+    expect(onPreview).toHaveBeenCalledWith('https://cdn.example/track-1-preview.mp3');
+    expect(onNotFound).not.toHaveBeenCalled();
+  });
+
+  it('8. stale callback ignores late resolve', () => {
+    getAudioSource.mockReturnValue(
+      of({
+        track_id: 1,
+        provider: 'youtube',
+        youtube_video_id: 'late-id',
+        status: 'ok',
+      }),
+    );
+    const onYoutube = vi.fn();
+    resolver.resolvePlayableSource(track(), {
+      onResolving: vi.fn(),
+      onYoutube,
+      onStream: vi.fn(),
+      onPreview: vi.fn(),
+      onNotFound: vi.fn(),
+      onTrackUpdated: vi.fn(),
+      isStale: () => true,
+    });
+    expect(onYoutube).not.toHaveBeenCalled();
   });
 });

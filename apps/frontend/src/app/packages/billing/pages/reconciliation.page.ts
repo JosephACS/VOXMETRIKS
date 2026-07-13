@@ -6,13 +6,10 @@ import { Payment } from '../models/billing.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-reconciliation',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <div class="reconciliation-page">
       <h1>{{ 'billing.reconciliation.title' | t:lang() }}</h1>

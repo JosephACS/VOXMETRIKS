@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, finalize, map, of, share } from 'rxjs';
-import { PlayableTrack, PlaybackStatus, RepeatMode } from '../models/player.models';
+import { PlayableTrack, PlaybackStatus, RepeatMode, AudioResolvePhase } from '../models/player.models';
 import { CoverArtService } from './cover-art.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { ListenStatsService } from '../../packages/streaming/services/listen-stats.service';
@@ -14,6 +14,7 @@ import { PlaybackEngine } from '../../playback-core/playback.engine';
 import { cycleRepeatMode } from '../../playback-core/playback-history';
 import { AudioResolver } from '../../playback-core/resolver/audio.resolver';
 import { RESOLVE_FRIENDLY_ERROR } from '../../playback-core/resolver/resolved-source.model';
+import { isGenericDemoAudioUrl } from '../config/demo-audio.config';
 import {
   clearPersistedSession,
   persistPlaybackSession,
@@ -70,7 +71,9 @@ export class MusicPlayerService {
   queue = signal<PlayableTrack[]>([]);
   queueIndex = signal(0);
   expandedOpen = signal(false);
-  audioMode = signal<'youtube' | 'stream' | 'demo' | 'loading'>('demo');
+  audioMode = signal<'youtube' | 'stream' | 'preview' | 'loading'>('loading');
+  /** User-facing resolve lifecycle (idle → resolving → ready/playing | unavailable). */
+  resolvePhase = signal<AudioResolvePhase>('idle');
   currentCover = signal<string | null>(null);
 
   upcomingQueue = computed(() => {
@@ -355,6 +358,7 @@ export class MusicPlayerService {
 
   stopPlayback() {
     this.playbackToken++;
+    this.audioResolver.cancel();
     this.audioResolver.resetRetries();
     this.engine.stopAll();
     this.queueState.clear();
@@ -365,7 +369,8 @@ export class MusicPlayerService {
     this.setStatus('idle');
     this.currentTime.set(0);
     this.duration.set(0);
-    this.audioMode.set('demo');
+    this.audioMode.set('loading');
+    this.resolvePhase.set('idle');
     this.playbackError.set(null);
     this.expandedOpen.set(false);
     this.pendingRestoreTime = 0;
@@ -431,12 +436,18 @@ export class MusicPlayerService {
       this.queueState.recordPlayed(leaving);
     }
 
+    // Cancel prior resolve so a late response cannot swap the current track.
+    if (leaving) this.audioResolver.cancel(leaving.id);
+    this.audioResolver.cancel(track.id);
+
     this.engine.stopAll();
     this.currentTrack.set(track);
     if (!options.restorePosition) this.currentTime.set(0);
     this.duration.set(track.durationMs ? track.durationMs / 1000 : 0);
     this.playbackError.set(null);
     this.setStatus('loading');
+    this.resolvePhase.set('resolving');
+    this.audioMode.set('loading');
 
     this.history.add({
       id_track: track.id,
@@ -445,26 +456,27 @@ export class MusicPlayerService {
     });
 
     const token = ++this.playbackToken;
-    this.currentCover.set(null);
+    // Keep prior cover until a new one resolves — never flash empty placeholder.
     this.coverSvc.cover$(track.id).subscribe((url) => {
-      if (token === this.playbackToken) this.currentCover.set(url);
+      if (token === this.playbackToken && url) this.currentCover.set(url);
     });
 
     const shouldAutoplay = autoplay && options.userInitiated !== false && !this.restoredSession;
     this.restoredSession = false;
 
     this.audioResolver.resolvePlayableSource(track, {
-      isStale: () => token !== this.playbackToken,
+      isStale: () => token !== this.playbackToken || this.currentTrack()?.id !== track.id,
       onResolving: () => {
         this.audioMode.set('loading');
         this.setStatus('loading');
+        this.resolvePhase.set('resolving');
       },
-      onYoutube: (videoId) => this.startYt(track, videoId, shouldAutoplay, options),
-      onStream: (streamUrl) => this.startStream(track, streamUrl, shouldAutoplay, options),
-      onDemo: () => this.startDemo(track, shouldAutoplay, options),
-      onNotFound: () => this.startDemo(track, shouldAutoplay, options),
+      onYoutube: (videoId) => this.startYt(track, videoId, shouldAutoplay, options, token),
+      onStream: (streamUrl) => this.startStream(track, streamUrl, shouldAutoplay, options, token),
+      onPreview: (previewUrl) => this.startPreview(track, previewUrl, shouldAutoplay, options, token),
+      onNotFound: () => this.failPlayback(track, token, 'unavailable'),
       onTrackUpdated: (updated) => {
-        this.currentTrack.set(updated);
+        if (token === this.playbackToken) this.currentTrack.set(updated);
       },
     });
 
@@ -472,8 +484,16 @@ export class MusicPlayerService {
     this.schedulePersist();
   }
 
-  private startYt(track: PlayableTrack, videoId: string, autoplay: boolean, options: LoadOptions = {}) {
+  private startYt(
+    track: PlayableTrack,
+    videoId: string,
+    autoplay: boolean,
+    options: LoadOptions = {},
+    token?: number,
+  ) {
+    if (token != null && token !== this.playbackToken) return;
     this.audioMode.set('youtube');
+    this.resolvePhase.set(autoplay ? 'playing' : 'ready');
     this.engine.markLoaded(track.id, true);
     this.engine.startYoutube(videoId, autoplay);
     if (options.restorePosition && options.restorePosition > 0) {
@@ -484,11 +504,25 @@ export class MusicPlayerService {
     else this.setStatus('paused');
   }
 
-  private startDemo(track: PlayableTrack, autoplay: boolean, options: LoadOptions = {}) {
-    this.audioMode.set('demo');
-    this.engine.startDemo(track.audioUrl, track.id, autoplay).then((ok) => {
+  private startPreview(
+    track: PlayableTrack,
+    previewUrl: string,
+    autoplay: boolean,
+    options: LoadOptions = {},
+    token?: number,
+  ) {
+    if (token != null && token !== this.playbackToken) return;
+    if (isGenericDemoAudioUrl(previewUrl)) {
+      this.failPlayback(track, token, 'unavailable');
+      return;
+    }
+    this.audioMode.set('preview');
+    this.resolvePhase.set(autoplay ? 'playing' : 'ready');
+    this.playbackError.set(null);
+    this.engine.startDemo(previewUrl, track.id, autoplay).then((ok) => {
+      if (token != null && token !== this.playbackToken) return;
       if (!ok && autoplay) {
-        this.handleAudioFailure(track, 'demo');
+        this.handleAudioFailure(track, 'preview');
         return;
       }
       if (options.restorePosition && options.restorePosition > 0) {
@@ -503,10 +537,14 @@ export class MusicPlayerService {
     streamUrl: string,
     autoplay: boolean,
     options: LoadOptions = {},
+    token?: number,
   ) {
+    if (token != null && token !== this.playbackToken) return;
     this.audioMode.set('stream');
+    this.resolvePhase.set(autoplay ? 'playing' : 'ready');
     this.engine.markLoaded(track.id, false);
     this.engine.startDemo(streamUrl, track.id, autoplay).then((ok) => {
+      if (token != null && token !== this.playbackToken) return;
       if (!ok && autoplay) {
         this.handleAudioFailure(track, 'stream');
         return;
@@ -518,29 +556,40 @@ export class MusicPlayerService {
     });
   }
 
-  private handleAudioFailure(track: PlayableTrack, source: 'youtube' | 'stream' | 'demo') {
+  private handleAudioFailure(track: PlayableTrack, source: 'youtube' | 'stream' | 'preview') {
     if (source === 'youtube' || source === 'stream') {
       const token = this.playbackToken;
+      this.resolvePhase.set('resolving');
       this.audioResolver.recoverFromPlaybackError(track, source, {
-        isStale: () => token !== this.playbackToken,
-        onResolving: () => this.setStatus('loading'),
-        onYoutube: (videoId) => this.startYt(track, videoId, true),
-        onStream: (url) => this.startStream(track, url, true),
-        onDemo: () => this.startDemo(track, true),
-        onNotFound: () => this.failPlayback(track),
-        onTrackUpdated: (updated) => this.currentTrack.set(updated),
+        isStale: () => token !== this.playbackToken || this.currentTrack()?.id !== track.id,
+        onResolving: () => {
+          this.setStatus('loading');
+          this.resolvePhase.set('resolving');
+        },
+        onYoutube: (videoId) => this.startYt(track, videoId, true, {}, token),
+        onStream: (url) => this.startStream(track, url, true, {}, token),
+        onPreview: (url) => this.startPreview(track, url, true, {}, token),
+        onNotFound: () => this.failPlayback(track, token, 'unavailable'),
+        onTrackUpdated: (updated) => {
+          if (token === this.playbackToken) this.currentTrack.set(updated);
+        },
       });
       return;
     }
-    this.failPlayback(track);
+    this.failPlayback(track, this.playbackToken, 'failed');
   }
 
-  private failPlayback(track: PlayableTrack) {
+  private failPlayback(_track: PlayableTrack, token?: number, phase: AudioResolvePhase = 'unavailable') {
+    if (token != null && token !== this.playbackToken) return;
+    this.audioMode.set('loading');
+    this.resolvePhase.set(phase);
     this.playbackError.set(RESOLVE_FRIENDLY_ERROR);
     this.setStatus('error');
     if (this.queue().length > 1 || this.autoplay()) {
       window.setTimeout(() => {
-        if (this.status() === 'error') this.next();
+        if (this.status() === 'error' && (token == null || token === this.playbackToken)) {
+          this.next();
+        }
       }, 1200);
     }
   }
@@ -662,10 +711,12 @@ export class MusicPlayerService {
 
     if (session.track.youtubeVideoId) {
       this.audioMode.set('youtube');
+      this.resolvePhase.set('ready');
       this.engine.startYoutube(session.track.youtubeVideoId, false);
       this.engine.markLoaded(session.track.id, true);
-    } else {
-      this.audioMode.set('demo');
+    } else if (session.track.audioUrl && !isGenericDemoAudioUrl(session.track.audioUrl)) {
+      this.audioMode.set('stream');
+      this.resolvePhase.set('ready');
       this.engine.primeDemo(session.track.audioUrl);
       if (session.currentTime > 0) {
         this.engine.startDemo(session.track.audioUrl, session.track.id, false).then(() => {
@@ -673,6 +724,9 @@ export class MusicPlayerService {
           this.pendingRestoreTime = 0;
         });
       }
+    } else {
+      this.audioMode.set('loading');
+      this.resolvePhase.set('idle');
     }
   }
 }

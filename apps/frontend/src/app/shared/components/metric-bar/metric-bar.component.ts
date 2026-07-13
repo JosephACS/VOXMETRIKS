@@ -103,7 +103,7 @@ export class MetricBarComponent {
   get displayValue(): string {
     const v = this.value ?? 0;
     // Simple formatting without DecimalPipe (used as template pipe)
-    const [intPart, fracSpec] = this.digitsInfo.split('.');
+    const [, fracSpec] = this.digitsInfo.split('.');
     if (!fracSpec) return String(Math.round(v));
     const [, maxFrac] = fracSpec.split('-').map(Number);
     return v.toFixed(maxFrac ?? 1);

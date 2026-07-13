@@ -47,6 +47,7 @@ import { HomeAnalyticsBandComponent } from './widgets/home-analytics-band.compon
 import { SmartHomeService } from '../../smart/services/smart-home.service';
 import { HomeSectionWidgetComponent } from '../../smart/widgets/home-section-widget.component';
 import { SmartHomeSection, AudioDna } from '../../smart/models/smart-home.models';
+import { AudioPrefetchService } from '../../../playback-core/audio-prefetch.service';
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -69,6 +70,7 @@ export class HomeComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private covers = inject(CoverArtService);
   private trackCover = inject(TrackCoverService);
+  private audioPrefetch = inject(AudioPrefetchService);
   private i18n = inject(I18nService);
   /** Resolved real cover URLs per track id (same source the player uses). */
   private coverUrls = signal<Record<number, string>>({});
@@ -209,6 +211,10 @@ export class HomeComponent implements OnInit {
         this.railsLoading.set(false);
         (feed.discover?.items ?? []).forEach((t) => this.resolveCover(t.id_track, t.id_artista));
         (feed.artists ?? []).forEach((a) => this.resolveArtistCover(a.id_artista));
+        this.audioPrefetch.warm(
+          (feed.discover?.items ?? []).map((t) => t.id_track),
+          10,
+        );
       },
       error: (err) => {
         this.hasError.set(true);
@@ -224,6 +230,7 @@ export class HomeComponent implements OnInit {
         const deduped = dedupeHistory(h);
         this.history.set(deduped);
         deduped.forEach((entry) => this.resolveCover(entry.id_track));
+        this.audioPrefetch.warm(deduped.map((e) => e.id_track), 8);
       });
     this.historySvc.reload();
     this.favoritesSvc.favoriteIds$
@@ -235,9 +242,14 @@ export class HomeComponent implements OnInit {
         this.smartSections.set(res.sections ?? []);
         this.audioDna.set(res.profile?.audio_dna ?? null);
         this.smartLoading.set(false);
+        const smartIds: number[] = [];
         res.sections?.forEach((s) =>
-          s.tracks?.forEach((t) => this.resolveCover(t.id_track)),
+          s.tracks?.forEach((t) => {
+            this.resolveCover(t.id_track);
+            smartIds.push(t.id_track);
+          }),
         );
+        this.audioPrefetch.warm(smartIds, 12);
       },
       error: (err) => {
         this.smartLoading.set(false);

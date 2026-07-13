@@ -195,6 +195,7 @@ class PlaylistSummary(BaseModel):
     created_at:   Optional[str] = None
     total_tracks: int = 0
     cover_track_id: Optional[int] = None
+    preview_track_ids: List[int] = []
 
 class PlaylistTrackItem(BaseModel):
     id_track:       int

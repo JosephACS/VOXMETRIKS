@@ -1,6 +1,7 @@
 import { SafeHtml } from '@angular/platform-browser';
 import { IconRenderService } from '../../../shared/services/icon-render.service';
 import { I18nService } from '../../../core/services/i18n.service';
+import { translateSystemCode } from '../../../core/i18n/system-labels';
 import { Component, DestroyRef, inject, OnInit, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { take } from 'rxjs';
@@ -18,7 +19,6 @@ import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import { displayTrackTitle, displayTrackSubtitle } from '../../../shared/utils/track-display.util';
 import { primaryArtistName } from '../../../shared/utils/artist.util';
-import { demoAudioUrlForTrack } from '../../../shared/config/demo-audio.config';
 import { SmartHomeService } from '../../smart/services/smart-home.service';
 import { SmartTrackItem, smartItemToTrack } from '../../smart/models/smart-home.models';
 import { HorizontalSectionComponent } from '../../../shared/components/horizontal-section/horizontal-section.component';
@@ -33,7 +33,8 @@ import { PlayerController } from '../../../playback-core/player.controller';
   styleUrls: ['./track-detail.component.css'],
 })
 export class TrackDetailComponent implements OnInit {
-  readonly lang = inject(I18nService).lang;
+  private readonly i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
   private iconRender = inject(IconRenderService);
   private coverArt = inject(CoverArtService);
   private coverSvc = inject(TrackCoverService);
@@ -137,7 +138,7 @@ export class TrackDetailComponent implements OnInit {
       title: displayTrackTitle(t.nombre_track),
       artist: displayTrackSubtitle(artist, t.nombre_genero, t.id_track),
       durationMs: t.duration_ms,
-      audioUrl: demoAudioUrlForTrack(t.id_track),
+      audioUrl: '',
       coverGradient: this.coverArt.gradientFor(t.id_track),
       explicit: t.explicit,
     });
@@ -153,8 +154,11 @@ export class TrackDetailComponent implements OnInit {
   }
 
   similarMeta(item: SmartTrackItem): string | undefined {
-    if (item.similarity != null) return `${Math.round(item.similarity * 100)}% similar`;
-    return undefined;
+    this.i18n.lang();
+    if (item.similarity == null) return undefined;
+    return translateSystemCode('meta_similar', (k, p) => this.i18n.t(k, p), {
+      pct: Math.round(item.similarity * 100),
+    }) ?? undefined;
   }
 
   private loadSimilar(trackId: number) {

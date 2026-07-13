@@ -25,6 +25,7 @@ export class PlaybackStore {
   readonly autoplayLoading = this.player.autoplayLoading;
   readonly progressPct = this.player.progressPct;
   readonly audioMode = this.player.audioMode;
+  readonly resolvePhase = this.player.resolvePhase;
   readonly playbackError = this.player.playbackError;
   readonly currentCover = this.player.currentCover;
   readonly expandedOpen = this.player.expandedOpen;

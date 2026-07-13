@@ -7,13 +7,10 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-biz-alerts',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
     <div class="biz-alerts">
       <a routerLink="/business-analytics">← Dashboard</a>

@@ -79,7 +79,15 @@ describe('MusicPlayerService', () => {
         {
           provide: TracksService,
           useValue: {
-            getAudioSource: vi.fn(() => of({ status: 'ok', youtube_video_id: null })),
+            getAudioSource: vi.fn(() =>
+              of({
+                track_id: 42,
+                provider: 'youtube',
+                status: 'not_found',
+                youtube_video_id: null,
+                playable_url: null,
+              }),
+            ),
             getCover: vi.fn(() => of({ status: 'ok', image_url: null })),
             listTracks: vi.fn(() => of({ total: 0, page: 1, limit: 24, items: [] })),
           },
@@ -107,16 +115,16 @@ describe('MusicPlayerService', () => {
 
   describe('loadTrack (hotspot)', () => {
     it('sets currentTrack, duration, and resets currentTime', () => {
-      const track = sampleTrack();
+      const track = sampleTrack({ youtubeVideoId: 'abc' });
       svc.playTrack(track);
-      expect(svc.currentTrack()).toEqual(track);
+      expect(svc.currentTrack()?.id).toBe(track.id);
       expect(svc.currentTime()).toBe(0);
       expect(svc.duration()).toBe(180);
     });
 
     it('persists session to sessionStorage', async () => {
       vi.useFakeTimers();
-      svc.playTrack(sampleTrack({ id: 7, title: 'Persisted' }));
+      svc.playTrack(sampleTrack({ id: 7, title: 'Persisted', youtubeVideoId: 'abc' }));
       await vi.advanceTimersByTimeAsync(350);
       const raw = sessionStorage.getItem('vox:playback:session');
       expect(raw).toBeTruthy();
@@ -126,7 +134,7 @@ describe('MusicPlayerService', () => {
     });
 
     it('records the track in listening history', () => {
-      const track = sampleTrack();
+      const track = sampleTrack({ youtubeVideoId: 'abc' });
       svc.playTrack(track);
       expect(historyAdd).toHaveBeenCalledWith({
         id_track: track.id,
@@ -140,18 +148,21 @@ describe('MusicPlayerService', () => {
       expect(svc.audioMode()).toBe('youtube');
       expect(mockEngine.startYoutube).toHaveBeenCalledWith('dQw4w9WgXcQ', true);
       expect(svc.status()).toBe('playing');
+      expect(svc.resolvePhase()).toBe('playing');
     });
 
-    it('falls back to demo mode when no YouTube id is available', () => {
-      svc.playTrack(sampleTrack());
-      expect(svc.audioMode()).toBe('demo');
-      expect(mockEngine.stopAll).toHaveBeenCalled();
+    it('falls back to unavailable when no playable source exists (never generic demo)', () => {
+      svc.playTrack(sampleTrack({ audioUrl: '/assets/audio/demo-01.wav' }));
+      expect(svc.resolvePhase()).toBe('unavailable');
+      expect(svc.status()).toBe('error');
+      expect(svc.audioMode()).toBe('loading');
+      expect(mockEngine.startDemo).not.toHaveBeenCalled();
     });
   });
 
   describe('transport controls', () => {
     it('pause and resume toggle status', () => {
-      svc.playTrack(sampleTrack());
+      svc.playTrack(sampleTrack({ youtubeVideoId: 'abc' }));
       svc.pause();
       expect(svc.status()).toBe('paused');
       svc.resume();
@@ -159,8 +170,8 @@ describe('MusicPlayerService', () => {
     });
 
     it('next advances queue', () => {
-      const a = sampleTrack({ id: 1, title: 'A' });
-      const b = sampleTrack({ id: 2, title: 'B' });
+      const a = sampleTrack({ id: 1, title: 'A', youtubeVideoId: 'a' });
+      const b = sampleTrack({ id: 2, title: 'B', youtubeVideoId: 'b' });
       svc.setQueue([a, b], 0);
       expect(svc.currentTrack()?.id).toBe(1);
       svc.next();
@@ -168,8 +179,8 @@ describe('MusicPlayerService', () => {
     });
 
     it('previous uses playback history after seek reset window', () => {
-      const a = sampleTrack({ id: 1, title: 'A' });
-      const b = sampleTrack({ id: 2, title: 'B' });
+      const a = sampleTrack({ id: 1, title: 'A', youtubeVideoId: 'a' });
+      const b = sampleTrack({ id: 2, title: 'B', youtubeVideoId: 'b' });
       svc.setQueue([a, b], 0);
       svc.next();
       svc.previous();
@@ -192,7 +203,7 @@ describe('MusicPlayerService', () => {
     });
 
     it('addToQueue appends without playing', () => {
-      svc.playTrack(sampleTrack({ id: 1 }));
+      svc.playTrack(sampleTrack({ id: 1, youtubeVideoId: 'a' }));
       const added = svc.addToQueue(sampleTrack({ id: 99, title: 'Queued' }));
       expect(added).toBe(true);
       expect(svc.queue().length).toBe(2);

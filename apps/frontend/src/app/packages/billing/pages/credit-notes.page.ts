@@ -7,13 +7,10 @@ import { CreditNote } from '../models/billing.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-credit-notes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="credit-notes-page">
       <h1>{{ 'billing.creditNotes.title' | t:lang() }}</h1>

@@ -24,6 +24,8 @@ export const STATUS_LABEL_KEYS: Record<string, string> = {
   grace: 'status.grace',
   recovered: 'status.recovered',
   suspended: 'status.suspended',
+  suspended_by_platform: 'status.suspended',
+  provisioning: 'status.provisioning',
   archived: 'status.archived',
   approved: 'status.approved',
   published: 'status.published',

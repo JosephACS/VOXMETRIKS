@@ -39,8 +39,9 @@ def build_because_sections(
                     {
                         "id": f"because-listened-{tid}",
                         "type": "because",
+                        "code": "because_listened",
                         "reason_type": "listened",
-                        "title": f"Porque escuchaste {title}",
+                        "title_params": {"name": title or ""},
                         "subtitle": artist,
                         "anchor_track_id": tid,
                         "tracks": sim,
@@ -68,8 +69,9 @@ def build_because_sections(
                     {
                         "id": f"because-liked-{tid}",
                         "type": "because",
+                        "code": "because_liked",
                         "reason_type": "liked",
-                        "title": f"Porque te gustó {title}",
+                        "title_params": {"name": title or ""},
                         "subtitle": artist,
                         "anchor_track_id": tid,
                         "tracks": sim,
@@ -110,8 +112,9 @@ def build_because_sections(
                     {
                         "id": f"because-artist-{aid}",
                         "type": "because",
+                        "code": "because_frequent_artist",
                         "reason_type": "frequent_artist",
-                        "title": f"Porque escuchas frecuentemente {name}",
+                        "title_params": {"name": name or ""},
                         "tracks": [
                             {
                                 "id_track": int(r[0]),

@@ -19,8 +19,10 @@ import { PlayableTrack } from '../../models/player.models';
     <div class="track-row" appDeferVisible [class.playing]="playback.isCurrentTrack(track.id)" (click)="play()">
       <span class="tr-index">{{ index }}</span>
       <button type="button" class="tr-cover" [style.background]="track.coverGradient" (click)="play($event)">
-        @if (coverUrl()) {
-          <img class="tr-cover-img" [src]="coverUrl()" [alt]="track.title" loading="lazy" (error)="coverUrl.set(null)" />
+        @if (coverLoading()) {
+          <span class="tr-cover-skel" aria-hidden="true"></span>
+        } @else if (coverUrl()) {
+          <img class="tr-cover-img" [src]="coverUrl()" [alt]="track.title" loading="lazy" (error)="onCoverError()" />
         } @else {
           <span class="cover-initial tr-cover-letter">{{ coverArt.initialsFor(track.artist || track.title) }}</span>
         }
@@ -89,6 +91,18 @@ import { PlayableTrack } from '../../models/player.models';
       font-size: 0.9375rem;
       font-weight: 700;
       z-index: 0;
+    }
+    .tr-cover-skel {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+      background-size: 200% 100%;
+      animation: trShimmer 1.2s ease-in-out infinite;
+      z-index: 0;
+    }
+    @keyframes trShimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
     }
     .tr-cover-img {
       position: absolute;
@@ -212,6 +226,7 @@ export class TrackRowComponent {
   @Input() energy?: number | null;
 
   coverUrl = signal<string | null>(null);
+  coverLoading = signal(false);
 
   constructor() {
     effect(() => {
@@ -220,10 +235,19 @@ export class TrackRowComponent {
       const id = this.track?.id;
       if (id == null || id < 0) return;
       this.coverRequested = true;
+      this.coverLoading.set(true);
       this.coverSvc.bestCover$(id, this.track?.artistId)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe((url) => this.coverUrl.set(url));
+        .subscribe((url) => {
+          this.coverUrl.set(url);
+          this.coverLoading.set(false);
+        });
     });
+  }
+
+  onCoverError() {
+    this.coverUrl.set(null);
+    this.coverLoading.set(false);
   }
 
   /** Energy llega en escala 0-1 (Spotify); lo normalizamos a porcentaje 0-100. */

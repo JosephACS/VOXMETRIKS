@@ -7,13 +7,10 @@ import { DataRequest, TermsVersion } from '../models/compliance.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-compliance-admin',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
     <div class="compliance-admin">
       <h1>{{ 'compliance.admin.title' | t:lang() }}</h1>

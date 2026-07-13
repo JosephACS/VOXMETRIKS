@@ -11,25 +11,25 @@ import { DataSourceBadgeComponent } from '../../../shared/components/data-source
 import { PlaylistsService } from '../services/playlists.service';
 import { PlaylistSummary, PlaylistDetail, PlaylistTrackItem } from '../../../shared/models/api.models';
 import { TrackRowComponent } from '../../../shared/components/track-row/track-row.component';
+import { CoverMosaicComponent } from '../../../shared/components/cover-mosaic/cover-mosaic.component';
 import { PlayerController } from '../../../playback-core/player.controller';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { PlayableTrack } from '../../../shared/models/player.models';
 import { apiFormError } from '../../../shared/utils/catalog-list.util';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
-const COVERS = [
-  'linear-gradient(135deg, #1ed896, #148f5e)',
-  'linear-gradient(135deg, #3b82f6, #1e40af)',
-  'linear-gradient(135deg, #10b981, #047857)',
-  'linear-gradient(135deg, #ec4899, #9d174d)',
-  'linear-gradient(135deg, #f59e0b, #b45309)',
-  'linear-gradient(135deg, #6366f1, #312e81)',
-];
-
 @Component({
   selector: 'app-playlists',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TrackRowComponent, TranslatePipe, DataSourceBadgeComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    TrackRowComponent,
+    CoverMosaicComponent,
+    TranslatePipe,
+    DataSourceBadgeComponent,
+  ],
   templateUrl: './playlists.component.html',
   styleUrls: [
     '../../../shared/styles/catalog-page-shared.css',
@@ -92,13 +92,18 @@ export class PlaylistsComponent implements OnInit {
     });
   }
 
-  cover(i: number): string {
-    return COVERS[i % COVERS.length];
+  previewIds(pl: PlaylistSummary | PlaylistDetail): number[] {
+    if (pl.preview_track_ids?.length) return pl.preview_track_ids.slice(0, 4);
+    if ('tracks' in pl && Array.isArray(pl.tracks)) {
+      return pl.tracks.slice(0, 4).map((t) => t.id_track);
+    }
+    if (pl.cover_track_id) return [pl.cover_track_id];
+    return [];
   }
 
   detailGradient(): string {
     const det = this.selected();
-    return det ? this.covers.gradientFor('pl-' + det.id) : COVERS[0];
+    return det ? this.covers.gradientFor('pl-' + det.id) : this.covers.gradientFor('playlist');
   }
 
   playlistQueue(tracks: PlaylistTrackItem[]): PlayableTrack[] {
@@ -106,8 +111,9 @@ export class PlaylistsComponent implements OnInit {
       id: t.id_track,
       title: t.nombre_track ?? '—',
       artist: t.nombre_artista ?? '—',
+      artistId: t.id_artista,
       durationMs: t.duration_ms,
-      audioUrl: `/assets/audio/demo-${String((t.id_track % 8) + 1).padStart(2, '0')}.wav`,
+      audioUrl: '',
       coverGradient: this.covers.gradientFor(t.id_track),
     }));
   }

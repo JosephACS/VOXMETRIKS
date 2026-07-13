@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import duckdb
 
 from app.packages.analytics.services.history_service import _warehouse_user_id
 from ._helpers import table_exists_conn
 
-from .feature_extractor import load_user_signal_tracks
 from .ranking_engine import RankingEngine
 
-MIX_DEFINITIONS = (
-    ("daily-mix-rock", "Daily Mix Rock", {"energy_min": 0.55, "acousticness_max": 0.45}),
-    ("daily-mix-pop", "Daily Mix Pop", {"danceability_min": 0.55, "energy_min": 0.4}),
-    ("daily-mix-chill", "Daily Mix Chill", {"energy_max": 0.45, "valence_min": 0.3}),
-    ("daily-mix-instrumental", "Daily Mix Instrumental", {"instrumentalness_min": 0.5}),
+# (stable code, playlist id slug, feature rules)
+MIX_DEFINITIONS: Tuple[Tuple[str, str, Dict[str, float]], ...] = (
+    ("daily_mix_rock", "daily-mix-rock", {"energy_min": 0.55, "acousticness_max": 0.45}),
+    ("daily_mix_pop", "daily-mix-pop", {"danceability_min": 0.55, "energy_min": 0.4}),
+    ("daily_mix_chill", "daily-mix-chill", {"energy_max": 0.45, "valence_min": 0.3}),
+    (
+        "daily_mix_instrumental",
+        "daily-mix-instrumental",
+        {"instrumentalness_min": 0.5},
+    ),
 )
 
 
@@ -50,7 +54,7 @@ def build_daily_mixes(
     catalog = {int(dict(zip(names, r))["id_track"]): dict(zip(names, r)) for r in rows}
 
     mixes: List[Dict[str, Any]] = []
-    for mix_id, title, rules in MIX_DEFINITIONS:
+    for code, slug, rules in MIX_DEFINITIONS:
         tracks: List[Dict[str, Any]] = []
         for pid in pool_ids:
             row = catalog.get(pid)
@@ -71,8 +75,8 @@ def build_daily_mixes(
         if tracks:
             mixes.append(
                 {
-                    "playlist_id": f"{mix_id}-{app_user_id}",
-                    "title": title,
+                    "playlist_id": f"{slug}-{app_user_id}",
+                    "code": code,
                     "track_count": len(tracks),
                     "tracks": tracks,
                 }

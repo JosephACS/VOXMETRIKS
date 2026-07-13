@@ -7,13 +7,10 @@ import { Addon, SubscriptionAddon } from '../models/subscriptions.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-subscription-addons',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <div class="subscription-addons">
       <h1>{{ 'subscriptions.addons.title' | t:lang() }}</h1>

@@ -8,13 +8,10 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-trial-start',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="trial-start">
       <h1>{{ 'subscriptions.trial.title' | t:lang() }}</h1>

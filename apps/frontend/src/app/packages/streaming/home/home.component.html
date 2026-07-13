@@ -256,7 +256,8 @@
               [title]="pl.name"
               [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
               [gradient]="cover('pl-' + pl.id)"
-              [coverTrackId]="pl.cover_track_id ?? undefined"
+              [mosaicTrackIds]="pl.preview_track_ids?.length ? pl.preview_track_ids : (pl.cover_track_id ? [pl.cover_track_id] : [])"
+              [mosaicSeed]="'pl-' + pl.id"
               [link]="'/playlists/' + pl.id"
               [tag]="playlistBadge(i)"
             />

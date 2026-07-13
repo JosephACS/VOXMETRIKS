@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { DeferVisibleDirective } from '../../directives/defer-visible.directive';
 import { TrackActionsComponent } from '../track-actions/track-actions.component';
+import { CoverMosaicComponent } from '../cover-mosaic/cover-mosaic.component';
 import { PlayerController } from '../../../playback-core/player.controller';
 import { CoverArtService } from '../../services/cover-art.service';
 import { TrackCoverService } from '../../services/track-cover.service';
@@ -14,12 +15,19 @@ import { PlayableTrack } from '../../models/player.models';
 @Component({
   selector: 'app-media-card',
   standalone: true,
-  imports: [CommonModule, RouterModule, DeferVisibleDirective, TrackActionsComponent],
+  imports: [CommonModule, RouterModule, DeferVisibleDirective, TrackActionsComponent, CoverMosaicComponent],
   template: `
     <article class="media-card" (click)="onCardClick()">
       <div class="media-cover" appDeferVisible [class.round]="round" [style.background]="gradient">
-        @if (coverUrl()) {
-          <img class="cover-img" [src]="coverUrl()" [alt]="title" loading="lazy" (error)="coverUrl.set(null)" />
+        @if (mosaicTrackIds?.length) {
+          <app-cover-mosaic
+            [trackIds]="mosaicTrackIds!"
+            [seed]="mosaicSeed || title"
+          />
+        } @else if (coverLoading()) {
+          <div class="cover-skel" aria-hidden="true"></div>
+        } @else if (coverUrl()) {
+          <img class="cover-img" [src]="coverUrl()" [alt]="title" loading="lazy" (error)="onCoverError()" />
         } @else {
           <span class="cover-thumb cover-thumb--card">
             <span class="cover-initial">{{ displayInitial }}</span>
@@ -101,7 +109,33 @@ import { PlayableTrack } from '../../models/player.models';
       z-index: 0;
       animation: coverFade 0.3s ease;
     }
+    .cover-skel {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+      background-size: 200% 100%;
+      animation: coverShimmer 1.2s ease-in-out infinite;
+      z-index: 0;
+    }
     @keyframes coverFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes coverShimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    .cover-thumb {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 0;
+    }
+    .cover-initial {
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: 0.02em;
+    }
     .media-card:hover .media-cover {
       box-shadow: 0 12px 28px rgba(0,0,0,0.5);
     }
@@ -238,12 +272,29 @@ export class MediaCardComponent {
   @Input() coverTrackId?: number;
   /** Fallback: retrato del artista si no hay portada de álbum. */
   @Input() coverArtistId?: number;
+  /** URL ya resuelta (p. ej. smart home cache) — evita round-trip inicial. */
+  @Input() imageUrl?: string | null;
+  /** Spotify-style mosaic from track ids (playlists / albums). */
+  @Input() mosaicTrackIds?: number[];
+  @Input() mosaicSeed?: string | number;
   @Output() played = new EventEmitter<PlayableTrack>();
 
   coverUrl = signal<string | null>(null);
+  coverLoading = signal(false);
 
   constructor() {
     effect(() => {
+      const preset = this.imageUrl;
+      if (preset) {
+        this.coverUrl.set(preset);
+        this.coverLoading.set(false);
+      }
+
+      if (this.mosaicTrackIds?.length) {
+        this.coverLoading.set(false);
+        return;
+      }
+
       const dir = this.defer();
       if (!dir?.visible() || this.coverRequested) return;
 
@@ -252,14 +303,22 @@ export class MediaCardComponent {
 
       if (trackId != null) {
         this.coverRequested = true;
+        if (!preset) this.coverLoading.set(true);
         this.coverSvc.bestCover$(trackId, artistId)
           .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe((url) => this.coverUrl.set(url));
+          .subscribe((url) => {
+            if (url) this.coverUrl.set(url);
+            this.coverLoading.set(false);
+          });
       } else if (artistId != null) {
         this.coverRequested = true;
+        if (!preset) this.coverLoading.set(true);
         this.coverSvc.artistCover$(artistId)
           .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe((url) => this.coverUrl.set(url));
+          .subscribe((url) => {
+            if (url) this.coverUrl.set(url);
+            this.coverLoading.set(false);
+          });
       }
     });
   }
@@ -267,6 +326,11 @@ export class MediaCardComponent {
   get displayInitial(): string {
     const label = this.coverLabel ?? this.subtitle ?? this.title;
     return this.covers.initialsFor(label);
+  }
+
+  onCoverError() {
+    this.coverUrl.set(null);
+    this.coverLoading.set(false);
   }
 
   onPlay(e: Event) {

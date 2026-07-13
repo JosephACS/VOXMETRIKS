@@ -4,6 +4,13 @@ import { UiPreferencesService } from '../services/ui-preferences.service';
 import { LocaleFormatService } from '../services/locale-format.service';
 import { statusLabelKey } from '../i18n/status-labels';
 import { httpErrorKey } from '../i18n/http-error-keys';
+import {
+  formatUpdatedWeek,
+  resolveSectionSubtitle,
+  resolveSectionTitle,
+  resolveSystemCode,
+  translateReasonCode,
+} from '../i18n/system-labels';
 
 describe('I18nService', () => {
   const STORAGE_KEY = 'voxmetrik_ui_prefs';
@@ -90,5 +97,37 @@ describe('I18nService', () => {
     ui.setLanguage('en');
     const enDate = fmt.formatDate(d);
     expect(enDate.length).toBeGreaterThan(0);
+  });
+
+  it('translates smart system codes without hardcoding language branches', async () => {
+    const ui = TestBed.inject(UiPreferencesService);
+    const i18n = TestBed.inject(I18nService);
+    const t = (k: string, p?: Record<string, string | number>) => i18n.t(k, p);
+
+    expect(resolveSystemCode('discover_weekly')).toBe('discover_weekly');
+    expect(resolveSystemCode(null, 'Discover Weekly')).toBe('discover_weekly');
+    expect(resolveSectionTitle({ code: 'discover_weekly' }, t)).toBe('Descubrimiento semanal');
+    expect(resolveSectionTitle({ code: 'daily_mix_rock' }, t)).toBe('Mix diario de rock');
+    expect(resolveSectionTitle({ code: 'daily_mix_chill' }, t)).toBe('Mix diario relajante');
+    expect(formatUpdatedWeek('2026-W29', t)).toBe('Actualizado: semana 29 de 2026');
+    expect(translateReasonCode('high_popularity', t)).toBe('Popularidad alta');
+    expect(
+      resolveSectionTitle(
+        { code: 'because_listened', title_params: { name: 'Bohemian Rhapsody' } },
+        t,
+      ),
+    ).toBe('Porque escuchaste Bohemian Rhapsody');
+    // Proper names stay as-is when no system code
+    expect(resolveSectionTitle({ title: 'Mis favoritos 2024' }, t)).toBe('Mis favoritos 2024');
+
+    ui.setLanguage('en');
+    await i18n.ensureLocale('en');
+    expect(resolveSectionTitle({ code: 'discover_weekly' }, t)).toBe('Discover Weekly');
+    expect(resolveSectionTitle({ code: 'daily_mix_pop' }, t)).toBe('Daily Mix Pop');
+    expect(formatUpdatedWeek('2026-W29', t)).toBe('Updated: week 29 of 2026');
+    expect(translateReasonCode('high_popularity', t)).toBe('High popularity');
+    expect(
+      resolveSectionSubtitle({ code: 'discover_weekly', week: '2026-W29' }, t),
+    ).toBe('Updated: week 29 of 2026');
   });
 });

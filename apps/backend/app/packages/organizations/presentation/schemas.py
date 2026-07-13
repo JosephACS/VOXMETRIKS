@@ -43,6 +43,7 @@ class OrganizationOut(BaseModel):
     updated_at: datetime
     closed_at: Optional[datetime] = None
     is_demo: bool = False
+    is_test: bool = False
 
 
 class MembershipOut(BaseModel):

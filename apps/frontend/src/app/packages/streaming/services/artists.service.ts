@@ -31,7 +31,7 @@ export class ArtistsService {
     const params = new HttpParams().set('limit', limit);
     return this.http
       .get<TopArtista[] | { artistas: TopArtista[] }>(`${this.API_URL}/top`, { params })
-      .pipe(map(res => (Array.isArray(res) ? res : (res as any).artistas ?? [])));
+      .pipe(map(res => (Array.isArray(res) ? res : (res as { artistas?: TopArtista[] }).artistas ?? [])));
   }
 
   getArtistById(id: number): Observable<Artista> {

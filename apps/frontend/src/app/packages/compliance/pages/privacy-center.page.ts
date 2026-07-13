@@ -7,13 +7,10 @@ import { ConsentRecord, DataRequest } from '../models/compliance.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-privacy-center',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="privacy-center">
       <h1>{{ 'compliance.privacy.title' | t:lang() }}</h1>

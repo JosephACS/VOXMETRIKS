@@ -64,10 +64,25 @@ export class TracksService {
     return this.http.get<TrackDetail>(`${this.API_URL}/${id}/detail`);
   }
 
-  getAudioSource(id: number, force = false, skipProvider?: string): Observable<AudioSource> {
+  getAudioSource(
+    id: number,
+    opts: boolean | {
+      force?: boolean;
+      skipProvider?: string;
+      asyncResolve?: boolean;
+    } = false,
+    skipProvider?: string,
+  ): Observable<AudioSource> {
+    // Back-compat: getAudioSource(id, force, skipProvider)
+    const options =
+      typeof opts === 'boolean'
+        ? { force: opts, skipProvider, asyncResolve: opts ? false : true }
+        : opts;
+
     let params = new HttpParams();
-    if (force) params = params.set('force', 'true');
-    if (skipProvider) params = params.set('skip_provider', skipProvider);
+    if (options.force) params = params.set('force', 'true');
+    if (options.skipProvider) params = params.set('skip_provider', options.skipProvider);
+    if (options.asyncResolve === false) params = params.set('async_resolve', 'false');
     return this.http.get<AudioSource>(`${this.API_URL}/${id}/audio-source`, {
       params: params.keys().length ? params : undefined,
     });

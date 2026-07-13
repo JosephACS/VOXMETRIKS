@@ -6,13 +6,10 @@ import { Plan } from '../models/subscriptions.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-plans-catalog',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, RouterModule, TranslatePipe],
   template: `
     <div class="plans-catalog">
       <div class="page-header">

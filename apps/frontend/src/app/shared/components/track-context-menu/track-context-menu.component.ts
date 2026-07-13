@@ -6,6 +6,7 @@ import { PlayableTrack } from '../../models/player.models';
 import { AddToPlaylistBtnComponent } from '../add-to-playlist-btn/add-to-playlist-btn.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { I18nService } from '../../../core/services/i18n.service';
+import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-track-context-menu',
@@ -120,6 +121,8 @@ import { I18nService } from '../../../core/services/i18n.service';
 export class TrackContextMenuComponent {
   readonly lang = inject(I18nService).lang;
   private readonly controller = inject(PlayerController);
+  private readonly i18n = inject(I18nService);
+  private readonly notify = inject(NotificationService);
 
   @Input({ required: true }) track!: PlayableTrack;
   @Input() contextQueue: PlayableTrack[] = [];
@@ -153,18 +156,25 @@ export class TrackContextMenuComponent {
     e.stopPropagation();
     const q = this.contextQueue.length ? this.contextQueue : undefined;
     this.controller.playNow(this.track, q);
+    this.notify.success(this.i18n.t('track.playNow'), this.track.title);
     this.close();
   }
 
   onPlayNext(e: Event) {
     e.stopPropagation();
     this.controller.playNextInQueue(this.track);
+    this.notify.info(this.i18n.t('track.playNext'), this.track.title);
     this.close();
   }
 
   onAddToQueue(e: Event) {
     e.stopPropagation();
-    this.controller.addToQueue(this.track);
+    const added = this.controller.addToQueue(this.track);
+    if (added) {
+      this.notify.success(this.i18n.t('track.addToQueue'), this.track.title);
+    } else {
+      this.notify.info(this.i18n.t('track.alreadyInQueue'), this.track.title);
+    }
     this.close();
   }
 }

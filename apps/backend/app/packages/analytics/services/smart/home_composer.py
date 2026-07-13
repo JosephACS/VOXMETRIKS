@@ -7,13 +7,43 @@ from typing import Any, Dict, List
 import duckdb
 
 from app.packages.analytics.services.history_service import _warehouse_user_id
+from app.packages.catalog.services.cover_art_service import cover_urls_for_tracks
 
 from .because_you import build_because_sections
 from .daily_mix import build_daily_mixes
-from .discover_weekly import build_discover_weekly
+from .discover_weekly import DISCOVER_WEEKLY_CODE, build_discover_weekly
 from .personalization_engine import build_musical_profile
 from .ranking_engine import RankingEngine
 from .trending_modules import build_trending_modules
+
+
+def _attach_cover_urls(conn: duckdb.DuckDBPyConnection, tracks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    ids = [int(t["id_track"]) for t in tracks if t.get("id_track") is not None]
+    try:
+        urls = cover_urls_for_tracks(conn, ids)
+    except Exception:
+        urls = {}
+    out: List[Dict[str, Any]] = []
+    for t in tracks:
+        item = dict(t)
+        tid = item.get("id_track")
+        if tid is not None and int(tid) in urls:
+            item["cover_url"] = urls[int(tid)]
+        out.append(item)
+    return out
+
+
+def _enrich_sections(
+    conn: duckdb.DuckDBPyConnection, sections: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    enriched: List[Dict[str, Any]] = []
+    for section in sections:
+        s = dict(section)
+        tracks = s.get("tracks") or []
+        if isinstance(tracks, list) and tracks:
+            s["tracks"] = _attach_cover_urls(conn, tracks)
+        enriched.append(s)
+    return enriched
 
 
 def compose_home(
@@ -35,8 +65,8 @@ def compose_home(
             {
                 "id": "continue-listening",
                 "type": "track_rail",
-                "title": "Seguir escuchando",
-                "subtitle": "Basado en tu actividad reciente",
+                "code": "continue_listening",
+                "subtitle_code": "continue_listening_sub",
                 "tracks": profile["top_tracks"][:6],
             }
         )
@@ -46,8 +76,8 @@ def compose_home(
             {
                 "id": "recommended-for-you",
                 "type": "track_rail",
-                "title": "Recomendado para ti",
-                "subtitle": "Personalizado con tus gustos",
+                "code": "recommended_for_you",
+                "subtitle_code": "recommended_for_you_sub",
                 "tracks": recommended,
             }
         )
@@ -57,8 +87,9 @@ def compose_home(
             {
                 "id": discover_weekly["playlist_id"],
                 "type": "playlist",
-                "title": discover_weekly["title"],
-                "subtitle": f"Actualizado {discover_weekly.get('week', '')}",
+                "code": discover_weekly.get("code") or DISCOVER_WEEKLY_CODE,
+                "week": discover_weekly.get("week"),
+                "subtitle_code": "updated_week",
                 "tracks": discover_weekly["tracks"],
             }
         )
@@ -68,7 +99,7 @@ def compose_home(
             {
                 "id": mix["playlist_id"],
                 "type": "playlist",
-                "title": mix["title"],
+                "code": mix["code"],
                 "tracks": mix["tracks"],
             }
         )
@@ -80,22 +111,26 @@ def compose_home(
             {
                 "id": "trending-today",
                 "type": "track_rail",
-                "title": "Trending Today",
+                "code": "trending_today",
                 "tracks": trending["trending_today"],
             }
         )
 
     if profile.get("top_genres"):
         top_g = profile["top_genres"][0]
+        genre_name = top_g.get("nombre_genero") or ""
         sections.append(
             {
                 "id": f"genre-favorites-{top_g.get('id_genero')}",
                 "type": "track_rail",
-                "title": f"Nuevos lanzamientos de {top_g.get('nombre_genero', 'tu género')}",
-                "subtitle": "Del género que más escuchas",
+                "code": "genre_new_releases",
+                "subtitle_code": "genre_new_releases_sub",
+                "title_params": {"genre": genre_name},
                 "tracks": recommended[6:12] if len(recommended) > 6 else recommended,
             }
         )
+
+    sections = _enrich_sections(conn, sections)
 
     return {
         "user_id": app_user_id,

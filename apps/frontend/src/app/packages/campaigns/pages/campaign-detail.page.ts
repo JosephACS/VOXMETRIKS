@@ -10,13 +10,10 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="campaign-detail-page">
       <a routerLink="/campaigns">← Back to campaigns</a>

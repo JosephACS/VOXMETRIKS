@@ -33,7 +33,7 @@
           <span class="track-artist">{{ t.artist }}</span>
           @if (playback.playbackError(); as err) {
             <span class="track-error">{{ err }} · <button type="button" class="inline-retry" (click)="controller.retryCurrent(); $event.stopPropagation()">{{ 'player.retry' | t:lang() }}</button></span>
-          } @else if (playback.status() === 'loading') {
+          } @else if (playback.resolvePhase() === 'resolving' || playback.status() === 'loading') {
             <span class="track-status">{{ 'player.sourceLoading' | t:lang() }}</span>
           } @else if (playback.status() === 'buffering') {
             <span class="track-status">{{ 'player.buffering' | t:lang() }}</span>

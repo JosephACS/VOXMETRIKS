@@ -1,9 +1,15 @@
-"""Pytest fixtures — isolated DuckDB + FastAPI TestClient."""
+"""Pytest fixtures — isolated temporary DuckDB + FastAPI TestClient.
+
+Never uses the development warehouse (``data/warehouse/voxmetrik.duckdb``).
+The session DB lives under a temp directory and is destroyed after the session.
+"""
 
 from __future__ import annotations
 
 import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import duckdb
@@ -11,6 +17,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 BACKEND = Path(__file__).resolve().parent.parent
+REPO_ROOT = BACKEND.parent.parent
+WAREHOUSE_DB = REPO_ROOT / "data" / "warehouse" / "voxmetrik.duckdb"
 sys.path.insert(0, str(BACKEND))
 
 os.environ.setdefault("AUTH_RATE_LIMIT", "0")
@@ -18,9 +26,10 @@ os.environ.setdefault("GLOBAL_RATE_LIMIT", "0")
 os.environ.setdefault("LOG_TO_FILES", "false")
 # Never send real email during pytest (user .env may set smtp/resend).
 os.environ["EMAIL_PROVIDER"] = "console"
-
-_TEST_DB_DIR = BACKEND / "tests" / ".pytest_db"
-_TEST_DB_PATH = _TEST_DB_DIR / "voxmetrik_test.duckdb"
+# Defense-in-depth: org creates under pytest are tagged is_test.
+os.environ["VOXMETRIKS_TEST_ISOLATION"] = "1"
+# Demo orgs stay hidden in list APIs during tests unless a test opts in.
+os.environ.setdefault("SHOW_DEMO_ORGANIZATIONS", "false")
 
 
 def _init_test_database(db_path: Path) -> None:
@@ -169,7 +178,14 @@ def _init_test_database(db_path: Path) -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def _configure_test_database() -> None:
-    os.environ["db_path"] = str(_TEST_DB_PATH)
+    tmp_dir = Path(tempfile.mkdtemp(prefix="voxmetriks_pytest_"))
+    db_path = tmp_dir / "voxmetrik_test.duckdb"
+
+    # Hard guard: never point pytest at the development warehouse.
+    assert db_path.resolve() != WAREHOUSE_DB.resolve(), (
+        f"Refusing to use warehouse DB for pytest: {WAREHOUSE_DB}"
+    )
+    os.environ["db_path"] = str(db_path)
     os.environ["RUN_ETL_ON_BOOT"] = "never"
     os.environ["SKIP_SYSTEM_BOOT"] = "1"
     from app.core.config import get_settings
@@ -179,11 +195,21 @@ def _configure_test_database() -> None:
     get_settings.cache_clear()
     shutdown_duckdb_client()
     close_read_pool()
-    _init_test_database(_TEST_DB_PATH)
+    _init_test_database(db_path)
+
+    # Re-assert after settings load.
+    resolved = Path(get_settings().db_path_resolved).resolve()
+    assert resolved == db_path.resolve(), (
+        f"pytest DB mismatch: settings={resolved} expected={db_path.resolve()}"
+    )
+    assert resolved != WAREHOUSE_DB.resolve(), "pytest resolved to warehouse DB"
+
     yield
+
     shutdown_duckdb_client()
     close_read_pool()
     get_settings.cache_clear()
+    shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="session")

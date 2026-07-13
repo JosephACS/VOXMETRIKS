@@ -71,6 +71,14 @@ class CreateOrganization:
         events = []
         occurred = now()
         with transaction(self._conn):
+            import os
+
+            # Mark orgs created under pytest so they never pollute the UI if a
+            # misconfigured run hits a shared DB (defense in depth).
+            created_under_pytest = bool(
+                os.environ.get("PYTEST_CURRENT_TEST")
+                or os.environ.get("VOXMETRIKS_TEST_ISOLATION") == "1"
+            )
             org = self._orgs.create(
                 display_name=cmd.display_name.strip(),
                 slug=slug,
@@ -82,6 +90,7 @@ class CreateOrganization:
                 legal_name=cmd.legal_name,
                 status=OrganizationStatus.PROVISIONING.value,
                 is_demo=False,
+                is_test=created_under_pytest,
                 closed_at=None,
             )
             events.append(

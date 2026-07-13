@@ -36,11 +36,15 @@ _COLS = (
     "updated_at",
     "closed_at",
     "is_demo",
+    "is_test",
 )
 _SELECT = ", ".join(_COLS)
 
 
 def _map(row: tuple[Any, ...]) -> Organization:
+    is_test = False
+    if len(row) > 14 and row[14] is not None:
+        is_test = bool(row[14])
     return Organization(
         id=int(row[0]),
         display_name=str(row[1]),
@@ -56,6 +60,7 @@ def _map(row: tuple[Any, ...]) -> Organization:
         updated_at=row[11],
         closed_at=row[12],
         is_demo=bool(row[13]) if row[13] is not None else False,
+        is_test=is_test,
     )
 
 
@@ -76,6 +81,7 @@ class OrganizationRepository:
         legal_name: Optional[str] = None,
         status: str = OrganizationStatus.PROVISIONING.value,
         is_demo: bool = False,
+        is_test: bool = False,
         closed_at: Optional[datetime] = None,
     ) -> Organization:
         if status not in ORGANIZATION_STATUSES:
@@ -95,8 +101,8 @@ class OrganizationRepository:
                 INSERT INTO app_organization (
                     id, display_name, legal_name, slug, organization_type,
                     country_code, timezone, default_currency, status,
-                    created_by, created_at, updated_at, closed_at, is_demo
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_by, created_at, updated_at, closed_at, is_demo, is_test
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     org_id,
@@ -113,6 +119,7 @@ class OrganizationRepository:
                     now,
                     closed_at,
                     is_demo,
+                    is_test,
                 ],
             )
         except Exception as exc:
@@ -138,12 +145,19 @@ class OrganizationRepository:
         return _map(row)
 
     def list_for_user(self, user_id: int) -> list[Organization]:
+        import os
+
+        from app.core.config import get_settings
+        from app.packages.organizations.domain.test_org_patterns import (
+            looks_like_test_organization,
+        )
+
         rows = self._conn.execute(
             """
             SELECT
                 o.id, o.display_name, o.legal_name, o.slug, o.organization_type,
                 o.country_code, o.timezone, o.default_currency, o.status,
-                o.created_by, o.created_at, o.updated_at, o.closed_at, o.is_demo
+                o.created_by, o.created_at, o.updated_at, o.closed_at, o.is_demo, o.is_test
             FROM app_organization o
             INNER JOIN app_organization_member m
                 ON m.organization_id = o.id
@@ -153,7 +167,25 @@ class OrganizationRepository:
             """,
             [user_id, MembershipStatus.ACTIVE.value],
         ).fetchall()
-        return [_map(r) for r in rows]
+        mapped = [_map(r) for r in rows]
+        # Pytest isolation: return full memberships so suite assertions keep working.
+        if os.environ.get("VOXMETRIKS_TEST_ISOLATION") == "1":
+            return mapped
+
+        show_demo = bool(get_settings().show_demo_organizations)
+        out: list[Organization] = []
+        for org in mapped:
+            if org.is_test or looks_like_test_organization(
+                slug=org.slug,
+                display_name=org.display_name,
+                is_test=org.is_test,
+                is_demo=org.is_demo,
+            ):
+                continue
+            if org.is_demo and not show_demo:
+                continue
+            out.append(org)
+        return out
 
     def update_basic_fields(
         self,

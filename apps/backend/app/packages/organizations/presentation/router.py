@@ -101,6 +101,7 @@ def _org_out(o: Organization) -> OrganizationOut:
         updated_at=o.updated_at,
         closed_at=o.closed_at,
         is_demo=o.is_demo,
+        is_test=o.is_test,
     )
 
 

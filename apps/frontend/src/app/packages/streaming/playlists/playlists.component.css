@@ -55,9 +55,8 @@
   width: 180px;
   height: 180px;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
+  display: block;
   color: rgba(255,255,255,0.85);
   box-shadow: 0 16px 40px rgba(0,0,0,0.45);
   flex-shrink: 0;
@@ -189,10 +188,10 @@
 
 .pl-cover {
   aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   color: rgba(255,255,255,0.85);
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
 }
 
 .pl-info { padding: 0.75rem; }

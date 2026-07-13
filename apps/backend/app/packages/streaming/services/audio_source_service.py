@@ -21,6 +21,7 @@ from .audio.cache import (
     STATUS_NOT_FOUND,
     STATUS_OK,
     STATUS_PENDING,
+    is_cache_usable,
     mark_failure,
     migrate_audio_source_columns,
     read_cache,
@@ -95,9 +96,8 @@ def get_audio_source_response(
 
     if not force:
         cached = read_cache(conn, track_id)
-        if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND, STATUS_DISABLED):
-            if cached["status"] != STATUS_OK or int(cached.get("failure_count") or 0) < 3:
-                return _api_dict(cached)
+        if cached and is_cache_usable(cached):
+            return _api_dict(cached)
 
     if async_resolve and not force:
         _schedule_resolve(track_id, skip_provider=skip_provider)

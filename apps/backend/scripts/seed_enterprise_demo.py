@@ -84,6 +84,11 @@ def seed_enterprise_demo() -> dict[str, object]:
             ).fetchone()
             if existing:
                 org_id = int(existing[0])
+                if _has_column(conn, "app_organization", "is_demo"):
+                    conn.execute(
+                        "UPDATE app_organization SET is_demo = TRUE WHERE id = ? AND (is_demo IS NULL OR is_demo = FALSE)",
+                        [org_id],
+                    )
             else:
                 org_id = _next_id(conn, "app_organization")
                 cols = "id, display_name, slug, organization_type, country_code, timezone, default_currency, status, created_by, created_at, updated_at"
@@ -92,6 +97,9 @@ def seed_enterprise_demo() -> dict[str, object]:
                 if _has_column(conn, "app_organization", "is_demo"):
                     cols += ", is_demo"
                     vals += ", TRUE"
+                if _has_column(conn, "app_organization", "is_test"):
+                    cols += ", is_test"
+                    vals += ", FALSE"
                 conn.execute(f"INSERT INTO app_organization ({cols}) VALUES ({vals})", params)
             result["organization_id"] = org_id
 

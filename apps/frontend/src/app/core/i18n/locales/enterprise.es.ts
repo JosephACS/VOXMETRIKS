@@ -45,6 +45,7 @@ export const ENTERPRISE_ES = {
 
   // —— Status labels (codes unchanged) ——
   'status.active': 'Activa',
+  'status.provisioning': 'Aprovisionando',
   'status.past_due': 'En mora',
   'status.paid': 'Pagada',
   'status.draft': 'Borrador',
@@ -177,6 +178,14 @@ export const ENTERPRISE_ES = {
 
   // —— Organizations ——
   'organizations.selector.empty': 'No hay organizaciones',
+  'organizations.selector.notFound': 'No se encontraron organizaciones',
+  'organizations.selector.search': 'Buscar organización…',
+  'organizations.selector.current': 'Seleccionada',
+  'organizations.selector.loading': 'Cargando org…',
+  'organizations.selector.none': 'Sin organización',
+  'organizations.selector.noneState': 'Estado sin organización',
+  'organizations.selector.demoBadge': 'Demo',
+  'organizations.selector.switchError': 'No se pudo cambiar de organización',
   'organizations.selector.create': 'Crear organización',
   'organizations.selector.title': 'Selector de organización',
   'organizations.selector.personal': 'Modo personal',

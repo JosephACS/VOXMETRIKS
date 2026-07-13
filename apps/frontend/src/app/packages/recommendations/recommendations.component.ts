@@ -29,7 +29,6 @@ import { MusicPlayerService } from '../../shared/services/music-player.service';
 
 import { primaryArtistName } from '../../shared/utils/artist.util';
 import { displayTrackTitle } from '../../shared/utils/track-display.util';
-import { demoAudioUrlForTrack } from '../../shared/config/demo-audio.config';
 
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
@@ -269,7 +268,7 @@ export class RecommendationsComponent implements OnInit {
 
       artistId: t.id_artista,
 
-      audioUrl: demoAudioUrlForTrack(id),
+      audioUrl: '',
 
       coverGradient: this.covers.gradientFor(id),
 

@@ -52,14 +52,7 @@ def list_playlists(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[s
     rows = conn.execute("""
         SELECT
             p.id, p.name, p.description, p.created_at,
-            COUNT(pt.track_id) AS total_tracks,
-            (
-                SELECT pt2.track_id
-                FROM app_playlist_track pt2
-                WHERE pt2.playlist_id = p.id
-                ORDER BY pt2.added_at DESC
-                LIMIT 1
-            ) AS cover_track_id
+            COUNT(pt.track_id) AS total_tracks
         FROM app_playlist p
         LEFT JOIN app_playlist_track pt ON pt.playlist_id = p.id
         WHERE p.user_id = ?
@@ -68,13 +61,26 @@ def list_playlists(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[s
     """, [user_id]).fetchall()
     result = []
     for r in rows:
+        pid = int(r[0])
+        preview_rows = conn.execute(
+            """
+            SELECT track_id
+            FROM app_playlist_track
+            WHERE playlist_id = ?
+            ORDER BY added_at DESC
+            LIMIT 4
+            """,
+            [pid],
+        ).fetchall()
+        preview_ids = [int(x[0]) for x in preview_rows]
         result.append({
-            "id": r[0],
+            "id": pid,
             "name": r[1],
             "description": r[2],
             "created_at": str(r[3]) if r[3] else None,
             "total_tracks": int(r[4] or 0),
-            "cover_track_id": int(r[5]) if r[5] is not None else None,
+            "cover_track_id": preview_ids[0] if preview_ids else None,
+            "preview_track_ids": preview_ids,
         })
     return result
 
@@ -95,12 +101,15 @@ def get_playlist(
     ).fetchall()
     track_ids = [r[0] for r in track_rows]
     tracks = _enrich_tracks(conn, track_ids)
+    preview_ids = [int(t) for t in track_ids[:4]]
     return {
         "id": row[0],
         "name": row[1],
         "description": row[2],
         "created_at": str(row[3]) if row[3] else None,
         "total_tracks": len(tracks),
+        "cover_track_id": preview_ids[0] if preview_ids else None,
+        "preview_track_ids": preview_ids,
         "tracks": tracks,
     }
 

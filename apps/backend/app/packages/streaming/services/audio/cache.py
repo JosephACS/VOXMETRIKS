@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 import duckdb
 
+from app.core.config import get_settings
 from app.core.time_util import utc_now
 
 from .models import ResolvedSource
@@ -71,10 +72,22 @@ def read_cache(
 
 
 def is_cache_usable(cached: Dict[str, Any]) -> bool:
-    if cached["status"] not in (STATUS_OK, STATUS_NOT_FOUND, STATUS_DISABLED):
+    status = cached["status"]
+    if status not in (STATUS_OK, STATUS_NOT_FOUND, STATUS_DISABLED):
         return False
-    if cached["status"] == STATUS_OK and int(cached.get("failure_count") or 0) >= _MAX_FAILURES_BEFORE_STALE:
+    if status == STATUS_OK and int(cached.get("failure_count") or 0) >= _MAX_FAILURES_BEFORE_STALE:
         return False
+    # Soft TTL: retry external lookup after negative cache ages out.
+    if status in (STATUS_NOT_FOUND, STATUS_DISABLED):
+        resolved_at = cached.get("resolved_at")
+        if resolved_at is not None:
+            try:
+                ttl = float(get_settings().audio_not_found_ttl_sec)
+                age_s = (utc_now() - resolved_at).total_seconds()
+                if age_s > ttl:
+                    return False
+            except Exception:
+                return False
     return True
 
 

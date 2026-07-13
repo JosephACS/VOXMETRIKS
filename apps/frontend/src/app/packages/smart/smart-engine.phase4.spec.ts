@@ -16,8 +16,8 @@ describe('Smart Home Phase 4', () => {
 
   it('personalized sections have distinct ids', () => {
     const sections = [
-      { id: 'recommended-for-you', type: 'track_rail' as const, title: 'A', tracks: [] },
-      { id: 'discover-weekly-1', type: 'playlist' as const, title: 'B', tracks: [] },
+      { id: 'recommended-for-you', type: 'track_rail' as const, code: 'recommended_for_you', tracks: [] },
+      { id: 'discover-weekly-1', type: 'playlist' as const, code: 'discover_weekly', tracks: [] },
     ];
     const ids = new Set(sections.map((s) => s.id));
     expect(ids.size).toBe(2);

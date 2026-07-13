@@ -8,15 +8,12 @@ import { Contact, Prospect } from '../models/crm.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
 
 @Component({
   selector: 'app-crm-prospect-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-prospect-detail-page">

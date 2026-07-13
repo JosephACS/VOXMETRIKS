@@ -43,6 +43,7 @@ export const ENTERPRISE_EN = {
   'common.organization': 'Organization',
 
   'status.active': 'Active',
+  'status.provisioning': 'Provisioning',
   'status.past_due': 'Past due',
   'status.paid': 'Paid',
   'status.draft': 'Draft',
@@ -171,6 +172,14 @@ export const ENTERPRISE_EN = {
   'billing.ledger.empty': 'No ledger entries.',
 
   'organizations.selector.empty': 'No organizations',
+  'organizations.selector.notFound': 'No organizations found',
+  'organizations.selector.search': 'Search organization…',
+  'organizations.selector.current': 'Selected',
+  'organizations.selector.loading': 'Loading org…',
+  'organizations.selector.none': 'No organization',
+  'organizations.selector.noneState': 'No-organization state',
+  'organizations.selector.demoBadge': 'Demo',
+  'organizations.selector.switchError': 'Could not switch organization',
   'organizations.selector.create': 'Create organization',
   'organizations.selector.title': 'Organization selector',
   'organizations.selector.personal': 'Personal mode',

@@ -39,6 +39,9 @@ ORG_TABLES = (
 def ensure_organization_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create organization tables and seed role catalogs (idempotent)."""
     if schema_ready():
+        # Additive migrations must still run (e.g. is_test) even when schema_ready.
+        if table_exists(conn, "app_organization"):
+            _apply_additive_columns(conn)
         # Additive: keep catalogs current only when org tables already exist
         # (isolated temp DBs may share process-level schema_ready without tables).
         if table_exists(conn, "app_business_role") and table_exists(conn, "app_permission"):
@@ -155,6 +158,7 @@ def _create_organization(conn: duckdb.DuckDBPyConnection) -> None:
             updated_at         TIMESTAMP NOT NULL,
             closed_at          TIMESTAMP,
             is_demo            BOOLEAN DEFAULT FALSE,
+            is_test            BOOLEAN DEFAULT FALSE,
             CHECK (status IN (
                 'provisioning', 'active', 'suspended_by_platform', 'closed'
             )),
@@ -355,6 +359,10 @@ def _apply_additive_columns(conn: duckdb.DuckDBPyConnection) -> None:
         if "is_demo" not in cols:
             conn.execute(
                 "ALTER TABLE app_organization ADD COLUMN is_demo BOOLEAN DEFAULT FALSE"
+            )
+        if "is_test" not in cols:
+            conn.execute(
+                "ALTER TABLE app_organization ADD COLUMN is_test BOOLEAN DEFAULT FALSE"
             )
     # Drop mutable-column ART indexes created by earlier I1 drafts (UPDATE-safe).
     for index_name in (

@@ -7,14 +7,11 @@ import { Subscription, SubscriptionEntitlement, AccessStateInfo } from '../model
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 /** Org subscription overview — requires organizationId from context/route. */
 @Component({
   selector: 'app-subscription-overview',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, RouterModule, TranslatePipe],
   template: `
     <div class="subscription-overview">
       <div class="page-header">

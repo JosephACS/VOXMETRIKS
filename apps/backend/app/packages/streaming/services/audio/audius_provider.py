@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from app.core.config import get_settings
+
 from .base import AudioProvider
 from .cache import STATUS_ERROR, STATUS_NOT_FOUND, STATUS_OK
 from .models import ResolvedSource, TrackContext
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 _AUDIUS_HOST = "https://api.audius.co"
 _APP_NAME = "VOXMETRIKS"
-_REQUEST_TIMEOUT = 8.0
+_REQUEST_TIMEOUT = float(get_settings().audio_provider_timeout_sec or 12.0)
 _SEARCH_LIMIT = 8
 
 _BAD_TITLE_RE = re.compile(

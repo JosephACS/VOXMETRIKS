@@ -22,6 +22,8 @@ type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
 declare global {
   interface Window {
+    // Google Identity Services is loaded at runtime; keep a loose type here.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     google?: any;
     onGoogleLibraryLoad?: () => void;
   }

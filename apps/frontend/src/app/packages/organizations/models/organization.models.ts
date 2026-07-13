@@ -15,6 +15,7 @@ export interface Organization {
   updated_at: string;
   closed_at?: string | null;
   is_demo?: boolean;
+  is_test?: boolean;
 }
 
 export interface Membership {

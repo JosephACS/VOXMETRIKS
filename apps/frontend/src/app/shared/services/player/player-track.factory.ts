@@ -1,6 +1,5 @@
 import { TopTrack, Track } from '../../models/api.models';
 import { PlayableTrack } from '../../models/player.models';
-import { demoAudioUrlForTrack } from '../../config/demo-audio.config';
 import { primaryArtistName } from '../../utils/artist.util';
 import { displayTrackTitle, displayTrackSubtitle } from '../../utils/track-display.util';
 import { CoverArtService } from '../cover-art.service';
@@ -19,7 +18,7 @@ export function playableFromTrack(
     artist: displayTrackSubtitle(artist, t.nombre_genero, t.id_track),
     artistId: t.id_artista,
     durationMs: t.duration_ms,
-    audioUrl: demoAudioUrlForTrack(t.id_track),
+    audioUrl: '',
     coverGradient: coverArt.gradientFor(t.id_track),
     explicit: t.explicit,
   };
@@ -31,7 +30,7 @@ export function playableFromTopTrack(coverArt: CoverArtService, t: TopTrack): Pl
     title: displayTrackTitle(t.nombre_track),
     artist: displayTrackSubtitle(t.nombre_artista, undefined, t.id_track),
     artistId: t.id_artista,
-    audioUrl: demoAudioUrlForTrack(t.id_track),
+    audioUrl: '',
     coverGradient: coverArt.gradientFor(t.id_track),
   };
 }

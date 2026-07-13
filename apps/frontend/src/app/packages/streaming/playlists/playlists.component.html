@@ -23,8 +23,11 @@
         <section class="detail-hero-page glass-panel">
           <div class="detail-hero-wrap" [style.background]="detailGradient()"></div>
           <div class="detail-hero">
-            <div class="detail-cover" [style.background]="detailGradient()">
-              <span [innerHTML]="icon('music', 40)"></span>
+            <div class="detail-cover">
+              <app-cover-mosaic
+                [trackIds]="previewIds(det)"
+                [seed]="'pl-' + det.id"
+              />
             </div>
             <div class="detail-meta-block">
               <span class="detail-type">{{ 'playlists.shareable' | t:lang() }}</span>
@@ -114,8 +117,11 @@
             [class.vm-stagger-4]="i % 4 === 3"
             [routerLink]="['/playlists', pl.id]"
           >
-            <div class="pl-cover" [style.background]="cover(i)">
-              <span [innerHTML]="icon('music', 38)"></span>
+            <div class="pl-cover">
+              <app-cover-mosaic
+                [trackIds]="previewIds(pl)"
+                [seed]="'pl-' + pl.id"
+              />
             </div>
             <div class="pl-info">
               <h3>{{ pl.name }}</h3>

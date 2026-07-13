@@ -320,6 +320,8 @@ export interface PlaylistSummary {
   created_at?: string;
   total_tracks: number;
   cover_track_id?: number | null;
+  /** Up to 4 track ids for Spotify-style mosaic covers. */
+  preview_track_ids?: number[];
 }
 
 export interface PlaylistTrackItem {

@@ -14,6 +14,7 @@ import { primaryArtistName } from '../../../shared/utils/artist.util';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { I18nService } from '../../../core/services/i18n.service';
+import { translateSystemCode } from '../../../core/i18n/system-labels';
 import { SmartHomeService } from '../../smart/services/smart-home.service';
 import { SmartArtistItem } from '../../smart/models/smart-home.models';
 import { HorizontalSectionComponent } from '../../../shared/components/horizontal-section/horizontal-section.component';
@@ -152,8 +153,11 @@ export class ArtistDetailComponent implements OnInit {
   }
 
   similarArtistMeta(item: SmartArtistItem): string | undefined {
-    if (item.similarity != null) return `${Math.round(item.similarity * 100)}% similar`;
-    return undefined;
+    this.i18n.lang();
+    if (item.similarity == null) return undefined;
+    return translateSystemCode('meta_similar', (k, p) => this.i18n.t(k, p), {
+      pct: Math.round(item.similarity * 100),
+    }) ?? undefined;
   }
 
   similarArtistName(item: SmartArtistItem): string {

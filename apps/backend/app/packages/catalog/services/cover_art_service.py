@@ -75,12 +75,41 @@ def _artist_name(conn: duckdb.DuckDBPyConnection, artist_id: int) -> Optional[st
 
 def _read_track_cache(conn: duckdb.DuckDBPyConnection, track_id: int) -> Optional[Dict[str, Any]]:
     row = conn.execute(
-        "SELECT track_id, image_url, status FROM app_track_cover WHERE track_id = ?",
+        "SELECT track_id, image_url, status, resolved_at FROM app_track_cover WHERE track_id = ?",
         [track_id],
     ).fetchone()
     if not row:
         return None
-    return {"track_id": int(row[0]), "image_url": row[1], "status": row[2]}
+    return {
+        "track_id": int(row[0]),
+        "image_url": row[1],
+        "status": row[2],
+        "resolved_at": row[3],
+    }
+
+
+def _cache_is_fresh(cached: Dict[str, Any]) -> bool:
+    """Keep successful hits forever; retry not_found after a configurable TTL."""
+    status = cached.get("status")
+    if status == STATUS_OK and cached.get("image_url"):
+        return True
+    if status != STATUS_NOT_FOUND:
+        return False
+    resolved_at = cached.get("resolved_at")
+    if resolved_at is None:
+        return False
+    try:
+        from datetime import timezone
+
+        from app.core.config import get_settings
+
+        if getattr(resolved_at, "tzinfo", None) is None:
+            resolved_at = resolved_at.replace(tzinfo=timezone.utc)
+        ttl = float(get_settings().cover_not_found_ttl_sec)
+        age = (utc_now() - resolved_at).total_seconds()
+        return age < ttl
+    except Exception:
+        return False
 
 
 def _write_track_cache(
@@ -101,12 +130,17 @@ def _write_track_cache(
 
 def _read_artist_cache(conn: duckdb.DuckDBPyConnection, artist_id: int) -> Optional[Dict[str, Any]]:
     row = conn.execute(
-        "SELECT artist_id, image_url, status FROM app_artist_cover WHERE artist_id = ?",
+        "SELECT artist_id, image_url, status, resolved_at FROM app_artist_cover WHERE artist_id = ?",
         [artist_id],
     ).fetchone()
     if not row:
         return None
-    return {"artist_id": int(row[0]), "image_url": row[1], "status": row[2]}
+    return {
+        "artist_id": int(row[0]),
+        "image_url": row[1],
+        "status": row[2],
+        "resolved_at": row[3],
+    }
 
 
 def _write_artist_cache(
@@ -172,10 +206,10 @@ def _resolve_track_image(track_name: str, artist_name: str) -> Optional[str]:
 def get_cached_cover(
     conn: duckdb.DuckDBPyConnection, track_id: int
 ) -> Optional[Dict[str, Any]]:
-    """Return cached cover row when present (read-only path)."""
+    """Return cached cover row when present and still fresh."""
     cached = _read_track_cache(conn, track_id)
-    if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND):
-        return cached
+    if cached and _cache_is_fresh(cached):
+        return {"track_id": cached["track_id"], "image_url": cached["image_url"], "status": cached["status"]}
     return None
 
 
@@ -183,9 +217,34 @@ def get_cached_artist_cover(
     conn: duckdb.DuckDBPyConnection, artist_id: int
 ) -> Optional[Dict[str, Any]]:
     cached = _read_artist_cache(conn, artist_id)
-    if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND):
-        return cached
+    if cached and _cache_is_fresh(cached):
+        return {
+            "artist_id": cached["artist_id"],
+            "image_url": cached["image_url"],
+            "status": cached["status"],
+        }
     return None
+
+
+def cover_urls_for_tracks(
+    conn: duckdb.DuckDBPyConnection, track_ids: list[int]
+) -> Dict[int, str]:
+    """Bulk read of OK cover URLs for home/smart feeds (no network)."""
+    ids = [int(t) for t in track_ids if t is not None]
+    if not ids:
+        return {}
+    placeholders = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"""
+        SELECT track_id, image_url
+        FROM app_track_cover
+        WHERE status = '{STATUS_OK}'
+          AND image_url IS NOT NULL
+          AND track_id IN ({placeholders})
+        """,
+        ids,
+    ).fetchall()
+    return {int(r[0]): str(r[1]) for r in rows if r[1]}
 
 
 def resolve_cover(
@@ -202,8 +261,12 @@ def resolve_cover(
 
     if not force:
         cached = _read_track_cache(conn, track_id)
-        if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND):
-            return cached
+        if cached and _cache_is_fresh(cached):
+            return {
+                "track_id": cached["track_id"],
+                "image_url": cached["image_url"],
+                "status": cached["status"],
+            }
 
     image_url = _resolve_track_image(track_name, artist_name)
     status = STATUS_OK if image_url else STATUS_NOT_FOUND
@@ -224,10 +287,15 @@ def resolve_artist_cover(
 
     if not force:
         cached = _read_artist_cache(conn, artist_id)
-        if cached and cached["status"] in (STATUS_OK, STATUS_NOT_FOUND):
-            return cached
+        if cached and _cache_is_fresh(cached):
+            return {
+                "artist_id": cached["artist_id"],
+                "image_url": cached["image_url"],
+                "status": cached["status"],
+            }
 
     image_url = _itunes_search(name, entity="musicArtist")
     status = STATUS_OK if image_url else STATUS_NOT_FOUND
     _write_artist_cache(conn, artist_id, image_url, status)
     return {"artist_id": artist_id, "image_url": image_url, "status": status}
+

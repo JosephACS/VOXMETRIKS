@@ -4,6 +4,7 @@ export interface PlayableTrack {
   artist: string;
   artistId?: number;
   durationMs?: number;
+  /** Stream / preview URL once resolved — empty until a real source is known. */
   audioUrl: string;
   coverGradient: string;
   explicit?: boolean;
@@ -11,7 +12,17 @@ export interface PlayableTrack {
   youtubeVideoId?: string;
 }
 
+/** Playback engine status (transport). */
 export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'buffering' | 'error';
+
+/** Audio source resolve lifecycle (user-facing). */
+export type AudioResolvePhase =
+  | 'idle'
+  | 'resolving'
+  | 'ready'
+  | 'playing'
+  | 'failed'
+  | 'unavailable';
 
 export type RepeatMode = 'off' | 'all' | 'one';
 

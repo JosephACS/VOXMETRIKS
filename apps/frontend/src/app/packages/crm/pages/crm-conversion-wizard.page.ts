@@ -9,15 +9,12 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 type WizardStep = 'view' | 'confirm-link' | 'claim';
 
 @Component({
   selector: 'app-crm-conversion-wizard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   styleUrls: ['../styles/crm.css'],
   template: `
     <section class="crm-page" data-testid="crm-conversion-wizard-page">

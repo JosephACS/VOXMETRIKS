@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 _YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 _YT_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
-_REQUEST_TIMEOUT = 8.0
+_REQUEST_TIMEOUT = float(get_settings().audio_provider_timeout_sec or 12.0)
 _SEARCH_MAX_RESULTS = 12
 
 

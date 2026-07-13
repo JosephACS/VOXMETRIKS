@@ -10,6 +10,8 @@ import { Injectable } from '@angular/core';
  */
 declare global {
   interface Window {
+    // YouTube IFrame API is injected at runtime.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     YT?: any;
     onYouTubeIframeAPIReady?: () => void;
   }
@@ -20,6 +22,7 @@ const API_SCRIPT_ID = 'vox-yt-iframe-api';
 
 @Injectable({ providedIn: 'root' })
 export class YoutubeEngineService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private player: any = null;
   private ready = false;
   private creating = false;
@@ -141,7 +144,7 @@ export class YoutubeEngineService {
       },
       events: {
         onReady: () => this.handleReady(),
-        onStateChange: (e: any) => this.handleState(e),
+        onStateChange: (e: { data?: number }) => this.handleState(e),
         onError: () => this.onError?.(),
       },
     });
@@ -153,7 +156,7 @@ export class YoutubeEngineService {
     if (this.desired) this.applyLoad();
   }
 
-  private handleState(e: any): void {
+  private handleState(e: { data?: number }): void {
     // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
     switch (e?.data) {
       case 1:

@@ -13,6 +13,8 @@ from ._helpers import table_exists_conn
 
 from .ranking_engine import RankingEngine
 
+DISCOVER_WEEKLY_CODE = "discover_weekly"
+
 
 def _week_seed(user_id: int) -> int:
     week = datetime.now(timezone.utc).isocalendar()[1]
@@ -75,7 +77,7 @@ def build_discover_weekly(
     week = datetime.now(timezone.utc).isocalendar()
     return {
         "playlist_id": f"discover-weekly-{app_user_id}",
-        "title": "Discover Weekly",
+        "code": DISCOVER_WEEKLY_CODE,
         "week": f"{week[0]}-W{week[1]:02d}",
         "track_count": len(mixed),
         "tracks": mixed[:limit],

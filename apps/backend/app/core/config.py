@@ -85,7 +85,10 @@ class Settings(BaseSettings):
     seed_demo_users: bool = True
     auth_rate_limit: int = 20
     auth_rate_window_sec: int = 60
-    global_rate_limit: int = 120
+    # 0 = disabled. Local/dev defaults to no global limit so home covers +
+    # playback never hit 429. Production should set GLOBAL_RATE_LIMIT (e.g. 120–300).
+    # Paths ending in /cover and /audio-source stay exempt even when enabled.
+    global_rate_limit: int = 0
     global_rate_window_sec: int = 60
     # Set E2E=1 only in Playwright/pytest runs (.env.e2e, npm run e2e:backend).
     e2e_mode: bool = Field(default=False, validation_alias="E2E")
@@ -99,6 +102,13 @@ class Settings(BaseSettings):
     cache_ttl_recommendations: int = 120
     cache_ttl_smart_home: int = 90
     cache_ttl_audio: int = 300
+    # Soft TTL for negative audio / cover cache entries (seconds).
+    audio_not_found_ttl_sec: int = 3600
+    cover_not_found_ttl_sec: int = 3600
+    # Per-provider HTTP timeout for YouTube / Audius lookups.
+    audio_provider_timeout_sec: float = 12.0
+    # Show is_demo / enterprise-demo orgs in the selector (opt-in).
+    show_demo_organizations: bool = False
 
     # Platform jobs (Phase 5)
     jobs_enabled: bool = True
@@ -292,8 +302,18 @@ class Settings(BaseSettings):
 
     @property
     def effective_global_rate_limit(self) -> int:
-        """Rate limit 0 is honoured only in E2E/pytest; otherwise restore default."""
-        if self.global_rate_limit == 0 and not self.is_test_runtime:
+        """Global API rate limit.
+
+        - Local/dev: 0 (unlimited) so streaming home/covers/playback never 429.
+        - Pytest/E2E: honour configured value (usually 0).
+        - Production: 0 falls back to 120 unless an explicit positive limit is set.
+        """
+        if self.is_test_runtime:
+            return self.global_rate_limit
+        if not self.is_production:
+            # Development: always unlimited unless an explicit positive override is set
+            return self.global_rate_limit if self.global_rate_limit > 0 else 0
+        if self.global_rate_limit <= 0:
             return 120
         return self.global_rate_limit
 

@@ -8,9 +8,6 @@ import { Plan, PlanPrice } from '../models/subscriptions.models';
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
-import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
-
 /**
  * Post-conversion / explicit plan selection.
  * Does NOT auto-create a subscription — owner chooses trial or paid.
@@ -18,7 +15,7 @@ import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-fo
 @Component({
   selector: 'app-subscription-select-plan',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
     <div class="page select-plan-page">
       <a routerLink="/subscriptions/overview">{{ 'subscriptions.selectPlan.back' | t:lang() }}</a>

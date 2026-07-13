@@ -116,7 +116,8 @@ def test_discover_weekly_has_tracks(smart_conn):
         return_value=_MOCK_RANK,
     ):
         weekly = build_discover_weekly(smart_conn, 1, limit=5)
-    assert weekly["title"] == "Discover Weekly"
+    assert weekly["code"] == "discover_weekly"
+    assert "title" not in weekly or weekly.get("title") != "Discover Weekly"
     assert len(weekly["tracks"]) >= 1
 
 
