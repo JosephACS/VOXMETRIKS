@@ -63,9 +63,13 @@ def _schedule_resolve(track_id: int, skip_provider: Optional[str] = None) -> Non
 
     def _job() -> None:
         try:
-            with using_write_conn() as conn:
-                migrate_audio_source_columns(conn)
-                resolve_audio_source(conn, track_id, force=False, skip_provider=skip_provider)
+            # Do not hold using_write_conn across YouTube/Audius network I/O —
+            # that blocked the shared DuckDB lock and starved Home API reads.
+            get_audio_resolver().resolve_background(
+                track_id, force=False, skip_provider=skip_provider
+            )
+        except Exception:
+            logger.exception("background audio resolve failed track_id=%s", track_id)
         finally:
             with _scheduled_lock:
                 _scheduled_ids.discard(track_id)

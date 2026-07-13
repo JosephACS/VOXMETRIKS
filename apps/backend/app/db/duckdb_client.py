@@ -24,10 +24,11 @@ _client_lock = threading.Lock()
 
 
 class DuckDBClient:
-    """Singleton DuckDB client — lazy init, read-optimized, thread-safe."""
+    """Singleton DuckDB client — borrows the process shared connection."""
 
     def __init__(self, db_path: str, *, read_only: bool = True) -> None:
         self._db_path = db_path
+        # Kept for API compatibility; connection mode is owned by database.py.
         self._read_only = read_only
         self._conn: duckdb.DuckDBPyConnection | None = None
         self._lock = threading.Lock()
@@ -41,17 +42,23 @@ class DuckDBClient:
         return self._conn is not None
 
     def connect(self) -> duckdb.DuckDBPyConnection:
-        if self._conn is None:
-            with self._lock:
-                if self._conn is None:
-                    logger.info("Opening DuckDB connection path=%s read_only=%s", self._db_path, self._read_only)
-                    self._conn = duckdb.connect(self._db_path, read_only=self._read_only)
-        return self._conn
+        """Attach to the shared warehouse connection (never open a second handle)."""
+        from app.core.database import get_connection
+
+        with self._lock:
+            if self._conn is None:
+                logger.info(
+                    "Opening DuckDB connection path=%s read_only=%s (shared pool)",
+                    self._db_path,
+                    self._read_only,
+                )
+                self._conn = get_connection()
+            return self._conn
 
     def close(self) -> None:
+        """Detach this client; the shared pool stays open until close_read_pool()."""
         with self._lock:
             if self._conn is not None:
-                self._conn.close()
                 self._conn = None
                 logger.info("DuckDB connection closed")
 
@@ -69,13 +76,13 @@ class DuckDBClient:
         params: list | tuple | None = None,
         *,
         label: str = "query",
-    ) -> duckdb.DuckDBPyConnection:
-        conn = self.connect()
+    ) -> Any:
         safe_sql = self._validate_sql(sql)
         bound = list(params or [])
         start = time.perf_counter()
         try:
-            result = conn.execute(safe_sql, bound)
+            # LockedConn.execute materializes rows under the shared DB lock.
+            result = self.connect().execute(safe_sql, bound)
             elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
             db_logger.info(
                 "sql label=%s elapsed_ms=%s params=%s",

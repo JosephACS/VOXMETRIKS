@@ -88,9 +88,49 @@ class AudioResolver:
                 )
                 return self._from_cache(cached)
 
+        result = self._resolve_providers(ctx, skip_provider=skip_provider)
+        if result is not None:
+            write_cache(conn, result)
+        return result
+
+    def resolve_background(
+        self,
+        track_id: int,
+        *,
+        force: bool = False,
+        skip_provider: Optional[str] = None,
+    ) -> Optional[ResolvedSource]:
+        """Resolve without holding the DB lock across provider network I/O."""
+        from app.core.database import get_connection
+        from .cache import migrate_audio_source_columns
+
+        conn = get_connection()
+        migrate_audio_source_columns(conn)
+        ctx = build_track_context(conn, track_id)
+        if ctx is None:
+            return None
+        if not force:
+            cached = read_cache(conn, track_id)
+            if cached and is_cache_usable(cached):
+                return self._from_cache(cached)
+
+        result = self._resolve_providers(ctx, skip_provider=skip_provider)
+        if result is None:
+            return None
+
+        write_cache(get_connection(), result)
+        return result
+
+    def _resolve_providers(
+        self,
+        ctx: TrackContext,
+        *,
+        skip_provider: Optional[str] = None,
+    ) -> Optional[ResolvedSource]:
         start = time.perf_counter()
         skip = {skip_provider} if skip_provider else set()
         last_not_found: Optional[ResolvedSource] = None
+        track_id = ctx.track_id
 
         for provider in self._providers:
             if provider.name in skip:
@@ -123,7 +163,6 @@ class AudioResolver:
             )
 
             if result.status == STATUS_OK:
-                write_cache(conn, result)
                 return result
 
             if result.status == STATUS_ERROR:
@@ -132,17 +171,14 @@ class AudioResolver:
             last_not_found = result
 
         if last_not_found:
-            write_cache(conn, last_not_found)
             return last_not_found
 
-        final = ResolvedSource(
+        return ResolvedSource(
             track_id=track_id,
             provider=self._providers[-1].name if self._providers else "none",
             status=STATUS_NOT_FOUND,
             query=ctx.track_name,
         )
-        write_cache(conn, final)
-        return final
 
     @staticmethod
     def _from_cache(cached: dict) -> ResolvedSource:

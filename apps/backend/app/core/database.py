@@ -3,11 +3,9 @@ backend/database.py
 ===================
 DuckDB connection management for FastAPI.
 
-Key features:
-  - Per-request connections (safe for reads and writes)
-  - Automatic DB validation on startup
-  - Schema introspection: get_table_columns() returns REAL column names
-  - Dependency injection: get_conn() for use in route dependencies
+DuckDB forbids opening the same file with mixed configs (e.g. read_only=True
+while a read-write connection exists). All access goes through one shared
+read-write connection serialized by ``_db_lock``.
 """
 
 from __future__ import annotations
@@ -16,7 +14,7 @@ import logging
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, List
+from typing import Any, Generator, List
 
 import duckdb
 
@@ -24,154 +22,201 @@ from .config import get_settings
 
 logger = logging.getLogger("voxmetrik.database")
 
-# Global write lock to serialize write operations
-_write_lock = threading.Lock()
-_read_lock = threading.Lock()
-_read_conn: duckdb.DuckDBPyConnection | None = None
+# Serializes connect + every SQL execute on the shared handle.
+_db_lock = threading.RLock()
+_shared_conn: duckdb.DuckDBPyConnection | None = None
+
+
+class _MaterializedResult:
+    """Snapshot of a DuckDB query result (safe after the DB lock is released)."""
+
+    __slots__ = ("description", "_rows", "_i")
+
+    def __init__(self, description: Any, rows: list) -> None:
+        self.description = description
+        self._rows = rows
+        self._i = 0
+
+    def fetchall(self) -> list:
+        return list(self._rows)
+
+    def fetchone(self) -> Any:
+        if self._i >= len(self._rows):
+            return None
+        row = self._rows[self._i]
+        self._i += 1
+        return row
+
+    def fetchmany(self, size: int = 1) -> list:
+        chunk = self._rows[self._i : self._i + size]
+        self._i += len(chunk)
+        return list(chunk)
+
+    def df(self) -> Any:
+        import pandas as pd
+
+        cols = [d[0] for d in (self.description or [])]
+        return pd.DataFrame(self._rows, columns=cols or None)
+
+
+class _LockedConn:
+    """Proxy that serializes DuckDB calls without holding a lock across FastAPI yields.
+
+    FastAPI resumes dependency cleanup on a *different* worker thread than enter,
+    so ``with _db_lock: yield conn`` raises ``cannot release un-acquired lock``.
+
+    Results are materialized under the lock so ``.fetchall()`` is safe afterwards.
+    """
+
+    __slots__ = ("_conn",)
+
+    def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
+        self._conn = conn
+
+    def execute(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        with _db_lock:
+            result = self._conn.execute(*args, **kwargs)
+            try:
+                rows = result.fetchall()
+            except Exception:
+                # DDL / statements with no result set
+                rows = []
+            description = getattr(result, "description", None)
+            return _MaterializedResult(description, rows)
+
+    def executemany(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        with _db_lock:
+            return self._conn.executemany(*args, **kwargs)
+
+    def cursor(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        with _db_lock:
+            return self._conn.cursor(*args, **kwargs)
+
+    def commit(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        with _db_lock:
+            return self._conn.commit(*args, **kwargs)
+
+    def rollback(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        with _db_lock:
+            return self._conn.rollback(*args, **kwargs)
+
+    def close(self) -> None:
+        # Shared pool owns the real connection lifetime.
+        return None
+
+    def __getattr__(self, name: str):
+        attr = getattr(self._conn, name)
+        if callable(attr):
+
+            def _guarded(*args, **kwargs):  # noqa: ANN002, ANN003
+                with _db_lock:
+                    return attr(*args, **kwargs)
+
+            return _guarded
+        return attr
+
+
+def _db_path() -> Path:
+    return get_settings().db_path_resolved
+
+
+def _ensure_shared_conn(db_path: Path | None = None) -> duckdb.DuckDBPyConnection:
+    """Open the process-wide connection if needed (caller must hold ``_db_lock``)."""
+    global _shared_conn
+    path = db_path or _db_path()
+    if not path.exists():
+        raise FileNotFoundError(
+            f"DuckDB database not found: {path}\n"
+            "  → Run python elt_pipeline.py first to create the database."
+        )
+    if _shared_conn is None:
+        # Single RW connection — never mix with a separate read_only handle.
+        _shared_conn = duckdb.connect(str(path))
+        logger.info("Read pool opened (shared read-write connection)")
+    return _shared_conn
+
+
+def _borrow_conn() -> _LockedConn:
+    with _db_lock:
+        return _LockedConn(_ensure_shared_conn())
 
 
 def open_read_pool(db_path: Path) -> None:
-    """Open a shared read-only DuckDB connection for the process lifetime."""
-    global _read_conn
-    if _read_conn is not None:
-        return
-    _read_conn = duckdb.connect(str(db_path), read_only=True)
-    logger.info("Read pool opened (shared read-only connection)")
+    """Open the shared DuckDB connection for the process lifetime."""
+    with _db_lock:
+        _ensure_shared_conn(db_path)
 
 
 def close_read_pool() -> None:
-    """Close the shared read connection on shutdown."""
-    global _read_conn
-    if _read_conn is None:
-        return
-    try:
-        _read_conn.close()
-    except Exception:
-        logger.warning("close_read_pool: failed to close shared read connection", exc_info=True)
-    _read_conn = None
-    logger.info("Read pool closed")
+    """Close the shared connection on shutdown."""
+    global _shared_conn
+    with _db_lock:
+        if _shared_conn is None:
+            return
+        try:
+            _shared_conn.close()
+        except Exception:
+            logger.warning("close_read_pool: failed to close shared connection", exc_info=True)
+        _shared_conn = None
+        logger.info("Read pool closed")
 
 
 def get_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
-    FastAPI dependency: yields the shared read-only connection when available,
-    otherwise opens a short-lived connection (tests / fallback).
+    FastAPI dependency: yields a lock-safe proxy to the shared connection.
+
+    Must not hold ``_db_lock`` across ``yield`` (threadpool enter/exit mismatch).
     """
-    settings = get_settings()
-    db_path = settings.db_path_resolved
-
-    if not db_path.exists():
-        raise FileNotFoundError(
-            f"DuckDB database not found: {db_path}\n"
-            "  → Run python elt_pipeline.py first to create the database."
-        )
-
-    if _read_conn is not None:
-        with _read_lock:
-            yield _read_conn
-        return
-
-    conn = duckdb.connect(str(db_path), read_only=True)
-    try:
-        yield conn
-    except Exception:
-        raise
-    finally:
-        try:
-            conn.close()
-        except Exception:
-            logger.warning("get_conn: failed to close connection", exc_info=True)
+    yield _borrow_conn()  # type: ignore[misc]
 
 
-def _release_read_connections() -> None:
-    """Close read singletons so DuckDB accepts a write connection."""
-    global _read_conn
+def _shutdown_aux_clients() -> None:
+    """Close other DuckDB handles that would conflict with this process connection."""
     try:
         from app.db.duckdb_client import shutdown_duckdb_client
 
         shutdown_duckdb_client()
     except Exception:
-        logger.debug("release_read_connections: duckdb client shutdown skipped", exc_info=True)
-    if _read_conn is not None:
-        try:
-            _read_conn.close()
-        except Exception:
-            logger.warning("release_read_connections: failed to close read pool", exc_info=True)
-        _read_conn = None
+        logger.debug("aux client shutdown skipped", exc_info=True)
+
+
+def _release_read_connections() -> None:
+    """
+    Legacy hook used by tests before exclusive writes.
+
+    With a single shared RW connection there is nothing to tear down for mode
+    switching; still shut down auxiliary clients that may have opened the file.
+    """
+    _shutdown_aux_clients()
 
 
 def _reopen_read_pool() -> None:
-    """Restore shared read pool after a write connection closes."""
+    """Legacy hook — ensure the shared pool is available after a write section."""
     try:
-        open_read_pool(get_settings().db_path_resolved)
+        with _db_lock:
+            _ensure_shared_conn()
     except Exception:
         logger.debug("reopen_read_pool skipped", exc_info=True)
 
 
 @contextmanager
 def using_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
-    """Open a short-lived write connection (serialized via global lock)."""
-    settings = get_settings()
-    db_path = settings.db_path_resolved
-    if not db_path.exists():
-        raise FileNotFoundError(
-            f"DuckDB database not found: {db_path}\n"
-            "  → Run python elt_pipeline.py first to create the database."
-        )
-    _release_read_connections()
-    with _write_lock:
-        conn = duckdb.connect(str(db_path))
-        try:
-            yield conn
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                logger.warning("using_write_conn: failed to close connection", exc_info=True)
-            _reopen_read_pool()
+    """Yield a lock-safe proxy for writes (same-thread context manager is fine)."""
+    _shutdown_aux_clients()
+    yield _borrow_conn()  # type: ignore[misc]
 
 
 def get_write_conn() -> Generator[duckdb.DuckDBPyConnection, None, None]:
-    """
-    FastAPI dependency: yields a per-request DuckDB connection for write operations.
-    Uses a write lock to prevent concurrent writes.
-    """
-    settings = get_settings()
-    db_path = settings.db_path_resolved
-
-    if not db_path.exists():
-        raise FileNotFoundError(
-            f"DuckDB database not found: {db_path}\n"
-            "  → Run python elt_pipeline.py first to create the database."
-        )
-
-    _release_read_connections()
-    with _write_lock:
-        conn = duckdb.connect(str(db_path))
-        try:
-            yield conn
-        except Exception:
-            raise
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                logger.warning("get_write_conn: failed to close connection", exc_info=True)
-            _reopen_read_pool()
+    """FastAPI dependency: lock-safe shared connection for writes."""
+    _shutdown_aux_clients()
+    yield _borrow_conn()  # type: ignore[misc]
 
 
 # ── Schema introspection ──────────────────────────────────────────────────────
 
 def get_connection() -> duckdb.DuckDBPyConnection:
-    """Return the shared read-only warehouse connection (opens pool if needed)."""
-    settings = get_settings()
-    db_path = settings.db_path_resolved
-    if not db_path.exists():
-        raise FileNotFoundError(f"DuckDB database not found: {db_path}")
-    if _read_conn is None:
-        open_read_pool(db_path)
-    assert _read_conn is not None
-    return _read_conn
+    """Return a lock-safe proxy to the shared warehouse connection."""
+    return _borrow_conn()  # type: ignore[return-value]
 
 
 def fetch_all_rows(conn: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -> list[dict]:
@@ -235,7 +280,7 @@ def safe_query(
                 f"None of the requested columns {select_cols} exist in '{table}'. "
                 f"Available: {real_cols}"
             )
-        cols_sql  = ", ".join(valid)
+        cols_sql = ", ".join(valid)
         used_cols = valid
 
     sql = f"SELECT {cols_sql} FROM {table}"

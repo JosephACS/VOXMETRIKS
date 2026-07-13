@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { LoadingService } from '../../shared/services/loading.service';
 import { FavoritesService } from '../../packages/streaming/services/favorites.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { MusicPlayerService } from '../../shared/services/music-player.service';
@@ -501,8 +500,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     ];
     return gradients[id % gradients.length];
   });
-
-  constructor(public loading: LoadingService) {}
 
   ngOnInit() {
     this.checkScreenSize();
