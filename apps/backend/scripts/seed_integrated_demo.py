@@ -357,13 +357,19 @@ def _seed_personal_line(conn, ids: dict[str, int]) -> dict[str, Any]:
 
 
 def _ensure_professional_subscription(conn, org_id: int, actor_id: int) -> None:
-    """Attach Professional plan to canonical demo org when missing."""
+    """Attach Professional plan to canonical demo org when missing; always repair entitlements."""
     from app.core.time_util import utc_now
+    from app.packages.subscriptions.application.commercial_catalog import ensure_commercial_catalog
+    from app.packages.subscriptions.application.use_cases import ensure_plan_entitlements
     from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
 
     ensure_subscription_tables(conn)
     if not _table_exists(conn, "app_plan") or not _table_exists(conn, "app_subscription"):
         return
+    try:
+        ensure_commercial_catalog(conn)
+    except Exception:
+        pass
     plan = conn.execute(
         "SELECT id FROM app_plan WHERE code = 'professional' AND status != 'archived' LIMIT 1"
     ).fetchone()
@@ -379,6 +385,7 @@ def _ensure_professional_subscription(conn, org_id: int, actor_id: int) -> None:
         [org_id],
     ).fetchone()
     if existing:
+        ensure_plan_entitlements(conn, int(existing[0]))
         return
     price = conn.execute(
         """
@@ -398,12 +405,21 @@ def _ensure_professional_subscription(conn, org_id: int, actor_id: int) -> None:
         cols += ", plan_price_id"
         vals += ", ?"
         params.append(price_id)
+    if _has_column(conn, "app_subscription", "billing_currency"):
+        cols += ", billing_currency"
+        vals += ", ?"
+        params.append("USD")
+    if _has_column(conn, "app_subscription", "access_state"):
+        cols += ", access_state"
+        vals += ", ?"
+        params.append("full")
     if _has_column(conn, "app_subscription", "created_by"):
         cols += ", created_by"
         vals += ", ?"
         params.append(actor_id)
     try:
         conn.execute(f"INSERT INTO app_subscription ({cols}) VALUES ({vals})", params)
+        ensure_plan_entitlements(conn, sid)
     except Exception:
         pass
 

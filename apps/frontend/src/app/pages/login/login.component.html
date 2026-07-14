@@ -25,7 +25,6 @@
 
   <div class="login-panel" role="main">
     <div class="login-toolbar">
-      <app-brand-mark class="login-panel__brand" variant="horizontal" size="sm" />
       <div class="lang-toggle" role="group" [attr.aria-label]="'settings.language' | t">
         <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t:lang() }}</button>
         <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t:lang() }}</button>

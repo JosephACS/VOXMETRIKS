@@ -1008,7 +1008,7 @@ export const LOCALE_ES = {
     'nav.crm.approvals': 'Aprobaciones',
     'nav.crm.audit': 'Auditoría CRM',
     'nav.section.subscriptions': 'Suscripciones',
-    'nav.subscriptions.overview': 'Mi suscripción',
+    'nav.subscriptions.overview': 'Plan de la organización',
     'nav.subscriptions.plans': 'Planes',
     'nav.subscriptions.trial': 'Iniciar trial',
     'nav.section.billing': 'Facturación',

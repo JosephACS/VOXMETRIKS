@@ -109,6 +109,8 @@ export interface SubscriptionEntitlement {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  current_usage?: number | null;
+  remaining?: number | null;
 }
 
 export interface SubscriptionAddon {

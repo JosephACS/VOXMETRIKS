@@ -788,6 +788,131 @@ def _materialize_entitlements(
         )
 
 
+def ensure_plan_entitlements(
+    conn: duckdb.DuckDBPyConnection,
+    subscription_id: int,
+) -> int:
+    """Idempotently materialize plan entitlements when none exist for an active-like subscription.
+
+    Returns the number of enabled plan entitlements after repair.
+    Does not invent features — only copies from ``app_plan_feature``.
+    """
+    row = conn.execute(
+        "SELECT plan_id, organization_id, status FROM app_subscription WHERE id = ?",
+        [subscription_id],
+    ).fetchone()
+    if not row:
+        return 0
+    plan_id = int(row[0])
+    status = str(row[2])
+    if status not in ("active", "trialing", "past_due", "provisioning"):
+        n = conn.execute(
+            "SELECT COUNT(*) FROM app_subscription_entitlement "
+            "WHERE subscription_id = ? AND source = 'plan' AND enabled = TRUE",
+            [subscription_id],
+        ).fetchone()
+        return int(n[0]) if n else 0
+
+    existing = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM app_subscription_entitlement "
+            "WHERE subscription_id = ? AND source = 'plan'",
+            [subscription_id],
+        ).fetchone()[0]
+    )
+    feature_count = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM app_plan_feature WHERE plan_id = ?",
+            [plan_id],
+        ).fetchone()[0]
+    )
+    if existing == 0 and feature_count == 0:
+        # Catalog may not have been synced for this plan yet.
+        try:
+            from app.packages.subscriptions.application.commercial_catalog import (
+                ensure_commercial_catalog,
+            )
+
+            ensure_commercial_catalog(conn)
+        except Exception:
+            pass
+        feature_count = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM app_plan_feature WHERE plan_id = ?",
+                [plan_id],
+            ).fetchone()[0]
+        )
+    if existing == 0 and feature_count > 0:
+        _materialize_entitlements(conn, subscription_id, plan_id)
+
+    return int(
+        conn.execute(
+            "SELECT COUNT(*) FROM app_subscription_entitlement "
+            "WHERE subscription_id = ? AND source = 'plan' AND enabled = TRUE",
+            [subscription_id],
+        ).fetchone()[0]
+    )
+
+
+def _current_usage_for_feature(
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    organization_id: int,
+    subscription_id: int,
+    feature_code: str,
+) -> Optional[int]:
+    """Resolve live usage for known meterable features; else last usage record."""
+    code = feature_code.lower()
+    if code in ("seats", "max_users", "members"):
+        for sql in (
+            """
+            SELECT COUNT(*) FROM app_organization_membership
+            WHERE organization_id = ? AND status = 'active' AND deleted_at IS NULL
+            """,
+            """
+            SELECT COUNT(*) FROM app_organization_membership
+            WHERE organization_id = ? AND status = 'active'
+            """,
+        ):
+            try:
+                row = conn.execute(sql, [organization_id]).fetchone()
+                if row is not None:
+                    return int(row[0])
+            except Exception:
+                continue
+    if code in ("artists", "managed_artists"):
+        for sql in (
+            """
+            SELECT COUNT(*) FROM app_artist_profile
+            WHERE organization_id = ? AND status != 'archived'
+            """,
+            """
+            SELECT COUNT(*) FROM app_artist_profile
+            WHERE organization_id = ?
+            """,
+        ):
+            try:
+                row = conn.execute(sql, [organization_id]).fetchone()
+                if row is not None:
+                    return int(row[0])
+            except Exception:
+                continue
+    try:
+        row = conn.execute(
+            """
+            SELECT quantity FROM app_usage_record
+            WHERE subscription_id = ? AND feature_code = ?
+            ORDER BY recorded_at DESC LIMIT 1
+            """,
+            [subscription_id, feature_code],
+        ).fetchone()
+        if row is not None and row[0] is not None:
+            return int(row[0])
+    except Exception:
+        pass
+    return None
+
+
 def _upsert_access_state(
     conn: duckdb.DuckDBPyConnection,
     subscription_id: int,
@@ -1720,13 +1845,51 @@ class UsageUseCases:
         self,
         subscription_id: int,
     ) -> list[SubscriptionEntitlement]:
-        """Return all active entitlements for a subscription."""
+        """Return all active entitlements for a subscription.
+
+        Auto-heals missing plan entitlements (e.g. subscriptions inserted by demo seed
+        without running the normal activate/trial path).
+        """
+        ensure_plan_entitlements(self._conn, subscription_id)
         rows = self._conn.execute(
             f"SELECT {_ENTITLEMENT_COLS} FROM app_subscription_entitlement "
             "WHERE subscription_id = ? AND enabled = TRUE ORDER BY feature_code ASC",
             [subscription_id],
         ).fetchall()
         return [_map_entitlement(r) for r in rows]
+
+    def entitlement_usage_snapshot(
+        self,
+        subscription_id: int,
+    ) -> list[dict]:
+        """Entitlements plus current_usage / remaining (backend-derived, not FE-invented)."""
+        sub = self._conn.execute(
+            "SELECT organization_id FROM app_subscription WHERE id = ?",
+            [subscription_id],
+        ).fetchone()
+        org_id = int(sub[0]) if sub else 0
+        ents = self.evaluate_entitlements(subscription_id)
+        out: list[dict] = []
+        for e in ents:
+            usage = _current_usage_for_feature(
+                self._conn,
+                organization_id=org_id,
+                subscription_id=subscription_id,
+                feature_code=e.feature_code,
+            )
+            remaining: Optional[int] = None
+            if e.limit_value is not None and usage is not None:
+                remaining = max(0, int(e.limit_value) - int(usage))
+            elif e.limit_value is not None and usage is None:
+                remaining = int(e.limit_value)
+            out.append(
+                {
+                    "entitlement": e,
+                    "current_usage": usage,
+                    "remaining": remaining,
+                }
+            )
+        return out
 
     def check_feature(
         self,

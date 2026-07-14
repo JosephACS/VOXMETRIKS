@@ -85,14 +85,24 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [description]="'platformOps.dashboard.noJobsBody' | t:lang()"
           />
         } @else {
-          <ul class="ent-list">
-            @for (j of jobs; track j.id) {
-              <li>
-                {{ j.job_code }} —
-                <app-enterprise-status-badge [status]="j.status" />
-              </li>
-            }
-          </ul>
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'platformOps.dashboard.code' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (j of jobs; track j.id) {
+                  <tr>
+                    <td class="mono">{{ j.job_code }}</td>
+                    <td><app-enterprise-status-badge [status]="j.status" /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
       </app-enterprise-section-card>
 
@@ -103,14 +113,26 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [description]="'platformOps.dashboard.noFlagsBody' | t:lang()"
           />
         } @else {
-          <ul class="ent-list">
-            @for (f of flags; track f.id) {
-              <li>
-                {{ f.flag_key }}:
-                <app-enterprise-status-badge [status]="f.enabled ? 'active' : 'closed'" />
-              </li>
-            }
-          </ul>
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'platformOps.dashboard.code' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of flags; track f.id) {
+                  <tr>
+                    <td class="mono">{{ f.flag_key }}</td>
+                    <td>
+                      <app-enterprise-status-badge [status]="f.enabled ? 'active' : 'closed'" />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
       </app-enterprise-section-card>
 
@@ -121,16 +143,30 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [description]="'platformOps.dashboard.noBackupsBody' | t:lang()"
           />
         } @else {
-          <ul class="ent-list">
-            @for (b of backups; track b.id) {
-              <li>
-                {{ b.file_path }}
-                @if (b.labeled_academic) {
-                  ({{ 'platformOps.dashboard.academic' | t:lang() }})
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'platformOps.dashboard.backupPath' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (b of backups; track b.id) {
+                  <tr>
+                    <td>{{ b.file_path }}</td>
+                    <td>
+                      @if (b.labeled_academic) {
+                        <span class="badge">{{ 'platformOps.dashboard.academic' | t:lang() }}</span>
+                      } @else {
+                        {{ 'common.notAvailable' | t:lang() }}
+                      }
+                    </td>
+                  </tr>
                 }
-              </li>
-            }
-          </ul>
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
       </app-enterprise-section-card>
     </div>

@@ -1,61 +1,90 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Plan, PlanPrice } from '../models/subscriptions.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleFormatService } from '../../../core/services/locale-format.service';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-trial-start',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
-    <div class="vx-enterprise trial-start">
-      <h1>{{ 'subscriptions.trial.title' | t:lang() }}</h1>
+    <div class="vx-enterprise trial-start-page">
+      @if (!organizationId) {
+        <app-enterprise-org-required />
+      } @else {
+        <app-enterprise-page-header
+          [title]="'subscriptions.trial.title' | t:lang()"
+          [subtitle]="'subscriptions.trial.subtitle' | t:lang()"
+        >
+          <a routerLink="/subscriptions/overview" class="btn btn--secondary">{{
+            'common.back' | t:lang()
+          }}</a>
+        </app-enterprise-page-header>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-field">
-          <label>Plan</label>
-          <select formControlName="planId" (change)="onPlanChange()">
-            <option value="">Seleccionar...</option>
-            @for (p of plans; track p.id) {
-              <option [value]="p.id">
-                {{ p.display_name }} ({{ p.trial_days_default }} días trial)
-              </option>
+        <app-enterprise-section-card [title]="'subscriptions.trial.formTitle' | t:lang()">
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'subscriptions.trial.plan' | t:lang()"
+              [required]="true"
+            >
+              <select formControlName="planId" class="input" (change)="onPlanChange()">
+                <option [ngValue]="0">{{ 'subscriptions.trial.selectPlan' | t:lang() }}</option>
+                @for (p of plans; track p.id) {
+                  <option [ngValue]="p.id">
+                    {{ p.display_name }}
+                    ({{ p.trial_days_default }}
+                    {{ 'subscriptions.trial.days' | t:lang() }})
+                  </option>
+                }
+              </select>
+            </app-enterprise-form-field>
+
+            @if (prices.length > 0) {
+              <app-enterprise-form-field [label]="'subscriptions.trial.priceOptional' | t:lang()">
+                <select formControlName="planPriceId" class="input">
+                  <option [ngValue]="null">{{ 'subscriptions.trial.noPrice' | t:lang() }}</option>
+                  @for (p of prices; track p.id) {
+                    <option [ngValue]="p.id">{{ formatPrice(p) }}</option>
+                  }
+                </select>
+              </app-enterprise-form-field>
             }
-          </select>
-        </div>
 
-        @if (prices.length > 0) {
-          <div class="form-field">
-            <label>Precio (opcional)</label>
-            <select formControlName="planPriceId">
-              <option value="">Ninguno</option>
-              @for (p of prices; track p.id) {
-                <option [value]="p.id">
-                  {{ p.currency }} {{ p.amount }} / {{ p.billing_period }}
-                </option>
-              }
-            </select>
-          </div>
-        }
+            <app-enterprise-form-field
+              [label]="'subscriptions.trial.currency' | t:lang()"
+              [required]="true"
+            >
+              <input
+                formControlName="billingCurrency"
+                class="input"
+                maxlength="3"
+                placeholder="USD"
+              />
+            </app-enterprise-form-field>
 
-        <div class="form-field">
-          <label>Moneda</label>
-          <input formControlName="billingCurrency" placeholder="USD" maxlength="3" />
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" [disabled]="form.invalid || saving" class="btn btn--primary">{{ 'subscriptions.trial.title' | t:lang() }}</button>
-        </div>
+            <div class="form-grid__actions">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                [disabled]="form.invalid || saving"
+              >
+                {{ 'subscriptions.trial.submit' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
 
         @if (error) {
-          <div class="error">{{ error }}</div>
+          <app-enterprise-error-state [message]="error" (retry)="reloadPlans()" />
         }
-      </form>
+      }
     </div>
   `,
 })
@@ -67,6 +96,7 @@ export class TrialStartPageComponent implements OnInit {
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly money = inject(LocaleFormatService);
 
   organizationId: number | null = null;
   plans: Plan[] = [];
@@ -82,47 +112,65 @@ export class TrialStartPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.organizationId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    if (!this.organizationId) return;
+    this.reloadPlans();
+  }
+
+  reloadPlans(): void {
+    this.error = null;
     this.api.listPlans({ status: 'active' }).subscribe({
       next: (r) => (this.plans = r.items),
       error: (e) => {
-        this.error = e?.error?.detail?.message ?? 'Error al cargar planes';
+        this.error = e?.error?.detail?.message ?? this.i18n.t('subscriptions.trial.loadFailed');
       },
     });
+  }
+
+  formatPrice(pr: PlanPrice): string {
+    const period =
+      pr.billing_period === 'annual'
+        ? this.i18n.t('subscriptions.period.annual')
+        : pr.billing_period === 'monthly'
+          ? this.i18n.t('subscriptions.period.monthly')
+          : pr.billing_period;
+    return `${this.money.formatMoney(pr.amount, pr.currency || 'USD')} / ${period}`;
   }
 
   onPlanChange(): void {
     const planId = Number(this.form.value.planId);
     if (!planId) return;
     this.api.listPlanPrices(planId).subscribe({
-      next: (prices) => (this.prices = prices),
-      error: (e) => {
-        this.error = e?.error?.detail?.message ?? 'Error al cargar precios';
+      next: (items) => {
+        this.prices = items;
+        this.form.patchValue({ planPriceId: null });
+      },
+      error: () => {
         this.prices = [];
       },
     });
   }
 
   onSubmit(): void {
-    const orgId = this.organizationId;
-    if (this.form.invalid || orgId == null) return;
+    if (!this.organizationId || this.form.invalid) return;
     this.saving = true;
     this.error = null;
-    const { planId, planPriceId, billingCurrency } = this.form.value;
-    this.api.startTrial(orgId, {
-      organization_id: orgId,
-      plan_id: planId!,
-      plan_price_id: planPriceId ?? undefined,
-      billing_currency: billingCurrency!,
-    }).subscribe({
-      next: () => this.router.navigate(['/subscriptions']),
-      error: (e) => {
-        this.error = e?.error?.detail?.message ?? 'Error al iniciar trial';
-        this.saving = false;
-      },
-    });
+    const v = this.form.getRawValue();
+    this.api
+      .startTrial(this.organizationId, {
+        organization_id: this.organizationId,
+        plan_id: Number(v.planId),
+        plan_price_id: v.planPriceId ?? undefined,
+        billing_currency: (v.billingCurrency || 'USD').toUpperCase(),
+      })
+      .subscribe({
+        next: () => {
+          this.saving = false;
+          void this.router.navigate(['/subscriptions/overview']);
+        },
+        error: (e) => {
+          this.saving = false;
+          this.error = e?.error?.detail?.message ?? this.i18n.t('common.actionFailed');
+        },
+      });
   }
 }

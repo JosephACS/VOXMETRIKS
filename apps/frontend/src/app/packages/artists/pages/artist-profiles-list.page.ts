@@ -73,42 +73,28 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [ctaLabel]="'artists.list.create' | t:lang()"
           />
         } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'common.name' | t:lang() }}</th>
-                  <th>{{ 'common.status' | t:lang() }}</th>
-                  <th>{{ 'artists.list.warehouseLink' | t:lang() }}</th>
-                  <th>{{ 'common.actions' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (artist of artists; track artist.id) {
-                  <tr>
-                    <td>{{ artist.display_name }}</td>
-                    <td><app-enterprise-status-badge [status]="artist.status" /></td>
-                    <td>
-                      @if (artist.warehouse_artist_id) {
-                        <span class="badge badge--linked">
-                          {{ 'artists.list.linked' | t:lang() }} (#{{ artist.warehouse_artist_id }})
-                        </span>
-                      } @else {
-                        <span class="badge badge--unlinked">
-                          {{ 'artists.list.notLinked' | t:lang() }}
-                        </span>
-                      }
-                    </td>
-                    <td>
-                      <a [routerLink]="['/artist-profiles', artist.id]" class="btn btn--ghost btn--sm">
-                        {{ 'common.view' | t:lang() }}
-                      </a>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
+          <div class="artist-card-grid">
+            @for (artist of artists; track artist.id) {
+              <a [routerLink]="['/artist-profiles', artist.id]" class="artist-card">
+                <div class="artist-card__cover" aria-hidden="true">
+                  <span>{{ artist.display_name.charAt(0) || '?' }}</span>
+                </div>
+                <div class="artist-card__body">
+                  <h3>{{ artist.display_name }}</h3>
+                  <app-enterprise-status-badge [status]="artist.status" />
+                  @if (artist.warehouse_artist_id) {
+                    <span class="badge badge--linked">
+                      {{ 'artists.list.linked' | t:lang() }}
+                    </span>
+                  } @else {
+                    <span class="badge badge--unlinked">
+                      {{ 'artists.list.notLinked' | t:lang() }}
+                    </span>
+                  }
+                </div>
+              </a>
+            }
+          </div>
           <p class="muted">{{ 'artists.list.total' | t:lang() }}: {{ total }}</p>
         }
       }

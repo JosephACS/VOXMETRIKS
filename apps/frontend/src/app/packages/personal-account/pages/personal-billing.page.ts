@@ -4,12 +4,13 @@ import { RouterLink } from '@angular/router';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import { PersonalAccountApiService } from '../services/personal-account-api.service';
 
 @Component({
   selector: 'app-personal-billing-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, RouterLink, TranslatePipe, LocaleMoneyPipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrl: '../personal-account.css',
   template: `
     <div class="vx-enterprise personal-account-page">
@@ -47,7 +48,7 @@ import { PersonalAccountApiService } from '../services/personal-account-api.serv
                 <tr>
                   <td>{{ $any(inv).invoice_number }}</td>
                   <td><app-enterprise-status-badge [status]="$any(inv).status" /></td>
-                  <td>{{ $any(inv).total }} {{ $any(inv).currency }}</td>
+                  <td>{{ $any(inv).total | localeMoney: $any(inv).currency || 'USD' }}</td>
                   <td>{{ $any(inv).issued_at || ('common.notAvailable' | t:lang()) }}</td>
                 </tr>
               }

@@ -6,7 +6,9 @@ import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Plan, PlanPrice } from '../models/subscriptions.models';
 import { I18nService } from '../../../core/services/i18n.service';
+import { LocaleFormatService } from '../../../core/services/locale-format.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
 /**
  * Post-conversion / explicit plan selection.
@@ -15,7 +17,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 @Component({
   selector: 'app-subscription-select-plan',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
     <div class="page select-plan-page vx-enterprise--narrow">
       <a routerLink="/subscriptions/overview" class="btn btn--ghost" style="margin-bottom:1rem;width:fit-content">
@@ -43,7 +45,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       </header>
 
       @if (!orgId) {
-        <div class="alert alert--danger">{{ 'subscriptions.selectPlan.orgFirst' | t:lang() }}</div>
+        <app-enterprise-org-required />
       } @else if (loading) {
         <div class="vx-skel-block" aria-busy="true">
           <div class="vx-skel"></div>
@@ -57,16 +59,19 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               <select formControlName="planId" (change)="onPlanChange()">
                 <option [ngValue]="0">{{ 'common.select' | t:lang() }}</option>
                 @for (p of plans; track p.id) {
-                  <option [ngValue]="p.id">{{ p.display_name }} (trial {{ p.trial_days_default }}d)</option>
+                  <option [ngValue]="p.id">
+                    {{ p.display_name }} ({{ p.trial_days_default }}
+                    {{ 'subscriptions.trial.days' | t:lang() }})
+                  </option>
                 }
               </select>
             </div>
 
             @if (prices.length) {
               <div class="form-field">
-                <label>Precio *</label>
+                <label>{{ 'subscriptions.selectPlan.priceLabel' | t:lang() }}</label>
                 <select formControlName="planPriceId">
-                  <option [ngValue]="null">Seleccionar…</option>
+                  <option [ngValue]="null">{{ 'common.select' | t:lang() }}</option>
                   @for (pr of prices; track pr.id) {
                     <option [ngValue]="pr.id">{{ formatPrice(pr) }}</option>
                   }
@@ -75,35 +80,42 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             }
 
             <div class="form-field">
-              <label>Moneda de facturación *</label>
-              <input formControlName="billingCurrency" maxlength="3" />
+              <label>{{ 'subscriptions.selectPlan.currencyLabel' | t:lang() }}</label>
+              <input formControlName="billingCurrency" maxlength="3" class="input" />
             </div>
 
             <div class="form-field">
-              <label>Modo *</label>
+              <label>{{ 'subscriptions.selectPlan.modeLabel' | t:lang() }}</label>
               <select formControlName="mode">
                 <option value="trial">{{ 'subscriptions.selectPlan.startTrial' | t:lang() }}</option>
-                <option value="subscribe">Suscripción activa (sin trial)</option>
+                <option value="subscribe">{{ 'subscriptions.selectPlan.subscribeMode' | t:lang() }}</option>
               </select>
             </div>
 
             <div class="actions">
               <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving">
-                {{ saving ? 'Creando…' : 'Confirmar' }}
+                {{ saving ? ('common.saving' | t:lang()) : ('common.confirm' | t:lang()) }}
               </button>
-              <a routerLink="/billing/invoices" class="btn btn--secondary">Ir a facturación</a>
+              <a routerLink="/billing/invoices" class="btn btn--secondary">{{
+                'subscriptions.selectPlan.goBilling' | t:lang()
+              }}</a>
             </div>
           </form>
         </div>
 
-        @if (error) { <div class="alert alert--danger" role="alert">{{ error }}</div> }
-        @if (success) { <div class="alert alert--ok" role="status">{{ success }}</div> }
+        @if (error) {
+          <div class="alert alert--danger" role="alert">{{ error }}</div>
+        }
+        @if (success) {
+          <div class="alert alert--success" role="status">{{ success }}</div>
+        }
       }
     </div>
   `,
 })
 export class SubscriptionSelectPlanPage implements OnInit {
   private i18n = inject(I18nService);
+  private money = inject(LocaleFormatService);
   readonly lang = this.i18n.lang;
 
   private api = inject(SubscriptionsApiService);
@@ -192,10 +204,13 @@ export class SubscriptionSelectPlanPage implements OnInit {
   }
 
   formatPrice(pr: PlanPrice): string {
-    const amount = Number(pr.amount);
-    const money = Number.isFinite(amount) ? amount.toFixed(2) : String(pr.amount);
-    const period = pr.billing_period === 'annual' ? 'anual' : pr.billing_period === 'monthly' ? 'mensual' : pr.billing_period;
-    return `$${money} ${pr.currency || 'USD'} / ${period}`;
+    const period =
+      pr.billing_period === 'annual'
+        ? this.i18n.t('subscriptions.period.annual')
+        : pr.billing_period === 'monthly'
+          ? this.i18n.t('subscriptions.period.monthly')
+          : pr.billing_period;
+    return `${this.money.formatMoney(pr.amount, pr.currency || 'USD')} / ${period}`;
   }
 
   submit(): void {
@@ -214,11 +229,11 @@ export class SubscriptionSelectPlanPage implements OnInit {
 
     const done = () => {
       this.saving = false;
-      this.success = 'Suscripción creada. Puedes continuar a facturación cuando corresponda.';
+      this.success = this.i18n.t('subscriptions.selectPlan.success');
       this.router.navigate(['/subscriptions/overview']);
     };
     const fail = (e: { error?: { detail?: { message?: string } } }) => {
-      this.error = e?.error?.detail?.message || 'No se pudo crear la suscripción (¿ya existe una activa?)';
+      this.error = e?.error?.detail?.message || this.i18n.t('subscriptions.selectPlan.failed');
       this.saving = false;
     };
 

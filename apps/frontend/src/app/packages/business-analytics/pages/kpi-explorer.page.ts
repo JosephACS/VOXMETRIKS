@@ -13,7 +13,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
-    <div class="vx-enterprise--wide kpi-explorer">
+    <div class="vx-enterprise vx-enterprise--wide kpi-explorer">
       @if (!orgId) {
         <app-enterprise-org-required />
       } @else {

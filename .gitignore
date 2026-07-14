@@ -1,9 +1,19 @@
 # ── Voxmetriks .gitignore ─────────────────────────────────────────────────────
 .env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+!**/.env.e2e.example
+
+# DuckDB / SQLite (never commit local warehouses)
 *.duckdb
 *.duckdb.wal
 *.duckdb.bak
 *.bak_*.duckdb
+*.db
+*.sqlite
+*.sqlite3
 
 # Python
 __pycache__/
@@ -19,24 +29,36 @@ env/
 node_modules/
 apps/frontend/dist/
 apps/frontend/.angular/
+coverage/
 
 # Generic build output
 dist/
 build/
 
-# Data
+# Data (local / generated)
 data/processed/
+data/warehouse/
 *.parquet
 *.csv
 
 # Test artifacts
 .pytest_cache/
 apps/backend/tests/.pytest_db/
+apps/backend/tests/**/*.duckdb
 .ruff_cache/
 .coverage
+htmlcov/
 automation/e2e/.auth/
 archive/generated/playwright-report/
 archive/generated/test-results/
+
+# Credentials / keys (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
 
 # IDE
 .vscode/
@@ -48,6 +70,7 @@ VOXMETRIKS.git/
 
 # Logs
 *.log
+logs/
 
 # Review / agent temp artifacts (Spec 014 G)
 automation/specs/**/*.zip
@@ -55,6 +78,8 @@ apps/backend/_*.txt
 apps/frontend/_*.txt
 apps/backend/tests/_*.json
 apps/backend/tests/_*.txt
+apps/sub-test-out.txt
+**/sub-test-out.txt
 
 # OS
 Thumbs.db

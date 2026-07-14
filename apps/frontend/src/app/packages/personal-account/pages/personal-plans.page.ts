@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import {
   PersonalAccountApiService,
   PersonalPlan,
@@ -13,7 +14,7 @@ import {
 @Component({
   selector: 'app-personal-plans-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, RouterLink, TranslatePipe, LocaleMoneyPipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrl: '../personal-account.css',
   template: `
     <div class="vx-enterprise personal-account-page">
@@ -54,7 +55,11 @@ import {
       } @else {
         <div class="plan-grid">
           @for (p of plans(); track p.code) {
-            <article class="plan-card" [class.plan-card--current]="isCurrent(p)">
+            <article
+              class="plan-card"
+              [class.plan-card--current]="isCurrent(p)"
+              [class.plan-card--recommended]="p.code === 'premium_individual'"
+            >
               <header>
                 <h2>{{ p.display_name }}</h2>
                 @if (isCurrent(p)) {
@@ -68,10 +73,23 @@ import {
                 @if (p.is_free) {
                   {{ 'personal.plans.freePrice' | t:lang() }}
                 } @else {
-                  {{ priceFor(p) | number: '1.2-2' }} USD
-                  <span class="muted">/ {{ period() === 'monthly' ? ('personal.plans.month' | t:lang()) : ('personal.plans.year' | t:lang()) }}</span>
+                  {{ priceFor(p) | localeMoney: currencyFor(p) }}
+                  <span class="muted"
+                    >/
+                    {{
+                      period() === 'monthly'
+                        ? ('personal.plans.month' | t:lang())
+                        : ('personal.plans.year' | t:lang())
+                    }}</span
+                  >
                 }
               </p>
+              @if (!p.is_free && period() === 'annual' && annualSavings(p) > 0) {
+                <span class="plan-save">
+                  {{ 'personal.plans.saveAnnual' | t:lang() }}:
+                  {{ annualSavings(p) | localeMoney: currencyFor(p) }}
+                </span>
+              }
               <p class="muted">{{ p.description }}</p>
               <ul class="plan-benefits">
                 @for (f of displayFeatures(p); track f) {
@@ -152,15 +170,34 @@ export class PersonalPlansPage implements OnInit {
     return pr?.amount ?? p.prices[0]?.amount ?? 0;
   }
 
+  currencyFor(p: PersonalPlan): string {
+    const pr = p.prices.find((x) => x.billing_period === this.period());
+    return (pr?.currency || p.prices[0]?.currency || 'USD').toUpperCase();
+  }
+
+  /** Approx. savings vs 12× monthly when viewing annual. */
+  annualSavings(p: PersonalPlan): number {
+    const monthly = p.prices.find((x) => x.billing_period === 'monthly')?.amount;
+    const annual = p.prices.find((x) => x.billing_period === 'annual')?.amount;
+    if (monthly == null || annual == null) return 0;
+    return Math.max(0, Number(monthly) * 12 - Number(annual));
+  }
+
   displayFeatures(p: PersonalPlan): string[] {
     return p.features
       .filter((f) => f.enabled)
       .map((f) => {
         const key = `personal.feature.${f.feature_code}`;
         const t = this.i18n.t(key);
-        if (t !== key) return t;
-        if (f.limit_value != null) return `${f.feature_code}: ${f.limit_value}`;
-        return f.feature_code;
+        const missing = this.i18n.t('common.missingTranslation');
+        if (t && t !== key && t !== missing) return t;
+        if (f.limit_value != null) {
+          return this.i18n.t('personal.feature.limitGeneric', {
+            code: f.feature_code.replace(/_/g, ' '),
+            n: f.limit_value,
+          });
+        }
+        return f.feature_code.replace(/_/g, ' ');
       });
   }
 

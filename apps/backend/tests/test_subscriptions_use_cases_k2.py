@@ -560,3 +560,64 @@ def test_addon_add_and_remove(conn):
     # Feature no longer entitled
     enabled2, _ = UsageUseCases(conn).check_feature(sub.id, "storage_gb")
     assert enabled2 is False
+
+
+def test_ensure_plan_entitlements_repairs_empty(conn):
+    """Demo-style insert without materialize → ensure_plan_entitlements fills from plan features."""
+    from decimal import Decimal
+
+    from app.core.time_util import utc_now
+    from app.packages.subscriptions.application.use_cases import (
+        PlanFeatureUseCases,
+        PlanPriceUseCases,
+        PlanUseCases,
+        UsageUseCases,
+        ensure_plan_entitlements,
+    )
+
+    plan = PlanUseCases(conn).create(
+        actor_user_id=200, code="repair-plan", display_name="Repair", trial_days_default=0
+    )
+    PlanUseCases(conn).activate(plan.id, actor_user_id=200)
+    price = PlanPriceUseCases(conn).set_price(
+        plan.id, actor_user_id=200, currency="USD", billing_period="monthly", amount=Decimal("9.00")
+    )
+    PlanFeatureUseCases(conn).configure(
+        plan_id=plan.id, actor_user_id=200, feature_code="seats", limit_value=25, enabled=True
+    )
+    PlanFeatureUseCases(conn).configure(
+        plan_id=plan.id, actor_user_id=200, feature_code="analytics_core", limit_value=None, enabled=True
+    )
+    now = utc_now()
+    conn.execute(
+        "INSERT INTO app_organization (id, slug, display_name, organization_type, status, "
+        "timezone, default_currency, created_by, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, 'active', 'UTC', 'USD', ?, ?, ?)",
+        [320, "org-repair", "Org Repair", "customer", 200, now, now],
+    )
+    sid = int(conn.execute("SELECT COALESCE(MAX(id),0)+1 FROM app_subscription").fetchone()[0])
+    conn.execute(
+        """
+        INSERT INTO app_subscription
+            (id, organization_id, plan_id, plan_price_id, status, billing_currency,
+             access_state, created_at, updated_at)
+        VALUES (?, 320, ?, ?, 'active', 'USD', 'full', ?, ?)
+        """,
+        [sid, plan.id, price.id, now, now],
+    )
+    assert (
+        conn.execute(
+            "SELECT COUNT(*) FROM app_subscription_entitlement WHERE subscription_id = ?",
+            [sid],
+        ).fetchone()[0]
+        == 0
+    )
+    n = ensure_plan_entitlements(conn, sid)
+    assert n >= 2
+    # Idempotent — second call does not duplicate
+    n2 = ensure_plan_entitlements(conn, sid)
+    assert n2 == n
+    ents = UsageUseCases(conn).evaluate_entitlements(sid)
+    codes = {e.feature_code for e in ents}
+    assert "seats" in codes
+    assert "analytics_core" in codes

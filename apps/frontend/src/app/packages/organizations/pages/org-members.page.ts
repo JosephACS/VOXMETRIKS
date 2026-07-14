@@ -17,7 +17,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <section class="org-page" data-testid="org-members-page">
       <h1>{{ 'organizations.members.title' | t:lang() }}</h1>
-      <p class="lede">El backend es la autoridad; la UI solo oculta acciones no permitidas.</p>
+      <p class="lede">{{ 'organizations.members.lede' | t:lang() }}</p>
 
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
@@ -25,26 +25,32 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
       <div class="org-actions" style="margin-bottom: 1rem">
         @if (ctx.hasPermission('member.invite')) {
-          <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">{{ 'organizations.invitations.title' | t:lang() }}</a>
+          <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">{{
+            'organizations.invitations.title' | t:lang()
+          }}</a>
         }
         @if (ctx.hasPermission('role.view')) {
-          <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']">Roles</a>
+          <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']">{{
+            'organizations.roles.title' | t:lang()
+          }}</a>
         }
       </div>
 
       @if (loading()) {
-        <p class="org-muted">Cargando miembros…</p>
+        <p class="org-muted">{{ 'organizations.members.loading' | t:lang() }}</p>
       } @else if (!items().length) {
-        <div class="org-card"><p class="org-muted">No hay miembros para mostrar.</p></div>
+        <div class="org-card">
+          <p class="org-muted">{{ 'organizations.members.empty' | t:lang() }}</p>
+        </div>
       } @else {
-        <div class="org-card" style="overflow-x:auto">
+        <div class="org-card" style="overflow-x: auto">
           <table class="org-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Usuario</th>
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th>{{ 'common.id' | t:lang() }}</th>
+                <th>{{ 'organizations.members.col.user' | t:lang() }}</th>
+                <th>{{ 'common.status' | t:lang() }}</th>
+                <th>{{ 'common.actions' | t:lang() }}</th>
               </tr>
             </thead>
             <tbody>
@@ -54,26 +60,39 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
                   <td>
                     #{{ m.user_id }}
                     @if (m.user_id === currentUserId) {
-                      <span class="org-badge">(tú)</span>
+                      <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
                     }
                   </td>
                   <td><span class="org-badge">{{ m.status }}</span></td>
                   <td>
                     <div class="org-actions">
                       @if (canSuspend() && m.status === 'active' && m.user_id !== currentUserId) {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'suspend')">Suspender</button>
+                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'suspend')">
+                          {{ 'organizations.members.suspend' | t:lang() }}
+                        </button>
                       }
                       @if (canSuspend() && m.status === 'suspended') {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'reactivate')">Reactivar</button>
+                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'reactivate')">
+                          {{ 'organizations.members.reactivate' | t:lang() }}
+                        </button>
                       }
                       @if (canRemove() && m.user_id !== currentUserId && m.status !== 'removed') {
-                        <button type="button" class="org-btn org-btn--danger" (click)="remove(m)">Remover</button>
+                        <button type="button" class="org-btn org-btn--danger" (click)="remove(m)">
+                          {{ 'organizations.members.remove' | t:lang() }}
+                        </button>
                       }
                       @if (m.user_id === currentUserId && m.status === 'active') {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'leave')">Salir</button>
+                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'leave')">
+                          {{ 'organizations.members.leave' | t:lang() }}
+                        </button>
                       }
                       @if (ctx.hasPermission('role.assign') && m.status === 'active') {
-                        <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']" [queryParams]="{ member: m.id }">Roles</a>
+                        <a
+                          class="org-btn org-btn--ghost"
+                          [routerLink]="['/organizations', orgId, 'roles']"
+                          [queryParams]="{ member: m.id }"
+                          >{{ 'organizations.roles.title' | t:lang() }}</a
+                        >
                       }
                     </div>
                   </td>
@@ -81,10 +100,26 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               }
             </tbody>
           </table>
-          <p class="org-muted">Página {{ page }} · total {{ total }}</p>
+          <p class="org-muted">
+            {{ 'common.page' | t:lang() }} {{ page }} · {{ 'common.total' | t:lang() }} {{ total }}
+          </p>
           <div class="org-actions">
-            <button type="button" class="org-btn org-btn--ghost" [disabled]="page <= 1" (click)="go(page - 1)">Anterior</button>
-            <button type="button" class="org-btn org-btn--ghost" [disabled]="page * limit >= total" (click)="go(page + 1)">Siguiente</button>
+            <button
+              type="button"
+              class="org-btn org-btn--ghost"
+              [disabled]="page <= 1"
+              (click)="go(page - 1)"
+            >
+              {{ 'common.prev' | t:lang() }}
+            </button>
+            <button
+              type="button"
+              class="org-btn org-btn--ghost"
+              [disabled]="page * limit >= total"
+              (click)="go(page + 1)"
+            >
+              {{ 'common.next' | t:lang() }}
+            </button>
           </div>
         </div>
       }
@@ -138,7 +173,7 @@ export class OrgMembersPageComponent implements OnInit {
       this.total = res.total;
       this.page = res.page;
     } catch (e) {
-      this.error.set(e instanceof OrganizationsApiError ? e.message : 'Error al listar miembros');
+      this.error.set(e instanceof OrganizationsApiError ? e.message : this.i18n.t('organizations.members.loadFailed'));
       this.items.set([]);
     } finally {
       this.loading.set(false);
@@ -148,10 +183,10 @@ export class OrgMembersPageComponent implements OnInit {
   async act(m: Membership, action: 'suspend' | 'reactivate' | 'leave'): Promise<void> {
     const label =
       action === 'leave'
-        ? '¿Salir de la organización?'
+        ? this.i18n.t('organizations.members.leaveConfirm')
         : action === 'suspend'
-          ? `¿Suspender miembro #${m.id}?`
-          : `¿Reactivar miembro #${m.id}?`;
+          ? this.i18n.t('organizations.members.suspendConfirm', { id: m.id })
+          : this.i18n.t('organizations.members.reactivateConfirm', { id: m.id });
     if (!confirm(label)) return;
     this.error.set(null);
     try {
@@ -162,15 +197,15 @@ export class OrgMembersPageComponent implements OnInit {
       this.error.set(
         e instanceof OrganizationsApiError
           ? e.status === 409
-            ? `Regla de negocio (409): ${e.message}`
+            ? this.i18n.t('organizations.members.businessRule', { message: e.message })
             : e.message
-          : 'Acción fallida',
+          : this.i18n.t('common.actionFailed'),
       );
     }
   }
 
   async remove(m: Membership): Promise<void> {
-    if (!confirm(`¿Remover lógicamente al miembro #${m.id}?`)) return;
+    if (!confirm(this.i18n.t('organizations.members.removeConfirm', { id: m.id }))) return;
     try {
       await firstValueFrom(this.api.removeMember(this.orgId, m.id));
       await this.load();
@@ -178,9 +213,9 @@ export class OrgMembersPageComponent implements OnInit {
       this.error.set(
         e instanceof OrganizationsApiError
           ? e.status === 409
-            ? `Regla de negocio (409): ${e.message}`
+            ? this.i18n.t('organizations.members.businessRule', { message: e.message })
             : e.message
-          : 'No se pudo remover',
+          : this.i18n.t('organizations.members.removeFailed'),
       );
     }
   }

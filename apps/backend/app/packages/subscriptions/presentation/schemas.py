@@ -256,6 +256,8 @@ class EntitlementOut(BaseModel):
     enabled: bool
     created_at: datetime
     updated_at: datetime
+    current_usage: Optional[int] = None
+    remaining: Optional[int] = None
 
 
 # ── Addon subscription schemas ─────────────────────────────────────────────────

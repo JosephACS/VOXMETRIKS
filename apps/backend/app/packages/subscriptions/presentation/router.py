@@ -130,11 +130,12 @@ def _change_out(c) -> SubscriptionChangeOut:
     )
 
 
-def _entitlement_out(e) -> EntitlementOut:
+def _entitlement_out(e, current_usage: int | None = None, remaining: int | None = None) -> EntitlementOut:
     return EntitlementOut(
         id=e.id, subscription_id=e.subscription_id, feature_code=e.feature_code,
         source=e.source, limit_value=e.limit_value, enabled=e.enabled,
         created_at=e.created_at, updated_at=e.updated_at,
+        current_usage=current_usage, remaining=remaining,
     )
 
 
@@ -644,8 +645,11 @@ def list_entitlements(
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     try:
-        ents = UsageUseCases(conn).evaluate_entitlements(subscription_id)
-        return [_entitlement_out(e) for e in ents]
+        snap = UsageUseCases(conn).entitlement_usage_snapshot(subscription_id)
+        return [
+            _entitlement_out(s["entitlement"], s["current_usage"], s["remaining"])
+            for s in snap
+        ]
     except Exception as exc:
         raise_sub_http(exc)
 

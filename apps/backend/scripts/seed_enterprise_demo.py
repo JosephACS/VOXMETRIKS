@@ -353,6 +353,14 @@ def seed_enterprise_demo() -> dict[str, object]:
             result["subscription_id"] = sub_id
             if sub_id:
                 entities["subscription"] = 1
+                try:
+                    from app.packages.subscriptions.application.use_cases import (
+                        ensure_plan_entitlements,
+                    )
+
+                    ensure_plan_entitlements(conn, int(sub_id))
+                except Exception:
+                    skipped.append("subscription_entitlements")
         else:
             skipped.append("app_subscription")
 

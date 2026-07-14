@@ -28,7 +28,10 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
         <app-enterprise-section-card [title]="'compliance.admin.terms' | t:lang()">
           @if (terms.length === 0) {
-            <p class="muted">{{ 'compliance.admin.noTerms' | t:lang() }}</p>
+            <app-enterprise-empty-state
+              [title]="'compliance.admin.noTermsTitle' | t:lang()"
+              [description]="'compliance.admin.noTerms' | t:lang()"
+            />
           } @else {
             <app-enterprise-data-table>
               <table class="data-table">
@@ -55,7 +58,10 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
         <app-enterprise-section-card [title]="'compliance.admin.dsr' | t:lang()">
           @if (dsr.length === 0) {
-            <p class="muted">{{ 'compliance.admin.noDsr' | t:lang() }}</p>
+            <app-enterprise-empty-state
+              [title]="'compliance.admin.noDsrTitle' | t:lang()"
+              [description]="'compliance.admin.noDsr' | t:lang()"
+            />
           } @else {
             <app-enterprise-data-table>
               <table class="data-table">

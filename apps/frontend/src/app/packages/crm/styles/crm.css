@@ -2,7 +2,7 @@
 .crm-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 0 2.5rem;
+  padding: 0 0 calc(2.5rem + 88px);
 }
 
 .crm-page h1 {

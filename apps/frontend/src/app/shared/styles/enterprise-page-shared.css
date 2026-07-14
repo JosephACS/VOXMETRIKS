@@ -32,8 +32,10 @@
 .campaigns-list-page,
 .campaign-detail-page,
 .artist-profiles-page,
+.artist-profiles-list-page,
 .artist-profile-detail-page,
 .catalog-assets-page,
+.catalog-releases-list-page,
 .rights-contracts-page,
 .rights-conflicts-page,
 .reports-list-page,
@@ -44,8 +46,11 @@
 .support-list-page,
 .support-detail-page,
 .privacy-center-page,
+.compliance-admin,
 .compliance-admin-page,
-.platform-ops-page {
+.platform-ops-page,
+.personal-account-page,
+.trial-start-page {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -311,9 +316,19 @@
 .form-field input,
 .form-field select,
 .form-field textarea,
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
 .select,
 .filter-bar select,
-.filter-bar input {
+.filter-bar input,
+.vx-enterprise input.input,
+.vx-enterprise select.input,
+.vx-enterprise textarea.input,
+.vx-enterprise .input,
+.vx-enterprise input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not(.field-input),
+.vx-enterprise select:not(.field-input),
+.vx-enterprise textarea:not(.field-input) {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border-radius: 0.6rem;
@@ -338,7 +353,14 @@
 .crm-form textarea:focus,
 .form-field input:focus,
 .form-field select:focus,
-.select:focus {
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus,
+.select:focus,
+.vx-enterprise .input:focus,
+.vx-enterprise input:not([type='checkbox']):not([type='radio']):not([type='hidden']):focus,
+.vx-enterprise select:focus,
+.vx-enterprise textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
@@ -1219,4 +1241,113 @@
   border: none;
   border-radius: 0;
   background: transparent;
+}
+
+/* Money / KPI readability */
+.vx-enterprise .data-table td:has(+ *),
+.vx-enterprise .mono,
+.plan-price,
+.vx-enterprise td.amount,
+.locale-money {
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-explorer .data-table th {
+  white-space: normal;
+  line-height: 1.25;
+  max-width: 8.5rem;
+  vertical-align: bottom;
+  letter-spacing: 0.04em;
+}
+
+.kpi-explorer .data-table td {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 14rem;
+}
+
+.kpi-explorer .data-table {
+  table-layout: auto;
+}
+
+@media (max-width: 900px) {
+  .kpi-explorer .ent-data-table .table-scroll,
+  .vx-enterprise .ent-data-table .table-scroll {
+    margin: 0 -0.25rem;
+    padding-bottom: 0.25rem;
+  }
+}
+
+/* Mock payment hint */
+.badge--mock,
+.vx-enterprise .badge.badge--mock {
+  background: rgba(56, 189, 248, 0.14);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.badge--linked {
+  background: rgba(30, 216, 150, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(30, 216, 150, 0.28);
+}
+
+.badge--unlinked {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Artist profile cards */
+.artist-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.artist-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--spotify-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+
+.artist-card:hover {
+  border-color: rgba(30, 216, 150, 0.35);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.artist-card__cover {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(30, 216, 150, 0.22), transparent 55%),
+    linear-gradient(160deg, #121212, #0a1612);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: -0.03em;
+}
+
+.artist-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.9rem 1rem;
+}
+
+.artist-card__body h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
