@@ -15,7 +15,10 @@ export interface HomeFeedPayload {
   discover: PaginatedResponse<Track>;
   genres: GeneroPopularidad[];
   artists: Artista[];
+  /** Popular warehouse playlists for the home rail. */
   playlists: PlaylistSummary[];
+  /** User's personal playlist count (KPI band). */
+  my_playlist_count?: number;
 }
 
 @Injectable({ providedIn: 'root' })

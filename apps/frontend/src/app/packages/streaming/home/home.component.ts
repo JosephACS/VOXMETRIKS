@@ -95,6 +95,7 @@ export class HomeComponent implements OnInit {
   genres = signal<GeneroPopularidad[]>([]);
   artists = signal<{ id: number; name: string }[]>([]);
   playlists = signal<PlaylistSummary[]>([]);
+  myPlaylistCount = signal(0);
   history = signal<HistoryEntry[]>([]);
   rawHistory = signal<HistoryEntry[]>([]);
   favoritesCount = signal(0);
@@ -208,6 +209,7 @@ export class HomeComponent implements OnInit {
           (feed.artists ?? []).map((a) => ({ id: a.id_artista, name: a.nombre_artista })),
         );
         this.playlists.set((feed.playlists ?? []).slice(0, 6));
+        this.myPlaylistCount.set(feed.my_playlist_count ?? 0);
         this.railsLoading.set(false);
         (feed.discover?.items ?? []).forEach((t) => this.resolveCover(t.id_track, t.id_artista));
         (feed.artists ?? []).forEach((a) => this.resolveArtistCover(a.id_artista));

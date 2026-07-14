@@ -38,7 +38,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
           <span class="h-sub">{{ subtitle }}</span>
         }
         @if (link) {
-          <a class="h-link" [routerLink]="link">{{ 'home.viewAll' | t:lang() }}</a>
+          <a class="h-link" [routerLink]="link" [queryParams]="queryParams || null">{{ 'home.viewAll' | t:lang() }}</a>
         }
       </div>
 
@@ -249,6 +249,7 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
   @Input() link?: string;
+  @Input() queryParams?: Record<string, string | number | boolean> | null;
 
   @ViewChild('scroller', { static: true }) scrollerRef!: ElementRef<HTMLElement>;
 
@@ -263,6 +264,7 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
   private dragStartX = 0;
   private dragScrollLeft = 0;
   private dragMoved = false;
+  private dragArmed = false;
   private pointerId: number | null = null;
 
   ngAfterViewInit(): void {
@@ -291,10 +293,19 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('document:pointermove', ['$event'])
   onDocPointerMove(e: PointerEvent): void {
-    if (!this.dragging() || this.pointerId !== e.pointerId) return;
+    if ((!this.dragArmed && !this.dragging()) || this.pointerId !== e.pointerId) return;
     const el = this.scrollerRef.nativeElement;
     const dx = e.clientX - this.dragStartX;
-    if (Math.abs(dx) > 4) this.dragMoved = true;
+    if (!this.dragMoved && Math.abs(dx) > 6) {
+      this.dragMoved = true;
+      this.dragging.set(true);
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!this.dragMoved) return;
     el.scrollLeft = this.dragScrollLeft - dx;
   }
 
@@ -335,20 +346,18 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
     if (e.pointerType === 'touch') return; // native swipe
     if (e.button !== 0) return;
     const target = e.target as HTMLElement | null;
-    // Don't start drag from interactive controls inside cards.
-    if (target?.closest('button, a, input, [role="button"]')) return;
+    // Don't start drag from cards / interactive controls — clicks must navigate/play.
+    if (target?.closest(
+      'button, a, input, [role="button"], app-media-card, .media-card, .pl-card, .artist-chip, .genre-chip, .continue-tile',
+    )) return;
 
     const el = this.scrollerRef.nativeElement;
-    this.dragging.set(true);
+    this.dragArmed = true;
     this.dragMoved = false;
+    this.dragging.set(false);
     this.dragStartX = e.clientX;
     this.dragScrollLeft = el.scrollLeft;
     this.pointerId = e.pointerId;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
   }
 
   scrollByPage(direction: -1 | 1): void {
@@ -386,8 +395,9 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
   }
 
   private endDrag(): void {
-    if (!this.dragging()) return;
+    if (!this.dragArmed && !this.dragging()) return;
     const el = this.scrollerRef.nativeElement;
+    const wasDrag = this.dragMoved;
     if (this.pointerId != null) {
       try {
         el.releasePointerCapture(this.pointerId);
@@ -395,12 +405,14 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
         /* ignore */
       }
     }
+    this.dragArmed = false;
     this.dragging.set(false);
     this.pointerId = null;
+    this.dragMoved = false;
     this.updateScrollState();
 
     // Suppress the click that follows a drag so play/navigation don't fire.
-    if (this.dragMoved) {
+    if (wasDrag) {
       const suppress = (ev: Event) => {
         ev.preventDefault();
         ev.stopPropagation();

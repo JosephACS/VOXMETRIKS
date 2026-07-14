@@ -1,0 +1,11 @@
+# VOXMETRIK backend — local development
+DB_PATH=
+HOST=0.0.0.0
+PORT=8000
+RELOAD=true
+LOG_LEVEL=INFO
+# PocketBase — see also root .env (canonical for POCKETBASE_*)
+POCKETBASE_URL=http://127.0.0.1:8090
+
+# Opt-in: show VOXMETRIKS Demo org in selector for local validation
+SHOW_DEMO_ORGANIZATIONS=true

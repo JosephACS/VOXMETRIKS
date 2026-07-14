@@ -8,7 +8,7 @@ from app.models.schemas import (
     SearchResponse,
     SearchTrackHit,
 )
-from app.services._warehouse import table_exists
+from app.services._warehouse import table_column_names, table_exists
 
 logger = get_logger(__name__)
 
@@ -88,33 +88,40 @@ class SearchService:
                 [pattern, per_type],
                 label="search_app_playlists",
             )
-            playlists = [
+            playlists.extend(
                 SearchPlaylistHit(
                     id_playlist=int(r["id_playlist"]),
                     playlist_name=str(r["playlist_name"] or ""),
+                    source="personal",
                 )
                 for r in rows
-            ]
-        elif table_exists(self._client, "dim_playlist"):
-            name_col = "nombre_playlist"
-            rows = self._client.fetch_all(
-                f"""
-                SELECT id_playlist, {name_col} AS playlist_name
-                FROM dim_playlist
-                WHERE LOWER({name_col}) LIKE LOWER(?)
-                ORDER BY {name_col}
-                LIMIT ?
-                """,
-                [pattern, per_type],
-                label="search_dim_playlists",
             )
-            playlists = [
-                SearchPlaylistHit(
-                    id_playlist=int(r["id_playlist"]),
-                    playlist_name=str(r["playlist_name"] or ""),
+        if table_exists(self._client, "dim_playlist"):
+            cols = table_column_names(self._client, "dim_playlist")
+            name_col = "nombre" if "nombre" in cols else (
+                "nombre_playlist" if "nombre_playlist" in cols else None
+            )
+            if name_col:
+                remaining = max(1, per_type - len(playlists))
+                rows = self._client.fetch_all(
+                    f"""
+                    SELECT id_playlist, {name_col} AS playlist_name
+                    FROM dim_playlist
+                    WHERE LOWER({name_col}) LIKE LOWER(?)
+                    ORDER BY {name_col}
+                    LIMIT ?
+                    """,
+                    [pattern, remaining],
+                    label="search_dim_playlists",
                 )
-                for r in rows
-            ]
+                playlists.extend(
+                    SearchPlaylistHit(
+                        id_playlist=int(r["id_playlist"]),
+                        playlist_name=str(r["playlist_name"] or ""),
+                        source="catalog",
+                    )
+                    for r in rows
+                )
 
         return SearchResponse(
             query=q,

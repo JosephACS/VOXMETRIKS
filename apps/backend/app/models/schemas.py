@@ -198,6 +198,7 @@ class SearchArtistHit(BaseModel):
 class SearchPlaylistHit(BaseModel):
     id_playlist: int
     playlist_name: str
+    source: str = "personal"  # personal | catalog
 
 
 class SearchResponse(BaseModel):

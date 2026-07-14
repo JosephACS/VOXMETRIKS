@@ -50,6 +50,11 @@ def duckdb_fold_expr(column_sql: str) -> str:
     return expr
 
 
+def _word_boundary_haystack(expr: str) -> str:
+    """Collapse punctuation to spaces so we can match word prefixes."""
+    return f"regexp_replace({expr}, '[^a-z0-9]+', ' ', 'g')"
+
+
 def build_track_search_filter(
     query: str,
     *,
@@ -59,8 +64,11 @@ def build_track_search_filter(
     search_fold_col: str | None = None,
 ) -> Tuple[str, List[str]]:
     """
-    Build WHERE fragment: every token must appear in track, artist, or genre
-    (accent-insensitive). Returns (sql_fragment, params).
+    Build WHERE fragment: every token must be a prefix of some word in
+    track / artist / genre (accent-insensitive).
+
+    Avoids mid-word false positives like ``meda`` matching ``Someday``.
+    Returns (sql_fragment, params).
     """
     tokens = search_tokens(query)
     if not tokens:
@@ -74,9 +82,12 @@ def build_track_search_filter(
         genre_f = duckdb_fold_expr(f"COALESCE({genre_col}, '')")
         haystack = f"({track_f} || ' ' || {artist_f} || ' ' || {genre_f})"
 
+    word_haystack = _word_boundary_haystack(haystack)
+
     parts: List[str] = []
     params: List[str] = []
     for token in tokens:
-        parts.append(f"{haystack} LIKE ?")
-        params.append(f"%{token}%")
+        # Start of title/artist OR start of any later word
+        parts.append(f"({word_haystack} LIKE ? OR {word_haystack} LIKE ?)")
+        params.extend([f"{token}%", f"% {token}%"])
     return " AND ".join(parts), params

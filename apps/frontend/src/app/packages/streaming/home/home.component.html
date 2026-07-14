@@ -6,7 +6,7 @@
       [userPlan]="userPlan()"
       [summary]="summary()"
       [summaryLoading]="summaryLoading()"
-      [playlistCount]="playlists().length"
+      [playlistCount]="myPlaylistCount()"
       [listenStreak]="listenStreak()"
       [listenMinutesToday]="listenMinutesToday()"
       [weeklyGoalPct]="weeklyGoalPct()"
@@ -26,7 +26,7 @@
       <app-home-analytics-band
         [summary]="summary()"
         [summaryLoading]="summaryLoading()"
-        [playlistCount]="playlists().length"
+        [playlistCount]="myPlaylistCount()"
         [favoritesCount]="favoritesCount()"
         [listenMinutesToday]="listenMinutesToday()"
         [growthValues]="growthValues()"
@@ -250,15 +250,20 @@
       }
 
       @if (playlists().length) {
-        <app-horizontal-section [title]="'home.section.playlists' | t" link="/playlists">
+        <app-horizontal-section
+          [title]="'home.section.playlists' | t"
+          [subtitle]="'home.section.playlistsHint' | t"
+          link="/playlists"
+          [queryParams]="{ tab: 'catalog' }"
+        >
           @for (pl of playlists(); track pl.id; let i = $index) {
             <app-media-card
               [title]="pl.name"
               [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
               [gradient]="cover('pl-' + pl.id)"
               [mosaicTrackIds]="pl.preview_track_ids?.length ? pl.preview_track_ids : (pl.cover_track_id ? [pl.cover_track_id] : [])"
-              [mosaicSeed]="'pl-' + pl.id"
-              [link]="'/playlists/' + pl.id"
+              [mosaicSeed]="'pl-cat-' + pl.id"
+              [link]="'/playlists/catalog/' + pl.id"
               [tag]="playlistBadge(i)"
             />
           }

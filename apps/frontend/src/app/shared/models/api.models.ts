@@ -359,6 +359,8 @@ export interface PlaylistSummary {
   cover_track_id?: number | null;
   /** Up to 4 track ids for Spotify-style mosaic covers. */
   preview_track_ids?: number[];
+  /** "catalog" for warehouse dim_playlist; omit/mine for personal. */
+  source?: string;
 }
 
 export interface PlaylistTrackItem {

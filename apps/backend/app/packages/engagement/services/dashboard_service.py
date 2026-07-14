@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import duckdb
 
@@ -13,6 +13,9 @@ from app.packages.analytics.services.stats_service import (
 )
 from app.packages.catalog.services.artist_service import get_artists
 from app.packages.catalog.services.genre_service import get_genre_stats
+from app.packages.catalog.services.playlist_catalog_service import (
+    list_popular_catalog_playlists,
+)
 from app.packages.catalog.services.track_service import get_tracks
 from app.packages.engagement.services.playlist_service import list_playlists
 
@@ -34,9 +37,11 @@ def get_home_feed(
     discover_rows, discover_total = get_tracks(conn, page=page, limit=discover_limit)
     genre_rows, _ = get_genre_stats(conn, page=1, limit=genre_limit)
     artist_rows, _ = get_artists(conn, page=1, limit=artist_limit)
-    playlists: List[Dict[str, Any]] = []
+    # Home rail = popular warehouse playlists (not the user's personal lists).
+    playlists = list_popular_catalog_playlists(conn, limit=playlist_limit)
+    my_playlist_count = 0
     if user_id is not None:
-        playlists = list_playlists(conn, user_id)[:playlist_limit]
+        my_playlist_count = len(list_playlists(conn, user_id))
 
     return {
         "summary": get_summary(conn),
@@ -51,4 +56,5 @@ def get_home_feed(
         "genres": genre_rows,
         "artists": artist_rows,
         "playlists": playlists,
+        "my_playlist_count": my_playlist_count,
     }

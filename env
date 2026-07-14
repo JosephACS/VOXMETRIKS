@@ -1,0 +1,37 @@
+# VOXMETRIK — local development (.env)
+# Generated for Windows local setup
+
+# PocketBase — required for the ~100k Spotify dataset (authoritative source)
+POCKETBASE_URL=http://127.0.0.1:8090
+POCKETBASE_EMAIL=calderonsaltos1234@gmail.com
+POCKETBASE_PASSWORD=20062023Saltos
+
+# Database — auto-resolves to data/warehouse/voxmetrik.duckdb
+DB_PATH=
+
+# Backend server
+HOST=0.0.0.0
+PORT=8000
+RELOAD=true
+LOG_LEVEL=INFO
+
+# Audio playback (YouTube Data API v3)
+YOUTUBE_API_KEY=AIzaSyCpvYzfrh-B2Hxas-Bs_TWDBBuWadakh-g
+
+# Pipeline settings
+PB_COLLECTION=datasets
+MAX_RETRIES=3
+RETRY_DELAY_S=2
+
+EMAIL_PROVIDER=smtp
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=minijoseph178@gmail.com
+SMTP_PASSWORD=ximo utey ovan unrb
+SMTP_USE_TLS=true
+
+EMAIL_FROM_ADDRESS=minijoseph178@gmail.com
+EMAIL_FROM_NAME=VOXMETRIKS
+
+EMAIL_SMOKE_TEST_TO=calderonsaltosjoseph@gmail.com

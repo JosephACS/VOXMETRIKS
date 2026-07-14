@@ -182,6 +182,23 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
         color: #f97066;
         font-size: 0.8rem;
         padding: 0.35rem 0.65rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .org-selector-retry {
+        align-self: flex-start;
+        border: 1px solid rgba(249, 112, 102, 0.45);
+        background: transparent;
+        color: #f97066;
+        border-radius: 6px;
+        padding: 0.25rem 0.55rem;
+        font: inherit;
+        font-size: 0.75rem;
+        cursor: pointer;
+      }
+      .org-selector-retry:hover {
+        background: rgba(249, 112, 102, 0.12);
       }
       .org-selector-empty {
         padding: 0.75rem 0.65rem;
@@ -242,7 +259,12 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           }
 
           @if (ctx.error()) {
-            <div class="org-selector-error" role="alert">{{ ctx.error() }}</div>
+            <div class="org-selector-error" role="alert">
+              <div>{{ ctx.error() }}</div>
+              <button type="button" class="org-selector-retry" (click)="retryLoad($event)">
+                {{ 'organizations.selector.retry' | t:lang() }}
+              </button>
+            </div>
           }
 
           <div class="org-selector-list">
@@ -325,32 +347,51 @@ export class OrgSelectorComponent implements OnInit {
   readonly showSearch = computed(() => this.ctx.organizations().length > 8 || this.query().length > 0);
 
   async ngOnInit(): Promise<void> {
-    if (this.ctx.status() === 'idle') {
-      await this.ctx.bootstrap();
+    if (this.ctx.status() === 'idle' || this.ctx.status() === 'error') {
+      await this.ctx.bootstrap({ force: this.ctx.status() === 'error' });
     }
     this.bridge.openRequests$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.open.set(true);
-      this.switchError.set(null);
-      this.query.set('');
-      this.focusIndex.set(0);
-      queueMicrotask(() => this.searchInput?.nativeElement?.focus());
+      void this.openMenuAndRefresh();
     });
   }
 
   /** Public API for enterprise pages / bridge. */
   openMenu(): void {
+    void this.openMenuAndRefresh();
+  }
+
+  private async openMenuAndRefresh(): Promise<void> {
     this.open.set(true);
+    this.switchError.set(null);
+    this.query.set('');
+    this.focusIndex.set(0);
+    if (this.ctx.status() === 'error' || this.ctx.status() === 'idle') {
+      await this.ctx.retryBootstrap();
+    }
+    queueMicrotask(() => this.searchInput?.nativeElement?.focus());
   }
 
   toggle(e: Event): void {
     e.stopPropagation();
-    this.open.update((v) => !v);
+    const next = !this.open();
+    this.open.set(next);
     this.switchError.set(null);
-    if (this.open()) {
+    if (next) {
       this.query.set('');
       this.focusIndex.set(0);
-      queueMicrotask(() => this.searchInput?.nativeElement?.focus());
+      if (this.ctx.status() === 'error' || this.ctx.status() === 'idle') {
+        void this.ctx.retryBootstrap().then(() => {
+          queueMicrotask(() => this.searchInput?.nativeElement?.focus());
+        });
+      } else {
+        queueMicrotask(() => this.searchInput?.nativeElement?.focus());
+      }
     }
+  }
+
+  async retryLoad(e: Event): Promise<void> {
+    e.stopPropagation();
+    await this.ctx.retryBootstrap();
   }
 
   @HostListener('document:click')

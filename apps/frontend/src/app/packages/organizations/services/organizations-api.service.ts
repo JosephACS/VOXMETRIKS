@@ -38,8 +38,17 @@ export class OrganizationsApiService {
   private handle = (err: unknown) => {
     if (err instanceof HttpErrorResponse) {
       const body = err.error as ApiErrorBody | undefined;
-      const code = body?.details?.code;
-      const message = body?.message || err.message || 'Request failed';
+      const code =
+        body?.details?.code ||
+        (err.status === 0 || /failed to fetch|unknown error|network/i.test(String(err.message) + String(body?.message ?? ''))
+          ? 'network_error'
+          : undefined);
+      // Prefer API detail; avoid raw browser "Failed to fetch" as the user-facing text.
+      const raw = body?.message || err.message || 'Request failed';
+      const message =
+        code === 'network_error' || /failed to fetch/i.test(raw)
+          ? 'network_error'
+          : raw;
       return throwError(() => new OrganizationsApiError(message, err.status, code, body));
     }
     return throwError(() => err);

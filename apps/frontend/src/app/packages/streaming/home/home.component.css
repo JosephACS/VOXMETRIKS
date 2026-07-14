@@ -180,6 +180,23 @@
   border-radius: 0.35rem;
 }
 
+.hero-stat--link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.hero-stat--link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: #1ed896;
+}
+.hero-stat--link:focus-visible {
+  outline: 2px solid rgba(30, 216, 150, 0.55);
+  outline-offset: 4px;
+  border-radius: 0.35rem;
+}
+
 /* Analytical events breakdown dialog */
 .events-modal-backdrop {
   position: fixed;

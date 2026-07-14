@@ -45,7 +45,12 @@ from app.services.health_service import HealthService
 from app.packages.analytics.routes import analytics_router, smart_router, stats_router
 from app.packages.ai.routes.ai import router as ai_router
 from app.platform.routes.platform import router as platform_router
-from app.packages.catalog.routes import artists_router, genres_router, tracks_router
+from app.packages.catalog.routes import (
+    artists_router,
+    catalog_playlists_router,
+    genres_router,
+    tracks_router,
+)
 from app.packages.engagement.routes import (
     dashboard_router,
     favorites_router,
@@ -238,6 +243,7 @@ def create_app() -> FastAPI:
     application.include_router(artists_router, prefix="/api/v1")
     application.include_router(genres_router, prefix="/api/v1")
     application.include_router(tracks_router, prefix="/api/v1")
+    application.include_router(catalog_playlists_router, prefix="/api/v1")
     application.include_router(playlists_router, prefix="/api/v1")
     application.include_router(favorites_router, prefix="/api/v1")
     application.include_router(dashboard_router, prefix="/api/v1")

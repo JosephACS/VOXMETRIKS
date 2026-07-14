@@ -132,6 +132,14 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        path: 'playlists/catalog/:id',
+        title: 'playlists.catalogDetail',
+        loadComponent: () =>
+          import('./packages/streaming/playlists/playlists.component').then(
+            (m) => m.PlaylistsComponent
+          ),
+      },
+      {
         path: 'playlists/:id',
         title: 'playlists.shareable',
         loadComponent: () =>

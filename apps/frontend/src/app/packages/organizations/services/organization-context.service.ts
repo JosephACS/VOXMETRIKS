@@ -6,6 +6,7 @@ import {
 } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from './organizations-api.service';
 import { CrmContextService } from '../../crm/services/crm-context.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 export type OrgContextState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -16,6 +17,7 @@ export type OrgContextState = 'idle' | 'loading' | 'ready' | 'error';
 @Injectable({ providedIn: 'root' })
 export class OrganizationContextService {
   private readonly api = inject(OrganizationsApiService);
+  private readonly i18n = inject(I18nService);
   private readonly crmCtx = inject(CrmContextService, { optional: true });
 
   private readonly _status = signal<OrgContextState>('idle');
@@ -88,13 +90,31 @@ export class OrganizationContextService {
     await this.bootstrap();
   }
 
-  async bootstrap(): Promise<void> {
-    if (this.bootstrapPromise) return this.bootstrapPromise;
+  async bootstrap(options?: { force?: boolean }): Promise<void> {
+    if (this.bootstrapPromise) {
+      if (!options?.force) return this.bootstrapPromise;
+      await this.bootstrapPromise.catch(() => undefined);
+    }
 
     this.bootstrapPromise = this.runBootstrap().finally(() => {
       this.bootstrapPromise = null;
     });
     return this.bootstrapPromise;
+  }
+
+  /** Retry after network/API failure (e.g. open selector again). */
+  async retryBootstrap(): Promise<void> {
+    return this.bootstrap({ force: true });
+  }
+
+  private friendlyError(e: unknown): string {
+    if (e instanceof OrganizationsApiError) {
+      if (e.code === 'network_error' || e.message === 'network_error' || /failed to fetch/i.test(e.message)) {
+        return this.i18n.t('organizations.selector.networkError');
+      }
+      return e.message || this.i18n.t('organizations.selector.loadError');
+    }
+    return this.i18n.t('organizations.selector.loadError');
   }
 
   private async runBootstrap(): Promise<void> {
@@ -131,7 +151,7 @@ export class OrganizationContextService {
       this._status.set('ready');
     } catch (e) {
       this._status.set('error');
-      this._error.set(e instanceof OrganizationsApiError ? e.message : 'Failed to load organizations');
+      this._error.set(this.friendlyError(e));
     }
   }
 
@@ -172,7 +192,12 @@ export class OrganizationContextService {
         this.clearOrganizationScopedState();
         this._status.set('error');
         this._error.set(
-          e instanceof OrganizationsApiError ? e.message : 'Failed to activate organization',
+          e instanceof OrganizationsApiError &&
+            (e.code === 'network_error' || e.message === 'network_error' || /failed to fetch/i.test(e.message))
+            ? this.i18n.t('organizations.selector.networkError')
+            : e instanceof OrganizationsApiError
+              ? e.message
+              : this.i18n.t('organizations.selector.loadError'),
         );
         throw e;
       }

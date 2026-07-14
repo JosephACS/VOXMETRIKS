@@ -37,11 +37,17 @@
           <span>{{ 'home.stat.albums' | t:lang() }}</span>
           <em class="hero-stat__sub">{{ 'home.stat.albumsSub' | t:lang() }}</em>
         </div>
-        <div class="hero-stat" [attr.title]="'home.stat.playlistsTip' | t:lang()">
+        <a
+          class="hero-stat hero-stat--link"
+          routerLink="/playlists"
+          [queryParams]="{ tab: 'catalog' }"
+          [attr.title]="'home.stat.playlistsTip' | t:lang()"
+          [attr.aria-label]="('home.stat.playlists' | t:lang()) + ': ' + exact(s.total_playlists ?? playlistCount())"
+        >
           <strong class="tabular-nums" [attr.title]="exact(s.total_playlists ?? playlistCount())">{{ fmt(s.total_playlists ?? playlistCount()) }}</strong>
           <span>{{ 'home.stat.playlists' | t:lang() }}</span>
           <em class="hero-stat__sub">{{ 'home.stat.playlistsSub' | t:lang() }}</em>
-        </div>
+        </a>
       </div>
     } @else if (summaryLoading()) {
       <div class="hero-stats hero-stats--loading" aria-hidden="true">
@@ -69,6 +75,7 @@
     </a>
     <nav class="discover-shortcuts" [attr.aria-label]="'home.section.discover' | t">
       <a routerLink="/tracks" class="discover-chip discover-chip--primary">{{ 'home.discover.catalog' | t:lang() }}</a>
+      <a routerLink="/playlists" [queryParams]="{ tab: 'catalog' }" class="discover-chip">{{ 'home.discover.playlists' | t:lang() }}</a>
       <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t:lang() }}</a>
     </nav>
   </div>

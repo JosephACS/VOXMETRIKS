@@ -6,6 +6,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { PlaylistsService } from '../services/playlists.service';
@@ -17,6 +19,8 @@ import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { PlayableTrack } from '../../../shared/models/player.models';
 import { apiFormError } from '../../../shared/utils/catalog-list.util';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+
+type PlaylistTab = 'mine' | 'catalog';
 
 @Component({
   selector: 'app-playlists',
@@ -46,11 +50,19 @@ export class PlaylistsComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   playlists = signal<PlaylistSummary[]>([]);
+  catalogPlaylists = signal<PlaylistSummary[]>([]);
+  catalogTotal = signal(0);
+  catalogPage = signal(1);
+  catalogSearch = signal('');
+  tab = signal<PlaylistTab>('mine');
   selected = signal<PlaylistDetail | null>(null);
   detailId = signal<number | null>(null);
+  isCatalogDetail = signal(false);
   isLoading = signal(true);
+  catalogLoading = signal(false);
   detailLoading = signal(false);
   hasError = signal(false);
+  catalogError = signal(false);
   detailError = signal(false);
   showCreate = signal(false);
   showEdit = signal(false);
@@ -60,6 +72,8 @@ export class PlaylistsComponent implements OnInit {
   saving = signal(false);
   editingId = signal<number | null>(null);
 
+  private catalogSearch$ = new Subject<string>();
+
   constructor(
     private svc: PlaylistsService,
     private route: ActivatedRoute,
@@ -67,20 +81,57 @@ export class PlaylistsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.catalogSearch$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((q) => {
+        this.catalogSearch.set(q);
+        this.catalogPage.set(1);
+        this.loadCatalog();
+      });
+
     this.route.paramMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((pm) => {
-      const raw = pm.get('id');
-      if (raw) {
-        this.detailId.set(Number(raw));
-        this.openDetailById(Number(raw));
-      } else {
-        this.detailId.set(null);
-        this.selected.set(null);
-        this.detailError.set(false);
-        this.load();
-      }
+        const raw = pm.get('id');
+        const path = this.route.snapshot.routeConfig?.path ?? '';
+        const catalog = path.includes('catalog');
+        this.isCatalogDetail.set(catalog);
+        if (raw) {
+          this.detailId.set(Number(raw));
+          this.openDetailById(Number(raw), catalog);
+        } else {
+          this.detailId.set(null);
+          this.selected.set(null);
+          this.detailError.set(false);
+          this.syncTabFromQuery();
+          this.load();
+          if (this.tab() === 'catalog') this.loadCatalog();
+        }
+      });
+
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.detailId()) return;
+        const prev = this.tab();
+        this.syncTabFromQuery();
+        if (this.tab() === 'catalog' && (prev !== 'catalog' || !this.catalogPlaylists().length)) {
+          this.loadCatalog();
+        }
+      });
+  }
+
+  private syncTabFromQuery(): void {
+    const t = this.route.snapshot.queryParamMap.get('tab');
+    this.tab.set(t === 'catalog' ? 'catalog' : 'mine');
+  }
+
+  setTab(next: PlaylistTab): void {
+    this.tab.set(next);
+    void this.router.navigate(['/playlists'], {
+      queryParams: next === 'catalog' ? { tab: 'catalog' } : {},
     });
+    if (next === 'catalog') this.loadCatalog();
   }
 
   load() {
@@ -90,6 +141,35 @@ export class PlaylistsComponent implements OnInit {
       next: (d) => { this.playlists.set(d ?? []); this.isLoading.set(false); },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });
+  }
+
+  loadCatalog(page = this.catalogPage()): void {
+    this.catalogLoading.set(true);
+    this.catalogError.set(false);
+    this.catalogPage.set(page);
+    this.svc.listCatalog({
+      page,
+      limit: 24,
+      search: this.catalogSearch() || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.catalogPlaylists.set(res.items ?? []);
+        this.catalogTotal.set(res.total ?? 0);
+        this.catalogLoading.set(false);
+      },
+      error: () => {
+        this.catalogError.set(true);
+        this.catalogLoading.set(false);
+      },
+    });
+  }
+
+  onCatalogSearch(value: string): void {
+    this.catalogSearch$.next(value);
+  }
+
+  catalogTotalPages(): number {
+    return Math.max(1, Math.ceil(this.catalogTotal() / 24));
   }
 
   previewIds(pl: PlaylistSummary | PlaylistDetail): number[] {
@@ -160,11 +240,15 @@ export class PlaylistsComponent implements OnInit {
     });
   }
 
-  openDetail(pl: PlaylistSummary) {
-    this.router.navigate(['/playlists', pl.id]);
+  openDetail(pl: PlaylistSummary, catalog = false) {
+    if (catalog || pl.source === 'catalog') {
+      this.router.navigate(['/playlists/catalog', pl.id]);
+    } else {
+      this.router.navigate(['/playlists', pl.id]);
+    }
   }
 
-  openDetailById(id: number) {
+  openDetailById(id: number, catalog = false) {
     if (!Number.isFinite(id) || id <= 0) {
       this.router.navigate(['/playlists']);
       return;
@@ -172,9 +256,10 @@ export class PlaylistsComponent implements OnInit {
     this.detailLoading.set(true);
     this.detailError.set(false);
     this.selected.set(null);
-    this.svc.get(id).subscribe({
+    const req = catalog ? this.svc.getCatalog(id) : this.svc.get(id);
+    req.subscribe({
       next: (d) => {
-        this.selected.set(d);
+        this.selected.set({ ...d, source: catalog ? 'catalog' : d.source });
         this.detailLoading.set(false);
       },
       error: () => {
@@ -186,10 +271,13 @@ export class PlaylistsComponent implements OnInit {
   }
 
   backToList() {
-    this.router.navigate(['/playlists']);
+    this.router.navigate(['/playlists'], {
+      queryParams: this.isCatalogDetail() ? { tab: 'catalog' } : {},
+    });
   }
 
   openEdit(det: PlaylistDetail) {
+    if (det.source === 'catalog' || this.isCatalogDetail()) return;
     this.editingId.set(det.id);
     this.formName.set(det.name);
     this.formDesc.set(det.description ?? '');
@@ -222,6 +310,7 @@ export class PlaylistsComponent implements OnInit {
   }
 
   deletePlaylist(det: PlaylistDetail) {
+    if (det.source === 'catalog' || this.isCatalogDetail()) return;
     void this.confirm.open({
       title: this.i18n.t('confirm.deleteTitle'),
       message: `${this.i18n.t('playlists.deleteConfirm', { name: det.name })}\n\n${this.i18n.t('playlists.deleteWarn')}`,
@@ -238,7 +327,7 @@ export class PlaylistsComponent implements OnInit {
 
   removeTrack(trackId: number) {
     const det = this.selected();
-    if (!det) return;
+    if (!det || det.source === 'catalog' || this.isCatalogDetail()) return;
     this.svc.removeTrack(det.id, trackId).subscribe({
       next: () => {
         this.svc.get(det.id).subscribe({

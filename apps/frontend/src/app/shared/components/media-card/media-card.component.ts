@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { DeferVisibleDirective } from '../../directives/defer-visible.directive';
 import { TrackActionsComponent } from '../track-actions/track-actions.component';
 import { CoverMosaicComponent } from '../cover-mosaic/cover-mosaic.component';
@@ -17,7 +17,11 @@ import { PlayableTrack } from '../../models/player.models';
   standalone: true,
   imports: [CommonModule, RouterModule, DeferVisibleDirective, TrackActionsComponent, CoverMosaicComponent],
   template: `
-    <article class="media-card" (click)="onCardClick()">
+    <article
+      class="media-card"
+      [routerLink]="!track && link ? link : null"
+      (click)="onCardClick()"
+    >
       <div class="media-cover" appDeferVisible [class.round]="round" [style.background]="gradient">
         @if (mosaicTrackIds?.length) {
           <app-cover-mosaic
@@ -246,7 +250,6 @@ import { PlayableTrack } from '../../models/player.models';
 })
 export class MediaCardComponent {
   private readonly controller = inject(PlayerController);
-  private router = inject(Router);
   private covers = inject(CoverArtService);
   private coverSvc = inject(TrackCoverService);
   private destroyRef = inject(DestroyRef);
@@ -341,12 +344,9 @@ export class MediaCardComponent {
   }
 
   onCardClick() {
+    // Link-only cards navigate via [routerLink] on the article.
     if (this.track) {
       this.onPlay(new Event('click'));
-      return;
-    }
-    if (this.link) {
-      void this.router.navigateByUrl(this.link);
     }
   }
 }
