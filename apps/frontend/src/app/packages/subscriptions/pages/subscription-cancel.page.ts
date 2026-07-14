@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="subscription-cancel">
+    <div class="vx-enterprise subscription-cancel">
       <h1>{{ 'subscriptions.cancel.title' | t:lang() }}</h1>
 
       <p class="warning">

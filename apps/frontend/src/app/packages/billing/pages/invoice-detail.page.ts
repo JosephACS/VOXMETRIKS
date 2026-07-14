@@ -24,7 +24,7 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
     LocaleDatePipe,
   ],
   template: `
-    <div class="invoice-detail-page">
+    <div class="vx-enterprise invoice-detail-page">
       <a routerLink="/billing/invoices" class="back-link">{{ 'billing.invoiceDetail.back' | t:lang() }}</a>
       @if (loading) {
         <p>{{ 'billing.invoiceDetail.loading' | t:lang() }}</p>

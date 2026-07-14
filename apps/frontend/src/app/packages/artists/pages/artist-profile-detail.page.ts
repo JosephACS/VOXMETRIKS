@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="artist-profile-detail-page">
+    <div class="vx-enterprise artist-profile-detail-page">
       <a routerLink="/artist-profiles">&larr; {{ 'artists.detail.back' | t:lang() }}</a>
 
       @if (artist) {

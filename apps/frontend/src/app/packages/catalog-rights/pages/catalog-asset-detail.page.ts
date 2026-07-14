@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="catalog-asset-detail-page">
+    <div class="vx-enterprise catalog-asset-detail-page">
       <a routerLink="/catalog-rights/assets">&larr; Back to assets</a>
 
       @if (asset) {

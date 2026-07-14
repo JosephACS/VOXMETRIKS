@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="compliance-admin">
+    <div class="vx-enterprise compliance-admin">
       <h1>{{ 'compliance.admin.title' | t:lang() }}</h1>
       <p class="subtitle">Terms, DSR, retention, incidents, and audit search.</p>
       <nav class="subnav">

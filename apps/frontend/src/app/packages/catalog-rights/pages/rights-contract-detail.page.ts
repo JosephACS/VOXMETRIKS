@@ -19,7 +19,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="rights-contract-detail-page">
+    <div class="vx-enterprise rights-contract-detail-page">
       <a routerLink="/catalog-rights/contracts">&larr; Back to contracts</a>
 
       @if (contract) {

@@ -1,4 +1,6 @@
 @import './styles/motion.css';
+@import './app/shared/styles/enterprise-page-shared.css';
+@import './app/shared/styles/catalog-page-shared.css';
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

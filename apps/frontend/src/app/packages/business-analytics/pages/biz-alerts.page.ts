@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="biz-alerts">
+    <div class="vx-enterprise biz-alerts">
       <a routerLink="/business-analytics">← Dashboard</a>
       <h1>{{ 'businessAnalytics.alerts.title' | t:lang() }}</h1>
       @if (alerts.length === 0) { <p>{{ 'businessAnalytics.alerts.empty' | t:lang() }}</p> }

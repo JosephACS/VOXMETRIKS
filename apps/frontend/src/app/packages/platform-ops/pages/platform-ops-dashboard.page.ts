@@ -10,7 +10,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="platform-ops-dashboard">
+    <div class="vx-enterprise platform-ops-dashboard">
       <h1>{{ 'platformOps.dashboard.title' | t:lang() }}</h1>
       <p class="subtitle">Academic/local ops console — not production HA. Secrets redacted in UI.</p>
 

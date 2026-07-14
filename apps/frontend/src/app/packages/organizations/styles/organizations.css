@@ -1,27 +1,30 @@
-/* Shared styles for Organizations package pages */
+/* Organizations — maps to shared enterprise / Spotify tokens (no GitHub palette). */
 .org-page {
-  max-width: 920px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.25rem 1rem 2.5rem;
+  padding: 0 0 2.5rem;
 }
 
 .org-page h1 {
-  font-size: 1.5rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0 0 0.35rem;
 }
 
 .org-page .lede {
-  color: var(--text-muted, #8b949e);
+  color: var(--spotify-muted, var(--text-muted));
   margin: 0 0 1.25rem;
   line-height: 1.45;
 }
 
 .org-card {
-  background: color-mix(in srgb, var(--surface, #161b22) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border, #30363d) 80%, transparent);
-  border-radius: 12px;
+  background: var(--spotify-card, var(--bg-card));
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
   padding: 1.1rem 1.15rem;
   margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .org-form {
@@ -34,25 +37,27 @@
   gap: 0.35rem;
   font-size: 0.875rem;
   font-weight: 500;
+  color: var(--spotify-muted, var(--text-muted));
 }
 
 .org-form input,
 .org-form select,
 .org-form textarea {
   width: 100%;
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  border: 1px solid var(--border, #30363d);
-  background: var(--bg, #0d1117);
-  color: inherit;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--spotify-base, var(--bg-surface));
+  color: var(--text);
   font: inherit;
 }
 
 .org-form input:focus,
 .org-form select:focus,
 .org-form textarea:focus {
-  outline: 2px solid color-mix(in srgb, #1ed896 55%, transparent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .org-actions {
@@ -65,11 +70,12 @@
 .org-btn {
   appearance: none;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0.5rem 0.9rem;
+  border-radius: 0.5rem;
+  padding: 0.55rem 1.1rem;
   font: inherit;
+  font-size: 0.875rem;
   cursor: pointer;
-  background: #1ed896;
+  background: var(--accent);
   color: #04140e;
   font-weight: 600;
 }
@@ -80,37 +86,42 @@
 }
 
 .org-btn--ghost {
-  background: transparent;
-  border-color: var(--border, #30363d);
-  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--spotify-muted, var(--text-muted));
   font-weight: 500;
 }
 
 .org-btn--danger {
-  background: #b42318;
-  color: #fff;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
 }
 
 .org-alert {
-  border-radius: 8px;
+  border-radius: 0.75rem;
   padding: 0.75rem 0.9rem;
   margin-bottom: 0.9rem;
   border: 1px solid transparent;
+  font-size: 0.875rem;
 }
 
 .org-alert--error {
-  background: color-mix(in srgb, #b42318 18%, transparent);
-  border-color: color-mix(in srgb, #b42318 45%, transparent);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
 }
 
 .org-alert--ok {
-  background: color-mix(in srgb, #1ed896 14%, transparent);
-  border-color: color-mix(in srgb, #1ed896 40%, transparent);
+  background: var(--accent-dim);
+  border-color: rgba(30, 216, 150, 0.35);
+  color: var(--accent);
 }
 
 .org-alert--warn {
-  background: color-mix(in srgb, #d4a017 16%, transparent);
-  border-color: color-mix(in srgb, #d4a017 40%, transparent);
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
 }
 
 .org-table {
@@ -122,43 +133,56 @@
 .org-table th,
 .org-table td {
   text-align: left;
-  padding: 0.55rem 0.4rem;
-  border-bottom: 1px solid var(--border, #30363d);
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
   vertical-align: top;
 }
 
+.org-table thead tr {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.org-table tbody tr:hover {
+  background: var(--row-hover);
+}
+
 .org-muted {
-  color: var(--text-muted, #8b949e);
+  color: var(--spotify-muted, var(--text-muted));
   font-size: 0.85rem;
 }
 
 .org-badge {
   display: inline-block;
-  padding: 0.15rem 0.45rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.75rem;
-  border: 1px solid var(--border, #30363d);
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
 }
 
 .org-badge--suspended,
 .org-badge--closed {
-  border-color: #b42318;
-  color: #f97066;
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .org-badge--active {
-  border-color: #1ed896;
-  color: #1ed896;
+  border-color: rgba(30, 216, 150, 0.35);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .org-token-box {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.8rem;
   word-break: break-all;
   padding: 0.75rem;
-  border-radius: 8px;
-  background: #0d1117;
-  border: 1px dashed #d4a017;
+  border-radius: 0.6rem;
+  background: var(--spotify-base);
+  border: 1px dashed rgba(251, 191, 36, 0.45);
+  color: var(--spotify-muted);
 }
 
 .org-steps {
@@ -171,13 +195,15 @@
 .org-step {
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid var(--border, #30363d);
+  border: 1px solid var(--border);
   font-size: 0.8rem;
+  color: var(--spotify-muted);
 }
 
 .org-step--active {
-  border-color: #1ed896;
-  color: #1ed896;
+  border-color: rgba(30, 216, 150, 0.45);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 @media (max-width: 640px) {

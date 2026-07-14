@@ -14,7 +14,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <div class="vx-enterprise page">
       <p><a routerLink="/reports">← Reports</a></p>
       @if (loading) {
         <p>{{ 'common.loading' | t:lang() }}</p>

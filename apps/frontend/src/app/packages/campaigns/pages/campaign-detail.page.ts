@@ -15,7 +15,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="campaign-detail-page">
+    <div class="vx-enterprise campaign-detail-page">
       <a routerLink="/campaigns">← Back to campaigns</a>
 
       @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }

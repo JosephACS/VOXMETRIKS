@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="artist-profile-history-page">
+    <div class="vx-enterprise artist-profile-history-page">
       <a [routerLink]="['/artist-profiles', artistId]">&larr; Back to profile</a>
       <h1>{{ 'artists.history.title' | t:lang() }}</h1>
 

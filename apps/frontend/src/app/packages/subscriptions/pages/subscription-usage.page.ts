@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="subscription-usage">
+    <div class="vx-enterprise subscription-usage">
       <h1>{{ 'subscriptions.usage.title' | t:lang() }}</h1>
 
       @if (records.length > 0) {

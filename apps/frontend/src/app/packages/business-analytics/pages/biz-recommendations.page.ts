@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="biz-recommendations">
+    <div class="vx-enterprise biz-recommendations">
       <a routerLink="/business-analytics">← Dashboard</a>
       <h1>{{ 'businessAnalytics.recommendations.title' | t:lang() }}</h1>
       <p class="subtitle">Honest rule-based insights — not AI.</p>

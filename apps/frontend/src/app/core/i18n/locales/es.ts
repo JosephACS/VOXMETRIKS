@@ -7,6 +7,13 @@ export const LOCALE_ES = {
     'nav.section.data': 'DATOS',
     'nav.section.system': 'SISTEMA',
     'nav.section.organizations': 'ORGANIZACIONES',
+    'nav.group.music': 'Música',
+    'nav.group.analytics': 'Analítica',
+    'nav.group.clients': 'Clientes',
+    'nav.group.finance': 'Suscripciones y Finanzas',
+    'nav.group.artists': 'Gestión artística',
+    'nav.group.direction': 'Dirección',
+    'nav.group.admin': 'Administración',
     // Nav items
     'nav.home': 'Inicio',
     'nav.analyticsHub': 'Centro analítico',

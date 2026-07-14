@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="credit-notes-page">
+    <div class="vx-enterprise credit-notes-page">
       <h1>{{ 'billing.creditNotes.title' | t:lang() }}</h1>
       <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
         {{ showForm ? 'Cancel' : 'New Credit Note' }}

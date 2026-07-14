@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="rights-contracts-list-page">
+    <div class="vx-enterprise rights-contracts-list-page">
       <h1>{{ 'catalogRights.contracts.title' | t:lang() }}</h1>
       <p class="subtitle read-only-notice">
         Catalog ownership/licensing agreements (master, publishing, neighboring rights). This is

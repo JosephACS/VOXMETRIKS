@@ -1,31 +1,35 @@
-/* Shared styles for CRM package pages */
+/* CRM — maps to shared enterprise / Spotify tokens (no GitHub palette). */
 .crm-page {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.25rem 1rem 2.5rem;
+  padding: 0 0 2.5rem;
 }
 
 .crm-page h1 {
-  font-size: 1.5rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0 0 0.35rem;
 }
 
 .crm-page .lede {
-  color: var(--text-muted, #8b949e);
+  color: var(--spotify-muted, var(--text-muted));
   margin: 0 0 1.25rem;
   line-height: 1.45;
 }
 
 .crm-card {
-  background: color-mix(in srgb, var(--surface, #161b22) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border, #30363d) 80%, transparent);
-  border-radius: 12px;
+  background: var(--spotify-card, var(--bg-card));
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
   padding: 1.1rem 1.15rem;
   margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .crm-card h2 {
-  font-size: 1.05rem;
+  font-size: 1rem;
+  font-weight: 650;
   margin: 0 0 0.75rem;
 }
 
@@ -39,25 +43,27 @@
   gap: 0.35rem;
   font-size: 0.875rem;
   font-weight: 500;
+  color: var(--spotify-muted, var(--text-muted));
 }
 
 .crm-form input,
 .crm-form select,
 .crm-form textarea {
   width: 100%;
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  border: 1px solid var(--border, #30363d);
-  background: var(--bg, #0d1117);
-  color: inherit;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--spotify-base, var(--bg-surface));
+  color: var(--text);
   font: inherit;
 }
 
 .crm-form input:focus,
 .crm-form select:focus,
 .crm-form textarea:focus {
-  outline: 2px solid color-mix(in srgb, #1ed896 55%, transparent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .crm-form input[readonly],
@@ -76,11 +82,12 @@
 .crm-btn {
   appearance: none;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0.5rem 0.9rem;
+  border-radius: 0.5rem;
+  padding: 0.55rem 1.1rem;
   font: inherit;
+  font-size: 0.875rem;
   cursor: pointer;
-  background: #1ed896;
+  background: var(--accent);
   color: #04140e;
   font-weight: 600;
   text-decoration: none;
@@ -94,42 +101,48 @@
 }
 
 .crm-btn--ghost {
-  background: transparent;
-  border-color: var(--border, #30363d);
-  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--spotify-muted, var(--text-muted));
   font-weight: 500;
 }
 
 .crm-btn--danger {
-  background: #b42318;
-  color: #fff;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
 }
 
 .crm-btn--warn {
-  background: #d4a017;
-  color: #04140e;
+  background: rgba(251, 191, 36, 0.16);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
 }
 
 .crm-alert {
-  border-radius: 8px;
+  border-radius: 0.75rem;
   padding: 0.75rem 0.9rem;
   margin-bottom: 0.9rem;
   border: 1px solid transparent;
+  font-size: 0.875rem;
 }
 
 .crm-alert--error {
-  background: color-mix(in srgb, #b42318 18%, transparent);
-  border-color: color-mix(in srgb, #b42318 45%, transparent);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
 }
 
 .crm-alert--ok {
-  background: color-mix(in srgb, #1ed896 14%, transparent);
-  border-color: color-mix(in srgb, #1ed896 40%, transparent);
+  background: var(--accent-dim);
+  border-color: rgba(30, 216, 150, 0.35);
+  color: var(--accent);
 }
 
 .crm-alert--warn {
-  background: color-mix(in srgb, #d4a017 16%, transparent);
-  border-color: color-mix(in srgb, #d4a017 40%, transparent);
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
 }
 
 .crm-table {
@@ -141,21 +154,25 @@
 .crm-table th,
 .crm-table td {
   text-align: left;
-  padding: 0.55rem 0.4rem;
-  border-bottom: 1px solid var(--border, #30363d);
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
   vertical-align: top;
 }
 
 .crm-table th {
   font-weight: 600;
-  color: var(--text-muted, #8b949e);
-  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+}
+
+.crm-table tbody tr:hover {
+  background: var(--row-hover);
 }
 
 .crm-muted {
-  color: var(--text-muted, #8b949e);
+  color: var(--spotify-muted, var(--text-muted));
   font-size: 0.85rem;
 }
 
@@ -163,25 +180,38 @@
   display: inline-block;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  border: 1px solid var(--border, #30363d);
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
 }
 
-.crm-badge--prospect   { border-color: #58a6ff; color: #58a6ff; }
-.crm-badge--qualified  { border-color: #1ed896; color: #1ed896; }
-.crm-badge--proposal   { border-color: #d2a8ff; color: #d2a8ff; }
-.crm-badge--negotiation{ border-color: #d4a017; color: #d4a017; }
-.crm-badge--won        { background: color-mix(in srgb, #1ed896 18%, transparent); border-color: #1ed896; color: #1ed896; }
-.crm-badge--lost       { background: color-mix(in srgb, #b42318 18%, transparent); border-color: #b42318; color: #f97066; }
-.crm-badge--canceled   { border-color: #8b949e; color: #8b949e; }
-.crm-badge--draft      { border-color: #8b949e; color: #8b949e; }
-.crm-badge--sent       { border-color: #58a6ff; color: #58a6ff; }
-.crm-badge--approved   { border-color: #1ed896; color: #1ed896; }
-.crm-badge--rejected   { border-color: #b42318; color: #f97066; }
-.crm-badge--pending    { border-color: #d4a017; color: #d4a017; }
-.crm-badge--active     { border-color: #1ed896; color: #1ed896; }
-.crm-badge--converted  { background: color-mix(in srgb, #1ed896 18%, transparent); border-color: #1ed896; color: #1ed896; }
+.crm-badge--prospect { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
+.crm-badge--qualified { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
+.crm-badge--proposal { border-color: rgba(168, 85, 247, 0.45); color: #c084fc; }
+.crm-badge--negotiation { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
+.crm-badge--won {
+  background: var(--accent-dim);
+  border-color: rgba(30, 216, 150, 0.45);
+  color: var(--accent);
+}
+.crm-badge--lost {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+.crm-badge--canceled { color: var(--spotify-muted); }
+.crm-badge--draft { color: var(--spotify-muted); }
+.crm-badge--sent { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
+.crm-badge--approved { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
+.crm-badge--rejected { border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
+.crm-badge--pending { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
+.crm-badge--active { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
+.crm-badge--converted {
+  background: var(--accent-dim);
+  border-color: rgba(30, 216, 150, 0.45);
+  color: var(--accent);
+}
 
 .crm-board {
   display: grid;
@@ -191,24 +221,24 @@
 }
 
 .crm-board-col {
-  background: color-mix(in srgb, var(--surface, #161b22) 80%, transparent);
-  border: 1px solid var(--border, #30363d);
-  border-radius: 10px;
+  background: var(--spotify-elevated, var(--spotify-card));
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
   padding: 0.75rem 0.65rem;
 }
 
 .crm-board-col h3 {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin: 0 0 0.6rem;
-  color: var(--text-muted, #8b949e);
+  color: var(--text-muted);
 }
 
 .crm-board-item {
-  background: color-mix(in srgb, var(--bg, #0d1117) 85%, transparent);
-  border: 1px solid var(--border, #30363d);
-  border-radius: 8px;
+  background: var(--spotify-base);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
   padding: 0.6rem 0.7rem;
   margin-bottom: 0.5rem;
   cursor: pointer;
@@ -216,10 +246,13 @@
   color: inherit;
   display: block;
   font-size: 0.875rem;
+  transition: border-color var(--motion-duration-fast, 150ms) ease,
+    background var(--motion-duration-fast, 150ms) ease;
 }
 
 .crm-board-item:hover {
-  border-color: color-mix(in srgb, #1ed896 50%, transparent);
+  border-color: rgba(30, 216, 150, 0.45);
+  background: var(--spotify-card-hover);
 }
 
 .crm-board-item .crm-muted {
@@ -234,9 +267,9 @@
 }
 
 .crm-stat {
-  background: color-mix(in srgb, var(--surface, #161b22) 92%, transparent);
-  border: 1px solid var(--border, #30363d);
-  border-radius: 10px;
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
   padding: 0.85rem 1rem;
   text-align: center;
 }
@@ -245,12 +278,15 @@
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .crm-stat__label {
-  font-size: 0.75rem;
-  color: var(--text-muted, #8b949e);
-  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
 }
 
 .crm-wizard-steps {
@@ -263,23 +299,25 @@
 .crm-wizard-step {
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid var(--border, #30363d);
+  border: 1px solid var(--border);
   font-size: 0.8rem;
+  color: var(--spotify-muted);
 }
 
 .crm-wizard-step--active {
-  border-color: #1ed896;
-  color: #1ed896;
+  border-color: rgba(30, 216, 150, 0.45);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .crm-wizard-step--done {
-  border-color: #8b949e;
-  color: #8b949e;
+  border-color: var(--border);
+  color: var(--text-muted);
 }
 
 .crm-readonly-note {
   font-size: 0.8rem;
-  color: var(--text-muted, #8b949e);
+  color: var(--spotify-muted);
   font-style: italic;
   margin-bottom: 0.5rem;
 }

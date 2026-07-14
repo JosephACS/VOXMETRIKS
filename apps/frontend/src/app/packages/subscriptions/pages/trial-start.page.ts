@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="trial-start">
+    <div class="vx-enterprise trial-start">
       <h1>{{ 'subscriptions.trial.title' | t:lang() }}</h1>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">

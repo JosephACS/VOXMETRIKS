@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="catalog-releases-list-page">
+    <div class="vx-enterprise catalog-releases-list-page">
       <h1>{{ 'catalogRights.releases.title' | t:lang() }}</h1>
       <p class="subtitle">
         Release records (e.g. albums/EPs) tracked for rights purposes. Optional warehouse album

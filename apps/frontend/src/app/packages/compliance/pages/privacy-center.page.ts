@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="privacy-center">
+    <div class="vx-enterprise privacy-center">
       <h1>{{ 'compliance.privacy.title' | t:lang() }}</h1>
       <p class="subtitle">Manage your consent and data subject requests.</p>
 

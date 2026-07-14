@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="rights-contract-history-page">
+    <div class="vx-enterprise rights-contract-history-page">
       <a [routerLink]="['/catalog-rights/contracts', contractId]">&larr; Back to contract</a>
       <h1>Contract #{{ contractId }} — {{ 'artists.history.title' | t:lang() }}</h1>
 

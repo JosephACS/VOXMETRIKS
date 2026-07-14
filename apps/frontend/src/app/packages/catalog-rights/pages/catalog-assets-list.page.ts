@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="catalog-assets-list-page">
+    <div class="vx-enterprise catalog-assets-list-page">
       <h1>{{ 'catalogRights.assets.title' | t:lang() }}</h1>
       <p class="subtitle">
         Rights-tracking records for songs/works. This is not a legal registry — it does not

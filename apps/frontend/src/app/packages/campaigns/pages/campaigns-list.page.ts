@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="campaigns-list-page">
+    <div class="vx-enterprise campaigns-list-page">
       <h1>{{ 'campaigns.list.title' | t:lang() }}</h1>
       <p class="subtitle">Marketing campaigns with budgets, expenses, and ROI tracking.</p>
 

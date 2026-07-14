@@ -18,20 +18,24 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="biz-analytics-dashboard">
-      <h1>{{ 'businessAnalytics.dashboard.title' | t:lang() }}</h1>
-      <p class="subtitle">
-        Warehouse KPIs plus commercial counts from live APIs. Null values show as {{ 'common.notAvailable' | t:lang() }} — never invented.
-      </p>
+    <div class="biz-analytics-dashboard vx-enterprise--wide">
+      <header class="vx-hero">
+        <div>
+          <h1 class="vx-hero__title">{{ 'businessAnalytics.dashboard.title' | t:lang() }}</h1>
+          <p class="vx-hero__subtitle">
+            Warehouse KPIs plus commercial counts from live APIs. Null values show as {{ 'common.notAvailable' | t:lang() }} — never invented.
+          </p>
+        </div>
+      </header>
       <nav class="subnav">
-        <a routerLink="/business-analytics">Dashboard</a> |
-        <a routerLink="/business-analytics/kpis">{{ 'businessAnalytics.kpis.title' | t:lang() }}</a> |
-        <a routerLink="/business-analytics/alerts">Alerts</a> |
-        <a routerLink="/business-analytics/recommendations">Recommendations</a> |
+        <a routerLink="/business-analytics">Dashboard</a>
+        <a routerLink="/business-analytics/kpis">{{ 'businessAnalytics.kpis.title' | t:lang() }}</a>
+        <a routerLink="/business-analytics/alerts">Alerts</a>
+        <a routerLink="/business-analytics/recommendations">Recommendations</a>
         <a routerLink="/business-analytics/quality">{{ 'businessAnalytics.quality.title' | t:lang() }}</a>
       </nav>
 
-      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
+      @if (loading) { <div class="vx-skel-block" aria-busy="true"><div class="vx-skel"></div><div class="vx-skel"></div></div> }
       @else {
         <section class="commercial-summary">
           <h2>Commercial &amp; CS snapshot</h2>

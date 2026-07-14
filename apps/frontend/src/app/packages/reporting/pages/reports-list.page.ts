@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <div class="vx-enterprise page">
       <h1>{{ 'reporting.list.title' | t:lang() }}</h1>
       <p class="subtitle">Generate immutable executive snapshots from versioned KPIs. Not a certified statement.</p>
       <nav class="subnav">

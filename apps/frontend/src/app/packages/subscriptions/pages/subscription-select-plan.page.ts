@@ -5,9 +5,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Plan, PlanPrice } from '../models/subscriptions.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+
 /**
  * Post-conversion / explicit plan selection.
  * Does NOT auto-create a subscription — owner chooses trial or paid.
@@ -17,66 +17,87 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page select-plan-page">
-      <a routerLink="/subscriptions/overview">{{ 'subscriptions.selectPlan.back' | t:lang() }}</a>
-      <h1>{{ 'subscriptions.selectPlan.heading' | t:lang() }}</h1>
-      <p class="subtitle">{{ 'subscriptions.selectPlan.subtitle' | t:lang() }}</p>
+    <div class="page select-plan-page vx-enterprise--narrow">
+      <a routerLink="/subscriptions/overview" class="btn btn--ghost" style="margin-bottom:1rem;width:fit-content">
+        {{ 'subscriptions.selectPlan.back' | t:lang() }}
+      </a>
+
+      <header class="vx-hero">
+        <div>
+          <h1 class="vx-hero__title">{{ 'subscriptions.selectPlan.heading' | t:lang() }}</h1>
+          <p class="vx-hero__subtitle">{{ 'subscriptions.selectPlan.subtitle' | t:lang() }}</p>
+          <div class="vx-hero__meta">
+            @if (orgName) {
+              <span class="badge badge--active">{{ orgName }}</span>
+            }
+            @if (conversionId) {
+              <span class="badge">#{{ conversionId }}</span>
+            }
+          </div>
+        </div>
+        <div class="vx-hero__actions">
+          <a routerLink="/subscriptions/plans" class="btn btn--secondary">
+            {{ 'subscriptions.plans.title' | t:lang() }}
+          </a>
+        </div>
+      </header>
 
       @if (!orgId) {
-        <p class="error">{{ 'subscriptions.selectPlan.orgFirst' | t:lang() }}</p>
+        <div class="alert alert--danger">{{ 'subscriptions.selectPlan.orgFirst' | t:lang() }}</div>
       } @else if (loading) {
-        <p>{{ 'subscriptions.selectPlan.loadingPlans' | t:lang() }}</p>
+        <div class="vx-skel-block" aria-busy="true">
+          <div class="vx-skel"></div>
+          <div class="vx-skel"></div>
+        </div>
       } @else {
-        <p class="muted">{{ 'common.organization' | t:lang() }} #{{ orgId }}@if (conversionId) { · #{{ conversionId }} }</p>
-
-        <form [formGroup]="form" (ngSubmit)="submit()">
-          <div class="form-field">
-            <label>{{ 'subscriptions.selectPlan.planLabel' | t:lang() }}</label>
-            <select formControlName="planId" (change)="onPlanChange()">
-              <option [ngValue]="0">{{ 'common.select' | t:lang() }}</option>
-              @for (p of plans; track p.id) {
-                <option [ngValue]="p.id">{{ p.display_name }} (trial {{ p.trial_days_default }}d)</option>
-              }
-            </select>
-          </div>
-
-          @if (prices.length) {
+        <div class="vx-card">
+          <form class="vx-form" [formGroup]="form" (ngSubmit)="submit()">
             <div class="form-field">
-              <label>Precio *</label>
-              <select formControlName="planPriceId">
-                <option [ngValue]="null">Seleccionar…</option>
-                @for (pr of prices; track pr.id) {
-                  <option [ngValue]="pr.id">
-                    {{ formatPrice(pr) }}
-                  </option>
+              <label>{{ 'subscriptions.selectPlan.planLabel' | t:lang() }}</label>
+              <select formControlName="planId" (change)="onPlanChange()">
+                <option [ngValue]="0">{{ 'common.select' | t:lang() }}</option>
+                @for (p of plans; track p.id) {
+                  <option [ngValue]="p.id">{{ p.display_name }} (trial {{ p.trial_days_default }}d)</option>
                 }
               </select>
             </div>
-          }
 
-          <div class="form-field">
-            <label>Moneda de facturación *</label>
-            <input formControlName="billingCurrency" maxlength="3" />
-          </div>
+            @if (prices.length) {
+              <div class="form-field">
+                <label>Precio *</label>
+                <select formControlName="planPriceId">
+                  <option [ngValue]="null">Seleccionar…</option>
+                  @for (pr of prices; track pr.id) {
+                    <option [ngValue]="pr.id">{{ formatPrice(pr) }}</option>
+                  }
+                </select>
+              </div>
+            }
 
-          <div class="form-field">
-            <label>Modo *</label>
-            <select formControlName="mode">
-              <option value="trial">{{ 'subscriptions.selectPlan.startTrial' | t:lang() }}</option>
-              <option value="subscribe">Suscripción activa (sin trial)</option>
-            </select>
-          </div>
+            <div class="form-field">
+              <label>Moneda de facturación *</label>
+              <input formControlName="billingCurrency" maxlength="3" />
+            </div>
 
-          <div class="actions">
-            <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving">
-              {{ saving ? 'Creando…' : 'Confirmar' }}
-            </button>
-            <a routerLink="/billing/invoices" class="btn btn--secondary">Ir a facturación</a>
-          </div>
-        </form>
+            <div class="form-field">
+              <label>Modo *</label>
+              <select formControlName="mode">
+                <option value="trial">{{ 'subscriptions.selectPlan.startTrial' | t:lang() }}</option>
+                <option value="subscribe">Suscripción activa (sin trial)</option>
+              </select>
+            </div>
 
-        @if (error) { <p class="error">{{ error }}</p> }
-        @if (success) { <p class="success">{{ success }}</p> }
+            <div class="actions">
+              <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving">
+                {{ saving ? 'Creando…' : 'Confirmar' }}
+              </button>
+              <a routerLink="/billing/invoices" class="btn btn--secondary">Ir a facturación</a>
+            </div>
+          </form>
+        </div>
+
+        @if (error) { <div class="alert alert--danger" role="alert">{{ error }}</div> }
+        @if (success) { <div class="alert alert--ok" role="status">{{ success }}</div> }
       }
     </div>
   `,
@@ -92,6 +113,7 @@ export class SubscriptionSelectPlanPage implements OnInit {
   private fb = inject(FormBuilder);
 
   orgId: number | null = null;
+  orgName: string | null = null;
   conversionId: number | null = null;
   plans: Plan[] = [];
   prices: PlanPrice[] = [];
@@ -99,6 +121,7 @@ export class SubscriptionSelectPlanPage implements OnInit {
   saving = false;
   error: string | null = null;
   success: string | null = null;
+  private preferredPeriod: string | null = null;
 
   form = this.fb.group({
     planId: [0, [Validators.required, Validators.min(1)]],
@@ -109,15 +132,19 @@ export class SubscriptionSelectPlanPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const qOrg = Number(this.route.snapshot.queryParamMap.get('organizationId') || 0);
+    const qPlan = Number(this.route.snapshot.queryParamMap.get('planId') || 0);
+    this.preferredPeriod = this.route.snapshot.queryParamMap.get('period');
     this.conversionId = Number(this.route.snapshot.queryParamMap.get('conversionId') || 0) || null;
     if (qOrg) {
       try {
         await this.orgCtx.activate(qOrg);
       } catch {
-        /* fall through to active context */
+        /* fall through */
       }
     }
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? (qOrg || null);
+    const org = this.orgCtx.activeOrganization();
+    this.orgId = org?.id ?? (qOrg || null);
+    this.orgName = org?.display_name ?? null;
     if (!this.orgId) {
       this.error = 'Activa una organización primero.';
       return;
@@ -127,6 +154,10 @@ export class SubscriptionSelectPlanPage implements OnInit {
       next: (r) => {
         this.plans = r.items || [];
         this.loading = false;
+        if (qPlan > 0 && this.plans.some((p) => p.id === qPlan)) {
+          this.form.patchValue({ planId: qPlan });
+          this.onPlanChange();
+        }
       },
       error: (e) => {
         this.error = e?.error?.detail?.message || 'No se pudieron cargar planes';
@@ -143,10 +174,14 @@ export class SubscriptionSelectPlanPage implements OnInit {
     this.api.listPlanPrices(planId).subscribe({
       next: (prices) => {
         this.prices = (prices || []).filter((p) => p.status === 'active');
-        if (this.prices.length === 1) {
+        const preferred = this.preferredPeriod
+          ? this.prices.find((p) => p.billing_period === this.preferredPeriod)
+          : null;
+        const auto = preferred || (this.prices.length === 1 ? this.prices[0] : null);
+        if (auto) {
           this.form.patchValue({
-            planPriceId: this.prices[0].id,
-            billingCurrency: this.prices[0].currency || 'USD',
+            planPriceId: auto.id,
+            billingCurrency: auto.currency || 'USD',
           });
         }
       },
@@ -159,7 +194,7 @@ export class SubscriptionSelectPlanPage implements OnInit {
   formatPrice(pr: PlanPrice): string {
     const amount = Number(pr.amount);
     const money = Number.isFinite(amount) ? amount.toFixed(2) : String(pr.amount);
-    const period = pr.billing_period === 'annual' ? 'yearly' : pr.billing_period;
+    const period = pr.billing_period === 'annual' ? 'anual' : pr.billing_period === 'monthly' ? 'mensual' : pr.billing_period;
     return `$${money} ${pr.currency || 'USD'} / ${period}`;
   }
 

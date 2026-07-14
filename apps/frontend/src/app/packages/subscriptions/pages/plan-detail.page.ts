@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   imports: [CommonModule, RouterModule, TranslatePipe],
   template: `
     @if (plan) {
-      <div class="plan-detail">
+      <div class="vx-enterprise plan-detail">
         <div class="page-header">
           <h1>{{ plan.display_name }}
             <span class="badge" [class]="'badge--' + plan.status">{{ plan.status }}</span>

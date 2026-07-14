@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="ledger-page">
+    <div class="vx-enterprise ledger-page">
       <h1>{{ 'billing.ledger.title' | t:lang() }}</h1>
       <p class="subtitle read-only-notice">Read-only — append-only financial record.</p>
       <div class="filter-bar">

@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="rights-conflicts-list-page">
+    <div class="vx-enterprise rights-conflicts-list-page">
       <h1>{{ 'catalogRights.conflicts.title' | t:lang() }}</h1>
       <p class="subtitle">
         Conflicts are opened automatically when ownership percentages exceed 100% for the same

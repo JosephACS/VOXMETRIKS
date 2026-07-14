@@ -1,0 +1,933 @@
+/**
+ * Shared enterprise UI — aligned with original VOXMETRIK dark / accent system.
+ * Uses tokens from styles.css (--accent, --spotify-*, --glass-*, etc.).
+ * Do not introduce a second palette (no GitHub-dark fallbacks).
+ */
+
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+
+.vx-enterprise,
+.plans-catalog,
+.subscription-overview,
+.select-plan-page,
+.trial-start-page,
+.subscription-addons-page,
+.subscription-cancel-page,
+.subscription-usage-page,
+.plan-detail-page,
+.invoices-list-page,
+.invoice-detail-page,
+.billing-profile-page,
+.payment-attempts-page,
+.manual-transfer-page,
+.reconciliation-page,
+.refunds-page,
+.credit-notes-page,
+.ledger-page,
+.biz-analytics-dashboard,
+.kpi-explorer-page,
+.biz-alerts-page,
+.biz-recommendations-page,
+.biz-quality-page,
+.campaigns-list-page,
+.campaign-detail-page,
+.artist-profiles-page,
+.artist-profile-detail-page,
+.catalog-assets-page,
+.rights-contracts-page,
+.rights-conflicts-page,
+.reports-list-page,
+.report-detail-page,
+.decisions-list-page,
+.decision-detail-page,
+.cs-dashboard-page,
+.support-list-page,
+.support-detail-page,
+.privacy-center-page,
+.compliance-admin-page,
+.platform-ops-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 0 2rem;
+  color: var(--text);
+}
+
+.vx-enterprise--wide {
+  max-width: 1440px;
+}
+
+.vx-enterprise--narrow {
+  max-width: 920px;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.vx-enterprise .page-header,
+.vx-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.vx-hero {
+  background: var(--hero-gradient);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.vx-hero__title,
+.vx-enterprise .page-header h1,
+.vx-enterprise > h1,
+.plans-catalog .page-header h1,
+.subscription-overview .page-header h1,
+.biz-analytics-dashboard > h1 {
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.vx-hero__subtitle,
+.vx-enterprise .lede,
+.vx-enterprise .subtitle,
+.page-header p,
+.biz-analytics-dashboard .subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--spotify-muted);
+  max-width: 52rem;
+}
+
+.vx-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  align-items: center;
+}
+
+.vx-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* ── Cards / surfaces ────────────────────────────────────────────────────── */
+
+.vx-card,
+.sub-card,
+.org-card,
+.crm-card,
+.kpi-card,
+.commercial-summary,
+.entitlements {
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.1rem 1.15rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--motion-duration-fast, 150ms) ease,
+    background var(--motion-duration-fast, 150ms) ease,
+    transform var(--motion-duration-fast, 150ms) ease;
+}
+
+.vx-card:hover,
+.kpi-card:hover {
+  border-color: var(--shell-border-strong);
+  background: var(--spotify-card-hover);
+}
+
+.vx-card h2,
+.crm-card h2,
+.commercial-summary h2,
+.entitlements h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.75rem;
+  color: var(--text);
+}
+
+.table-card {
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.table-card .data-table,
+.table-card .org-table,
+.table-card .crm-table {
+  margin: 0;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn,
+.btn--primary,
+.org-btn,
+.crm-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--motion-duration-fast, 150ms) ease,
+    border-color var(--motion-duration-fast, 150ms) ease,
+    transform var(--motion-duration-fast, 150ms) ease,
+    box-shadow var(--motion-duration-fast, 150ms) ease,
+    opacity var(--motion-duration-fast, 150ms) ease;
+}
+
+.btn--primary,
+.org-btn,
+.crm-btn {
+  background: var(--accent);
+  color: #04140e;
+}
+
+.btn--primary:hover:not(:disabled),
+.org-btn:hover:not(:disabled),
+.crm-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn--secondary,
+.btn--ghost,
+.org-btn--ghost,
+.crm-btn--ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--spotify-muted);
+  font-weight: 500;
+}
+
+.btn--secondary:hover:not(:disabled),
+.btn--ghost:hover:not(:disabled),
+.org-btn--ghost:hover:not(:disabled),
+.crm-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.btn--danger,
+.org-btn--danger,
+.crm-btn--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.btn--danger:hover:not(:disabled),
+.org-btn--danger:hover:not(:disabled),
+.crm-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.btn--warn,
+.crm-btn--warn {
+  background: rgba(251, 191, 36, 0.16);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+}
+
+.btn:disabled,
+.org-btn:disabled,
+.crm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.vx-actions,
+.org-actions,
+.crm-actions,
+.sub-card__actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+.sub-card__actions a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sub-card__actions a:hover {
+  text-decoration: underline;
+}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+
+.vx-form,
+.org-form,
+.crm-form,
+.select-plan-page form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.vx-form label,
+.org-form label,
+.crm-form label,
+.form-field label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--spotify-muted);
+}
+
+.vx-form input,
+.vx-form select,
+.vx-form textarea,
+.org-form input,
+.org-form select,
+.org-form textarea,
+.crm-form input,
+.crm-form select,
+.crm-form textarea,
+.form-field input,
+.form-field select,
+.form-field textarea,
+.select,
+.filter-bar select,
+.filter-bar input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--spotify-base);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color var(--motion-duration-normal, 220ms) ease,
+    box-shadow var(--motion-duration-normal, 220ms) ease;
+}
+
+.vx-form input:focus,
+.vx-form select:focus,
+.vx-form textarea:focus,
+.org-form input:focus,
+.org-form select:focus,
+.org-form textarea:focus,
+.crm-form input:focus,
+.crm-form select:focus,
+.crm-form textarea:focus,
+.form-field input:focus,
+.form-field select:focus,
+.select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.filter-bar .select,
+.filter-bar select {
+  width: auto;
+  min-width: 160px;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+
+.badge,
+.vx-badge,
+.org-badge,
+.crm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  color: var(--spotify-muted);
+  white-space: nowrap;
+}
+
+.badge--active,
+.badge--paid,
+.badge--full,
+.org-badge--active,
+.crm-badge--active {
+  border-color: rgba(30, 216, 150, 0.35);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.badge--trialing,
+.badge--draft,
+.badge--pending,
+.badge--issued {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.badge--past_due,
+.badge--partially_paid,
+.badge--warn,
+.badge--limited {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
+.badge--canceled,
+.badge--expired,
+.badge--void,
+.badge--blocked,
+.badge--archived,
+.badge--suspended,
+.badge--closed,
+.org-badge--suspended,
+.org-badge--closed {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.badge--recommended {
+  border-color: rgba(30, 216, 150, 0.5);
+  background: var(--accent);
+  color: #04140e;
+}
+
+.badge--current {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+/* ── Alerts / states ─────────────────────────────────────────────────────── */
+
+.alert,
+.org-alert,
+.crm-alert,
+.access-banner,
+.error-card {
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.alert--danger,
+.org-alert--error,
+.crm-alert--error,
+.access-banner--blocked,
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.alert--ok,
+.org-alert--ok,
+.success {
+  background: var(--accent-dim);
+  border-color: rgba(30, 216, 150, 0.35);
+  color: var(--accent);
+}
+
+.alert--warn,
+.org-alert--warn,
+.access-banner--limited {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+
+.muted,
+.org-muted,
+.crm-muted,
+.text-muted {
+  color: var(--spotify-muted);
+  font-size: 0.85rem;
+}
+
+.empty-state,
+.no-sub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  text-align: center;
+  padding: 2.5rem 1.25rem;
+  color: var(--spotify-muted);
+  background: var(--section-bg);
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+}
+
+.vx-skel,
+.loading {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--spotify-base) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    var(--spotify-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: vx-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes vx-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.vx-skel-block {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.vx-skel-block .vx-skel { height: 72px; border-radius: 0.75rem; }
+
+/* ── KPI / dashboards ────────────────────────────────────────────────────── */
+
+.vx-kpi-grid,
+.kpi-grid,
+.crm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.kpi-card,
+.crm-stat {
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.1rem;
+  min-height: 96px;
+}
+
+.kpi-card h3,
+.crm-stat__label {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.kpi-value,
+.crm-stat__value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-null {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kpi-source {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.subnav a {
+  color: var(--spotify-muted);
+  text-decoration: none;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  transition: background var(--motion-duration-fast, 150ms) ease,
+    color var(--motion-duration-fast, 150ms) ease;
+}
+
+.subnav a:hover,
+.subnav a.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ── Definition lists ────────────────────────────────────────────────────── */
+
+.sub-card dl,
+.vx-dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: 0.45rem 1rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.sub-card dt,
+.vx-dl dt {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sub-card dd,
+.vx-dl dd {
+  margin: 0;
+  color: var(--text);
+}
+
+/* ── Plans premium ───────────────────────────────────────────────────────── */
+
+.plans-hero {
+  margin-bottom: 1.5rem;
+}
+
+.billing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.25rem;
+  background: var(--spotify-base);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  margin: 1rem 0 0.35rem;
+}
+
+.billing-toggle__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--spotify-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--motion-duration-fast, 150ms) ease,
+    color var(--motion-duration-fast, 150ms) ease;
+}
+
+.billing-toggle__btn.is-active {
+  background: var(--accent);
+  color: #04140e;
+}
+
+.billing-toggle__save {
+  margin-left: 0.65rem;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem 1.15rem 1.15rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--motion-duration-normal, 220ms) ease,
+    border-color var(--motion-duration-normal, 220ms) ease,
+    box-shadow var(--motion-duration-normal, 220ms) ease,
+    background var(--motion-duration-normal, 220ms) ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-3px);
+  background: var(--spotify-card-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-md);
+}
+
+.plan-card--recommended {
+  border-color: rgba(30, 216, 150, 0.45);
+  box-shadow: var(--shadow-glow);
+}
+
+.plan-card--current {
+  border-color: rgba(30, 216, 150, 0.65);
+  background: linear-gradient(180deg, rgba(30, 216, 150, 0.08) 0%, var(--spotify-card) 42%);
+}
+
+.plan-card__ribbons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 1.4rem;
+}
+
+.plan-card__name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.plan-card__price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.plan-card__amount {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-card__period {
+  color: var(--spotify-muted);
+  font-size: 0.85rem;
+}
+
+.plan-card__annual-note {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.plan-card__desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--spotify-muted);
+  min-height: 2.6em;
+}
+
+.plan-card__features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  flex: 1;
+}
+
+.plan-card__features li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.8125rem;
+  color: var(--spotify-muted);
+  line-height: 1.4;
+}
+
+.plan-card__features li::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.plan-card__meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.plan-card__actions {
+  margin-top: auto;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plan-card__actions .btn {
+  width: 100%;
+}
+
+.plan-card__unavailable {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1100px) {
+  .plans-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vx-enterprise,
+  .plans-catalog,
+  .subscription-overview,
+  .biz-analytics-dashboard {
+    max-width: none;
+  }
+
+  .sub-card dl,
+  .vx-dl {
+    grid-template-columns: 1fr;
+  }
+
+  .table-card,
+  .data-table,
+  .org-table,
+  .crm-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* ── Org / CRM page width alignment ──────────────────────────────────────── */
+
+.org-page,
+.crm-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 0 2.5rem;
+}
+
+.org-page h1,
+.crm-page h1 {
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+.org-page .lede,
+.crm-page .lede {
+  color: var(--spotify-muted);
+  margin: 0 0 1.25rem;
+  line-height: 1.45;
+}
+
+/* ── Modal (confirm-style) ───────────────────────────────────────────────── */
+
+.vx-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--shell-overlay);
+  backdrop-filter: blur(4px);
+}
+
+.vx-modal {
+  width: min(440px, 100%);
+  background: var(--spotify-elevated);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.vx-modal h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.vx-modal p {
+  margin: 0 0 1rem;
+  color: var(--spotify-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.vx-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-card,
+  .vx-card,
+  .kpi-card,
+  .btn,
+  .btn--primary,
+  .org-btn,
+  .crm-btn,
+  .billing-toggle__btn {
+    transition: none !important;
+  }
+
+  .plan-card:hover {
+    transform: none;
+  }
+
+  .vx-skel,
+  .loading {
+    animation: none;
+  }
+}

@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="manual-transfer-page">
+    <div class="vx-enterprise manual-transfer-page">
       <h1>{{ 'billing.manualTransfer.title' | t:lang() }}</h1>
       <p class="subtitle">MOCK / academic transfer recording — not a real bank payment.</p>
       @if (!orgId) {

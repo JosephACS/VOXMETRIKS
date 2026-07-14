@@ -16,14 +16,16 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
   standalone: true,
   imports: [CommonModule, RouterModule, TranslatePipe, StatusLabelPipe, LocaleMoneyPipe, LocaleDatePipe],
   template: `
-    <div class="invoices-list-page">
+    <div class="invoices-list-page vx-enterprise">
       @if (hasPastDue) {
         <div class="alert alert--danger">
           {{ 'billing.invoiceDetail.pastDueAlert' | t:lang() }}
         </div>
       }
       <div class="page-header">
-        <h1>{{ 'billing.invoices.title' | t:lang() }}</h1>
+        <div>
+          <h1>{{ 'billing.invoices.title' | t:lang() }}</h1>
+        </div>
         <a routerLink="/billing/payment-attempts" class="btn btn--secondary">{{ 'billing.invoices.paymentAttempts' | t:lang() }}</a>
       </div>
       <div class="filter-bar">
@@ -38,37 +40,39 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
         </select>
       </div>
       @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
+        <div class="vx-skel-block" aria-busy="true"><div class="vx-skel"></div></div>
       } @else if (invoices.length) {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ 'billing.invoices.number' | t:lang() }}</th>
-              <th>{{ 'common.status' | t:lang() }}</th>
-              <th>{{ 'billing.invoices.total' | t:lang() }}</th>
-              <th>{{ 'billing.invoiceDetail.paid' | t:lang() }}</th>
-              <th>{{ 'billing.invoiceDetail.due' | t:lang() }}</th>
-              <th>{{ 'billing.invoiceDetail.issued' | t:lang() }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (inv of invoices; track inv.id) {
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td><a [routerLink]="['/billing/invoices', inv.id]">{{ inv.invoice_number }}</a></td>
-                <td><span class="badge" [class]="'badge--' + inv.status">{{ inv.status | statusLabel }}</span></td>
-                <td>{{ inv.total | localeMoney:inv.currency }}</td>
-                <td>{{ inv.amount_paid | localeMoney:inv.currency }}</td>
-                <td>{{ inv.amount_due | localeMoney:inv.currency }}</td>
-                <td>{{ inv.issued_at | localeDate:true }}</td>
+                <th>{{ 'billing.invoices.number' | t:lang() }}</th>
+                <th>{{ 'common.status' | t:lang() }}</th>
+                <th>{{ 'billing.invoices.total' | t:lang() }}</th>
+                <th>{{ 'billing.invoiceDetail.paid' | t:lang() }}</th>
+                <th>{{ 'billing.invoiceDetail.due' | t:lang() }}</th>
+                <th>{{ 'billing.invoiceDetail.issued' | t:lang() }}</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (inv of invoices; track inv.id) {
+                <tr>
+                  <td><a [routerLink]="['/billing/invoices', inv.id]">{{ inv.invoice_number }}</a></td>
+                  <td><span class="badge" [class]="'badge--' + inv.status">{{ inv.status | statusLabel }}</span></td>
+                  <td>{{ inv.total | localeMoney:inv.currency }}</td>
+                  <td>{{ inv.amount_paid | localeMoney:inv.currency }}</td>
+                  <td>{{ inv.amount_due | localeMoney:inv.currency }}</td>
+                  <td>{{ inv.issued_at | localeDate:true }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else if (!error) {
-        <p class="empty-state">{{ 'billing.invoices.empty' | t:lang() }}</p>
+        <div class="empty-state"><p>{{ 'billing.invoices.empty' | t:lang() }}</p></div>
       }
       @if (error) {
-        <p class="error">{{ error }}</p>
+        <div class="alert alert--danger" role="alert">{{ error }}</div>
       }
     </div>
   `,

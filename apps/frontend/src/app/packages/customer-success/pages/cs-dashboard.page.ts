@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <div class="vx-enterprise page">
       <h1>{{ 'customerSuccess.dashboard.title' | t:lang() }}</h1>
       <p class="subtitle">
         Rule-based health score (not AI). Academic SLA configs are not contractual.

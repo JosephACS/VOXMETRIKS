@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="reconciliation-page">
+    <div class="vx-enterprise reconciliation-page">
       <h1>{{ 'billing.reconciliation.title' | t:lang() }}</h1>
       <p class="subtitle">Settle and reconcile payments from bank statements.</p>
       @if (payments.length) {

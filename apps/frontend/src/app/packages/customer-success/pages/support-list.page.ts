@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <div class="vx-enterprise page">
       <h1>{{ 'support.list.title' | t:lang() }}</h1>
       <p class="subtitle">Organization-scoped tickets. {{ 'support.detail.internalNote' | t:lang() }}s require staff permission.</p>
       <nav class="subnav"><a routerLink="/customer-success">CS</a> | <a routerLink="/support">{{ 'support.list.title' | t:lang() }}</a></nav>

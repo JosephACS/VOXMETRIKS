@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="refunds-page">
+    <div class="vx-enterprise refunds-page">
       <h1>{{ 'billing.refunds.title' | t:lang() }}</h1>
       <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
         {{ showForm ? 'Cancel' : 'New Refund' }}

@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page biz-quality">
+    <div class="vx-enterprise page biz-quality">
       <a routerLink="/business-analytics">← Dashboard</a>
       <h1>{{ 'businessAnalytics.quality.title' | t:lang() }}</h1>
       <p class="subtitle">Warehouse / KPI quality checks — sources labeled.</p>

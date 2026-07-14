@@ -1,6 +1,8 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { FavoritesService } from '../../packages/streaming/services/favorites.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
 import { MusicPlayerService } from '../../shared/services/music-player.service';
@@ -44,6 +46,18 @@ interface NavSection {
   items: NavItem[];
 }
 
+interface NavGroupConfig {
+  id: string;
+  titleKey: TranslationKey;
+  sectionIds: string[];
+}
+
+interface NavGroupView {
+  id: string;
+  title: string;
+  sections: NavSection[];
+}
+
 @Component({
   selector: 'app-dashboard-layout',
   standalone: true,
@@ -72,6 +86,19 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private resizeHandler = () => this.checkScreenSize();
 
   private static readonly COLLAPSE_KEY = 'voxmetrik_sidebar_collapsed';
+  private static readonly NAV_GROUPS_KEY = 'voxmetrik_nav_groups_open';
+
+  private readonly navGroupConfig: NavGroupConfig[] = [
+    { id: 'music', titleKey: 'nav.group.music', sectionIds: ['main', 'music', 'recommendations'] },
+    { id: 'analytics', titleKey: 'nav.group.analytics', sectionIds: ['analytics', 'data'] },
+    { id: 'clients', titleKey: 'nav.group.clients', sectionIds: ['crm', 'customerSuccess'] },
+    { id: 'finance', titleKey: 'nav.group.finance', sectionIds: ['subscriptions', 'billing'] },
+    { id: 'artists', titleKey: 'nav.group.artists', sectionIds: ['artistProfiles', 'catalogRights', 'campaigns'] },
+    { id: 'direction', titleKey: 'nav.group.direction', sectionIds: ['businessAnalytics', 'reporting'] },
+    { id: 'admin', titleKey: 'nav.group.admin', sectionIds: ['organizations', 'compliance', 'platformOps', 'system'] },
+  ];
+
+  expandedNavGroups = signal<Record<string, boolean>>(this.readNavGroupsPref());
 
   userName = computed(() => {
     this.i18n.tick();
@@ -490,6 +517,21 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     return sections.filter((s) => s.id !== 'data');
   });
 
+  visibleNavGroups = computed((): NavGroupView[] => {
+    this.i18n.tick();
+    const sections = this.visibleNavSections();
+    const byId = new Map(sections.map((s) => [s.id, s]));
+    return this.navGroupConfig
+      .map((group) => ({
+        id: group.id,
+        title: this.i18n.t(group.titleKey),
+        sections: group.sectionIds
+          .map((id) => byId.get(id))
+          .filter((s): s is NavSection => !!s && s.items.length > 0),
+      }))
+      .filter((g) => g.sections.length > 0);
+  });
+
   userInitial = computed(() => this.userName().charAt(0).toUpperCase());
   avatarGradient = computed(() => {
     const id = this.auth.getUser()?.id ?? 0;
@@ -512,6 +554,69 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     }
     this.platformEvents.start(this.destroyRef);
     void this.orgCtx.bootstrap();
+    this.ensureActiveNavGroupOpen();
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => this.ensureActiveNavGroupOpen());
+  }
+
+  isNavGroupOpen(groupId: string): boolean {
+    if (this.sidebarCollapsed()) return true;
+    const state = this.expandedNavGroups();
+    if (state[groupId] != null) return state[groupId];
+    return groupId === 'music';
+  }
+
+  toggleNavGroup(groupId: string, event?: Event): void {
+    event?.stopPropagation();
+    if (this.sidebarCollapsed()) return;
+    this.expandedNavGroups.update((prev) => {
+      const next = { ...prev, [groupId]: !this.isNavGroupOpen(groupId) };
+      this.persistNavGroupsPref(next);
+      return next;
+    });
+  }
+
+  private ensureActiveNavGroupOpen(): void {
+    const url = this.router.url.split('?')[0];
+    for (const group of this.visibleNavGroups()) {
+      const hit = group.sections.some((section) =>
+        section.items.some((item) =>
+          item.exact ? url === item.path : url === item.path || url.startsWith(`${item.path}/`),
+        ),
+      );
+      if (hit) {
+        this.expandedNavGroups.update((prev) => {
+          if (prev[group.id]) return prev;
+          const next = { ...prev, [group.id]: true };
+          this.persistNavGroupsPref(next);
+          return next;
+        });
+        break;
+      }
+    }
+  }
+
+  private readNavGroupsPref(): Record<string, boolean> {
+    try {
+      const raw = localStorage.getItem(DashboardLayoutComponent.NAV_GROUPS_KEY);
+      if (!raw) return { music: true };
+      const parsed = JSON.parse(raw) as Record<string, boolean>;
+      return { music: true, ...parsed };
+    } catch {
+      return { music: true };
+    }
+  }
+
+  private persistNavGroupsPref(state: Record<string, boolean>): void {
+    try {
+      localStorage.setItem(DashboardLayoutComponent.NAV_GROUPS_KEY, JSON.stringify(state));
+    } catch {
+      /* ignore */
+    }
   }
 
   ngOnDestroy() {

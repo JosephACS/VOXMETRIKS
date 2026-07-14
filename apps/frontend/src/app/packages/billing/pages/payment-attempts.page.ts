@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="payment-attempts-page">
+    <div class="vx-enterprise payment-attempts-page">
       <h1>{{ 'billing.paymentAttempts.title' | t:lang() }}</h1>
       @if (attempts.length) {
         <table class="data-table">

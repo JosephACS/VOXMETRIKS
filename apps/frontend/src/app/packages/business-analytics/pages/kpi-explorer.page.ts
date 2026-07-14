@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="kpi-explorer">
+    <div class="vx-enterprise kpi-explorer">
       <a routerLink="/business-analytics">← Dashboard</a>
       <h1>{{ 'businessAnalytics.kpis.title' | t:lang() }}</h1>
       @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }

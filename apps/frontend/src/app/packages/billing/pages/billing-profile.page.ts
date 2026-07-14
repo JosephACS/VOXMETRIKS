@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="billing-profile-page">
+    <div class="vx-enterprise billing-profile-page">
       <h1>{{ 'billing.profile.title' | t:lang() }}</h1>
       @if (profile) {
         <div class="profile-card">

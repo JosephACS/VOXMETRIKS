@@ -35,28 +35,50 @@
     </div>
 
     <nav class="sidebar-nav" data-testid="app-sidebar-nav">
-      @for (section of visibleNavSections(); track section.id) {
-        <div class="nav-section">
-          <span class="nav-section-label">
-            {{ section.title }}
-            @if (section.id === 'data' && isEngineerRole()) {
-              <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t:lang() }}</span>
-            }
-          </span>
-          @for (item of section.items; track item.path) {
-            <a
-              class="nav-item"
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: item.exact }"
-              [title]="item.label"
-              [attr.aria-label]="item.label"
-              (click)="closeSidebar()"
-            >
-              <span class="nav-icon" [innerHTML]="safeSvg(item.icon)"></span>
-              <span class="nav-label">{{ item.label }}</span>
-              <span class="nav-indicator"></span>
-            </a>
+      @for (group of visibleNavGroups(); track group.id) {
+        <div class="nav-group" [class.is-open]="isNavGroupOpen(group.id)">
+          <button
+            type="button"
+            class="nav-group-toggle"
+            (click)="toggleNavGroup(group.id, $event)"
+            [attr.aria-expanded]="isNavGroupOpen(group.id)"
+            [title]="group.title"
+          >
+            <span class="nav-group-title">{{ group.title }}</span>
+            <span class="nav-group-chevron" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </button>
+          @if (isNavGroupOpen(group.id) || sidebarCollapsed()) {
+            <div class="nav-group-body">
+              @for (section of group.sections; track section.id) {
+                <div class="nav-section">
+                  <span class="nav-section-label">
+                    {{ section.title }}
+                    @if (section.id === 'data' && isEngineerRole()) {
+                      <span class="role-badge role-badge--engineer role-badge--compact">{{ 'shell.engineerSection' | t:lang() }}</span>
+                    }
+                  </span>
+                  @for (item of section.items; track item.path) {
+                    <a
+                      class="nav-item"
+                      [routerLink]="item.path"
+                      routerLinkActive="active"
+                      [routerLinkActiveOptions]="{ exact: item.exact }"
+                      [title]="item.label"
+                      [attr.aria-label]="item.label"
+                      (click)="closeSidebar()"
+                    >
+                      <span class="nav-icon" [innerHTML]="safeSvg(item.icon)"></span>
+                      <span class="nav-label">{{ item.label }}</span>
+                      <span class="nav-indicator"></span>
+                    </a>
+                  }
+                </div>
+              }
+            </div>
           }
         </div>
       }
