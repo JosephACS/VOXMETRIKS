@@ -62,7 +62,7 @@ export class BizRecommendationsPage implements OnInit {
   orgId: number | null = null;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.load();
   }
 

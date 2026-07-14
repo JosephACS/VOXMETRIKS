@@ -21,6 +21,14 @@ REPO_ROOT = BACKEND.parent.parent
 WAREHOUSE_DB = REPO_ROOT / "data" / "warehouse" / "voxmetrik.duckdb"
 sys.path.insert(0, str(BACKEND))
 
+# Session-scoped Settings override (set by ``_configure_test_database``).
+from tests.db_isolation import (
+    bind_test_db,
+    clear_session_settings,
+    remember_session_settings,
+    restore_session_db,
+)
+
 os.environ.setdefault("AUTH_RATE_LIMIT", "0")
 os.environ.setdefault("GLOBAL_RATE_LIMIT", "0")
 os.environ.setdefault("LOG_TO_FILES", "false")
@@ -30,6 +38,11 @@ os.environ["EMAIL_PROVIDER"] = "console"
 os.environ["VOXMETRIKS_TEST_ISOLATION"] = "1"
 # Demo orgs stay hidden in list APIs during tests unless a test opts in.
 os.environ.setdefault("SHOW_DEMO_ORGANIZATIONS", "false")
+
+
+# Re-export for convenience (tests should prefer ``tests.db_isolation``).
+__all__ = ["bind_test_db", "restore_session_db"]
+
 
 
 def _init_test_database(db_path: Path) -> None:
@@ -148,6 +161,9 @@ def _init_test_database(db_path: Path) -> None:
     from app.packages.contracts.infrastructure.schema import ensure_commercial_contract_tables
     from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
     from app.packages.billing.infrastructure.schema import ensure_billing_tables
+    from app.packages.personal_subscriptions.infrastructure.schema import (
+        ensure_personal_subscription_tables,
+    )
     from app.packages.artists.infrastructure.schema import ensure_artist_tables
     from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
     from app.packages.campaigns.infrastructure.schema import ensure_campaign_tables
@@ -165,6 +181,7 @@ def _init_test_database(db_path: Path) -> None:
     ensure_commercial_contract_tables(conn)
     ensure_subscription_tables(conn)
     ensure_billing_tables(conn)
+    ensure_personal_subscription_tables(conn)
     ensure_artist_tables(conn)
     ensure_catalog_rights_tables(conn)
     ensure_campaign_tables(conn)
@@ -185,20 +202,26 @@ def _configure_test_database() -> None:
     assert db_path.resolve() != WAREHOUSE_DB.resolve(), (
         f"Refusing to use warehouse DB for pytest: {WAREHOUSE_DB}"
     )
-    os.environ["db_path"] = str(db_path)
-    os.environ["RUN_ETL_ON_BOOT"] = "never"
-    os.environ["SKIP_SYSTEM_BOOT"] = "1"
-    from app.core.config import get_settings
+    # Import config first so module-level dotenv loading finishes, then force
+    # the pytest DB path (blank ``DB_PATH=`` in .env must not win).
+    from app.core import config as config_module
     from app.core.database import close_read_pool
     from app.db.duckdb_client import shutdown_duckdb_client
 
-    get_settings.cache_clear()
+    os.environ["DB_PATH"] = str(db_path)
+    os.environ["db_path"] = str(db_path)
+    os.environ["RUN_ETL_ON_BOOT"] = "never"
+    os.environ["SKIP_SYSTEM_BOOT"] = "1"
+    # Session override survives fixtures that call ``get_settings.cache_clear()``.
+    forced = config_module.Settings(db_path=str(db_path))
+    remember_session_settings(forced)
+    config_module.set_settings_override(forced)
     shutdown_duckdb_client()
     close_read_pool()
     _init_test_database(db_path)
 
     # Re-assert after settings load.
-    resolved = Path(get_settings().db_path_resolved).resolve()
+    resolved = Path(config_module.get_settings().db_path_resolved).resolve()
     assert resolved == db_path.resolve(), (
         f"pytest DB mismatch: settings={resolved} expected={db_path.resolve()}"
     )
@@ -208,14 +231,24 @@ def _configure_test_database() -> None:
 
     shutdown_duckdb_client()
     close_read_pool()
-    get_settings.cache_clear()
+    clear_session_settings()
+    config_module.set_settings_override(None)
+    config_module.get_settings.cache_clear()
     shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@pytest.fixture(autouse=True)
+def _restore_session_settings_after_test() -> None:
+    """After each test, restore session Settings so the shared TestClient keeps working."""
+    yield
+    restore_session_db()
 
 
 @pytest.fixture(scope="session")
 def client() -> TestClient:
     from app.main import app
 
+    restore_session_db()
     with TestClient(app) as test_client:
         yield test_client
 

@@ -53,6 +53,15 @@ def add_favorite(conn: duckdb.DuckDBPyConnection, user_id: int, track_id: int) -
     ).fetchone()
     if dup:
         return True
+    from app.packages.personal_subscriptions.application.entitlements import (
+        assert_can_add_favorite,
+    )
+    from app.packages.personal_subscriptions.domain.errors import EntitlementLimitError
+
+    try:
+        assert_can_add_favorite(conn, user_id)
+    except EntitlementLimitError as exc:
+        raise ValueError(str(exc)) from exc
     conn.execute(
         "INSERT INTO app_favorite (user_id, track_id, added_at) VALUES (?, ?, ?)",
         [user_id, track_id, utc_now()],

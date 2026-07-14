@@ -113,22 +113,22 @@ export class PrivacyCenterPage implements OnInit {
   }
 
   load(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id;
+    const orgId = this.orgCtx.organizationId();
     this.loading = true;
-    this.api.myConsentRecords(orgId).subscribe({
+    this.api.myConsentRecords(orgId ?? undefined).subscribe({
       next: (r) => {
         this.consents = r;
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.message || 'Failed to load';
+        this.error = e?.error?.message || this.i18n.t('common.loadFailed');
         this.loading = false;
       },
     });
   }
 
   submitDsr(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id;
+    const orgId = this.orgCtx.organizationId();
     if (!orgId || this.dsrForm.invalid) {
       this.error = this.i18n.t('common.orgRequired');
       return;
@@ -140,7 +140,7 @@ export class PrivacyCenterPage implements OnInit {
         this.error = null;
       },
       error: (e) => {
-        this.error = e?.error?.message || 'Submit failed';
+        this.error = e?.error?.message || this.i18n.t('common.actionFailed');
       },
     });
   }

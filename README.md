@@ -11,7 +11,10 @@
 
 Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
 
-**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`. Royalties/Payouts: **OUT_OF_SCOPE**. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/).
+**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`.  
+**Suscripciones personales B2C (spec 029):** Free / Premium Individual / Duo / Familiar — `CLOSED_WITH_ACCEPTED_DEBT`. Separadas de planes empresariales.  
+Cuentas demo locales: [`docs/DEMO-ACCOUNTS.md`](docs/DEMO-ACCOUNTS.md) (`DEMO_ACCOUNT_PASSWORD`, seed opt-in).
+Royalties/Payouts: **OUT_OF_SCOPE**. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/) · [automation/specs/029-personal-music-subscriptions/](automation/specs/029-personal-music-subscriptions/).
 
 ---
 

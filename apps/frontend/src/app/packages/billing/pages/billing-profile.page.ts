@@ -141,7 +141,7 @@ export class BillingProfilePage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadProfile();
   }
@@ -151,7 +151,7 @@ export class BillingProfilePage implements OnInit {
       next: (p) => (this.profile = p),
       error: (e) => {
         if (e.status === 404) this.profile = null;
-        else this.error = e.error?.message ?? 'Error loading profile';
+        else this.error = e.error?.message ?? this.i18n.t('common.loadFailed');
       },
     });
   }
@@ -163,7 +163,7 @@ export class BillingProfilePage implements OnInit {
         this.profile = p;
         this.error = null;
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error creating profile'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),
     });
   }
 
@@ -173,7 +173,7 @@ export class BillingProfilePage implements OnInit {
         this.profile = p;
         this.editMode = false;
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error updating profile'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.updateFailed')),
     });
   }
 }

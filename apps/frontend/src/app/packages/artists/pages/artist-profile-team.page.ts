@@ -128,7 +128,7 @@ export class ArtistProfileTeamPage implements OnInit {
   }
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (this.orgId) {
       this.loadAssignments();
       this.loadTeam();

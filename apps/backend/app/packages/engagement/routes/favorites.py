@@ -32,7 +32,17 @@ def add(
     user_id: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
-    ok = add_favorite(conn, user_id, track_id)
+    try:
+        ok = add_favorite(conn, user_id, track_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "entitlement_limit",
+                "message": str(exc),
+                "cta": "/account/plans",
+            },
+        ) from exc
     if not ok:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
     row = conn.execute(

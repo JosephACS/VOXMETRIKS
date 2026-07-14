@@ -121,6 +121,15 @@ def create_playlist(
     description: Optional[str] = None,
 ) -> Dict[str, Any]:
     ensure_app_tables(conn)
+    from app.packages.personal_subscriptions.application.entitlements import (
+        assert_can_create_playlist,
+    )
+    from app.packages.personal_subscriptions.domain.errors import EntitlementLimitError
+
+    try:
+        assert_can_create_playlist(conn, user_id)
+    except EntitlementLimitError as exc:
+        raise ValueError(str(exc)) from exc
     new_id = _next_id(conn, "app_playlist")
     conn.execute(
         "INSERT INTO app_playlist (id, name, description, created_at, user_id) VALUES (?, ?, ?, ?, ?)",

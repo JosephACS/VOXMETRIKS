@@ -134,6 +134,35 @@ Abrir http://localhost:4200
 | `demo` o `demo@voxmetrik.io` | `demo123` | Usuario estándar |
 | `admin` o `admin@voxmetrik.io` | `admin123` | Engineer (+ `/elt-pipeline`, `/explorer`) |
 
+### Cuentas demo (B2C + B2B) — cierre integrado
+
+Guía completa (sin contraseñas): [`docs/DEMO-ACCOUNTS.md`](../docs/DEMO-ACCOUNTS.md)
+
+```bash
+cd apps/backend
+# limpia orgs/planes de pytest (no toca dim_track / catálogo musical)
+python scripts/cleanup_test_organizations.py --apply --retire-test-plans
+
+set VOXMETRIKS_SEED_DEMO_ACCOUNTS=1
+set DEMO_ACCOUNT_PASSWORD=TU_SECRETO_LOCAL
+python scripts/seed_integrated_demo.py
+# re-ejecutar = idempotente
+```
+
+Contraseña: variable **`DEMO_ACCOUNT_PASSWORD`** (solo hash en DB; placeholder en `.env.example`).
+
+| Username | Demostración | Rutas |
+|----------|--------------|-------|
+| `listener.free` | Free personal | `/home`, `/account/plans` |
+| `listener.premium` | Premium Individual | `/account/subscription`, `/account/billing` |
+| `household.owner` | Familiar + miembros | `/account/household` |
+| `platform.admin` | Catálogos / ops | `/platform-ops` |
+| `sales.manager` | CRM comercial | `/crm/*` |
+| `organization.owner` | Org Professional | `/organizations/*`, `/subscriptions/*` |
+| `finance.manager` | Billing org | `/billing/*` |
+
+Planes **personales** (`/account/*`) ≠ planes **empresariales** (`/subscriptions/*`).
+
 ---
 
 ## 7. Tests y smoke (opcional)

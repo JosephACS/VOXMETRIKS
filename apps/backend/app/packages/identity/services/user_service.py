@@ -139,6 +139,14 @@ def login(
     if not user["email_verified"]:
         # Caller maps this to a 403 so the UI can prompt for the code.
         return {"verification_required": True, "email": user["email"]}
+    try:
+        from app.packages.personal_subscriptions.application.use_cases import (
+            ensure_free_subscription,
+        )
+
+        ensure_free_subscription(conn, user_id)
+    except Exception:  # noqa: BLE001
+        pass
     if needs_rehash(row[3]):
         conn.execute(
             "UPDATE app_user SET password_hash = ? WHERE id = ?",
@@ -257,6 +265,14 @@ def verify_email(
     if not row:
         raise ValueError("user not found")
     user = _user_row_to_dict(row)
+    try:
+        from app.packages.personal_subscriptions.application.use_cases import (
+            ensure_free_subscription,
+        )
+
+        ensure_free_subscription(conn, int(user["id"]))
+    except Exception:  # noqa: BLE001 — Free assign must not block login
+        pass
     token = create_session(conn, int(row[0]), days=90)
     return {"token": token, "user": user}
 

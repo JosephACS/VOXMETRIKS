@@ -69,6 +69,10 @@ from app.packages.subscriptions.presentation.router import (
 )
 from app.packages.billing.infrastructure.schema import ensure_billing_tables
 from app.packages.billing.presentation.router import billing_router
+from app.packages.personal_subscriptions.infrastructure.schema import (
+    ensure_personal_subscription_tables,
+)
+from app.packages.personal_subscriptions.presentation.router import personal_router
 from app.packages.artists.infrastructure.schema import ensure_artist_tables
 from app.packages.artists.presentation.router import artists_profiles_router
 from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
@@ -93,10 +97,12 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    db_path = settings.db_path_resolved
+    # Resolve settings at lifespan time so pytest can force DB_PATH after import.
+    runtime_settings = get_settings()
+    db_path = runtime_settings.db_path_resolved
     logger.info(
         "VOXMETRIK_V2 starting env=%s warehouse=%s",
-        settings.environment,
+        runtime_settings.environment,
         db_path,
     )
 
@@ -127,6 +133,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 ensure_subscription_tables(conn)
                 # Spec 019: Billing, Payments and Reconciliation
                 ensure_billing_tables(conn)
+                # Spec 029: Personal Music Subscriptions (B2C, user-owned)
+                ensure_personal_subscription_tables(conn)
                 # Spec 020: Artists and Team Management
                 ensure_artist_tables(conn)
                 # Spec 021: Catalog Rights and Contracts
@@ -246,6 +254,7 @@ def create_app() -> FastAPI:
     application.include_router(addons_router, prefix="/api/v1")
     application.include_router(subscriptions_router, prefix="/api/v1")
     application.include_router(billing_router, prefix="/api/v1")
+    application.include_router(personal_router, prefix="/api/v1")
     application.include_router(artists_profiles_router, prefix="/api/v1")
     application.include_router(catalog_rights_router, prefix="/api/v1")
     application.include_router(campaigns_router, prefix="/api/v1")

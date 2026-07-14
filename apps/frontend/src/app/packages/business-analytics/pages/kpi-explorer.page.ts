@@ -89,9 +89,8 @@ export class KpiExplorerPage implements OnInit {
   orgName: string | null = null;
 
   ngOnInit(): void {
-    const org = this.orgCtx.activeOrganization();
-    this.orgId = org?.id ?? null;
-    this.orgName = org?.display_name ?? null;
+    this.orgId = this.orgCtx.organizationId();
+    this.orgName = this.orgCtx.activeOrganization()?.display_name ?? null;
     if (!this.orgId) return;
     this.load();
   }

@@ -132,7 +132,7 @@ export class ReportDetailPage implements OnInit {
   id = 0;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.orgId && this.id) this.reload();
     else this.error = this.i18n.t('common.orgRequiredContext');

@@ -111,9 +111,9 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'businessAnalytics.alerts.severity' | t:lang()">
               <select [(ngModel)]="riskSeverity" name="riskSeverity" class="select">
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
+                <option value="low">{{ 'severity.low' | t:lang() }}</option>
+                <option value="medium">{{ 'severity.medium' | t:lang() }}</option>
+                <option value="high">{{ 'severity.high' | t:lang() }}</option>
               </select>
             </app-enterprise-form-field>
             <div class="form-grid__actions">
@@ -245,7 +245,7 @@ export class CsDashboardPage implements OnInit {
   success = '';
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.refresh();
   }
 
@@ -282,7 +282,7 @@ export class CsDashboardPage implements OnInit {
             this.success = this.i18n.t('customerSuccess.dashboard.healthRefreshed');
           },
           error: (e) => {
-            this.error = e?.error?.detail?.message || 'Dashboard denied or failed';
+            this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.dashboardFailed');
             this.loading = false;
             this.busy = false;
           },
@@ -302,11 +302,11 @@ export class CsDashboardPage implements OnInit {
     this.api.createOnboarding(this.orgId).subscribe({
       next: () => {
         this.busy = false;
-        this.success = 'Onboarding created.';
+        this.success = this.i18n.t('customerSuccess.dashboard.onboardingCreated');
         this.refresh();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Onboarding failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.onboardingFailed');
         this.busy = false;
       },
     });
@@ -318,11 +318,11 @@ export class CsDashboardPage implements OnInit {
     this.api.evaluateRenewal(this.orgId).subscribe({
       next: () => {
         this.busy = false;
-        this.success = 'Renewal evaluated.';
+        this.success = this.i18n.t('customerSuccess.dashboard.renewalEvaluated');
         this.refresh();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Renewal failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.renewalFailed');
         this.busy = false;
       },
     });
@@ -335,11 +335,11 @@ export class CsDashboardPage implements OnInit {
       next: () => {
         this.riskTitle = '';
         this.busy = false;
-        this.success = 'Risk created.';
+        this.success = this.i18n.t('customerSuccess.dashboard.riskCreated');
         this.loadLists(this.orgId!);
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Create risk failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.riskFailed');
         this.busy = false;
       },
     });
@@ -348,14 +348,15 @@ export class CsDashboardPage implements OnInit {
   assignIntervention(riskId: number): void {
     if (!this.orgId) return;
     this.busy = true;
-    this.api.createIntervention(this.orgId, `Intervention for risk #${riskId}`, riskId).subscribe({
+    const title = this.i18n.t('customerSuccess.dashboard.interventionTitle', { id: riskId });
+    this.api.createIntervention(this.orgId, title, riskId).subscribe({
       next: () => {
         this.busy = false;
-        this.success = 'Intervention assigned.';
+        this.success = this.i18n.t('customerSuccess.dashboard.interventionAssigned');
         this.loadLists(this.orgId!);
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Intervention failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.interventionFailed');
         this.busy = false;
       },
     });
@@ -367,11 +368,11 @@ export class CsDashboardPage implements OnInit {
     this.api.completeIntervention(this.orgId, id).subscribe({
       next: () => {
         this.busy = false;
-        this.success = 'Intervention completed.';
+        this.success = this.i18n.t('customerSuccess.dashboard.interventionCompleted');
         this.loadLists(this.orgId!);
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Complete failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.completeFailed');
         this.busy = false;
       },
     });
@@ -384,11 +385,11 @@ export class CsDashboardPage implements OnInit {
       next: () => {
         this.expansionTitle = '';
         this.busy = false;
-        this.success = 'Expansion created.';
+        this.success = this.i18n.t('customerSuccess.dashboard.expansionCreated');
         this.loadLists(this.orgId!);
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Expansion failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.expansionFailed');
         this.busy = false;
       },
     });

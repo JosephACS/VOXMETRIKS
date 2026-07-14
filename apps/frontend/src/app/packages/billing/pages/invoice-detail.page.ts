@@ -42,7 +42,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <app-enterprise-status-badge [status]="invoice.status" />
           </app-enterprise-page-header>
         @if (invoice.status === 'past_due') {
-          <div class="alert alert--danger">
+          <div class="alert alert--warn" role="status">
             {{ 'billing.invoiceDetail.pastDueAlert' | t:lang() }}
           </div>
         }
@@ -92,14 +92,16 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           <span class="badge badge--mock">{{ 'billing.invoiceDetail.mockBadge' | t:lang() }}</span>
         <p class="muted">{{ 'billing.invoiceDetail.mockHint' | t:lang() }}</p>
         @if (attempts.length) {
-          <div class="simulate-bar">
-            <label for="mock-scenario">{{ 'billing.invoiceDetail.mockResult' | t:lang() }}</label>
-            <select id="mock-scenario" [(ngModel)]="selectedScenario">
-              @for (s of mockScenarios; track s) {
-                <option [value]="s">{{ s }}</option>
-              }
-            </select>
+          <div class="form-grid">
+            <app-enterprise-form-field [label]="'billing.invoiceDetail.mockResult' | t:lang()">
+              <select id="mock-scenario" class="select" [(ngModel)]="selectedScenario">
+                @for (s of mockScenarios; track s) {
+                  <option [value]="s">{{ ('billing.mock.' + s) | t:lang() }}</option>
+                }
+              </select>
+            </app-enterprise-form-field>
           </div>
+          <app-enterprise-data-table>
           <table class="data-table">
             <thead>
               <tr>
@@ -114,13 +116,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 <tr>
                   <td>{{ a.id }} @if (a.is_mock) { <span class="badge badge--mock">[{{ 'common.mock' | t:lang() }}]</span> }</td>
                   <td>{{ a.amount | localeMoney:a.currency }}</td>
-                  <td>
-                    <span [class.ok]="a.status === 'succeeded'"
-                          [class.err]="a.status === 'failed'"
-                          [class.warn]="a.status === 'processing'">
-                      {{ a.status | statusLabel }}
-                    </span>
-                  </td>
+                  <td><app-enterprise-status-badge [status]="a.status" /></td>
                   <td class="actions">
                     @if (a.status === 'created' || a.status === 'processing') {
                       <button type="button" class="btn btn--danger" [disabled]="busy"
@@ -139,17 +135,23 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               }
             </tbody>
           </table>
+          </app-enterprise-data-table>
         } @else {
-          <p class="empty-state">{{ 'billing.invoiceDetail.noAttempts' | t:lang() }}</p>
-          @if (invoice.status === 'issued' || invoice.status === 'past_due' || invoice.status === 'partially_paid') {
-            <button type="button" class="btn btn--primary" [disabled]="busy"
-              (click)="createAttempt()">{{ 'billing.invoiceDetail.createAttempt' | t:lang() }}</button>
-          }
+          <app-enterprise-empty-state
+            [title]="'billing.invoiceDetail.noAttempts' | t:lang()"
+            [ctaLabel]="
+              invoice.status === 'issued' || invoice.status === 'past_due' || invoice.status === 'partially_paid'
+                ? ('billing.invoiceDetail.createAttempt' | t:lang())
+                : undefined
+            "
+            (ctaClick)="createAttempt()"
+          />
         }
         </app-enterprise-section-card>
 
         <app-enterprise-section-card [title]="'billing.invoiceDetail.lineItems' | t:lang()">
         @if (items.length) {
+          <app-enterprise-data-table>
           <table class="data-table">
             <thead>
               <tr>
@@ -170,8 +172,9 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               }
             </tbody>
           </table>
+          </app-enterprise-data-table>
         } @else {
-          <p class="empty-state">{{ 'billing.invoiceDetail.noLines' | t:lang() }}</p>
+          <app-enterprise-empty-state [title]="'billing.invoiceDetail.noLines' | t:lang()" />
         }
         </app-enterprise-section-card>
         @if (error) {
@@ -217,7 +220,7 @@ export class InvoiceDetailPage implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) {
       this.error = this.i18n.t('common.orgRequiredContext');
       return;

@@ -81,11 +81,11 @@ export class PaymentAttemptsPage implements OnInit {
   orgId: number | null = null;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.api.listPaymentAttempts(this.orgId!).subscribe({
       next: (res) => (this.attempts = res.items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading payment attempts'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
     });
   }
 }

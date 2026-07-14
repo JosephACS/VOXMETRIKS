@@ -15,6 +15,7 @@ import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-campaign-detail',
@@ -236,6 +237,7 @@ export class CampaignDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
   private orgCtx = inject(OrganizationContextService);
+  private confirmDlg = inject(ConfirmDialogService);
 
   campaign: Campaign | null = null;
   budget: CampaignBudget | null = null;
@@ -261,13 +263,13 @@ export class CampaignDetailPage implements OnInit {
 
   ngOnInit(): void {
     this.campaignId = Number(this.route.snapshot.paramMap.get('id'));
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.load();
   }
 
   load(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    const orgId = this.orgCtx.organizationId();
     this.orgId = orgId;
     if (orgId == null) return;
     this.loading = true;
@@ -378,10 +380,19 @@ export class CampaignDetailPage implements OnInit {
     });
   }
 
-  decide(approvalId: number, approved: boolean): void {
+  async decide(approvalId: number, approved: boolean): Promise<void> {
     const orgId = this.orgId;
     if (orgId == null) return;
-    if (!approved && !confirm(this.i18n.t('campaigns.detail.rejectApprovalConfirm'))) return;
+    if (!approved) {
+      const ok = await this.confirmDlg.open({
+        title: this.i18n.t('common.confirm'),
+        message: this.i18n.t('campaigns.detail.rejectApprovalConfirm'),
+        confirmLabel: this.i18n.t('campaigns.detail.reject'),
+        cancelLabel: this.i18n.t('common.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
     this.busy = true;
     this.api
       .decideApproval(orgId, approvalId, {

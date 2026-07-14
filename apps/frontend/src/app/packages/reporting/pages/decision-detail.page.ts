@@ -103,7 +103,7 @@ export class DecisionDetailPage implements OnInit {
   error = '';
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.orgId && this.id) this.reload();
   }

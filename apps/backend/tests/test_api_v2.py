@@ -157,6 +157,9 @@ def api_v2_db(tmp_path, monkeypatch):
     conn2.close()
 
     monkeypatch.setenv("DB_PATH", str(db_path))
+    from tests.db_isolation import bind_test_db, restore_session_db
+
+    bind_test_db(db_path)
     get_settings.cache_clear()
 
     from app.core.database import close_read_pool, open_read_pool
@@ -167,7 +170,7 @@ def api_v2_db(tmp_path, monkeypatch):
     yield db_path
     shutdown_duckdb_client()
     close_read_pool()
-    get_settings.cache_clear()
+    restore_session_db()
     # Restore session warehouse read pool for subsequent tests.
     try:
         open_read_pool(get_settings().db_path_resolved)

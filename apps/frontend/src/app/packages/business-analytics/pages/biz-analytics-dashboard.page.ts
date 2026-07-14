@@ -179,7 +179,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
   }
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.load();
   }
 

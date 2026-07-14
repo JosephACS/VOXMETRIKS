@@ -94,7 +94,7 @@ export class ManualTransferPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
   }
 
   submit(): void {

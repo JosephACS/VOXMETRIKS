@@ -89,7 +89,7 @@ export class LedgerPage implements OnInit {
   orgId: number | null = null;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadLedger();
   }
@@ -103,7 +103,7 @@ export class LedgerPage implements OnInit {
   loadLedger(): void {
     this.api.getLedger(this.orgId!, { entry_type: this.typeFilter || undefined }).subscribe({
       next: (res) => (this.entries = res.items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading ledger'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
     });
   }
 

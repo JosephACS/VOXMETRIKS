@@ -6,6 +6,7 @@ import { CustomerSuccessApiService } from '../services/customer-success-api.serv
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
 @Component({
@@ -30,7 +31,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <app-enterprise-error-state [message]="error" />
           }
           @if (success) {
-            <p class="success">{{ success }}</p>
+            <div class="alert alert--success" role="status">{{ success }}</div>
           }
 
           <app-enterprise-page-header [title]="$any(caseData).subject || ('common.notAvailable' | t:lang())">
@@ -49,25 +50,41 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
           <app-enterprise-section-card [title]="'support.detail.messages' | t:lang()">
             @if (messages.length === 0) {
-              <p class="muted">{{ 'support.detail.noMessages' | t:lang() }}</p>
+              <app-enterprise-empty-state [title]="'support.detail.noMessages' | t:lang()" />
             } @else {
               <ul class="ent-list">
                 @for (m of messages; track $index) {
                   <li [class.internal]="$any(m).is_internal">
-                    {{ $any(m).is_internal ? '[internal] ' : '' }}{{ $any(m).body || ('common.notAvailable' | t:lang()) }}
+                    @if ($any(m).is_internal) {
+                      <app-enterprise-status-badge
+                        status="internal"
+                        [label]="'support.detail.internalTag' | t:lang()"
+                      />
+                    }
+                    {{ $any(m).body || ('common.notAvailable' | t:lang()) }}
                   </li>
                 }
               </ul>
             }
             <div class="form-grid">
               <app-enterprise-form-field [label]="'support.detail.messagePlaceholder' | t:lang()">
-                <input [(ngModel)]="body" class="input" />
+                <input [(ngModel)]="body" class="input" name="body" />
               </app-enterprise-form-field>
               <div class="form-grid__actions">
-                <button type="button" class="btn btn--primary" (click)="send(false)" [disabled]="busy || !body.trim()">
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  (click)="send(false)"
+                  [disabled]="busy || !body.trim()"
+                >
                   {{ 'support.detail.send' | t:lang() }}
                 </button>
-                <button type="button" class="btn btn--secondary" (click)="send(true)" [disabled]="busy || !body.trim()">
+                <button
+                  type="button"
+                  class="btn btn--secondary"
+                  (click)="send(true)"
+                  [disabled]="busy || !body.trim()"
+                >
                   {{ 'support.detail.internalNote' | t:lang() }}
                 </button>
               </div>
@@ -85,6 +102,7 @@ export class SupportDetailPage implements OnInit {
   private api = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
   private route = inject(ActivatedRoute);
+  private confirmDlg = inject(ConfirmDialogService);
   orgId: number | null = null;
   id = 0;
   caseData: unknown = null;
@@ -96,7 +114,7 @@ export class SupportDetailPage implements OnInit {
   busy = false;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.orgId && this.id) this.reload();
     else this.error = this.i18n.t('common.orgRequiredContext');
@@ -113,7 +131,7 @@ export class SupportDetailPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
+        this.error = e?.error?.detail?.message || this.i18n.t('common.loadFailed');
         this.loading = false;
       },
     });
@@ -137,11 +155,13 @@ export class SupportDetailPage implements OnInit {
       next: () => {
         this.body = '';
         this.busy = false;
-        this.success = internal ? this.i18n.t('support.detail.internalSent') : this.i18n.t('support.detail.messageSent');
+        this.success = internal
+          ? this.i18n.t('support.detail.internalSent')
+          : this.i18n.t('support.detail.messageSent');
         this.reload();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
+        this.error = e?.error?.detail?.message || this.i18n.t('common.actionFailed');
         this.busy = false;
       },
     });
@@ -159,16 +179,23 @@ export class SupportDetailPage implements OnInit {
         this.reload();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
+        this.error = e?.error?.detail?.message || this.i18n.t('common.actionFailed');
         this.busy = false;
       },
     });
   }
 
-  closeCase(): void {
+  async closeCase(): Promise<void> {
     const orgId = this.orgId;
     if (orgId == null) return;
-    if (!confirm(this.i18n.t('support.detail.closeConfirm'))) return;
+    const ok = await this.confirmDlg.open({
+      title: this.i18n.t('support.detail.closeTitle'),
+      message: this.i18n.t('support.detail.closeConfirm'),
+      confirmLabel: this.i18n.t('support.detail.close'),
+      cancelLabel: this.i18n.t('common.cancel'),
+      danger: true,
+    });
+    if (!ok) return;
     this.busy = true;
     this.error = '';
     this.api.close(orgId, this.id).subscribe({
@@ -178,7 +205,7 @@ export class SupportDetailPage implements OnInit {
         this.reload();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
+        this.error = e?.error?.detail?.message || this.i18n.t('common.actionFailed');
         this.busy = false;
       },
     });

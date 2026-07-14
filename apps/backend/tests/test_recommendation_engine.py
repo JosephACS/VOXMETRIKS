@@ -75,11 +75,14 @@ def engine_db(tmp_path, monkeypatch):
     )
     conn.close()
     monkeypatch.setenv("DB_PATH", str(db_path))
+    from tests.db_isolation import bind_test_db, restore_session_db
+
+    bind_test_db(db_path)
     get_settings.cache_clear()
     shutdown_duckdb_client()
     yield
     shutdown_duckdb_client()
-    get_settings.cache_clear()
+    restore_session_db()
 
 
 def test_popularity_min_max():

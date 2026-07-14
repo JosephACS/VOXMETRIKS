@@ -105,13 +105,13 @@ export class CampaignsListPage implements OnInit {
   createForm = this.fb.group({ name: ['', Validators.required], market: [''] });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.load();
   }
 
   load(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id;
+    const orgId = this.orgCtx.organizationId();
     if (!orgId) {
       this.orgId = null;
       return;
@@ -125,14 +125,14 @@ export class CampaignsListPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.message || 'Failed to load';
+        this.error = e?.error?.message || this.i18n.t('common.loadFailed');
         this.loading = false;
       },
     });
   }
 
   createCampaign(): void {
-    const orgId = this.orgCtx.activeOrganization()?.id;
+    const orgId = this.orgCtx.organizationId();
     if (!orgId || this.createForm.invalid) return;
     const v = this.createForm.value;
     this.api.create(orgId, { name: v.name!, market: v.market || undefined }).subscribe({
@@ -141,7 +141,7 @@ export class CampaignsListPage implements OnInit {
         this.load();
       },
       error: (e) => {
-        this.error = e?.error?.message || 'Create failed';
+        this.error = e?.error?.message || this.i18n.t('common.createFailed');
       },
     });
   }

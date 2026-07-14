@@ -40,8 +40,15 @@ _env_candidates = [
 for _env_path in _env_candidates:
     if _env_path.exists():
         load_dotenv(dotenv_path=str(_env_path), override=False)
+# Prefer project-root .env for non-empty keys only. Never clobber an already-set
+# (or intentionally empty) variable with a blank ``DB_PATH=`` line.
 if (_PROJECT_ROOT / ".env").exists():
-    load_dotenv(dotenv_path=str(_PROJECT_ROOT / ".env"), override=True)
+    from dotenv import dotenv_values
+
+    for _key, _val in (dotenv_values(str(_PROJECT_ROOT / ".env")) or {}).items():
+        if _val is None or not str(_val).strip():
+            continue
+        os.environ[_key] = str(_val)
 
 _ENV_FILES = tuple(str(p) for p in _env_candidates if p.exists())
 
@@ -53,6 +60,7 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
         populate_by_name=True,
+        env_ignore_empty=True,
     )
 
     # Runtime environment — "development" (default) or "production".
@@ -258,8 +266,8 @@ class Settings(BaseSettings):
 
     @property
     def db_path_resolved(self) -> Path:
-        # 1 — Explicit env/config override
-        if self.db_path.strip():
+        # 1 — Explicit env/config override (treat blank as unset — .env may set DB_PATH=)
+        if self.db_path and self.db_path.strip():
             return Path(self.db_path.strip())
 
         # 2 — Walk up from this file to find the project root
@@ -331,6 +339,26 @@ class Settings(BaseSettings):
         return self.jobs_enabled
 
 
+_settings_override: Settings | None = None
+
+
+def set_settings_override(settings: Settings | None) -> None:
+    """Test harness hook — mutable override so all ``from … import get_settings`` stays valid."""
+    global _settings_override
+    _settings_override = settings
+    _cached_settings.cache_clear()
+
+
 @lru_cache(maxsize=1)
-def get_settings() -> Settings:
+def _cached_settings() -> Settings:
     return Settings()
+
+
+def get_settings() -> Settings:
+    if _settings_override is not None:
+        return _settings_override
+    return _cached_settings()
+
+
+# Backward-compatible with call sites that do ``get_settings.cache_clear()``.
+get_settings.cache_clear = _cached_settings.cache_clear  # type: ignore[attr-defined]

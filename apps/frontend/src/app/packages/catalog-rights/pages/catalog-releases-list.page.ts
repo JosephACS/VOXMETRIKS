@@ -118,13 +118,13 @@ export class CatalogReleasesListPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.load();
   }
 
   load(): void {
-    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    const id = this.orgCtx.organizationId() ?? 0;
     this.orgId = id || null;
     if (!this.orgId) return;
     this.loading = true;
@@ -137,7 +137,7 @@ export class CatalogReleasesListPage implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        this.error = e.error?.message ?? 'Error loading releases';
+        this.error = e.error?.message ?? this.i18n.t('common.loadFailed');
       },
     });
   }
@@ -155,7 +155,7 @@ export class CatalogReleasesListPage implements OnInit {
           this.createForm.reset();
           this.load();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error creating release'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),
       });
   }
 }

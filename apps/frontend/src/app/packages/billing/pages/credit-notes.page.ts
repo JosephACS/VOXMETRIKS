@@ -118,7 +118,7 @@ export class CreditNotesPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadCreditNotes();
   }
@@ -126,7 +126,7 @@ export class CreditNotesPage implements OnInit {
   loadCreditNotes(): void {
     this.api.listCreditNotes(this.orgId!).subscribe({
       next: (res) => (this.creditNotes = res.items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading credit notes'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
     });
   }
 
@@ -137,14 +137,14 @@ export class CreditNotesPage implements OnInit {
         this.showForm = false;
         this.loadCreditNotes();
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error creating credit note'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),
     });
   }
 
   apply(id: number): void {
     this.api.applyCreditNote(this.orgId!, id).subscribe({
       next: () => this.loadCreditNotes(),
-      error: (e) => (this.error = e.error?.message ?? 'Error applying credit note'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.actionFailed')),
     });
   }
 }

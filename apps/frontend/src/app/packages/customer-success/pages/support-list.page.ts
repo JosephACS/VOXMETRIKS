@@ -104,7 +104,7 @@ export class SupportListPage implements OnInit {
   busy = false;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.reload();
   }
 
@@ -118,7 +118,7 @@ export class SupportListPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Failed to load cases';
+        this.error = e?.error?.detail?.message || this.i18n.t('support.list.loadFailed');
         this.loading = false;
       },
     });
@@ -134,7 +134,7 @@ export class SupportListPage implements OnInit {
         this.reload();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Create failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('support.list.createFailed');
         this.busy = false;
       },
     });

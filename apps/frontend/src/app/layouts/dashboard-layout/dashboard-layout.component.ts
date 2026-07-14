@@ -19,6 +19,7 @@ import { PlatformEventsService } from '../../core/services/platform-events.servi
 import { SafeHtml } from '@angular/platform-browser';
 import { OrgSelectorComponent } from '../../packages/organizations/components/org-selector.component';
 import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
+import { CrmContextService } from '../../packages/crm/services/crm-context.service';
 
 interface NavItemConfig {
   path: string;
@@ -79,6 +80,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);
   private platformEvents = inject(PlatformEventsService);
   private orgCtx = inject(OrganizationContextService);
+  private crmCtx = inject(CrmContextService);
 
   sidebarOpen = signal(false);
   sidebarCollapsed = signal(this.readCollapsedPref());
@@ -89,7 +91,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private static readonly NAV_GROUPS_KEY = 'voxmetrik_nav_groups_open';
 
   private readonly navGroupConfig: NavGroupConfig[] = [
-    { id: 'music', titleKey: 'nav.group.music', sectionIds: ['main', 'music', 'recommendations'] },
+    { id: 'music', titleKey: 'nav.group.music', sectionIds: ['main', 'music', 'personalAccount', 'recommendations'] },
     { id: 'analytics', titleKey: 'nav.group.analytics', sectionIds: ['analytics', 'data'] },
     { id: 'clients', titleKey: 'nav.group.clients', sectionIds: ['crm', 'customerSuccess'] },
     { id: 'finance', titleKey: 'nav.group.finance', sectionIds: ['subscriptions', 'billing'] },
@@ -174,6 +176,32 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         { path: '/playlists', labelKey: 'nav.playlists', icon: this.svgIcon('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>') },
         { path: '/liked', labelKey: 'nav.liked', icon: this.svgIcon('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>') },
         { path: '/history', labelKey: 'nav.history', icon: this.svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>') },
+      ],
+    },
+    {
+      id: 'personalAccount',
+      titleKey: 'nav.section.personalAccount',
+      items: [
+        {
+          path: '/account/subscription',
+          labelKey: 'nav.personal.subscription',
+          icon: this.svgIcon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+        },
+        {
+          path: '/account/plans',
+          labelKey: 'nav.personal.plans',
+          icon: this.svgIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'),
+        },
+        {
+          path: '/account/household',
+          labelKey: 'nav.personal.household',
+          icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        },
+        {
+          path: '/account/billing',
+          labelKey: 'nav.personal.billing',
+          icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
       ],
     },
     {
@@ -512,9 +540,49 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   });
 
   visibleNavSections = computed(() => {
+    // Tick permission/CRM signals so nav updates after bootstrap.
+    this.orgCtx.permissions();
+    this.orgCtx.hasOrganization();
+    this.crmCtx.hasCrmAccess();
+    this.crmCtx.permissions();
+
     const sections = this.navSections();
-    if (this.auth.hasEngineerAccess()) return sections;
-    return sections.filter((s) => s.id !== 'data');
+    const engineer = this.auth.hasEngineerAccess();
+    const hasOrg = this.orgCtx.hasOrganization();
+    const crm = this.crmCtx.hasCrmAccess();
+    const orgPerm = (code: string) => this.orgCtx.hasPermission(code);
+
+    return sections.filter((s) => {
+      if (s.id === 'data') return engineer;
+      // Always available in personal music mode
+      if (
+        s.id === 'main' ||
+        s.id === 'music' ||
+        s.id === 'personalAccount' ||
+        s.id === 'recommendations' ||
+        s.id === 'system'
+      ) {
+        return true;
+      }
+      // Org list / create: any authenticated user may open organizations shell
+      if (s.id === 'organizations') return true;
+      // CRM — platform sales roles only
+      if (s.id === 'crm') return crm;
+      // Enterprise finance / ops require active org context + permission
+      if (s.id === 'subscriptions') {
+        return hasOrg && (orgPerm('subscription.view') || engineer);
+      }
+      if (s.id === 'billing') {
+        return hasOrg && (orgPerm('billing.view') || orgPerm('invoice.view') || orgPerm('payment.view'));
+      }
+      if (s.id === 'customerSuccess') {
+        return hasOrg && (orgPerm('support.view') || orgPerm('organization.view'));
+      }
+      if (s.id === 'platformOps') {
+        return engineer || this.crmCtx.roles().includes('platform_admin');
+      }
+      return hasOrg;
+    });
   });
 
   visibleNavGroups = computed((): NavGroupView[] => {
@@ -554,6 +622,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     }
     this.platformEvents.start(this.destroyRef);
     void this.orgCtx.bootstrap();
+    void this.crmCtx.bootstrap();
     this.ensureActiveNavGroupOpen();
     this.router.events
       .pipe(

@@ -53,6 +53,12 @@ def get_user_history(
     limit: int = 25,
 ) -> Dict[str, Any]:
     """Actividad del usuario: sesiones, favoritos y eventos del warehouse."""
+    try:
+        from app.packages.personal_subscriptions.application.entitlements import history_cap
+
+        limit = history_cap(conn, user_id, limit)
+    except Exception:  # noqa: BLE001 — history must not fail if personal schema missing
+        limit = min(max(1, limit), 25)
     wh_user = _warehouse_user_id(user_id)
 
     sessions: List[Dict[str, Any]] = []

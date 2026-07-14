@@ -86,7 +86,7 @@ export class ReconciliationPage implements OnInit {
   orgId: number | null = null;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadPayments();
   }
@@ -94,21 +94,21 @@ export class ReconciliationPage implements OnInit {
   loadPayments(): void {
     this.api.listPayments(this.orgId!).subscribe({
       next: (res) => (this.payments = res.items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading payments'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
     });
   }
 
   settle(id: number): void {
     this.api.settlePayment(this.orgId!, id).subscribe({
       next: () => this.loadPayments(),
-      error: (e) => (this.error = e.error?.message ?? 'Error settling payment'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.actionFailed')),
     });
   }
 
   reconcile(id: number): void {
     this.api.reconcilePayment(this.orgId!, id).subscribe({
       next: () => this.loadPayments(),
-      error: (e) => (this.error = e.error?.message ?? 'Error reconciling payment'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.actionFailed')),
     });
   }
 }

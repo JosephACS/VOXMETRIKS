@@ -136,7 +136,7 @@ export class ArtistProfilesListPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.load();
   }
@@ -147,7 +147,7 @@ export class ArtistProfilesListPage implements OnInit {
   }
 
   load(): void {
-    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    const id = this.orgCtx.organizationId() ?? 0;
     this.orgId = id || null;
     if (!this.orgId) return;
     this.loading = true;

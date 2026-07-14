@@ -44,7 +44,17 @@ def create(
 ):
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="name cannot be empty")
-    return create_playlist(conn, user_id, body.name, body.description)
+    try:
+        return create_playlist(conn, user_id, body.name, body.description)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "entitlement_limit",
+                "message": str(exc),
+                "cta": "/account/plans",
+            },
+        ) from exc
 
 
 @router.get("/{playlist_id}", response_model=PlaylistDetail, summary="Get playlist with tracks")

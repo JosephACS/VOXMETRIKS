@@ -78,7 +78,7 @@ export class BizQualityPage implements OnInit {
   error = '';
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loading = true;
     this.api.listQuality(this.orgId).subscribe({
@@ -98,7 +98,7 @@ export class BizQualityPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Failed to load quality checks';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.loadFailed');
         this.loading = false;
       },
     });

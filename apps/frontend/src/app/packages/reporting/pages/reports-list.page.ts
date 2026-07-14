@@ -126,7 +126,7 @@ export class ReportsListPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || e?.message || 'Failed to load reports';
+        this.error = e?.error?.detail?.message || e?.message || this.i18n.t('common.loadFailed');
         this.loading = false;
       },
     });
@@ -157,7 +157,7 @@ export class ReportsListPage implements OnInit {
         });
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Create failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.createFailed');
         this.busy = false;
       },
     });

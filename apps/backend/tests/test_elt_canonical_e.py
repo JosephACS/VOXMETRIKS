@@ -33,10 +33,14 @@ def test_invoke_canonical_missing_script_reports_error(tmp_path: Path, monkeypat
     empty = tmp_path / "empty_root"
     empty.mkdir()
     monkeypatch.setenv("DB_PATH", str(tmp_path / "unused.duckdb"))
+    from tests.db_isolation import bind_test_db, restore_session_db
+
+    bind_test_db(tmp_path / "unused.duckdb")
     get_settings.cache_clear()
     outcome = invoke_canonical_elt(cwd=empty, db_path=tmp_path / "t.duckdb", timeout_s=5)
     assert outcome["status"] == "error"
     assert "canonical_elt_script_not_found" in outcome["errors"]
+    restore_session_db()
 
 
 @pytest.fixture()
@@ -82,11 +86,14 @@ def boot_db_validate(tmp_path, monkeypatch):
 
     monkeypatch.setenv("DB_PATH", str(db_path))
     monkeypatch.setenv("RUN_ETL_ON_BOOT", "validation-only")
+    from tests.db_isolation import bind_test_db, restore_session_db
+
+    bind_test_db(db_path)
     get_settings.cache_clear()
     shutdown_duckdb_client()
     yield db_path
     shutdown_duckdb_client()
-    get_settings.cache_clear()
+    restore_session_db()
 
 
 def test_boot_validation_only_does_not_run_etl(boot_db_validate) -> None:

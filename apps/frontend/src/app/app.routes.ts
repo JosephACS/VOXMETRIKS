@@ -15,6 +15,7 @@ import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
 import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
 import { REPORTING_ROUTES } from './packages/reporting/reporting.routes';
 import { CUSTOMER_SUCCESS_ROUTES } from './packages/customer-success/customer-success.routes';
+import { PERSONAL_ACCOUNT_ROUTES } from './packages/personal-account/personal-account.routes';
 
 export const APP_ROUTES: Routes = [
   {
@@ -253,6 +254,7 @@ export const APP_ROUTES: Routes = [
       ...PLATFORM_OPS_ROUTES,
       ...REPORTING_ROUTES,
       ...CUSTOMER_SUCCESS_ROUTES,
+      ...PERSONAL_ACCOUNT_ROUTES,
       {
         path: 'error/401',
         title: 'errors.401.title',

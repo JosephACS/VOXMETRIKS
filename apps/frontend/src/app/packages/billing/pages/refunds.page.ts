@@ -117,7 +117,7 @@ export class RefundsPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadRefunds();
   }
@@ -125,7 +125,7 @@ export class RefundsPage implements OnInit {
   loadRefunds(): void {
     this.api.listRefunds(this.orgId!).subscribe({
       next: (res) => (this.refunds = res.items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading refunds'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
     });
   }
 
@@ -136,7 +136,7 @@ export class RefundsPage implements OnInit {
         this.showForm = false;
         this.loadRefunds();
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error creating refund'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),
     });
   }
 }

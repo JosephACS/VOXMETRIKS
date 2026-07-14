@@ -169,7 +169,7 @@ export class RightsContractsListPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     const assetIdParam = this.route.snapshot.queryParamMap.get('asset_id');
     if (assetIdParam) {
       this.assetFilter = Number(assetIdParam);
@@ -197,7 +197,7 @@ export class RightsContractsListPage implements OnInit {
   }
 
   load(): void {
-    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    const id = this.orgCtx.organizationId() ?? 0;
     this.orgId = id || null;
     if (!this.orgId) return;
     this.loading = true;

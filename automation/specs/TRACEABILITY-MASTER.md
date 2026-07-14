@@ -1,13 +1,30 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 3.2.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-12  
-**Alcance:** Specs operativas `001`–`011` + fundamento **015** + **016–028** (incluye **024** Executive Reporting y **025** Customer Success & Support)  
-**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (reapertura documental 028 tras 024/025, 2026-07-12)  
+**Versión:** 3.3.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-14  
+**Alcance:** Specs operativas `001`–`011` + fundamento **015** + **016–029** (incluye **029** Personal Music Subscriptions)  
+**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (028)  
+**Línea B2C personal:** Spec **029** — `CLOSED_WITH_ACCEPTED_DEBT`  
 **Nota:** Numeración corregida — **024 ≠ Royalties**, **025 ≠ Payouts**. Royalties/Payouts quedan **OUT_OF_SCOPE** (specs futuras no numeradas).  
 **Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia  
 **Constitución vigente:** 2.0.0 (`.specify/memory/constitution.md`)
 
 Referencia: Constitución §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+
+### Personal Music Subscriptions — Spec 029 (cierre 2026-07-14)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `029-personal-music-subscriptions` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Alcance | B2C Free/Individual/Duo/Familiar separado de B2B Spec 018 |
+| Código | `packages/personal_subscriptions` BE · `packages/personal-account` FE |
+| API | `/api/v1/personal/*` |
+| Gates | pytest S029 · pytest full 799 · S028 golden · FE lint/unit/build |
+| feature.json | apunta a **029** |
+| Demo | `docs/DEMO-ACCOUNTS.md` · `seed_integrated_demo.py` · cleanup test orgs |
+| Cierre integrado | B2C + B2B listo para demostración local (2026-07-14) |
+
+Debt: Playwright NOT_VERIFIED; MOCK pay/email; queue avanzado soft-flag; renewals on-read.
 
 ### Enterprise Integration and Final Validation — Spec 028 (reopen 2026-07-12)
 
@@ -16,11 +33,11 @@ Referencia: Constitución §12. Documento canónico transversal; las specs indiv
 | Spec | `028-enterprise-integration-and-final-validation` |
 | Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
 | Estado del sistema | **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** |
-| Alcance | Integración 024/025 + golden path ampliado + trazabilidad corregida |
+| Alcance | Integración 024/025 + golden path ampliado + trazabilidad corregida · **integración documental B2C+B2B vía Spec 029** |
 | Gates | golden-path pytest PASS · reporting R* · CS S* · FE lint/unit/build |
 | Código | `test_enterprise_golden_path_s028.py` · packages `reporting`, `customer_success` |
 | Evidencia | `automation/specs/028-enterprise-integration-and-final-validation/` |
-| feature.json | apunta a **028** |
+| feature.json | historial 028; activo **029** mientras se cierra personal |
 
 Debt: Playwright/Docker NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; royalties/payouts OUT_OF_SCOPE.
 

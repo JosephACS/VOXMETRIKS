@@ -27,8 +27,8 @@ export class ConfirmDialogService {
       this.resolver = resolve;
       this.state.set({
         ...options,
-        confirmLabel: options.confirmLabel ?? 'OK',
-        cancelLabel: options.cancelLabel ?? 'Cancel',
+        confirmLabel: options.confirmLabel ?? 'Confirmar',
+        cancelLabel: options.cancelLabel ?? 'Cancelar',
         danger: options.danger ?? false,
       });
     });

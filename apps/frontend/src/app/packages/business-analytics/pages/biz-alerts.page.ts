@@ -72,7 +72,7 @@ export class BizAlertsPage implements OnInit {
   orgId: number | null = null;
 
   ngOnInit(): void {
-    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.api.listAlerts(this.orgId).subscribe((a) => (this.alerts = a));
   }
