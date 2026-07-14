@@ -1,11 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { OrganizationContextService } from '../services/organization-context.service';
-
+import { Organization } from '../models/organization.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+
 @Component({
   selector: 'app-org-none-page',
   standalone: true,
@@ -19,18 +20,26 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
         <p>{{ 'organizations.none.hint' | t:lang() }}</p>
         <div class="org-actions">
           <a class="org-btn" routerLink="/organizations/new">{{ 'organizations.create.title' | t:lang() }}</a>
-          <a class="org-btn org-btn--ghost" routerLink="/invitations/accept">{{ 'organizations.acceptInvite.title' | t:lang() }}</a>
-          <a class="org-btn org-btn--ghost" routerLink="/discover">{{ 'organizations.none.personal' | t:lang() }}</a>
+          <a class="org-btn org-btn--ghost" routerLink="/invitations/accept">{{
+            'organizations.acceptInvite.title' | t:lang()
+          }}</a>
+          <a class="org-btn org-btn--ghost" routerLink="/discover">{{
+            'organizations.none.personal' | t:lang()
+          }}</a>
         </div>
       </div>
       @if (ctx.organizations().length) {
         <div class="org-card">
           <h2>{{ 'organizations.none.accessible' | t:lang() }}</h2>
-          <ul>
+          <ul class="org-none-list">
             @for (o of ctx.organizations(); track o.id) {
               <li>
-                {{ o.display_name }}
-                <span class="org-badge" [class.org-badge--suspended]="o.status !== 'active'">{{ o.status | statusLabel }}</span>
+                <button type="button" class="org-btn org-btn--ghost" (click)="activateOrg(o)">
+                  {{ o.display_name }}
+                </button>
+                <span class="org-badge" [class.org-badge--suspended]="o.status !== 'active'">{{
+                  o.status | statusLabel
+                }}</span>
               </li>
             }
           </ul>
@@ -44,8 +53,32 @@ export class OrgNonePageComponent implements OnInit {
   readonly lang = this.i18n.lang;
 
   readonly ctx = inject(OrganizationContextService);
+  private readonly router = inject(Router);
 
-  ngOnInit(): void {
-    if (this.ctx.status() === 'idle') void this.ctx.bootstrap();
+  async ngOnInit(): Promise<void> {
+    await this.ctx.ensureReady();
+    // Contradictory state: Demo selected / active but URL is /organizations/none.
+    // Leave personal-mode page only when there is a real active org id.
+    const id = this.ctx.organizationId();
+    if (id != null) {
+      await this.router.navigate(['/organizations', id, 'settings'], { replaceUrl: true });
+    }
+  }
+
+  async activateOrg(o: Organization): Promise<void> {
+    if (o.status === 'closed') {
+      await this.router.navigate(['/organizations/closed']);
+      return;
+    }
+    if (o.status === 'suspended_by_platform') {
+      await this.router.navigate(['/organizations/suspended']);
+      return;
+    }
+    try {
+      await this.ctx.activate(o.id);
+      await this.router.navigate(['/organizations', o.id, 'settings']);
+    } catch {
+      /* error surfaced on context */
+    }
   }
 }

@@ -192,8 +192,11 @@ describe('OrganizationContextService (I4)', () => {
     );
     await boot;
     expect(ctx.hasPermission('audit.view')).toBe(true);
+    expect(ctx.organizationId()).toBe(1);
 
     const act = ctx.activate(2);
+    // Previous org stays visible until activate succeeds (no contradictory empty selector).
+    expect(ctx.activeOrganization()?.id).toBe(1);
     const actReq = http.expectOne(`${base}/organizations/2/activate`);
     actReq.flush({
       context: 'active',
@@ -209,8 +212,63 @@ describe('OrganizationContextService (I4)', () => {
     ]);
     await act;
     expect(ctx.activeOrganization()?.id).toBe(2);
+    expect(ctx.organizationId()).toBe(2);
     expect(ctx.hasPermission('audit.view')).toBe(false);
     expect(ctx.hasPermission('organization.view')).toBe(true);
+  });
+
+  it('ensureReady shares in-flight bootstrap across concurrent callers', async () => {
+    const p1 = ctx.ensureReady();
+    const p2 = ctx.ensureReady();
+    flushBootstrap([], { context: 'none' });
+    await Promise.all([p1, p2]);
+    expect(ctx.hasOrganization()).toBe(false);
+    expect(ctx.organizationId()).toBeNull();
+    http.verify();
+  });
+
+  it('enterPersonalMode clears active org so selector cannot disagree with null id', async () => {
+    const boot = ctx.bootstrap();
+    flushBootstrap(
+      [
+        {
+          id: 1,
+          display_name: 'VOXMETRIKS Demo',
+          slug: 'voxmetriks-demo',
+          organization_type: 'label',
+          timezone: 'UTC',
+          default_currency: 'USD',
+          status: 'active',
+          created_by: 1,
+          created_at: '',
+          updated_at: '',
+        },
+      ],
+      {
+        context: 'active',
+        organization: {
+          id: 1,
+          display_name: 'VOXMETRIKS Demo',
+          slug: 'voxmetriks-demo',
+          organization_type: 'label',
+          timezone: 'UTC',
+          default_currency: 'USD',
+          status: 'active',
+          created_by: 1,
+          created_at: '',
+          updated_at: '',
+        },
+        roles: ['owner'],
+        permissions: ['organization.view'],
+      },
+    );
+    await boot;
+    expect(ctx.hasOrganization()).toBe(true);
+    ctx.enterPersonalMode();
+    expect(ctx.hasOrganization()).toBe(false);
+    expect(ctx.organizationId()).toBeNull();
+    expect(ctx.activeOrganization()).toBeNull();
+    expect(ctx.organizations().length).toBe(1);
   });
 });
 

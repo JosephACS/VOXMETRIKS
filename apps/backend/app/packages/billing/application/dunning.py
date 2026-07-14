@@ -293,6 +293,25 @@ class DunningUseCases:
             target_id=str(d.id), actor_user_id=actor_user_id, organization_id=organization_id,
             request_id=request_id,
         )
+        # Dunning recovery must restore subscription access (past_due → active).
+        sub_id = d.subscription_id
+        if sub_id is None:
+            row = self._conn.execute(
+                "SELECT subscription_id FROM app_invoice WHERE id = ? AND organization_id = ?",
+                [invoice_id, organization_id],
+            ).fetchone()
+            if row and row[0] is not None:
+                sub_id = int(row[0])
+        if sub_id is not None:
+            from app.packages.billing.application.orchestration import (
+                notify_subscription_recovered,
+            )
+            notify_subscription_recovered(
+                self._conn,
+                subscription_id=int(sub_id),
+                actor_user_id=actor_user_id,
+                request_id=request_id,
+            )
         return updated
 
     def apply_grace_expiry(

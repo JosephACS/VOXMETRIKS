@@ -4,49 +4,71 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Payment } from '../models/billing.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-manual-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise manual-transfer-page">
-      <h1>{{ 'billing.manualTransfer.title' | t:lang() }}</h1>
-      <p class="subtitle">MOCK / academic transfer recording — not a real bank payment.</p>
       @if (!orgId) {
-        <p class="error">Select an organization context.</p>
+        <app-enterprise-org-required />
       } @else {
-        <form [formGroup]="form" (ngSubmit)="submit()">
-          <div class="field">
-            <label>Invoice ID</label>
-            <input type="number" formControlName="invoice_id" class="input" placeholder="Invoice ID">
+        <app-enterprise-page-header
+          [title]="'billing.manualTransfer.title' | t:lang()"
+          [subtitle]="'billing.manualTransfer.hint' | t:lang()"
+        />
+
+        <app-enterprise-section-card>
+          <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'billing.manualTransfer.invoiceId' | t:lang()"
+              [required]="true"
+            >
+              <input type="number" formControlName="invoice_id" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.amount' | t:lang()" [required]="true">
+              <input type="number" formControlName="amount" class="input" step="0.01" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.currency' | t:lang()" [required]="true">
+              <input formControlName="currency" class="input" maxlength="3" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'billing.manualTransfer.notes' | t:lang()">
+              <input
+                formControlName="notes"
+                class="input"
+                [placeholder]="'billing.manualTransfer.notesPlaceholder' | t:lang()"
+              />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="form.invalid || loading">
+                {{
+                  (loading ? 'billing.manualTransfer.processing' : 'billing.manualTransfer.submit')
+                    | t:lang()
+                }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (result) {
+          <div class="alert alert--success" role="status">
+            {{ 'billing.manualTransfer.success' | t:{ id: result.id }:lang() }}
+            —
+            <app-enterprise-status-badge [status]="result.status" />
           </div>
-          <div class="field">
-            <label>Amount</label>
-            <input type="number" formControlName="amount" class="input" placeholder="0.00" step="0.01">
-          </div>
-          <div class="field">
-            <label>Currency</label>
-            <input formControlName="currency" class="input" placeholder="USD" maxlength="3">
-          </div>
-          <div class="field">
-            <label>Notes (optional)</label>
-            <input formControlName="notes" class="input" placeholder="Bank reference or notes">
-          </div>
-          <button type="submit" class="btn btn--primary" [disabled]="form.invalid || loading">
-            {{ loading ? 'Processing...' : 'Record Transfer' }}
-          </button>
-        </form>
-      }
-      @if (result) {
-        <div class="success-card">
-          <p>Transfer recorded. Payment ID: {{ result.id }} | Status: {{ result.status }}</p>
-        </div>
-      }
-      @if (error) {
-        <p class="error">{{ error }}</p>
+        }
+        @if (error) {
+          <app-enterprise-error-state [message]="error" />
+        }
       }
     </div>
   `,
@@ -73,9 +95,6 @@ export class ManualTransferPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-    }
   }
 
   submit(): void {

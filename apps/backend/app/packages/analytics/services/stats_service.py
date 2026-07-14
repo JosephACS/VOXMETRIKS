@@ -14,6 +14,7 @@ from .stats.constants import (
     WARN_CREATE_ABOVE,
 )
 from .stats.summary import get_summary
+from .stats.events_inventory import get_events_breakdown
 from .synthetic.generator import (
     generate_synthetic_activity,
     generate_synthetic_tracks,
@@ -30,6 +31,7 @@ __all__ = [
     "generate_synthetic_tracks",
     "get_catalog_growth",
     "get_energia_distribution",
+    "get_events_breakdown",
     "get_last_loads",
     "get_summary",
     "get_synthetic_limits",

@@ -4,132 +4,206 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-cs-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
-    <div class="vx-enterprise page">
-      <h1>{{ 'customerSuccess.dashboard.title' | t:lang() }}</h1>
-      <p class="subtitle">
-        Rule-based health score (not AI). Academic SLA configs are not contractual.
-      </p>
-      <nav class="subnav">
-        <a routerLink="/customer-success">Dashboard</a> |
-        <a routerLink="/support">{{ 'support.list.title' | t:lang() }}</a>
-      </nav>
-
+    <div class="vx-enterprise cs-dashboard-page">
       @if (!orgId) {
-        <p class="error">Select an organization context.</p>
+        <app-enterprise-org-required />
       } @else {
-        <div class="actions">
-          <button type="button" (click)="refresh()" [disabled]="busy">Refresh / calculate health</button>
-          <button type="button" (click)="startOnboarding()" [disabled]="busy">Start onboarding</button>
-          <button type="button" (click)="renewal()" [disabled]="busy">Evaluate renewal</button>
-        </div>
+        <app-enterprise-page-header
+          [title]="'customerSuccess.dashboard.title' | t:lang()"
+          [subtitle]="'customerSuccess.dashboard.subtitle' | t:lang()"
+        >
+          <a routerLink="/support" class="btn btn--secondary">{{ 'support.list.title' | t:lang() }}</a>
+        </app-enterprise-page-header>
+
+        <app-enterprise-action-bar>
+          <button type="button" class="btn btn--secondary" (click)="refresh()" [disabled]="busy">
+            {{ 'customerSuccess.dashboard.refresh' | t:lang() }}
+          </button>
+          <button type="button" class="btn btn--secondary" (click)="startOnboarding()" [disabled]="busy">
+            {{ 'customerSuccess.dashboard.startOnboarding' | t:lang() }}
+          </button>
+          <button type="button" class="btn btn--secondary" (click)="renewal()" [disabled]="busy">
+            {{ 'customerSuccess.dashboard.evaluateRenewal' | t:lang() }}
+          </button>
+        </app-enterprise-action-bar>
 
         @if (loading) {
-          <p>{{ 'common.loading' | t:lang() }}</p>
+          <app-enterprise-loading-skeleton [rows]="3" />
         } @else if (error) {
-          <p class="error">{{ error }}</p>
+          <app-enterprise-error-state [message]="error" (retry)="refresh()" />
         } @else if (success) {
-          <p class="success">{{ success }}</p>
+          <div class="alert alert--success" role="status">{{ success }}</div>
         }
 
         @if (health) {
-          <section class="cs-card">
-            <h2>Health</h2>
-            <p>
-              State:
-              <span class="badge">{{ health.score_state || ('common.notAvailable' | t:lang()) }}</span>
+          <app-enterprise-section-card [title]="'customerSuccess.health' | t:lang()">
+            <div class="form-grid">
+              <div>
+                <dt>{{ 'customerSuccess.dashboard.state' | t:lang() }}</dt>
+                <dd>
+                  <app-enterprise-status-badge
+                    [status]="health.score_state || 'draft'"
+                    [label]="health.score_state || ('common.notAvailable' | t:lang())"
+                  />
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'customerSuccess.dashboard.score' | t:lang() }}</dt>
+                <dd>
+                  @if (health.score == null) {
+                    {{ 'common.notAvailable' | t:lang() }}
+                  } @else {
+                    {{ health.score | number: '1.2-4' }}
+                  }
+                </dd>
+              </div>
+            </div>
+            <p class="muted">
+              {{ health.limitations || ('customerSuccess.dashboard.noLimitations' | t:lang()) }}
             </p>
-            <p>
-              Score:
-              @if (health.score == null) {
-                <em>{{ 'common.notAvailable' | t:lang() }}</em>
-              } @else {
-                {{ health.score | number: '1.2-4' }}
-              }
-            </p>
-            <p class="muted">{{ health.limitations || 'No limitations listed.' }}</p>
-          </section>
+          </app-enterprise-section-card>
         } @else if (!loading && !error) {
-          <p class="empty-state">No health snapshot yet. Click calculate health.</p>
+          <app-enterprise-empty-state
+            [title]="'customerSuccess.dashboard.noHealth' | t:lang()"
+            [ctaLabel]="'customerSuccess.dashboard.refresh' | t:lang()"
+            (ctaClick)="refresh()"
+          />
         }
 
         @if (dashboard) {
-          <section class="cs-card">
-            <h2>Overview</h2>
-            <p>Open risks: {{ dashboard.open_risks ?? ('common.notAvailable' | t:lang()) }}</p>
-            <p>Expansion opportunities: {{ dashboard.expansions ?? ('common.notAvailable' | t:lang()) }}</p>
-            <p class="muted">{{ dashboard.label || ('customerSuccess.dashboard.title' | t:lang()) }}</p>
-          </section>
+          <app-enterprise-section-card [title]="'customerSuccess.dashboard.overview' | t:lang()">
+            <p>
+              {{ 'customerSuccess.dashboard.openRisks' | t:lang() }}:
+              {{ dashboard.open_risks ?? ('common.notAvailable' | t:lang()) }}
+            </p>
+            <p>
+              {{ 'customerSuccess.dashboard.expansions' | t:lang() }}:
+              {{ dashboard.expansions ?? ('common.notAvailable' | t:lang()) }}
+            </p>
+            <p class="muted">
+              {{ dashboard.label || ('customerSuccess.dashboard.title' | t:lang()) }}
+            </p>
+          </app-enterprise-section-card>
         }
 
-        <section class="cs-card">
-          <h2>Risks</h2>
-          <form class="inline-form" (ngSubmit)="createRisk()">
-            <input [(ngModel)]="riskTitle" name="riskTitle" placeholder="Risk title" required />
-            <select [(ngModel)]="riskSeverity" name="riskSeverity">
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-            <button type="submit" [disabled]="busy || !riskTitle.trim()">Create risk</button>
+        <app-enterprise-section-card [title]="'customerSuccess.dashboard.risks' | t:lang()">
+          <form class="form-grid" (ngSubmit)="createRisk()">
+            <app-enterprise-form-field
+              [label]="'customerSuccess.dashboard.riskTitle' | t:lang()"
+              [required]="true"
+            >
+              <input [(ngModel)]="riskTitle" name="riskTitle" class="input" required />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'businessAnalytics.alerts.severity' | t:lang()">
+              <select [(ngModel)]="riskSeverity" name="riskSeverity" class="select">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                [disabled]="busy || !riskTitle.trim()"
+              >
+                {{ 'customerSuccess.dashboard.createRisk' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (risks.length === 0) {
-            <p class="empty-state">{{ 'customerSuccess.dashboard.noRisks' | t:lang() }}</p>
+            <app-enterprise-empty-state [title]="'customerSuccess.dashboard.noRisks' | t:lang()" />
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (r of risks; track $any(r).id) {
                 <li>
-                  <span class="badge">{{ $any(r).severity }}</span>
-                  {{ $any(r).title }} — {{ $any(r).status }}
-                  <button type="button" (click)="assignIntervention($any(r).id)" [disabled]="busy">
-                    Assign intervention
+                  <app-enterprise-status-badge [status]="$any(r).severity" />
+                  {{ $any(r).title }} —
+                  <app-enterprise-status-badge [status]="$any(r).status" />
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    (click)="assignIntervention($any(r).id)"
+                    [disabled]="busy"
+                  >
+                    {{ 'customerSuccess.dashboard.assignIntervention' | t:lang() }}
                   </button>
                 </li>
               }
             </ul>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="cs-card">
-          <h2>Interventions</h2>
+        <app-enterprise-section-card [title]="'customerSuccess.dashboard.interventions' | t:lang()">
           @if (interventions.length === 0) {
-            <p class="empty-state">No interventions.</p>
+            <app-enterprise-empty-state
+              [title]="'customerSuccess.dashboard.noInterventions' | t:lang()"
+            />
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (i of interventions; track $any(i).id) {
                 <li>
-                  {{ $any(i).title }} — <span class="badge">{{ $any(i).status }}</span>
+                  {{ $any(i).title }} —
+                  <app-enterprise-status-badge [status]="$any(i).status" />
                   @if ($any(i).status !== 'completed') {
-                    <button type="button" (click)="completeIntervention($any(i).id)" [disabled]="busy">
-                      Complete
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      (click)="completeIntervention($any(i).id)"
+                      [disabled]="busy"
+                    >
+                      {{ 'customerSuccess.dashboard.complete' | t:lang() }}
                     </button>
                   }
                 </li>
               }
             </ul>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="cs-card">
-          <h2>Expansion</h2>
-          <form class="inline-form" (ngSubmit)="createExpansion()">
-            <input [(ngModel)]="expansionTitle" name="expansionTitle" placeholder="Expansion title" required />
-            <button type="submit" [disabled]="busy || !expansionTitle.trim()">Create expansion</button>
+        <app-enterprise-section-card [title]="'customerSuccess.expansion' | t:lang()">
+          <form class="form-grid" (ngSubmit)="createExpansion()">
+            <app-enterprise-form-field
+              [label]="'customerSuccess.dashboard.expansionTitle' | t:lang()"
+              [required]="true"
+            >
+              <input [(ngModel)]="expansionTitle" name="expansionTitle" class="input" required />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                [disabled]="busy || !expansionTitle.trim()"
+              >
+                {{ 'customerSuccess.dashboard.createExpansion' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (expansions.length === 0) {
-            <p class="empty-state">No expansion opportunities.</p>
+            <app-enterprise-empty-state
+              [title]="'customerSuccess.dashboard.noExpansions' | t:lang()"
+            />
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (e of expansions; track $any(e).id) {
                 <li>
-                  {{ $any(e).title }} — {{ $any(e).status }}
+                  {{ $any(e).title }} —
+                  <app-enterprise-status-badge [status]="$any(e).status" />
                   @if ($any(e).estimated_value == null) {
                     <em>{{ 'common.notAvailable' | t:lang() }}</em>
                   } @else {
@@ -139,7 +213,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               }
             </ul>
           }
-        </section>
+        </app-enterprise-section-card>
       }
     </div>
   `,
@@ -152,7 +226,8 @@ export class CsDashboardPage implements OnInit {
   private orgCtx = inject(OrganizationContextService);
 
   orgId: number | null = null;
-  dashboard: { open_risks?: number; expansions?: number; label?: string; health?: unknown } | null = null;
+  dashboard: { open_risks?: number; expansions?: number; label?: string; health?: unknown } | null =
+    null;
   health: {
     score?: number | null;
     score_state?: string;
@@ -204,7 +279,7 @@ export class CsDashboardPage implements OnInit {
             this.loadLists(this.orgId!);
             this.loading = false;
             this.busy = false;
-            this.success = 'Health refreshed.';
+            this.success = this.i18n.t('customerSuccess.dashboard.healthRefreshed');
           },
           error: (e) => {
             this.error = e?.error?.detail?.message || 'Dashboard denied or failed';
@@ -214,7 +289,7 @@ export class CsDashboardPage implements OnInit {
         });
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Health calculation failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.healthFailed');
         this.loading = false;
         this.busy = false;
       },

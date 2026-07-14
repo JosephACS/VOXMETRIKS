@@ -3,54 +3,76 @@ import { CommonModule } from '@angular/common';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { LedgerEntry } from '../models/billing.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-ledger',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, LocaleMoneyPipe, LocaleDatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
     <div class="vx-enterprise ledger-page">
-      <h1>{{ 'billing.ledger.title' | t:lang() }}</h1>
-      <p class="subtitle read-only-notice">Read-only — append-only financial record.</p>
-      <div class="filter-bar">
-        <select (change)="onTypeFilter($event)" class="select">
-          <option value="">All entry types</option>
-          <option value="invoice_issued">Invoice Issued</option>
-          <option value="payment_received">Payment Received</option>
-          <option value="refund_issued">Refund Issued</option>
-          <option value="credit_note_applied">Credit Note Applied</option>
-          <option value="adjustment">Adjustment</option>
-        </select>
-      </div>
-      @if (entries.length) {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th><th>Type</th><th>Ref</th><th>Amount</th><th>Description</th><th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (e of entries; track e.id) {
-              <tr>
-                <td>{{ e.id }}</td>
-                <td><span class="badge badge--neutral">{{ e.entry_type }}</span></td>
-                <td>{{ e.reference_type }} #{{ e.reference_id }}</td>
-                <td [class]="e.amount < 0 ? 'amount-negative' : 'amount-positive'">
-                  {{ e.amount | number:'1.2-4' }} {{ e.currency }}
-                </td>
-                <td>{{ e.description }}</td>
-                <td>{{ e.created_at | date:'short' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <p class="empty-state">No ledger entries.</p>
-      }
-      @if (error) {
-        <p class="error">{{ error }}</p>
+        <app-enterprise-page-header
+          [title]="'billing.ledger.title' | t:lang()"
+          [subtitle]="'billing.ledger.subtitle' | t:lang()"
+        />
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="loadLedger()" />
+        }
+
+        <app-enterprise-data-table
+          [empty]="!entries.length && !error"
+          [emptyTitle]="'billing.ledger.emptyTitle' | t:lang()"
+          [emptyDescription]="'billing.ledger.emptyBody' | t:lang()"
+        >
+          <div toolbar>
+            <select (change)="onTypeFilter($event)" class="select">
+              <option value="">{{ 'billing.ledger.allTypes' | t:lang() }}</option>
+              <option value="invoice_issued">{{ 'billing.ledger.type.invoice_issued' | t:lang() }}</option>
+              <option value="payment_received">{{ 'billing.ledger.type.payment_received' | t:lang() }}</option>
+              <option value="refund_issued">{{ 'billing.ledger.type.refund_issued' | t:lang() }}</option>
+              <option value="credit_note_applied">{{ 'billing.ledger.type.credit_note_applied' | t:lang() }}</option>
+              <option value="adjustment">{{ 'billing.ledger.type.adjustment' | t:lang() }}</option>
+            </select>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ 'common.id' | t:lang() }}</th>
+                <th>{{ 'common.type' | t:lang() }}</th>
+                <th>{{ 'billing.ledger.reference' | t:lang() }}</th>
+                <th>{{ 'common.amount' | t:lang() }}</th>
+                <th>{{ 'common.description' | t:lang() }}</th>
+                <th>{{ 'common.date' | t:lang() }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of entries; track e.id) {
+                <tr>
+                  <td>{{ e.id }}</td>
+                  <td>
+                    <app-enterprise-status-badge
+                      status="neutral"
+                      [label]="entryTypeLabel(e.entry_type)"
+                    />
+                  </td>
+                  <td>{{ e.reference_type }} #{{ e.reference_id }}</td>
+                  <td [class]="e.amount < 0 ? 'amount-negative' : 'amount-positive'">
+                    {{ e.amount | localeMoney:e.currency }}
+                  </td>
+                  <td>{{ e.description }}</td>
+                  <td>{{ e.created_at | localeDate:true }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </app-enterprise-data-table>
       }
     </div>
   `,
@@ -68,11 +90,14 @@ export class LedgerPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    if (!this.orgId) return;
     this.loadLedger();
+  }
+
+  entryTypeLabel(type: string): string {
+    const key = `billing.ledger.type.${type}`;
+    const t = this.i18n.t(key);
+    return t === key ? type : t;
   }
 
   loadLedger(): void {

@@ -5,40 +5,81 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReportingApiService } from '../services/reporting-api.service';
 import { BusinessDecision, DecisionAction, DecisionFollowUp } from '../models/reporting.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-decision-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
-    <div class="vx-enterprise page">
-      <p><a routerLink="/business-decisions">← Decisions</a></p>
-      @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
-      @else if (error) { <p class="error">{{ error }}</p> }
-      @else if (decision) {
-        <h1>{{ decision.title }}</h1>
-        <p>{{ decision.proposal }}</p>
-        <p>Status: {{ decision.status }}</p>
-        <button type="button" (click)="approve()">Approve</button>
-        <button type="button" (click)="complete()">Complete</button>
-        <h2>Actions</h2>
-        <input [(ngModel)]="actionTitle" placeholder="action title" />
-        <button type="button" (click)="addAction()">Add action</button>
-        <ul>
-          @for (a of actions; track a.id) {
-            <li>{{ a.title }} — {{ a.status }}</li>
+    <div class="vx-enterprise decision-detail-page">
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else {
+        <a routerLink="/business-decisions" class="back-link">{{ 'reporting.decisions.back' | t:lang() }}</a>
+
+        @if (loading) {
+          <app-enterprise-loading-skeleton [rows]="4" />
+        } @else if (error && !decision) {
+          <app-enterprise-error-state [message]="error" (retry)="reload()" />
+        } @else if (decision) {
+          <app-enterprise-page-header [title]="decision.title">
+            <app-enterprise-status-badge [status]="decision.status" />
+          </app-enterprise-page-header>
+
+          <p class="muted">{{ decision.proposal }}</p>
+
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--primary" (click)="approve()">
+              {{ 'decisions.detail.approve' | t:lang() }}
+            </button>
+            <button type="button" class="btn btn--secondary" (click)="complete()">
+              {{ 'decisions.detail.complete' | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
+
+          <app-enterprise-section-card [title]="'reporting.decisions.actions' | t:lang()">
+            <div class="form-grid">
+              <app-enterprise-form-field [label]="'reporting.decisions.actionTitle' | t:lang()">
+                <input [(ngModel)]="actionTitle" class="input" />
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button type="button" class="btn btn--secondary" (click)="addAction()">
+                  {{ 'decisions.detail.addAction' | t:lang() }}
+                </button>
+              </div>
+            </div>
+            <ul class="ent-list">
+              @for (a of actions; track a.id) {
+                <li>{{ a.title }} — <app-enterprise-status-badge [status]="a.status" /></li>
+              }
+            </ul>
+          </app-enterprise-section-card>
+
+          <app-enterprise-section-card [title]="'reporting.decisions.followUps' | t:lang()">
+            <div class="form-grid">
+              <app-enterprise-form-field [label]="'reporting.decisions.note' | t:lang()">
+                <input [(ngModel)]="note" class="input" />
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button type="button" class="btn btn--secondary" (click)="addFollowUp()">
+                  {{ 'decisions.detail.addFollowUp' | t:lang() }}
+                </button>
+              </div>
+            </div>
+            <ul class="ent-list">
+              @for (f of followUps; track f.id) {
+                <li>{{ f.note }}</li>
+              }
+            </ul>
+          </app-enterprise-section-card>
+
+          @if (error) {
+            <app-enterprise-error-state [message]="error" />
           }
-        </ul>
-        <h2>Follow-ups</h2>
-        <input [(ngModel)]="note" placeholder="note" />
-        <button type="button" (click)="addFollowUp()">Add follow-up</button>
-        <ul>
-          @for (f of followUps; track f.id) {
-            <li>{{ f.note }}</li>
-          }
-        </ul>
+        }
       }
     </div>
   `,
@@ -70,13 +111,14 @@ export class DecisionDetailPage implements OnInit {
   reload(): void {
     if (!this.orgId) return;
     this.loading = true;
+    this.error = '';
     this.api.getDecision(this.orgId, this.id).subscribe({
       next: (d) => {
         this.decision = d;
         this.loading = false;
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Denied or not found';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
         this.loading = false;
       },
     });
@@ -88,7 +130,7 @@ export class DecisionDetailPage implements OnInit {
     if (!this.orgId) return;
     this.api.approveDecision(this.orgId, this.id).subscribe({
       next: (d) => (this.decision = d),
-      error: (e) => (this.error = e?.error?.detail?.message || 'Approve failed'),
+      error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
     });
   }
 
@@ -96,7 +138,7 @@ export class DecisionDetailPage implements OnInit {
     if (!this.orgId) return;
     this.api.completeDecision(this.orgId, this.id).subscribe({
       next: (d) => (this.decision = d),
-      error: (e) => (this.error = e?.error?.detail?.message || 'Complete failed'),
+      error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
     });
   }
 
@@ -107,7 +149,7 @@ export class DecisionDetailPage implements OnInit {
         this.actionTitle = '';
         this.reload();
       },
-      error: (e) => (this.error = e?.error?.detail?.message || 'Action failed'),
+      error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
     });
   }
 
@@ -118,7 +160,7 @@ export class DecisionDetailPage implements OnInit {
         this.note = '';
         this.reload();
       },
-      error: (e) => (this.error = e?.error?.detail?.message || 'Follow-up failed'),
+      error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
     });
   }
 }

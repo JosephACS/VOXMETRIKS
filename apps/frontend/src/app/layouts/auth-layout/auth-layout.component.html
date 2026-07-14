@@ -1,26 +1,15 @@
 <div class="auth-layout">
-  <!-- Background visuals -->
   <div class="auth-bg-gradient" aria-hidden="true"></div>
   <div class="auth-bg-grid" aria-hidden="true"></div>
 
   <div class="auth-container">
-    <!-- Branding -->
-    <div class="auth-brand">
-      <picture class="auth-brand-logo-wrap" aria-hidden="true">
-        <source srcset="/assets/images/voxmetrik-logo.png" type="image/png" />
-        <img src="/assets/images/voxmetrik-logo.webp" alt="VOXMETRIK" class="auth-brand-logo" />
-      </picture>
-    </div>
-
-    <!-- Dynamic content (login, etc.) -->
     <router-outlet></router-outlet>
 
-    <!-- Footer -->
     <div class="auth-footer">
       <p class="footer-text">
         {{ 'login.footer' | t:lang() }}
         <span class="footer-dot" aria-hidden="true">·</span>
-        2025
+        2026
       </p>
     </div>
   </div>

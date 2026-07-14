@@ -6,76 +6,102 @@ import { ExecutiveReport } from '../models/reporting.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-report-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
-    <div class="vx-enterprise page">
-      <p><a routerLink="/reports">← Reports</a></p>
-      @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
-      } @else if (error) {
-        <p class="error">{{ error }}</p>
-      } @else if (report) {
-        <h1>{{ report.title }}</h1>
-        <p class="subtitle">Immutable academic snapshot — not a certified financial statement.</p>
-        <p>
-          Status: <span class="badge">{{ report.status }}</span>
-        </p>
-        <p>
-          Period:
-          {{ report.period_start || ('common.notAvailable' | t:lang()) }} → {{ report.period_end || ('common.notAvailable' | t:lang()) }}
-        </p>
-        <div class="actions">
-          <button type="button" (click)="approve()" [disabled]="busy">Approve</button>
-          <button type="button" (click)="publish()" [disabled]="busy">Publish</button>
-          <button type="button" (click)="archive()" [disabled]="busy">Archive</button>
-          <button type="button" (click)="exportCsv()" [disabled]="busy">{{ 'reporting.detail.exportCsv' | t:lang() }}</button>
-        </div>
+    <div class="vx-enterprise report-detail-page">
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else {
+        <a routerLink="/reports" class="back-link">{{ 'reporting.detail.back' | t:lang() }}</a>
 
-        @if (snapshotLoading) {
-          <p>Loading snapshot…</p>
-        } @else if (snapshot) {
-          <section class="cs-card">
-            <h2>Frozen snapshot</h2>
-            <p class="muted">{{ snapshot.limitations || '' }}</p>
-            <p>
-              Unavailable sources:
-              {{ snapshot.unavailable_sources_json || '[]' }}
-            </p>
-            @if (kpiRows.length) {
-              <table class="data-table">
-                <thead>
-                  <tr><th>KPI</th><th>Value</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  @for (k of kpiRows; track k.code) {
-                    <tr>
-                      <td>{{ k.code }}</td>
-                      <td>
-                        @if (k.value == null) {
-                          <em>{{ 'common.notAvailable' | t:lang() }}</em>
-                        } @else {
-                          {{ k.value }}
-                        }
-                      </td>
-                      <td>{{ k.status || k.quality_status || '—' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            } @else {
-              <p class="empty-state">No KPI rows in snapshot.</p>
-            }
-          </section>
-        }
+        @if (loading) {
+          <app-enterprise-loading-skeleton [rows]="4" />
+        } @else if (error && !report) {
+          <app-enterprise-error-state [message]="error" (retry)="reload()" />
+        } @else if (report) {
+          <app-enterprise-page-header
+            [title]="report.title"
+            [subtitle]="'reporting.detail.immutable' | t:lang()"
+          >
+            <app-enterprise-status-badge [status]="report.status" />
+          </app-enterprise-page-header>
 
-        @if (success) {
-          <p class="success">{{ success }}</p>
+          <p class="muted">
+            {{ 'common.period' | t:lang() }}:
+            {{ report.period_start || ('common.notAvailable' | t:lang()) }} →
+            {{ report.period_end || ('common.notAvailable' | t:lang()) }}
+          </p>
+
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--primary" (click)="approve()" [disabled]="busy">
+              {{ 'reporting.detail.approve' | t:lang() }}
+            </button>
+            <button type="button" class="btn btn--secondary" (click)="publish()" [disabled]="busy">
+              {{ 'reporting.detail.publish' | t:lang() }}
+            </button>
+            <button type="button" class="btn btn--ghost" (click)="archive()" [disabled]="busy">
+              {{ 'reporting.detail.archive' | t:lang() }}
+            </button>
+            <button type="button" class="btn btn--secondary" (click)="exportCsv()" [disabled]="busy">
+              {{ 'reporting.detail.exportCsv' | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
+
+          @if (snapshotLoading) {
+            <app-enterprise-loading-skeleton [rows]="3" />
+          } @else if (snapshot) {
+            <app-enterprise-section-card [title]="'reporting.detail.snapshot' | t:lang()">
+              <p class="muted">{{ snapshot.limitations || '' }}</p>
+              <p>
+                {{ 'reporting.detail.unavailableSources' | t:lang() }}:
+                {{ snapshot.unavailable_sources_json || '[]' }}
+              </p>
+              @if (kpiRows.length) {
+                <app-enterprise-data-table>
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'reporting.detail.kpi' | t:lang() }}</th>
+                        <th>{{ 'reporting.detail.value' | t:lang() }}</th>
+                        <th>{{ 'common.status' | t:lang() }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (k of kpiRows; track k.code) {
+                        <tr>
+                          <td>{{ k.code }}</td>
+                          <td>
+                            @if (k.value == null) {
+                              <em>{{ 'common.notAvailable' | t:lang() }}</em>
+                            } @else {
+                              {{ k.value }}
+                            }
+                          </td>
+                          <td>{{ k.status || k.quality_status || '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </app-enterprise-data-table>
+              } @else {
+                <p class="muted">{{ 'reporting.detail.noKpis' | t:lang() }}</p>
+              }
+            </app-enterprise-section-card>
+          }
+
+          @if (success) {
+            <p class="success">{{ success }}</p>
+          }
+          @if (error) {
+            <app-enterprise-error-state [message]="error" />
+          }
         }
       }
     </div>
@@ -109,12 +135,13 @@ export class ReportDetailPage implements OnInit {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.orgId && this.id) this.reload();
-    else this.error = 'Missing organization or report id';
+    else this.error = this.i18n.t('common.orgRequiredContext');
   }
 
   reload(): void {
     if (!this.orgId) return;
     this.loading = true;
+    this.error = '';
     this.api.getExecutive(this.orgId, this.id).subscribe({
       next: (r) => {
         this.report = r;
@@ -122,7 +149,7 @@ export class ReportDetailPage implements OnInit {
         this.loadSnapshot();
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Denied or not found';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
         this.loading = false;
       },
     });
@@ -163,10 +190,10 @@ export class ReportDetailPage implements OnInit {
       next: (r) => {
         this.report = r;
         this.busy = false;
-        this.success = 'Report approved.';
+        this.success = this.i18n.t('reporting.detail.approved');
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Approve failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
         this.busy = false;
       },
     });
@@ -179,10 +206,10 @@ export class ReportDetailPage implements OnInit {
       next: (r) => {
         this.report = r;
         this.busy = false;
-        this.success = 'Report published.';
+        this.success = this.i18n.t('reporting.detail.published');
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Publish failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
         this.busy = false;
       },
     });
@@ -195,10 +222,10 @@ export class ReportDetailPage implements OnInit {
       next: (r) => {
         this.report = r;
         this.busy = false;
-        this.success = 'Report archived.';
+        this.success = this.i18n.t('reporting.detail.archived');
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Archive failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
         this.busy = false;
       },
     });
@@ -214,10 +241,10 @@ export class ReportDetailPage implements OnInit {
         a.download = `executive-report-${this.id}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        this.success = 'CSV downloaded (academic export).';
+        this.success = this.i18n.t('reporting.detail.exportDone');
       },
       error: (e) => {
-        this.error = e?.error?.detail?.message || 'Export failed';
+        this.error = e?.error?.detail?.message || this.i18n.t('common.failed');
       },
     });
   }

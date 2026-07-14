@@ -25,7 +25,8 @@ function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
     title: 'Test Track',
     artist: 'Test Artist',
     durationMs: 180_000,
-    audioUrl: '/assets/demo.mp3',
+    audioUrl: '',
+    youtubeVideoId: 'phase2TestVideo',
     coverGradient: 'linear-gradient(135deg, #111, #333)',
     ...overrides,
   };
@@ -95,7 +96,15 @@ describe('Playback Engine Phase 2', () => {
         {
           provide: TracksService,
           useValue: {
-            getAudioSource: vi.fn(() => of({ status: 'ok', youtube_video_id: null })),
+            getAudioSource: vi.fn((id: number) =>
+              of({
+                track_id: id,
+                provider: 'youtube',
+                status: 'ok',
+                youtube_video_id: 'phase2TestVideo',
+                playable_url: null,
+              }),
+            ),
             getCover: vi.fn(() => of({ status: 'ok', image_url: null })),
             listTracks: vi.fn(() => of({ total: 0, page: 1, limit: 24, items: [] })),
           },
@@ -201,19 +210,36 @@ describe('Playback Engine Phase 2', () => {
   });
 
   it('10. audio error does not block app — sets error then can retry', async () => {
-    vi.useFakeTimers();
-    mockEngine.startDemo = vi.fn(() => Promise.resolve(false));
-    controller.playTrack(sampleTrack({ id: 55 }));
+    const tracksApi = TestBed.inject(TracksService);
+    const getAudio = vi.mocked(tracksApi.getAudioSource);
+    getAudio.mockReturnValueOnce(
+      of({
+        track_id: 55,
+        provider: 'none',
+        status: 'not_found',
+        youtube_video_id: null,
+        playable_url: null,
+      }) as never,
+    );
+    getAudio.mockReturnValue(
+      of({
+        track_id: 55,
+        provider: 'youtube',
+        status: 'ok',
+        youtube_video_id: 'retryVideo',
+        playable_url: null,
+      }) as never,
+    );
+
+    controller.playTrack(sampleTrack({ id: 55, youtubeVideoId: '', audioUrl: '' }));
     await Promise.resolve();
     expect(store.status()).toBe('error');
     expect(store.playbackError()).toBeTruthy();
-    mockEngine.startDemo = vi.fn((_u: string, id: number) => {
-      mockEngine.loadedId = id;
-      return Promise.resolve(true);
-    });
+
     controller.retryCurrent();
+    await Promise.resolve();
     expect(store.playbackError()).toBeNull();
-    vi.useRealTimers();
+    expect(store.status()).toBe('playing');
   });
 });
 

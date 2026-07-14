@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -22,26 +23,30 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
     StatusLabelPipe,
     LocaleMoneyPipe,
     LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
   ],
   template: `
     <div class="vx-enterprise invoice-detail-page">
-      <a routerLink="/billing/invoices" class="back-link">{{ 'billing.invoiceDetail.back' | t:lang() }}</a>
-      @if (loading) {
-        <p>{{ 'billing.invoiceDetail.loading' | t:lang() }}</p>
-      } @else if (error && !invoice) {
-        <p class="error">{{ error }}</p>
-      } @else if (!invoice) {
-        <p class="empty-state">{{ 'billing.invoiceDetail.notFound' | t:lang() }}</p>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <div class="page-header">
-          <h1>{{ invoice.invoice_number }}</h1>
-          <span class="badge" [class]="'badge--' + invoice.status">{{ invoice.status | statusLabel }}</span>
-        </div>
+        <a routerLink="/billing/invoices" class="back-link">{{ 'billing.invoiceDetail.back' | t:lang() }}</a>
+        @if (loading) {
+          <app-enterprise-loading-skeleton [rows]="5" />
+        } @else if (error && !invoice) {
+          <app-enterprise-error-state [message]="error" (retry)="reload()" />
+        } @else if (!invoice) {
+          <app-enterprise-empty-state [title]="'billing.invoiceDetail.notFound' | t:lang()" />
+        } @else {
+          <app-enterprise-page-header [title]="invoice.invoice_number">
+            <app-enterprise-status-badge [status]="invoice.status" />
+          </app-enterprise-page-header>
         @if (invoice.status === 'past_due') {
           <div class="alert alert--danger">
             {{ 'billing.invoiceDetail.pastDueAlert' | t:lang() }}
           </div>
         }
+        <app-enterprise-section-card [title]="'common.details' | t:lang()">
         <dl class="meta">
           <dt>{{ 'common.currency' | t:lang() }}</dt>
           <dd>{{ invoice.currency || ('common.notAvailable' | t:lang()) }}</dd>
@@ -58,9 +63,9 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
           <dt>{{ 'billing.invoiceDetail.issued' | t:lang() }}</dt>
           <dd>{{ invoice.issued_at | localeDate:true }}</dd>
         </dl>
+        </app-enterprise-section-card>
 
-        <section class="dunning-panel">
-          <h2>{{ 'billing.invoiceDetail.dunning' | t:lang() }}</h2>
+        <app-enterprise-section-card [title]="'billing.invoiceDetail.dunning' | t:lang()">
           @if (dunning) {
             <dl class="meta">
               <dt>{{ 'common.status' | t:lang() }}</dt>
@@ -81,12 +86,10 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
           } @else {
             <p class="muted">{{ 'billing.invoiceDetail.noDunning' | t:lang() }}</p>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <h2>
-          {{ 'billing.invoiceDetail.attempts' | t:lang() }}
+        <app-enterprise-section-card [title]="'billing.invoiceDetail.attempts' | t:lang()">
           <span class="badge badge--mock">{{ 'billing.invoiceDetail.mockBadge' | t:lang() }}</span>
-        </h2>
         <p class="muted">{{ 'billing.invoiceDetail.mockHint' | t:lang() }}</p>
         @if (attempts.length) {
           <div class="simulate-bar">
@@ -143,8 +146,9 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
               (click)="createAttempt()">{{ 'billing.invoiceDetail.createAttempt' | t:lang() }}</button>
           }
         }
+        </app-enterprise-section-card>
 
-        <h2>{{ 'billing.invoiceDetail.lineItems' | t:lang() }}</h2>
+        <app-enterprise-section-card [title]="'billing.invoiceDetail.lineItems' | t:lang()">
         @if (items.length) {
           <table class="data-table">
             <thead>
@@ -169,11 +173,13 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
         } @else {
           <p class="empty-state">{{ 'billing.invoiceDetail.noLines' | t:lang() }}</p>
         }
+        </app-enterprise-section-card>
         @if (error) {
-          <p class="error">{{ error }}</p>
+          <app-enterprise-error-state [message]="error" />
         }
         @if (info) {
           <p class="success">{{ info }}</p>
+        }
         }
       }
     </div>

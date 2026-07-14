@@ -5,43 +5,90 @@ import { RouterLink } from '@angular/router';
 import { ReportingApiService } from '../services/reporting-api.service';
 import { ExecutiveReport, ReportDefinition } from '../models/reporting.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-reports-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
-    <div class="vx-enterprise page">
-      <h1>{{ 'reporting.list.title' | t:lang() }}</h1>
-      <p class="subtitle">Generate immutable executive snapshots from versioned KPIs. Not a certified statement.</p>
-      <nav class="subnav">
-        <a routerLink="/reports">Reports</a> |
-        <a routerLink="/business-decisions">Decisions</a>
-      </nav>
+    <div class="vx-enterprise reports-list-page">
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else {
+        <app-enterprise-page-header
+          [title]="'reporting.list.title' | t:lang()"
+          [subtitle]="'reporting.list.subtitle' | t:lang()"
+        >
+          <a routerLink="/business-decisions" class="btn btn--secondary">
+            {{ 'decisions.list.title' | t:lang() }}
+          </a>
+        </app-enterprise-page-header>
 
-      @if (!orgId) { <p class="error">Select an organization context.</p> }
-      @else {
-        <section>
-          <h2>New definition</h2>
-          <input [(ngModel)]="code" placeholder="code" />
-          <input [(ngModel)]="title" placeholder="title" />
-          <button type="button" (click)="createAndGenerate()" [disabled]="busy">Create &amp; generate</button>
-        </section>
+        <app-enterprise-section-card [title]="'reporting.list.newDefinition' | t:lang()">
+          <form class="form-grid" (ngSubmit)="createAndGenerate()">
+            <app-enterprise-form-field [label]="'reporting.list.code' | t:lang()" [required]="true">
+              <input [(ngModel)]="code" name="code" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field
+              [label]="'reporting.list.reportTitle' | t:lang()"
+              [required]="true"
+            >
+              <input [(ngModel)]="title" name="title" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="busy">
+                {{ 'reporting.list.create' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
 
-        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
-        @else if (error) { <p class="error">{{ error }}</p> }
-        @else if (!reports.length) { <p>{{ 'reporting.list.empty' | t:lang() }}</p> }
-        @else {
-          <ul>
-            @for (r of reports; track r.id) {
-              <li>
-                <a [routerLink]="['/reports', r.id]">{{ r.title }}</a>
-                — {{ r.status }}
-              </li>
-            }
-          </ul>
+        @if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="reload()" />
+        } @else if (!reports.length) {
+          <app-enterprise-empty-state
+            [title]="'reporting.list.emptyTitle' | t:lang()"
+            [description]="'reporting.list.emptyBody' | t:lang()"
+            [ctaLabel]="'reporting.list.create' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'reporting.list.reportTitle' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of reports; track r.id) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/reports', r.id]">{{ r.title }}</a>
+                    </td>
+                    <td><app-enterprise-status-badge [status]="r.status" /></td>
+                    <td>
+                      <a [routerLink]="['/reports', r.id]" class="btn btn--ghost btn--sm">
+                        {{ 'common.view' | t:lang() }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
       }
     </div>

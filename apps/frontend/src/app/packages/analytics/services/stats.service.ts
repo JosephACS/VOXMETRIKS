@@ -10,7 +10,7 @@ import {
   ImportResult,
   WarehouseStatus, TrendingAnalytics, PlatformAnalytics, EngagementAnalytics,
   WarehouseTableMeta, TablePreview, RecommendationPayload, HealthResponse, HistoryHub,
-  PaginatedResponse,
+  PaginatedResponse, EventsBreakdown,
 } from '../../../shared/models/api.models';
 
 /** Facade over domain-scoped stats/analytics HTTP APIs. */
@@ -22,6 +22,7 @@ export class StatsService {
   private readonly recommendations = inject(StatsRecommendationsApi);
 
   getSummary(): Observable<StatsSummary> { return this.dashboard.getSummary(); }
+  getEventsBreakdown(): Observable<EventsBreakdown> { return this.dashboard.getEventsBreakdown(); }
   invalidateSummary(): void { this.dashboard.invalidateSummary(); }
   getTopTracks(limit = 10): Observable<TopTrack[]> { return this.dashboard.getTopTracks(limit); }
   invalidateTopTracks(limit?: number): void { this.dashboard.invalidateTopTracks(limit); }
@@ -46,7 +47,7 @@ export class StatsService {
   getHistoryHub(limit = 30): Observable<HistoryHub> { return this.analytics.getHistoryHub(limit); }
 
   getExplorerTables(): Observable<WarehouseTableMeta[]> { return this.explorer.getExplorerTables(); }
-  getTablePreview(table: string, page = 1, limit = 8): Observable<TablePreview> {
+  getTablePreview(table: string, page = 1, limit = 50): Observable<TablePreview> {
     return this.explorer.getTablePreview(table, page, limit);
   }
 

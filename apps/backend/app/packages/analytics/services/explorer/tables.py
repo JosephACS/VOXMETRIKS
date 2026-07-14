@@ -45,14 +45,17 @@ def get_table_preview(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
     page: int = 1,
-    limit: int = 8,
+    limit: int = 50,
 ) -> Dict[str, Any]:
+    """Preview a sample page only — never stream the full table to the client."""
     allowed = set(explorer_visible_tables(conn))
     if table_name not in allowed:
         if table_name in EXPLORER_BLOCKED_TABLES:
             raise ValueError(f"Table '{table_name}' is not accessible")
         raise ValueError(f"Table '{table_name}' not found")
 
+    # Hard cap: sample pages of 50 or 100 max (route also enforces).
+    limit = 100 if limit >= 100 else 50 if limit >= 50 else max(1, min(limit, 50))
     offset = max(0, (page - 1) * limit)
     total = count_rows(conn, table_name)
 

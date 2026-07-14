@@ -15,6 +15,7 @@ import {
   SyntheticResult,
   TopTrack,
   HealthResponse,
+  EventsBreakdown,
 } from '../../../shared/models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +28,10 @@ export class StatsDashboardApi {
 
   getSummary(): Observable<StatsSummary> {
     return this.summaryCache.get(() => this.http.get<StatsSummary>(`${this.BASE}/summary`));
+  }
+
+  getEventsBreakdown(): Observable<EventsBreakdown> {
+    return this.http.get<EventsBreakdown>(`${this.BASE}/events-breakdown`);
   }
 
   invalidateSummary(): void {

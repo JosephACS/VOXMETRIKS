@@ -37,21 +37,17 @@ export class LocaleFormatService {
     }).format(n);
   }
 
-  /** e.g. $99,00 USD (es) or $99.00 USD (en) */
+  /** e.g. $99,00 USD (es) or $99.00 USD (en) — never "99,00 US$ USD". */
   formatMoney(amount: number | string | null | undefined, currency = 'USD'): string {
     if (amount == null || amount === '') return '';
     const n = typeof amount === 'number' ? amount : Number(amount);
     if (!Number.isFinite(n)) return String(amount);
-    const formatted = new Intl.NumberFormat(this.localeTag(), {
-      style: 'currency',
-      currency: (currency || 'USD').toUpperCase(),
-      currencyDisplay: 'symbol',
+    const code = (currency || 'USD').toUpperCase();
+    const numberOnly = new Intl.NumberFormat(this.localeTag(), {
+      style: 'decimal',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(n);
-    const code = (currency || 'USD').toUpperCase();
-    // Ensure currency code suffix for clarity across locales
-    if (formatted.includes(code)) return formatted;
-    return `${formatted} ${code}`;
+    return `$${numberOnly} ${code}`;
   }
 }

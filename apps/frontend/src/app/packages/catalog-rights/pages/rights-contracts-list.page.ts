@@ -5,85 +5,140 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CatalogRightsApiService } from '../services/catalog-rights-api.service';
 import { RightsContract } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-rights-contracts-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TranslatePipe,
+    StatusLabelPipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise rights-contracts-list-page">
-      <h1>{{ 'catalogRights.contracts.title' | t:lang() }}</h1>
-      <p class="subtitle read-only-notice">
-        Catalog ownership/licensing agreements (master, publishing, neighboring rights). This is
-        separate from CRM commercial (sales) contracts, and does not assert legal validity.
-      </p>
-
-      <div class="filters">
-        <label>
-          Asset id
-          <input type="number" [value]="assetFilter ?? ''" (change)="onAssetChange($event)" class="input" />
-        </label>
-        <label>
-          Status
-          <select [value]="statusFilter" (change)="onStatusChange($event)">
-            <option value="">All</option>
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="expired">Expired</option>
-            <option value="archived">Archived</option>
-            <option value="disputed">Disputed</option>
-          </select>
-        </label>
-      </div>
-
-      <form [formGroup]="createForm" (ngSubmit)="createContract()" class="create-form">
-        <input formControlName="asset_id" type="number" placeholder="Asset id" class="input" />
-        <select formControlName="rights_type" class="input">
-          <option value="master">Master</option>
-          <option value="publishing">Publishing</option>
-          <option value="neighboring">Neighboring</option>
-          <option value="other">Other</option>
-        </select>
-        <input formControlName="valid_from" type="date" class="input" />
-        <input formControlName="valid_to" type="date" placeholder="Valid to (optional)" class="input" />
-        <label class="checkbox">
-          <input type="checkbox" formControlName="exclusive" /> Exclusive
-        </label>
-        <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
-          Create Contract
-        </button>
-      </form>
-
-      @if (error) {
-        <p class="error">{{ error }}</p>
-      }
-
-      @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
-      } @else if (contracts.length === 0) {
-        <p>{{ 'catalogRights.contracts.empty' | t:lang() }}</p>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <table class="contracts-table">
-          <thead>
-            <tr><th>Asset</th><th>Type</th><th>Status</th><th>Exclusive</th><th>Valid From</th><th>Valid To</th><th></th></tr>
-          </thead>
-          <tbody>
-            @for (c of contracts; track c.id) {
-              <tr>
-                <td>#{{ c.asset_id }}</td>
-                <td>{{ c.rights_type }}</td>
-                <td><span class="badge" [class]="'badge--' + c.status">{{ c.status }}</span></td>
-                <td>{{ c.exclusive ? 'Yes' : 'No' }}</td>
-                <td>{{ c.valid_from }}</td>
-                <td>{{ c.valid_to ?? '—' }}</td>
-                <td><a [routerLink]="['/catalog-rights/contracts', c.id]">View</a></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <p class="total">Total: {{ total }}</p>
+        <app-enterprise-page-header
+          [title]="'catalogRights.contracts.title' | t:lang()"
+          [subtitle]="'catalogRights.contracts.subtitle' | t:lang()"
+        />
+
+        <app-enterprise-action-bar>
+          <app-enterprise-form-field [label]="'catalogRights.contracts.assetId' | t:lang()">
+            <input
+              type="number"
+              class="input"
+              [value]="assetFilter ?? ''"
+              (change)="onAssetChange($event)"
+            />
+          </app-enterprise-form-field>
+          <app-enterprise-form-field [label]="'common.status' | t:lang()">
+            <select class="input" [value]="statusFilter" (change)="onStatusChange($event)">
+              <option value="">{{ 'common.all' | t:lang() }}</option>
+              <option value="draft">{{ 'draft' | statusLabel }}</option>
+              <option value="active">{{ 'active' | statusLabel }}</option>
+              <option value="expired">{{ 'expired' | statusLabel }}</option>
+              <option value="archived">{{ 'archived' | statusLabel }}</option>
+              <option value="disputed">{{ 'disputed' | statusLabel }}</option>
+            </select>
+          </app-enterprise-form-field>
+        </app-enterprise-action-bar>
+
+        <app-enterprise-section-card [title]="'catalogRights.contracts.create' | t:lang()">
+          <form [formGroup]="createForm" (ngSubmit)="createContract()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'catalogRights.contracts.assetId' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="asset_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field
+              [label]="'catalogRights.contracts.rightsType' | t:lang()"
+              [required]="true"
+            >
+              <select formControlName="rights_type" class="input">
+                <option value="master">{{ 'catalogRights.rightsType.master' | t:lang() }}</option>
+                <option value="publishing">{{ 'catalogRights.rightsType.publishing' | t:lang() }}</option>
+                <option value="neighboring">{{ 'catalogRights.rightsType.neighboring' | t:lang() }}</option>
+                <option value="other">{{ 'catalogRights.rightsType.other' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <app-enterprise-form-field
+              [label]="'catalogRights.contracts.validFrom' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="valid_from" type="date" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.contracts.validToOptional' | t:lang()">
+              <input formControlName="valid_to" type="date" class="input" />
+            </app-enterprise-form-field>
+            <label class="checkbox">
+              <input type="checkbox" formControlName="exclusive" />
+              {{ 'catalogRights.contracts.exclusive' | t:lang() }}
+            </label>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
+                {{ 'catalogRights.contracts.create' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="load()" />
+        } @else if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (contracts.length === 0) {
+          <app-enterprise-empty-state
+            [title]="'catalogRights.contracts.emptyTitle' | t:lang()"
+            [description]="'catalogRights.contracts.emptyBody' | t:lang()"
+            [ctaLabel]="'catalogRights.contracts.create' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'catalogRights.contracts.assetId' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.contracts.rightsType' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.contracts.exclusive' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.contracts.validFrom' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.contracts.validTo' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of contracts; track c.id) {
+                  <tr>
+                    <td>#{{ c.asset_id }}</td>
+                    <td>{{ rightsTypeLabel(c.rights_type) }}</td>
+                    <td><app-enterprise-status-badge [status]="c.status" /></td>
+                    <td>{{ (c.exclusive ? 'common.yes' : 'common.no') | t:lang() }}</td>
+                    <td>{{ c.valid_from | localeDate }}</td>
+                    <td>{{ c.valid_to | localeDate }}</td>
+                    <td>
+                      <a [routerLink]="['/catalog-rights/contracts', c.id]" class="btn btn--ghost btn--sm">
+                        {{ 'common.view' | t:lang() }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+          <p class="muted">{{ 'catalogRights.contracts.total' | t:lang() }}: {{ total }}</p>
+        }
       }
     </div>
   `,
@@ -103,6 +158,7 @@ export class RightsContractsListPage implements OnInit {
   error: string | null = null;
   statusFilter = '';
   assetFilter: number | null = null;
+  orgId: number | null = null;
 
   createForm = this.fb.group({
     asset_id: [null as number | null, [Validators.required]],
@@ -112,17 +168,21 @@ export class RightsContractsListPage implements OnInit {
     exclusive: [false],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
     const assetIdParam = this.route.snapshot.queryParamMap.get('asset_id');
     if (assetIdParam) {
       this.assetFilter = Number(assetIdParam);
       this.createForm.patchValue({ asset_id: this.assetFilter });
     }
+    if (!this.orgId) return;
     this.load();
+  }
+
+  rightsTypeLabel(code: string): string {
+    const key = `catalogRights.rightsType.${code}`;
+    const translated = this.i18n.t(key);
+    return translated === key ? code : translated;
   }
 
   onStatusChange(event: Event): void {
@@ -137,10 +197,9 @@ export class RightsContractsListPage implements OnInit {
   }
 
   load(): void {
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    this.orgId = id || null;
+    if (!this.orgId) return;
     this.loading = true;
     this.api
       .listContracts(this.orgId, {
@@ -156,7 +215,7 @@ export class RightsContractsListPage implements OnInit {
         },
         error: (e) => {
           this.loading = false;
-          this.error = e.error?.message ?? 'Error loading rights contracts';
+          this.error = e.error?.message ?? this.i18n.t('common.failed');
         },
       });
   }
@@ -177,7 +236,7 @@ export class RightsContractsListPage implements OnInit {
           this.createForm.reset({ rights_type: 'master', exclusive: false });
           this.load();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error creating rights contract'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 }

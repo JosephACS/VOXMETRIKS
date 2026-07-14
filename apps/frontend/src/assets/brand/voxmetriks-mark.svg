@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="VOXMETRIKS">
+  <rect width="48" height="48" rx="12" fill="rgba(30,216,150,0.12)"/>
+  <path d="M12 34 L24 12 L36 34" stroke="#1ed896" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.5 34 L24 22 L30.5 34" stroke="rgba(255,255,255,0.88)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="19" y="28" width="2.2" height="5" rx="1.1" fill="#1ed896"/>
+  <rect x="23" y="25.5" width="2.2" height="7.5" rx="1.1" fill="#1ed896"/>
+  <rect x="27" y="27" width="2.2" height="6" rx="1.1" fill="#1ed896"/>
+</svg>

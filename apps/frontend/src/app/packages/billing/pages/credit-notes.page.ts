@@ -4,54 +4,96 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { CreditNote } from '../models/billing.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-credit-notes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslatePipe,
+    LocaleMoneyPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise credit-notes-page">
-      <h1>{{ 'billing.creditNotes.title' | t:lang() }}</h1>
-      <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
-        {{ showForm ? 'Cancel' : 'New Credit Note' }}
-      </button>
-      @if (showForm) {
-        <form [formGroup]="form" (ngSubmit)="submit()" class="form-card">
-          <input type="number" formControlName="invoice_id" placeholder="Invoice ID" class="input">
-          <input type="number" formControlName="amount" placeholder="Amount" step="0.01" class="input">
-          <input formControlName="reason" placeholder="Reason" class="input">
-          <button type="submit" class="btn btn--primary" [disabled]="form.invalid">{{ 'billing.creditNotes.create' | t:lang() }}</button>
-        </form>
-      }
-      @if (creditNotes.length) {
-        <table class="data-table">
-          <thead>
-            <tr><th>Number</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            @for (cn of creditNotes; track cn.id) {
-              <tr>
-                <td>{{ cn.credit_note_number }}</td>
-                <td>{{ cn.invoice_id }}</td>
-                <td>{{ cn.amount | number:'1.2-2' }} {{ cn.currency }}</td>
-                <td><span class="badge" [class]="'badge--' + cn.status">{{ cn.status }}</span></td>
-                <td>
-                  @if (cn.status === 'issued') {
-                    <button class="btn btn--sm"
-                            (click)="apply(cn.id)">Apply</button>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <p class="empty-state">No credit notes.</p>
-      }
-      @if (error) {
-        <p class="error">{{ error }}</p>
+        <app-enterprise-page-header [title]="'billing.creditNotes.title' | t:lang()">
+          <button type="button" class="btn btn--secondary" (click)="showForm = !showForm">
+            {{ (showForm ? 'billing.creditNotes.cancel' : 'billing.creditNotes.new') | t:lang() }}
+          </button>
+        </app-enterprise-page-header>
+
+        @if (showForm) {
+          <app-enterprise-section-card [title]="'billing.creditNotes.new' | t:lang()">
+            <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+              <app-enterprise-form-field [label]="'billing.creditNotes.invoiceId' | t:lang()" [required]="true">
+                <input type="number" formControlName="invoice_id" class="input" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'common.amount' | t:lang()" [required]="true">
+                <input type="number" formControlName="amount" step="0.01" class="input" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'common.reason' | t:lang()">
+                <input formControlName="reason" class="input" />
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+                  {{ 'billing.creditNotes.create' | t:lang() }}
+                </button>
+              </div>
+            </form>
+          </app-enterprise-section-card>
+        }
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="loadCreditNotes()" />
+        }
+
+        @if (!creditNotes.length && !error) {
+          <app-enterprise-empty-state
+            [title]="'billing.creditNotes.emptyTitle' | t:lang()"
+            [description]="'billing.creditNotes.emptyBody' | t:lang()"
+            [ctaLabel]="'billing.creditNotes.new' | t:lang()"
+            (ctaClick)="showForm = true"
+          />
+        } @else if (creditNotes.length) {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'billing.creditNotes.number' | t:lang() }}</th>
+                  <th>{{ 'billing.creditNotes.invoice' | t:lang() }}</th>
+                  <th>{{ 'common.amount' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (cn of creditNotes; track cn.id) {
+                  <tr>
+                    <td>{{ cn.credit_note_number }}</td>
+                    <td>{{ cn.invoice_id }}</td>
+                    <td>{{ cn.amount | localeMoney:cn.currency }}</td>
+                    <td><app-enterprise-status-badge [status]="cn.status" /></td>
+                    <td>
+                      @if (cn.status === 'issued') {
+                        <button type="button" class="btn btn--sm" (click)="apply(cn.id)">
+                          {{ 'billing.creditNotes.apply' | t:lang() }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+        }
       }
     </div>
   `,
@@ -77,10 +119,7 @@ export class CreditNotesPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    if (!this.orgId) return;
     this.loadCreditNotes();
   }
 
@@ -94,7 +133,10 @@ export class CreditNotesPage implements OnInit {
   submit(): void {
     if (this.form.invalid) return;
     this.api.createCreditNote(this.orgId!, this.form.value).subscribe({
-      next: () => { this.showForm = false; this.loadCreditNotes(); },
+      next: () => {
+        this.showForm = false;
+        this.loadCreditNotes();
+      },
       error: (e) => (this.error = e.error?.message ?? 'Error creating credit note'),
     });
   }

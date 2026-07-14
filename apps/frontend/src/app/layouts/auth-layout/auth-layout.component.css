@@ -61,32 +61,14 @@ html[data-theme='light'] .auth-bg-grid {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 860px;
+  max-width: 1080px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-/* ── Brand ── */
-.auth-brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.auth-brand-logo-wrap {
-  display: block;
-  line-height: 0;
-}
-
-.auth-brand-logo {
-  height: 36px;
-  width: auto;
-  max-width: 200px;
-  object-fit: contain;
-}
+/* Brand lives inside the login panel / hero — avoid duplicate logos here */
 
 /* ── Footer ── */
 .auth-footer {
@@ -108,12 +90,23 @@ html[data-theme='light'] .auth-bg-grid {
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .auth-layout {
-    padding: 1rem 0.875rem;
+    padding: 1rem 0.75rem;
     align-items: flex-start;
-    padding-top: 3rem;
+    padding-top: 1.5rem;
   }
 
   .auth-container {
     max-width: 100%;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

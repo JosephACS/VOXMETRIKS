@@ -4,132 +4,173 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CommercialContract } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-contract-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, LocaleDatePipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-contract-detail-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">← Oportunidades</a>
-        <h1 style="margin:0">Contrato #{{ contractId }}</h1>
+    <div class="vx-enterprise crm-page" data-testid="crm-contract-detail-page">
+      <app-enterprise-page-header [title]="('crm.contract.title' | t:lang()) + ' #' + contractId">
+        <a class="btn btn--ghost" routerLink="/crm/opportunities">
+          ← {{ 'crm.contract.backOpportunities' | t:lang() }}
+        </a>
         @if (contract()) {
-          <span class="crm-badge crm-badge--{{ contract()!.status }}">{{ contract()!.status }}</span>
+          <app-enterprise-status-badge [status]="contract()!.status" />
         }
-      </div>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="3" />
       } @else if (contract()) {
-        <div class="crm-card">
-          <h2>Información del contrato</h2>
-          <dl style="display:grid;grid-template-columns:auto 1fr;gap:0.3rem 1rem;font-size:0.875rem">
-            <dt class="crm-muted">Oportunidad</dt><dd>#{{ contract()!.opportunity_id }}</dd>
-            <dt class="crm-muted">Versión cotización</dt><dd>#{{ contract()!.quotation_version_id }}</dd>
+        <app-enterprise-section-card [title]="'crm.contract.info' | t:lang()">
+          <div class="form-grid" style="font-size: 0.875rem">
+            <div>
+              <dt class="muted">{{ 'crm.contract.opportunity' | t:lang() }}</dt>
+              <dd>#{{ contract()!.opportunity_id }}</dd>
+            </div>
+            <div>
+              <dt class="muted">{{ 'crm.contract.quotationVersion' | t:lang() }}</dt>
+              <dd>#{{ contract()!.quotation_version_id }}</dd>
+            </div>
             @if (contract()!.organization_id) {
-              <dt class="crm-muted">Organización</dt><dd>#{{ contract()!.organization_id }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.organization' | t:lang() }}</dt>
+                <dd>#{{ contract()!.organization_id }}</dd>
+              </div>
             }
             @if (contract()!.legal_name) {
-              <dt class="crm-muted">Razón social</dt><dd>{{ contract()!.legal_name }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.legalName' | t:lang() }}</dt>
+                <dd>{{ contract()!.legal_name }}</dd>
+              </div>
             }
             @if (contract()!.signatory_user_id) {
-              <dt class="crm-muted">Firmante (usuario)</dt><dd>#{{ contract()!.signatory_user_id }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.signatoryUser' | t:lang() }}</dt>
+                <dd>#{{ contract()!.signatory_user_id }}</dd>
+              </div>
             }
             @if (contract()!.signatory_contact_id) {
-              <dt class="crm-muted">Firmante (contacto)</dt><dd>#{{ contract()!.signatory_contact_id }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.signatoryContact' | t:lang() }}</dt>
+                <dd>#{{ contract()!.signatory_contact_id }}</dd>
+              </div>
             }
             @if (contract()!.approved_by) {
-              <dt class="crm-muted">Aprobado por</dt><dd>#{{ contract()!.approved_by }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.approvedBy' | t:lang() }}</dt>
+                <dd>#{{ contract()!.approved_by }}</dd>
+              </div>
             }
             @if (contract()!.approval_notes) {
-              <dt class="crm-muted">Notas aprobación</dt><dd>{{ contract()!.approval_notes }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.approvalNotes' | t:lang() }}</dt>
+                <dd>{{ contract()!.approval_notes }}</dd>
+              </div>
             }
             @if (contract()!.accepted_at) {
-              <dt class="crm-muted">Aceptado</dt><dd>{{ contract()!.accepted_at | date:'medium' }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.acceptedAt' | t:lang() }}</dt>
+                <dd>{{ contract()!.accepted_at | localeDate:true }}</dd>
+              </div>
             }
             @if (contract()!.rejected_at) {
-              <dt class="crm-muted">Rechazado</dt><dd>{{ contract()!.rejected_at | date:'medium' }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.rejectedAt' | t:lang() }}</dt>
+                <dd>{{ contract()!.rejected_at | localeDate:true }}</dd>
+              </div>
             }
             @if (contract()!.terminated_at) {
-              <dt class="crm-muted">Terminado</dt><dd>{{ contract()!.terminated_at | date:'medium' }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.terminatedAt' | t:lang() }}</dt>
+                <dd>{{ contract()!.terminated_at | localeDate:true }}</dd>
+              </div>
             }
             @if (contract()!.termination_reason) {
-              <dt class="crm-muted">Motivo terminación</dt><dd>{{ contract()!.termination_reason }}</dd>
+              <div>
+                <dt class="muted">{{ 'crm.contract.terminationReason' | t:lang() }}</dt>
+                <dd>{{ contract()!.termination_reason }}</dd>
+              </div>
             }
-            <dt class="crm-muted">Creado</dt><dd>{{ contract()!.created_at | date:'medium' }}</dd>
-            <dt class="crm-muted">Actualizado</dt><dd>{{ contract()!.updated_at | date:'medium' }}</dd>
-          </dl>
+            <div>
+              <dt class="muted">{{ 'common.created' | t:lang() }}</dt>
+              <dd>{{ contract()!.created_at | localeDate:true }}</dd>
+            </div>
+            <div>
+              <dt class="muted">{{ 'common.updated' | t:lang() }}</dt>
+              <dd>{{ contract()!.updated_at | localeDate:true }}</dd>
+            </div>
+          </div>
 
           @if (contract()!.acceptance_evidence) {
-            <div style="margin-top:0.75rem">
-              <p class="crm-muted" style="font-size:0.8rem">
-                Evidencia de aceptación académica (referencia interna, no constituye firma legal certificada):
-              </p>
-              <div style="font-family:monospace;font-size:0.8rem;word-break:break-all;
-                          padding:0.5rem;border:1px dashed var(--border,#30363d);border-radius:6px">
+            <div style="margin-top: 0.75rem">
+              <p class="muted" style="font-size: 0.8rem">{{ 'crm.contract.evidenceNote' | t:lang() }}</p>
+              <div
+                style="font-family: monospace; font-size: 0.8rem; word-break: break-all; padding: 0.5rem; border: 1px dashed var(--border, #30363d); border-radius: 6px"
+              >
                 {{ contract()!.acceptance_evidence }}
               </div>
             </div>
           }
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Actions by status -->
-        <div class="crm-card">
-          <h2>Acciones disponibles</h2>
-          <div class="crm-actions">
+        <app-enterprise-section-card [title]="'crm.contract.actions' | t:lang()">
+          <app-enterprise-action-bar>
             @if (contract()!.status === 'draft') {
-              <button type="button" class="crm-btn" [disabled]="saving()" (click)="submit()">
-                Enviar para aprobación
+              <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submit()">
+                {{ 'crm.contract.submitApproval' | t:lang() }}
               </button>
             }
             @if (contract()!.status === 'pending_approval') {
-              <button type="button" class="crm-btn" [disabled]="saving()" (click)="approve()">
-                Aprobar contrato
+              <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="approve()">
+                {{ 'crm.contract.approveContract' | t:lang() }}
               </button>
-              <button type="button" class="crm-btn crm-btn--danger" [disabled]="saving()" (click)="reject()">
-                Rechazar
+              <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="reject()">
+                {{ 'common.reject' | t:lang() }}
               </button>
             }
             @if (contract()!.status === 'approved') {
-              <button type="button" class="crm-btn" [disabled]="saving()" (click)="send()">
-                Enviar al cliente
+              <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="send()">
+                {{ 'crm.contract.sendToClient' | t:lang() }}
               </button>
             }
             @if (contract()!.status === 'sent') {
-              <button type="button" class="crm-btn" [disabled]="saving()" (click)="accept()">
-                Registrar aceptación académica
+              <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="accept()">
+                {{ 'crm.contract.registerAcceptance' | t:lang() }}
               </button>
-              <button type="button" class="crm-btn crm-btn--danger" [disabled]="saving()" (click)="reject()">
-                Rechazar
+              <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="reject()">
+                {{ 'common.reject' | t:lang() }}
               </button>
             }
             @if (['approved', 'sent', 'active'].includes(contract()!.status)) {
-              <button type="button" class="crm-btn crm-btn--danger" [disabled]="saving()" (click)="terminate()">
-                Terminar contrato
+              <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="terminate()">
+                {{ 'crm.contract.terminateContract' | t:lang() }}
               </button>
             }
-          </div>
+          </app-enterprise-action-bar>
           @if (['draft', 'sent', 'pending_approval'].includes(contract()!.status)) {
-            <div class="crm-actions" style="margin-top:0.5rem">
-              <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()" (click)="expire()">
-                Marcar expirado
+            <app-enterprise-action-bar>
+              <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="expire()">
+                {{ 'crm.contract.markExpired' | t:lang() }}
               </button>
-            </div>
+            </app-enterprise-action-bar>
           }
-        </div>
+        </app-enterprise-section-card>
       }
-    </section>
+    </div>
   `,
 })
 export class CrmContractDetailPageComponent implements OnInit {

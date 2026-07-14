@@ -148,6 +148,43 @@ export interface StatsSummary {
   promedio_energy?: number;
   promedio_valence?: number;
   promedio_tempo?: number;
+  tracks_scope?: string;
+  artists_scope?: string;
+  albums_scope?: string;
+  playlists_scope?: string;
+  streams_scope?: string;
+  events_scope?: string;
+  events_updated_at?: string | null;
+  events_classification_totals?: Record<string, number> | null;
+}
+
+export interface EventsBreakdownRow {
+  table: string;
+  row_count: number;
+  kind: string;
+  category: string;
+  origin: string;
+  classification: 'real' | 'imported' | 'demo' | 'synthetic' | 'unknown' | string;
+  updated_at?: string | null;
+  pct_of_total: number;
+}
+
+export interface EventsBreakdown {
+  total_events: number;
+  formula: string;
+  activity_fact_tables: string[];
+  tables: EventsBreakdownRow[];
+  classification_totals: Record<string, number>;
+  classification_basis?: string;
+  latest_load?: {
+    modo?: string | null;
+    estado?: string | null;
+    fecha_carga?: string | null;
+    total_raw?: number | null;
+  };
+  updated_at?: string | null;
+  generated_at?: string;
+  tooltip?: string;
 }
 
 export interface WarehouseStatus {

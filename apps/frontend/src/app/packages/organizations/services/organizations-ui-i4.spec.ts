@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { environment } from '../../../../environments/environment';
 import { OrgSelectorComponent } from '../components/org-selector.component';
 import { OrgNonePageComponent } from '../pages/org-none.page';
@@ -73,6 +74,47 @@ describe('OrgNonePageComponent (I4)', () => {
     expect(text).toContain('Sin organización empresarial');
     expect(text).toContain('Seguir en modo personal');
     expect(text).toContain('Crear organización');
+    http.verify();
+  });
+
+  it('redirects to org settings when an active organization already exists', async () => {
+    await TestBed.configureTestingModule({
+      imports: [OrgNonePageComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        OrganizationsApiService,
+        OrganizationContextService,
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(OrgNonePageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const router = TestBed.inject(Router);
+    const nav = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const org = {
+      id: 1,
+      display_name: 'VOXMETRIKS Demo',
+      slug: 'voxmetriks-demo',
+      organization_type: 'label',
+      timezone: 'UTC',
+      default_currency: 'USD',
+      status: 'active',
+      created_by: 1,
+      created_at: '',
+      updated_at: '',
+    };
+    // Await ngOnInit explicitly so bootstrap + redirect complete before asserts.
+    const init = fixture.componentInstance.ngOnInit();
+    http.expectOne(`${environment.apiUrl}/organizations`).flush([org]);
+    http.expectOne(`${environment.apiUrl}/organizations/current`).flush({
+      context: 'active',
+      organization: org,
+      roles: ['owner'],
+      permissions: ['organization.view'],
+    });
+    await init;
+    expect(nav).toHaveBeenCalledWith(['/organizations', 1, 'settings'], { replaceUrl: true });
     http.verify();
   });
 });

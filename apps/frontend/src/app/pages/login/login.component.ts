@@ -3,7 +3,6 @@
  */
 
 import { Component, inject, signal, OnInit, NgZone, ElementRef, ViewChild } from '@angular/core';
-import { UpperCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   ReactiveFormsModule,
@@ -15,8 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UiPreferencesService, AppLanguage } from '../../core/services/ui-preferences.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { StatsService } from '../../packages/analytics/services/stats.service';
-import { StatsSummary } from '../../shared/models/api.models';
+import { BrandMarkComponent } from '../../shared/components/brand-mark/brand-mark.component';
 
 type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
@@ -34,7 +32,7 @@ const GIS_SCRIPT_ID = 'google-identity-services';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, UpperCasePipe],
+  imports: [ReactiveFormsModule, TranslatePipe, BrandMarkComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
@@ -43,7 +41,6 @@ export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
-  private readonly stats = inject(StatsService);
   private readonly i18n = inject(I18nService);
   private readonly ui = inject(UiPreferencesService);
   private readonly zone = inject(NgZone);
@@ -54,7 +51,6 @@ export class LoginComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly showPassword = signal(false);
-  protected readonly summary = signal<StatsSummary | null>(null);
 
   // Email verification
   protected readonly pendingEmail = signal('');
@@ -96,10 +92,6 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.stats.getSummary().subscribe({
-      next: (data) => this.summary.set(data),
-      error: (err) => console.error('[LoginComponent] getSummary failed', err),
-    });
     this.auth.getAuthConfig().then((cfg) => {
       if (cfg?.google_client_id) {
         this.googleClientId.set(cfg.google_client_id);
@@ -326,12 +318,5 @@ export class LoginComponent implements OnInit {
         }
       });
     });
-  }
-
-  protected formatStat(val?: number | null): string {
-    if (val == null) return '—';
-    if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
-    if (val >= 1_000) return `${(val / 1_000).toFixed(1)}K`;
-    return val.toString();
   }
 }

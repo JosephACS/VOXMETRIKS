@@ -36,8 +36,20 @@ export class OrganizationContextService {
   readonly permissions = this._permissions.asReadonly();
   readonly contextKind = this._contextKind.asReadonly();
 
-  readonly hasOrganization = computed(() => this._active() != null && this._contextKind() === 'active');
+  /** True only when an org is active with a concrete id (not "selected" without context). */
+  readonly hasOrganization = computed(
+    () => this._active()?.id != null && this._contextKind() === 'active',
+  );
   readonly isLoading = computed(() => this._status() === 'loading');
+
+  /** Active org id or null — never invent an id when context is cleared. */
+  readonly organizationId = computed(() =>
+    this.hasOrganization() ? (this._active()?.id ?? null) : null,
+  );
+
+  /** In-flight bootstrap so concurrent callers (route guards) share one load. */
+  private bootstrapPromise: Promise<void> | null = null;
+  private activatePromise: Promise<void> | null = null;
 
   hasPermission(code: string): boolean {
     return this._permissions().includes(code);
@@ -52,7 +64,40 @@ export class OrganizationContextService {
     this.crmCtx?.clearState();
   }
 
+  /**
+   * Personal / none mode: clear local org context so the selector cannot
+   * show a selected org while organizationId is null.
+   * (Backend "current" remains until the next activate; listing still works.)
+   */
+  enterPersonalMode(): void {
+    this.clearOrganizationScopedState();
+    this._status.set('ready');
+    this._error.set(null);
+  }
+
+  /** Wait until org context is ready (or error). Safe to call from parallel route guards. */
+  async ensureReady(): Promise<void> {
+    if (this.activatePromise) {
+      try {
+        await this.activatePromise;
+      } catch {
+        /* activate failure already reflected on signals */
+      }
+    }
+    if (this._status() === 'ready' || this._status() === 'error') return;
+    await this.bootstrap();
+  }
+
   async bootstrap(): Promise<void> {
+    if (this.bootstrapPromise) return this.bootstrapPromise;
+
+    this.bootstrapPromise = this.runBootstrap().finally(() => {
+      this.bootstrapPromise = null;
+    });
+    return this.bootstrapPromise;
+  }
+
+  private async runBootstrap(): Promise<void> {
     this._status.set('loading');
     this._error.set(null);
     try {
@@ -67,6 +112,18 @@ export class OrganizationContextService {
         this._membership.set(current.membership ?? null);
         this._roles.set(current.roles ?? []);
         this._permissions.set(current.permissions ?? []);
+      } else if (
+        (current.context === 'none' || current.context === 'invalid') &&
+        list.length === 1
+      ) {
+        // Single visible org: activate so post-login is not "Sin organización".
+        try {
+          await this.activate(list[0].id);
+          return;
+        } catch {
+          this.clearOrganizationScopedState();
+          this._contextKind.set(current.context);
+        }
       } else {
         this.clearOrganizationScopedState();
         this._contextKind.set(current.context);
@@ -84,27 +141,47 @@ export class OrganizationContextService {
   }
 
   async activate(organizationId: number): Promise<void> {
-    this._status.set('loading');
-    this._error.set(null);
-    try {
-      // Clear previous org-scoped permissions/UI before applying new context.
-      this.clearOrganizationScopedState();
-      const current = await firstValueFrom(this.api.activate(organizationId));
-      await this.refreshList();
-      this._contextKind.set(current.context);
-      if (current.context === 'active' && current.organization) {
-        this._active.set(current.organization);
-        this._membership.set(current.membership ?? null);
-        this._roles.set(current.roles ?? []);
-        this._permissions.set(current.permissions ?? []);
+    if (this.activatePromise) {
+      await this.activatePromise;
+      if (this._active()?.id === organizationId && this._contextKind() === 'active') {
+        return;
       }
-      this._status.set('ready');
-    } catch (e) {
-      this.clearOrganizationScopedState();
-      this._status.set('error');
-      this._error.set(e instanceof OrganizationsApiError ? e.message : 'Failed to activate organization');
-      throw e;
     }
+
+    const run = async (): Promise<void> => {
+      this._status.set('loading');
+      this._error.set(null);
+      // Keep previous active org visible until the new context succeeds —
+      // avoids selector showing "none" while /organizations/none is wrongfully open.
+      try {
+        const current = await firstValueFrom(this.api.activate(organizationId));
+        await this.refreshList();
+        this.crmCtx?.clearState();
+        this._contextKind.set(current.context);
+        if (current.context === 'active' && current.organization) {
+          this._active.set(current.organization);
+          this._membership.set(current.membership ?? null);
+          this._roles.set(current.roles ?? []);
+          this._permissions.set(current.permissions ?? []);
+        } else {
+          this.clearOrganizationScopedState();
+          this._contextKind.set(current.context);
+        }
+        this._status.set('ready');
+      } catch (e) {
+        this.clearOrganizationScopedState();
+        this._status.set('error');
+        this._error.set(
+          e instanceof OrganizationsApiError ? e.message : 'Failed to activate organization',
+        );
+        throw e;
+      }
+    };
+
+    this.activatePromise = run().finally(() => {
+      this.activatePromise = null;
+    });
+    return this.activatePromise;
   }
 
   async afterCreate(): Promise<void> {

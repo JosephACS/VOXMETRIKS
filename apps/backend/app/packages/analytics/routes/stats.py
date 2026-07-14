@@ -13,6 +13,7 @@ from app.packages.analytics.services.stats_service import (
     generate_synthetic_activity,
     get_catalog_growth,
     get_energia_distribution,
+    get_events_breakdown,
     get_last_loads,
     get_summary,
     get_synthetic_limits,
@@ -47,6 +48,18 @@ def summary(
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     return get_summary(conn)
+
+
+@router.get(
+    "/events-breakdown",
+    summary="Analytical events KPI breakdown (activity fact tables)",
+)
+def events_breakdown(
+    _user: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+):
+    """Row counts per activity fact table powering Home total_events. Read-only."""
+    return get_events_breakdown(conn)
 
 
 @router.get("/catalog-growth", summary="Catalog growth from load history")

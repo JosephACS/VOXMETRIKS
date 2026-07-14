@@ -4,9 +4,10 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CrmContextService } from '../services/crm-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 interface DashStats {
   prospects: number;
   opportunities: number;
@@ -17,53 +18,64 @@ interface DashStats {
 @Component({
   selector: 'app-crm-dashboard-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-dashboard-page">
-      <h1>{{ 'crm.dashboard.title' | t:lang() }}</h1>
-      <p class="lede">
-        Resumen comercial. Roles activos:
-        <strong>{{ roles().join(', ') || '—' }}</strong>
+    <div class="vx-enterprise crm-page" data-testid="crm-dashboard-page">
+      <app-enterprise-page-header
+        [title]="'crm.dashboard.title' | t:lang()"
+        [subtitle]="'crm.dashboard.subtitle' | t:lang()"
+      />
+
+      <p class="muted">
+        {{ 'crm.dashboard.roles' | t:lang() }}:
+        <strong>{{ roles().join(', ') || ('common.notAvailable' | t:lang()) }}</strong>
       </p>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="ngOnInit()" />
       }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando estadísticas…</p>
+        <app-enterprise-loading-skeleton [rows]="2" />
       } @else {
         <div class="crm-stats-grid">
-          <div class="crm-stat">
-            <div class="crm-stat__value">{{ stats().prospects }}</div>
-            <div class="crm-stat__label">{{ 'crm.prospects.title' | t:lang() }}</div>
-          </div>
-          <div class="crm-stat">
-            <div class="crm-stat__value">{{ stats().opportunities }}</div>
-            <div class="crm-stat__label">Oportunidades</div>
-          </div>
-          <div class="crm-stat">
-            <div class="crm-stat__value">{{ stats().approvalsPending }}</div>
-            <div class="crm-stat__label">{{ 'crm.approvals.title' | t:lang() }}</div>
-          </div>
-          <div class="crm-stat">
-            <div class="crm-stat__value">{{ stats().activities }}</div>
-            <div class="crm-stat__label">Actividades recientes</div>
-          </div>
+          <app-enterprise-stat-card
+            [label]="'crm.dashboard.prospects' | t:lang()"
+            [value]="stats().prospects"
+          />
+          <app-enterprise-stat-card
+            [label]="'crm.dashboard.opportunities' | t:lang()"
+            [value]="stats().opportunities"
+          />
+          <app-enterprise-stat-card
+            [label]="'crm.approvals.title' | t:lang()"
+            [value]="stats().approvalsPending"
+          />
+          <app-enterprise-stat-card
+            [label]="'crm.dashboard.activities' | t:lang()"
+            [value]="stats().activities"
+          />
         </div>
       }
 
-      <div class="crm-card">
-        <h2>Accesos rápidos</h2>
-        <div class="crm-actions">
-          <a class="crm-btn crm-btn--ghost" routerLink="/crm/prospects">Ver prospectos</a>
-          <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">Pipeline</a>
-          <a class="crm-btn crm-btn--ghost" routerLink="/crm/approvals">Aprobaciones</a>
-          <a class="crm-btn crm-btn--ghost" routerLink="/crm/audit">{{ 'organizations.audit.title' | t:lang() }}</a>
-        </div>
-      </div>
-    </section>
+      <app-enterprise-section-card [title]="'crm.dashboard.quick' | t:lang()">
+        <app-enterprise-action-bar>
+          <a class="btn btn--ghost" routerLink="/crm/prospects">
+            {{ 'crm.dashboard.viewProspects' | t:lang() }}
+          </a>
+          <a class="btn btn--ghost" routerLink="/crm/opportunities">
+            {{ 'crm.dashboard.pipeline' | t:lang() }}
+          </a>
+          <a class="btn btn--ghost" routerLink="/crm/approvals">
+            {{ 'crm.approvals.title' | t:lang() }}
+          </a>
+          <a class="btn btn--ghost" routerLink="/crm/audit">
+            {{ 'organizations.audit.title' | t:lang() }}
+          </a>
+        </app-enterprise-action-bar>
+      </app-enterprise-section-card>
+    </div>
   `,
 })
 export class CrmDashboardPageComponent implements OnInit {

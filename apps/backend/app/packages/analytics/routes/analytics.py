@@ -67,7 +67,7 @@ def explorer_tables(
 def explorer_preview(
     table_name: str,
     page: int = Query(1, ge=1),
-    limit: int = Query(8, ge=1, le=50),
+    limit: int = Query(50, ge=1, le=100),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
     _engineer: int = Depends(require_engineer_user),
 ):

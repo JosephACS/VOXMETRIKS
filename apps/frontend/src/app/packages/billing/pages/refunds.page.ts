@@ -4,48 +4,95 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { Refund } from '../models/billing.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-refunds',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslatePipe,
+    LocaleMoneyPipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise refunds-page">
-      <h1>{{ 'billing.refunds.title' | t:lang() }}</h1>
-      <button class="btn btn--secondary mb-3" (click)="showForm = !showForm">
-        {{ showForm ? 'Cancel' : 'New Refund' }}
-      </button>
-      @if (showForm) {
-        <form [formGroup]="form" (ngSubmit)="submit()" class="form-card">
-          <input type="number" formControlName="payment_id" placeholder="Payment ID" class="input">
-          <input type="number" formControlName="amount" placeholder="Amount" step="0.01" class="input">
-          <input formControlName="reason" placeholder="Reason (optional)" class="input">
-          <button type="submit" class="btn btn--primary" [disabled]="form.invalid">{{ 'billing.refunds.issue' | t:lang() }}</button>
-        </form>
-      }
-      @if (refunds.length) {
-        <table class="data-table">
-          <thead>
-            <tr><th>ID</th><th>Payment</th><th>Amount</th><th>Status</th><th>Processed</th></tr>
-          </thead>
-          <tbody>
-            @for (r of refunds; track r.id) {
-              <tr>
-                <td>{{ r.id }}</td><td>{{ r.payment_id }}</td>
-                <td>{{ r.amount | number:'1.2-2' }} {{ r.currency }}</td>
-                <td><span class="badge" [class]="'badge--' + r.status">{{ r.status }}</span></td>
-                <td>{{ r.processed_at | date:'short' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <p class="empty-state">{{ 'billing.refunds.empty' | t:lang() }}</p>
-      }
-      @if (error) {
-        <p class="error">{{ error }}</p>
+        <app-enterprise-page-header [title]="'billing.refunds.title' | t:lang()">
+          <button type="button" class="btn btn--secondary" (click)="showForm = !showForm">
+            {{ (showForm ? 'billing.refunds.cancel' : 'billing.refunds.new') | t:lang() }}
+          </button>
+        </app-enterprise-page-header>
+
+        @if (showForm) {
+          <app-enterprise-section-card [title]="'billing.refunds.new' | t:lang()">
+            <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+              <app-enterprise-form-field [label]="'billing.refunds.paymentId' | t:lang()" [required]="true">
+                <input type="number" formControlName="payment_id" class="input" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'billing.refunds.amount' | t:lang()" [required]="true">
+                <input type="number" formControlName="amount" step="0.01" class="input" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'common.reason' | t:lang()">
+                <input
+                  formControlName="reason"
+                  class="input"
+                  [placeholder]="'billing.refunds.reasonPlaceholder' | t:lang()"
+                />
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+                  {{ 'billing.refunds.issue' | t:lang() }}
+                </button>
+              </div>
+            </form>
+          </app-enterprise-section-card>
+        }
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="loadRefunds()" />
+        }
+
+        @if (!refunds.length && !error) {
+          <app-enterprise-empty-state
+            [title]="'billing.refunds.emptyTitle' | t:lang()"
+            [description]="'billing.refunds.emptyBody' | t:lang()"
+            [ctaLabel]="'billing.refunds.new' | t:lang()"
+            (ctaClick)="showForm = true"
+          />
+        } @else if (refunds.length) {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'common.id' | t:lang() }}</th>
+                  <th>{{ 'billing.refunds.payment' | t:lang() }}</th>
+                  <th>{{ 'common.amount' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'billing.refunds.processed' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of refunds; track r.id) {
+                  <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.payment_id }}</td>
+                    <td>{{ r.amount | localeMoney:r.currency }}</td>
+                    <td><app-enterprise-status-badge [status]="r.status" /></td>
+                    <td>{{ r.processed_at | localeDate:true }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+        }
       }
     </div>
   `,
@@ -71,10 +118,7 @@ export class RefundsPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    if (!this.orgId) return;
     this.loadRefunds();
   }
 
@@ -88,7 +132,10 @@ export class RefundsPage implements OnInit {
   submit(): void {
     if (this.form.invalid) return;
     this.api.createRefund(this.orgId!, this.form.value).subscribe({
-      next: () => { this.showForm = false; this.loadRefunds(); },
+      next: () => {
+        this.showForm = false;
+        this.loadRefunds();
+      },
       error: (e) => (this.error = e.error?.message ?? 'Error creating refund'),
     });
   }

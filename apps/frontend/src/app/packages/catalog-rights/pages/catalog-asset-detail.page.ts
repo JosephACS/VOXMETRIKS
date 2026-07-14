@@ -10,71 +10,98 @@ import {
   RightsCoverageRow,
 } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-catalog-asset-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
     <div class="vx-enterprise catalog-asset-detail-page">
-      <a routerLink="/catalog-rights/assets">&larr; Back to assets</a>
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else if (loading) {
+        <app-enterprise-loading-skeleton [rows]="6" />
+      } @else if (asset) {
+        <a routerLink="/catalog-rights/assets" class="back-link">
+          {{ 'catalogRights.assetDetail.back' | t:lang() }}
+        </a>
 
-      @if (asset) {
-        <h1>{{ asset.title }}</h1>
-        <div class="profile-card">
-          <div class="field"><label>Status</label>
-            <span class="badge" [class]="'badge--' + asset.status">{{ asset.status }}</span>
-          </div>
-          <div class="field"><label>Warehouse Track Link</label>
-            @if (asset.warehouse_track_id) {
-              <span class="badge badge--linked">Linked to track #{{ asset.warehouse_track_id }}</span>
-            } @else {
-              <span class="badge badge--unlinked">Not linked</span>
-            }
-          </div>
-        </div>
+        <app-enterprise-page-header [title]="asset.title">
+          <app-enterprise-status-badge [status]="asset.status" />
+        </app-enterprise-page-header>
 
-        <div class="actions">
-          <a class="btn btn--secondary" [routerLink]="['/catalog-rights/contracts']" [queryParams]="{ asset_id: asset.id }">
-            View {{ 'catalogRights.contracts.title' | t:lang() }}
+        <app-enterprise-section-card [title]="'common.details' | t:lang()">
+          <dl class="meta">
+            <dt>{{ 'catalogRights.assets.warehouseLink' | t:lang() }}</dt>
+            <dd>
+              @if (asset.warehouse_track_id) {
+                <span class="badge badge--linked">
+                  {{ 'catalogRights.assets.linked' | t:lang() }} #{{ asset.warehouse_track_id }}
+                </span>
+              } @else {
+                <span class="badge badge--unlinked">{{ 'catalogRights.assets.notLinked' | t:lang() }}</span>
+              }
+            </dd>
+          </dl>
+        </app-enterprise-section-card>
+
+        <app-enterprise-action-bar>
+          <a
+            class="btn btn--secondary"
+            [routerLink]="['/catalog-rights/contracts']"
+            [queryParams]="{ asset_id: asset.id }"
+          >
+            {{ 'catalogRights.contracts.title' | t:lang() }}
           </a>
-        </div>
+        </app-enterprise-action-bar>
 
-        <section class="link-warehouse">
-          <h2>Link Warehouse Track</h2>
-          <p class="hint">Optional reference only — this does not copy or duplicate dim_track data.</p>
-          <form [formGroup]="warehouseForm" (ngSubmit)="linkWarehouse()">
-            <input formControlName="warehouse_track_id" type="number" placeholder="Warehouse track id" class="input" />
-            <button type="submit" class="btn btn--secondary" [disabled]="warehouseForm.invalid">Link</button>
+        <app-enterprise-section-card [title]="'catalogRights.assetDetail.linkTrack' | t:lang()">
+          <p class="hint muted">{{ 'catalogRights.assetDetail.linkTrackHint' | t:lang() }}</p>
+          <form [formGroup]="warehouseForm" (ngSubmit)="linkWarehouse()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.assets.warehouseTrack' | t:lang()" [required]="true">
+              <input formControlName="warehouse_track_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary" [disabled]="warehouseForm.invalid">
+                {{ 'catalogRights.assetDetail.link' | t:lang() }}
+              </button>
+            </div>
           </form>
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="artists">
-          <h2>Artists</h2>
+        <app-enterprise-section-card [title]="'catalogRights.assetDetail.artists' | t:lang()">
           @if (artists.length === 0) {
-            <p>No artists linked yet.</p>
+            <p class="muted">{{ 'catalogRights.assetDetail.noArtists' | t:lang() }}</p>
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (a of artists; track a.id) {
                 <li>Artist profile #{{ a.artist_profile_id }} — {{ a.role }}</li>
               }
             </ul>
           }
-          <form [formGroup]="artistForm" (ngSubmit)="linkArtist()">
-            <input formControlName="artist_profile_id" type="number" placeholder="Artist profile id" class="input" />
-            <input formControlName="role" placeholder="Role (e.g. primary, featured)" class="input" />
-            <button type="submit" class="btn btn--secondary" [disabled]="artistForm.invalid">Link Artist</button>
+          <form [formGroup]="artistForm" (ngSubmit)="linkArtist()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.assets.artistProfile' | t:lang()" [required]="true">
+              <input formControlName="artist_profile_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.role' | t:lang()">
+              <input formControlName="role" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary" [disabled]="artistForm.invalid">
+                {{ 'catalogRights.assetDetail.linkArtist' | t:lang() }}
+              </button>
+            </div>
           </form>
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="ownership">
-          <h2>Ownership</h2>
+        <app-enterprise-section-card [title]="'catalogRights.assetDetail.ownership' | t:lang()">
           @if (ownership.length === 0) {
-            <p>No ownership records yet.</p>
+            <p class="muted">{{ 'catalogRights.assetDetail.noOwnership' | t:lang() }}</p>
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (o of ownership; track o.id) {
                 <li>
                   {{ o.ownership_type }} —
@@ -84,86 +111,112 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               }
             </ul>
           }
-          <form [formGroup]="ownershipForm" (ngSubmit)="registerOwnership()">
-            <select formControlName="ownership_type" class="input">
-              <option value="label">Label</option>
-              <option value="artist">Artist</option>
-              <option value="publisher">Publisher</option>
-              <option value="other">Other</option>
-            </select>
-            <input formControlName="owner_organization_id" type="number" placeholder="Owner org id (optional)" class="input" />
-            <input formControlName="artist_profile_id" type="number" placeholder="Artist profile id (optional)" class="input" />
-            <button type="submit" class="btn btn--secondary">Register Ownership</button>
+          <form [formGroup]="ownershipForm" (ngSubmit)="registerOwnership()" class="form-grid">
+            <app-enterprise-form-field [label]="'common.type' | t:lang()">
+              <select formControlName="ownership_type" class="input">
+                <option value="label">{{ 'catalogRights.ownershipType.label' | t:lang() }}</option>
+                <option value="artist">{{ 'catalogRights.assetDetail.artists' | t:lang() }}</option>
+                <option value="publisher">{{ 'catalogRights.ownershipType.publisher' | t:lang() }}</option>
+                <option value="other">{{ 'catalogRights.rightsType.other' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.assetDetail.ownerOrgId' | t:lang()">
+              <input formControlName="owner_organization_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.assets.artistProfile' | t:lang()">
+              <input formControlName="artist_profile_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary">
+                {{ 'catalogRights.assetDetail.ownership' | t:lang() }}
+              </button>
+            </div>
           </form>
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="coverage">
-          <h2>Rights Coverage</h2>
-          <p class="hint">
-            Percentage totals are computed per rights type + territory + overlapping period —
-            not a single global sum for the whole asset.
-          </p>
-          <form [formGroup]="coverageForm" (ngSubmit)="loadCoverage()">
-            <select formControlName="rights_type" class="input">
-              <option value="">All rights types</option>
-              <option value="master">Master</option>
-              <option value="publishing">Publishing</option>
-              <option value="neighboring">Neighboring</option>
-              <option value="other">Other</option>
-            </select>
-            <button type="submit" class="btn btn--secondary">Query Coverage</button>
+        <app-enterprise-section-card [title]="'catalogRights.assetDetail.coverage' | t:lang()">
+          <p class="hint muted">{{ 'catalogRights.assetDetail.coverageHint' | t:lang() }}</p>
+          <form [formGroup]="coverageForm" (ngSubmit)="loadCoverage()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.contracts.rightsType' | t:lang()">
+              <select formControlName="rights_type" class="input">
+                <option value="">{{ 'catalogRights.assetDetail.allRightsTypes' | t:lang() }}</option>
+                <option value="master">{{ 'catalogRights.rightsType.master' | t:lang() }}</option>
+                <option value="publishing">{{ 'catalogRights.rightsType.publishing' | t:lang() }}</option>
+                <option value="neighboring">{{ 'catalogRights.rightsType.neighboring' | t:lang() }}</option>
+                <option value="other">{{ 'catalogRights.rightsType.other' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary">
+                {{ 'catalogRights.assetDetail.queryCoverage' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (coverage.length > 0) {
-            <table class="data-table">
-              <thead>
-                <tr><th>Rights Type</th><th>Territory</th><th>Total %</th><th>Contracts</th><th>Conflict</th></tr>
-              </thead>
-              <tbody>
-                @for (row of coverage; track row.rights_type + row.territory_code) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td>{{ row.rights_type }}</td>
-                    <td>{{ row.territory_code }}</td>
-                    <td>{{ row.total_percentage }}%</td>
-                    <td>{{ row.contract_count }}</td>
-                    <td>
-                      @if (row.has_conflict) {
-                        <span class="badge badge--danger">Conflict</span>
-                      } @else {
-                        <span class="badge badge--ok">OK</span>
-                      }
-                    </td>
+                    <th>{{ 'catalogRights.contracts.rightsType' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.conflicts.territory' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.assetDetail.totalPct' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.contracts.title' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.assetDetail.conflict' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (row of coverage; track row.rights_type + row.territory_code) {
+                    <tr>
+                      <td>{{ row.rights_type }}</td>
+                      <td>{{ row.territory_code }}</td>
+                      <td>{{ row.total_percentage }}%</td>
+                      <td>{{ row.contract_count }}</td>
+                      <td>
+                        @if (row.has_conflict) {
+                          <span class="badge badge--danger">{{ 'catalogRights.assetDetail.conflict' | t:lang() }}</span>
+                        } @else {
+                          <span class="badge badge--ok">OK</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="overlap">
-          <h2>Detect Overlap</h2>
-          <form [formGroup]="overlapForm" (ngSubmit)="detectOverlap()">
-            <select formControlName="rights_type" class="input">
-              <option value="master">Master</option>
-              <option value="publishing">Publishing</option>
-              <option value="neighboring">Neighboring</option>
-              <option value="other">Other</option>
-            </select>
-            <button type="submit" class="btn btn--danger">Run Overlap Detection</button>
+        <app-enterprise-section-card [title]="'catalogRights.assetDetail.overlap' | t:lang()">
+          <form [formGroup]="overlapForm" (ngSubmit)="detectOverlap()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.contracts.rightsType' | t:lang()">
+              <select formControlName="rights_type" class="input">
+                <option value="master">{{ 'catalogRights.rightsType.master' | t:lang() }}</option>
+                <option value="publishing">{{ 'catalogRights.rightsType.publishing' | t:lang() }}</option>
+                <option value="neighboring">{{ 'catalogRights.rightsType.neighboring' | t:lang() }}</option>
+                <option value="other">{{ 'catalogRights.rightsType.other' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--danger">
+                {{ 'catalogRights.assetDetail.runOverlap' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (overlapResult) {
             @if (overlapResult.length === 0) {
-              <p>No conflicts detected.</p>
+              <p class="muted">{{ 'catalogRights.assetDetail.noConflicts' | t:lang() }}</p>
             } @else {
-              <p>{{ overlapResult.length }} conflict(s) opened. See <a routerLink="/catalog-rights/conflicts">Conflicts</a>.</p>
+              <p>
+                {{ 'catalogRights.assetDetail.conflictsOpened' | t:{ count: overlapResult.length }:lang() }}
+                <a routerLink="/catalog-rights/conflicts">{{ 'catalogRights.conflicts.title' | t:lang() }}</a>.
+              </p>
             }
           }
-        </section>
-      } @else if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
+        </app-enterprise-section-card>
       }
 
       @if (error) {
-        <p class="error">{{ error }}</p>
+        <app-enterprise-error-state [message]="error" (retry)="load()" />
       }
     </div>
   `,
@@ -184,6 +237,7 @@ export class CatalogAssetDetailPage implements OnInit {
   overlapResult: unknown[] | null = null;
   loading = false;
   error: string | null = null;
+  orgId: number | null = null;
 
   warehouseForm = this.fb.group({
     warehouse_track_id: [null as number | null, [Validators.required]],
@@ -208,21 +262,21 @@ export class CatalogAssetDetailPage implements OnInit {
     rights_type: ['master'],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   private get assetId(): number {
     return Number(this.route.snapshot.paramMap.get('id'));
   }
 
   ngOnInit(): void {
-    this.load();
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (this.orgId) this.load();
   }
 
   load(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
     this.loading = true;
-    this.api.getAsset(this.orgId, this.assetId).subscribe({
+    this.error = null;
+    this.api.getAsset(orgId, this.assetId).subscribe({
       next: (a) => {
         this.asset = a;
         this.loading = false;
@@ -231,55 +285,63 @@ export class CatalogAssetDetailPage implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        this.error = e.error?.message ?? 'Error loading catalog asset';
+        this.error = e.error?.message ?? this.i18n.t('common.failed');
       },
     });
   }
 
   loadArtists(): void {
-    this.api.listAssetArtists(this.orgId, this.assetId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listAssetArtists(orgId, this.assetId).subscribe({
       next: (items) => (this.artists = items),
       error: () => (this.artists = []),
     });
   }
 
   loadOwnership(): void {
-    this.api.listOwnership(this.orgId, this.assetId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listOwnership(orgId, this.assetId).subscribe({
       next: (items) => (this.ownership = items),
       error: () => (this.ownership = []),
     });
   }
 
   linkWarehouse(): void {
-    if (this.warehouseForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.warehouseForm.invalid) return;
     const id = Number(this.warehouseForm.value.warehouse_track_id);
-    this.api.linkWarehouseTrack(this.orgId, this.assetId, id).subscribe({
+    this.api.linkWarehouseTrack(orgId, this.assetId, id).subscribe({
       next: (a) => {
         this.asset = a;
         this.warehouseForm.reset();
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error linking warehouse track'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   linkArtist(): void {
-    if (this.artistForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.artistForm.invalid) return;
     const value = this.artistForm.value;
     this.api
-      .linkAssetArtist(this.orgId, this.assetId, Number(value.artist_profile_id), value.role || 'primary')
+      .linkAssetArtist(orgId, this.assetId, Number(value.artist_profile_id), value.role || 'primary')
       .subscribe({
         next: () => {
           this.artistForm.reset({ role: 'primary' });
           this.loadArtists();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error linking artist'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   registerOwnership(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
     const value = this.ownershipForm.value;
     this.api
-      .registerOwnership(this.orgId, this.assetId, {
+      .registerOwnership(orgId, this.assetId, {
         ownership_type: value.ownership_type || 'label',
         owner_organization_id: value.owner_organization_id || null,
         artist_profile_id: value.artist_profile_id || null,
@@ -289,23 +351,27 @@ export class CatalogAssetDetailPage implements OnInit {
           this.ownershipForm.reset({ ownership_type: 'label' });
           this.loadOwnership();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error registering ownership'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   loadCoverage(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
     const rightsType = this.coverageForm.value.rights_type || undefined;
-    this.api.queryCoverage(this.orgId, this.assetId, rightsType).subscribe({
+    this.api.queryCoverage(orgId, this.assetId, rightsType).subscribe({
       next: (rows) => (this.coverage = rows),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading coverage'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   detectOverlap(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
     const rightsType = this.overlapForm.value.rights_type || 'master';
-    this.api.detectOverlap(this.orgId, this.assetId, rightsType).subscribe({
+    this.api.detectOverlap(orgId, this.assetId, rightsType).subscribe({
       next: (conflicts) => (this.overlapResult = conflicts),
-      error: (e) => (this.error = e.error?.message ?? 'Error detecting overlap'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 }

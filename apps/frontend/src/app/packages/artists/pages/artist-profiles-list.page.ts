@@ -5,76 +5,112 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistProfile } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-artist-profiles-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TranslatePipe,
+    StatusLabelPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise artist-profiles-list-page">
-      <h1>{{ 'artists.list.title' | t:lang() }}</h1>
-
-      <div class="filters">
-        <label>
-          Status
-          <select [value]="statusFilter" (change)="onStatusChange($event)">
-            <option value="">All</option>
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="archived">Archived</option>
-          </select>
-        </label>
-      </div>
-
-      <form [formGroup]="createForm" (ngSubmit)="createArtist()" class="create-form">
-        <input formControlName="display_name" placeholder="Artist display name" class="input" />
-        <input formControlName="legal_name" placeholder="Legal name (optional)" class="input" />
-        <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
-          Create Artist Profile
-        </button>
-      </form>
-
-      @if (error) {
-        <p class="error">{{ error }}</p>
-      }
-
-      @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
-      } @else if (artists.length === 0) {
-        <p>{{ 'artists.list.empty' | t:lang() }}</p>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <table class="artists-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Warehouse Link</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (artist of artists; track artist.id) {
-              <tr>
-                <td>{{ artist.display_name }}</td>
-                <td><span class="badge" [class]="'badge--' + artist.status">{{ artist.status }}</span></td>
-                <td>
-                  @if (artist.warehouse_artist_id) {
-                    <span class="badge badge--linked">Linked (#{{ artist.warehouse_artist_id }})</span>
-                  } @else {
-                    <span class="badge badge--unlinked">Not linked</span>
-                  }
-                </td>
-                <td>
-                  <a [routerLink]="['/artist-profiles', artist.id]">View</a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <p class="total">Total: {{ total }}</p>
+        <app-enterprise-page-header
+          [title]="'artists.list.title' | t:lang()"
+          [subtitle]="'artists.list.subtitle' | t:lang()"
+        />
+
+        <app-enterprise-action-bar>
+          <app-enterprise-form-field [label]="'common.status' | t:lang()">
+            <select class="input" [value]="statusFilter" (change)="onStatusChange($event)">
+              <option value="">{{ 'common.all' | t:lang() }}</option>
+              <option value="draft">{{ 'draft' | statusLabel }}</option>
+              <option value="active">{{ 'active' | statusLabel }}</option>
+              <option value="inactive">{{ 'inactive' | statusLabel }}</option>
+              <option value="archived">{{ 'archived' | statusLabel }}</option>
+            </select>
+          </app-enterprise-form-field>
+        </app-enterprise-action-bar>
+
+        <app-enterprise-section-card [title]="'artists.list.create' | t:lang()">
+          <form [formGroup]="createForm" (ngSubmit)="createArtist()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'artists.list.displayName' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="display_name" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'artists.list.legalName' | t:lang()">
+              <input formControlName="legal_name" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
+                {{ 'artists.list.create' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="load()" />
+        } @else if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (artists.length === 0) {
+          <app-enterprise-empty-state
+            [title]="'artists.list.emptyTitle' | t:lang()"
+            [description]="'artists.list.emptyBody' | t:lang()"
+            [ctaLabel]="'artists.list.create' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'common.name' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'artists.list.warehouseLink' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (artist of artists; track artist.id) {
+                  <tr>
+                    <td>{{ artist.display_name }}</td>
+                    <td><app-enterprise-status-badge [status]="artist.status" /></td>
+                    <td>
+                      @if (artist.warehouse_artist_id) {
+                        <span class="badge badge--linked">
+                          {{ 'artists.list.linked' | t:lang() }} (#{{ artist.warehouse_artist_id }})
+                        </span>
+                      } @else {
+                        <span class="badge badge--unlinked">
+                          {{ 'artists.list.notLinked' | t:lang() }}
+                        </span>
+                      }
+                    </td>
+                    <td>
+                      <a [routerLink]="['/artist-profiles', artist.id]" class="btn btn--ghost btn--sm">
+                        {{ 'common.view' | t:lang() }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+          <p class="muted">{{ 'artists.list.total' | t:lang() }}: {{ total }}</p>
+        }
       }
     </div>
   `,
@@ -92,17 +128,16 @@ export class ArtistProfilesListPage implements OnInit {
   loading = false;
   error: string | null = null;
   statusFilter = '';
+  orgId: number | null = null;
 
   createForm = this.fb.group({
     display_name: ['', [Validators.required]],
     legal_name: [''],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) return;
     this.load();
   }
 
@@ -112,10 +147,9 @@ export class ArtistProfilesListPage implements OnInit {
   }
 
   load(): void {
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    this.orgId = id || null;
+    if (!this.orgId) return;
     this.loading = true;
     this.api.list(this.orgId, { status: this.statusFilter || undefined }).subscribe({
       next: (res) => {
@@ -126,7 +160,7 @@ export class ArtistProfilesListPage implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        this.error = e.error?.message ?? 'Error loading artist profiles';
+        this.error = e.error?.message ?? this.i18n.t('common.failed');
       },
     });
   }
@@ -144,7 +178,7 @@ export class ArtistProfilesListPage implements OnInit {
           this.createForm.reset();
           this.load();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error creating artist profile'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 }

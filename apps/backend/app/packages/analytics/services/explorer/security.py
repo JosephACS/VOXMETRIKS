@@ -9,6 +9,11 @@ import duckdb
 EXPLORER_BLOCKED_TABLES: frozenset[str] = frozenset({
     "app_user",
     "app_session",
+    "app_email_code",
+    "app_terms_acceptance",
+    "app_sensitive_access_record",
+    "app_payment_method_reference",
+    "app_provider_configuration",
 })
 
 SENSITIVE_COLUMN_NAMES: frozenset[str] = frozenset({
@@ -16,6 +21,12 @@ SENSITIVE_COLUMN_NAMES: frozenset[str] = frozenset({
     "password",
     "token",
     "session_token",
+    "refresh_token",
+    "access_token",
+    "api_key",
+    "secret",
+    "otp_code",
+    "verification_code",
 })
 
 

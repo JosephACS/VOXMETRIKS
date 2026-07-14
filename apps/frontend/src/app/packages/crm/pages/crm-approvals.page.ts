@@ -4,43 +4,47 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { ApprovalRequest } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-approvals-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, LocaleDatePipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-approvals-page">
-      <h1>{{ 'crm.approvals.title' | t:lang() }}</h1>
-      <p class="lede">Solicitudes de aprobación de descuento sobre cotizaciones.</p>
+    <div class="vx-enterprise crm-page" data-testid="crm-approvals-page">
+      <app-enterprise-page-header
+        [title]="'crm.approvals.title' | t:lang()"
+        [subtitle]="'crm.approvals.subtitle' | t:lang()"
+      />
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="4" />
       } @else if (!items().length) {
-        <div class="crm-card"><p class="crm-muted">No hay solicitudes de aprobación pendientes.</p></div>
+        <app-enterprise-empty-state [title]="'crm.approvals.empty' | t:lang()" />
       } @else {
-        <div class="crm-card" style="overflow-x:auto">
-          <table class="crm-table">
+        <app-enterprise-data-table>
+          <table class="data-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Tipo</th>
-                <th>Objeto</th>
-                <th>Motivo</th>
-                <th>Umbral</th>
-                <th>Estado</th>
-                <th>Solicitado</th>
-                <th>Acciones</th>
+                <th>{{ 'common.id' | t:lang() }}</th>
+                <th>{{ 'common.type' | t:lang() }}</th>
+                <th>{{ 'crm.approvals.object' | t:lang() }}</th>
+                <th>{{ 'common.reason' | t:lang() }}</th>
+                <th>{{ 'crm.approvals.threshold' | t:lang() }}</th>
+                <th>{{ 'common.status' | t:lang() }}</th>
+                <th>{{ 'crm.approvals.requested' | t:lang() }}</th>
+                <th>{{ 'common.actions' | t:lang() }}</th>
               </tr>
             </thead>
             <tbody>
@@ -49,40 +53,46 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
                   <td>{{ a.id }}</td>
                   <td>{{ a.object_type }}</td>
                   <td>#{{ a.object_id }}</td>
-                  <td>{{ a.reason || '—' }}</td>
-                  <td>{{ a.threshold_ref != null ? (a.threshold_ref | number:'1.0-2') + '%' : '—' }}</td>
-                  <td><span class="crm-badge crm-badge--{{ a.status }}">{{ a.status }}</span></td>
-                  <td class="crm-muted">{{ a.requested_at | date:'short' }}</td>
+                  <td>{{ a.reason || ('common.notAvailable' | t:lang()) }}</td>
+                  <td>
+                    @if (a.threshold_ref != null) {
+                      {{ a.threshold_ref | number: '1.0-2' }}%
+                    } @else {
+                      {{ 'common.notAvailable' | t:lang() }}
+                    }
+                  </td>
+                  <td><app-enterprise-status-badge [status]="a.status" /></td>
+                  <td class="muted">{{ a.requested_at | localeDate:true }}</td>
                   <td>
                     @if (a.status === 'pending') {
-                      <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-                        <button type="button" class="crm-btn" style="padding:0.3rem 0.6rem;font-size:0.8rem"
-                          [disabled]="saving()"
-                          (click)="review(a.id, 'approve')">
-                          Aprobar
+                      <app-enterprise-action-bar>
+                        <button type="button" class="btn btn--sm btn--primary" [disabled]="saving()" (click)="review(a.id, 'approve')">
+                          {{ 'common.approve' | t:lang() }}
                         </button>
-                        <button type="button" class="crm-btn crm-btn--danger" style="padding:0.3rem 0.6rem;font-size:0.8rem"
-                          [disabled]="saving()"
-                          (click)="review(a.id, 'reject')">
-                          Rechazar
+                        <button type="button" class="btn btn--sm btn--danger" [disabled]="saving()" (click)="review(a.id, 'reject')">
+                          {{ 'common.reject' | t:lang() }}
                         </button>
-                      </div>
+                      </app-enterprise-action-bar>
                     } @else {
-                      <span class="crm-muted">{{ a.reviewed_at | date:'shortDate' }}</span>
+                      <span class="muted">{{ a.reviewed_at | localeDate }}</span>
                     }
                   </td>
                 </tr>
               }
             </tbody>
           </table>
-          <p class="crm-muted" style="margin-top:0.5rem">Página {{ page }} · total {{ total }}</p>
-          <div class="crm-actions">
-            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="page <= 1" (click)="go(page - 1)">Anterior</button>
-            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="page * limit >= total" (click)="go(page + 1)">Siguiente</button>
-          </div>
-        </div>
+        </app-enterprise-data-table>
+        <p class="muted">{{ 'common.pageTotal' | t:{ page: page, total: total }:lang() }}</p>
+        <app-enterprise-action-bar>
+          <button type="button" class="btn btn--ghost" [disabled]="page <= 1" (click)="go(page - 1)">
+            {{ 'common.prev' | t:lang() }}
+          </button>
+          <button type="button" class="btn btn--ghost" [disabled]="page * limit >= total" (click)="go(page + 1)">
+            {{ 'common.next' | t:lang() }}
+          </button>
+        </app-enterprise-action-bar>
       }
-    </section>
+    </div>
   `,
 })
 export class CrmApprovalsPageComponent implements OnInit {

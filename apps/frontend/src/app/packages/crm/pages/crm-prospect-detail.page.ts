@@ -5,126 +5,151 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact, Prospect } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
 
 @Component({
   selector: 'app-crm-prospect-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-prospect-detail-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/prospects">← {{ 'crm.prospects.title' | t:lang() }}</a>
-        <h1 style="margin:0">
-          {{ prospect()?.display_name || 'Prospecto #' + prospectId }}
-        </h1>
+    <div class="vx-enterprise crm-page" data-testid="crm-prospect-detail-page">
+      <app-enterprise-page-header
+        [title]="prospect()?.display_name || ('crm.prospectDetail.fallback' | t:{ id: prospectId }:lang())"
+      >
+        <a class="btn btn--ghost" routerLink="/crm/prospects">
+          ← {{ 'crm.prospectDetail.back' | t:lang() }}
+        </a>
         @if (prospect()) {
-          <span class="crm-badge crm-badge--{{ prospect()!.status }}">{{ prospect()!.status }}</span>
+          <app-enterprise-status-badge [status]="prospect()!.status" />
         }
-      </div>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="3" />
       } @else if (prospect()) {
-        <!-- Edit form -->
-        <div class="crm-card">
-          <h2>Datos del prospecto</h2>
-          <form class="crm-form" (ngSubmit)="save()">
-            <label>Nombre *
-              <input [(ngModel)]="editForm.display_name" name="display_name" required />
-            </label>
-            <label>Empresa
-              <input [(ngModel)]="editForm.company_name" name="company_name" />
-            </label>
-            <label>Correo
-              <input [(ngModel)]="editForm.email" name="email" type="email" />
-            </label>
-            <label>Teléfono
-              <input [(ngModel)]="editForm.phone" name="phone" />
-            </label>
-            <label>Fuente
-              <input [(ngModel)]="editForm.source" name="source" />
-            </label>
-            <label>Notas
-              <textarea [(ngModel)]="editForm.notes" name="notes" rows="3"></textarea>
-            </label>
-            <div class="crm-actions">
-              <button type="submit" class="crm-btn" [disabled]="saving()">
-                {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        <app-enterprise-section-card [title]="'crm.prospectDetail.title' | t:lang()">
+          <form class="form-grid" (ngSubmit)="save()">
+            <app-enterprise-form-field [label]="'common.name' | t:lang()" [required]="true">
+              <input class="input" [(ngModel)]="editForm.display_name" name="display_name" required />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.prospects.company' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.company_name" name="company_name" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.email' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.email" name="email" type="email" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.prospects.phone' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.phone" name="phone" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.prospects.source' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.source" name="source" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.notes' | t:lang()">
+              <textarea class="input" [(ngModel)]="editForm.notes" name="notes" rows="3"></textarea>
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                {{ (saving() ? 'common.saving' : 'crm.prospectDetail.save') | t:lang() }}
               </button>
             </div>
           </form>
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Status transition -->
-        <div class="crm-card">
-          <h2>Cambiar estado</h2>
-          <div class="crm-form">
-            <label>Nuevo estado
-              <select [(ngModel)]="newStatus" name="newStatus">
+        <app-enterprise-section-card [title]="'crm.prospectDetail.changeStatus' | t:lang()">
+          <form class="form-grid">
+            <app-enterprise-form-field [label]="'crm.prospectDetail.newStatus' | t:lang()">
+              <select class="select" [(ngModel)]="newStatus" name="newStatus">
                 @for (s of statuses; track s) {
                   <option [value]="s" [disabled]="s === prospect()!.status">{{ s }}</option>
                 }
               </select>
-            </label>
-            <div class="crm-actions">
-              <button type="button" class="crm-btn crm-btn--ghost"
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button
+                type="button"
+                class="btn btn--secondary"
                 [disabled]="!newStatus || newStatus === prospect()!.status || saving()"
-                (click)="transitionStatus()">
-                Aplicar estado
+                (click)="transitionStatus()"
+              >
+                {{ 'crm.prospectDetail.applyStatus' | t:lang() }}
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </app-enterprise-section-card>
 
-        <!-- Link contact -->
-        <div class="crm-card">
-          <h2>Vincular contacto</h2>
+        <app-enterprise-section-card [title]="'crm.prospectDetail.linkContact' | t:lang()">
           @if (contacts().length) {
-            <div class="crm-form">
-              <label>Contacto
-                <select [(ngModel)]="selectedContactId" name="contactId">
-                  <option [ngValue]="null">— Selecciona —</option>
+            <form class="form-grid">
+              <app-enterprise-form-field [label]="'common.contact' | t:lang()">
+                <select class="select" [(ngModel)]="selectedContactId" name="contactId">
+                  <option [ngValue]="null">— {{ 'crm.prospectDetail.selectContact' | t:lang() }} —</option>
                   @for (c of contacts(); track c.id) {
-                    <option [ngValue]="c.id">{{ c.full_name }} ({{ c.email || c.phone || '#' + c.id }})</option>
+                    <option [ngValue]="c.id">
+                      {{ c.full_name }} ({{ c.email || c.phone || '#' + c.id }})
+                    </option>
                   }
                 </select>
-              </label>
-              <div class="crm-actions">
-                <button type="button" class="crm-btn crm-btn--ghost"
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button
+                  type="button"
+                  class="btn btn--secondary"
                   [disabled]="selectedContactId == null || saving()"
-                  (click)="linkContact()">
-                  Vincular
+                  (click)="linkContact()"
+                >
+                  {{ 'crm.prospectDetail.link' | t:lang() }}
                 </button>
               </div>
-            </div>
+            </form>
           } @else {
-            <p class="crm-muted">No hay contactos disponibles.</p>
-            <a class="crm-btn crm-btn--ghost" routerLink="/crm/contacts">Crear contacto</a>
+            <app-enterprise-empty-state
+              [title]="'crm.prospectDetail.noContacts' | t:lang()"
+              [ctaLabel]="'crm.prospectDetail.createContact' | t:lang()"
+              [ctaLink]="'/crm/contacts'"
+            />
           }
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Prospect metadata -->
-        <div class="crm-card crm-muted" style="font-size:0.8rem">
-          <p>Creado: {{ prospect()!.created_at | date:'medium' }}</p>
-          <p>Actualizado: {{ prospect()!.updated_at | date:'medium' }}</p>
-          @if (prospect()!.owner_user_id) {
-            <p>Propietario: #{{ prospect()!.owner_user_id }}</p>
-          }
-        </div>
+        <app-enterprise-section-card>
+          <div class="form-grid muted" style="font-size: 0.875rem">
+            <div>
+              <dt>{{ 'common.created' | t:lang() }}</dt>
+              <dd>{{ prospect()!.created_at | localeDate:true }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'common.updated' | t:lang() }}</dt>
+              <dd>{{ prospect()!.updated_at | localeDate:true }}</dd>
+            </div>
+            @if (prospect()!.owner_user_id) {
+              <div>
+                <dt>{{ 'common.owner' | t:lang() }}</dt>
+                <dd>#{{ prospect()!.owner_user_id }}</dd>
+              </div>
+            }
+          </div>
+        </app-enterprise-section-card>
       }
-    </section>
+    </div>
   `,
 })
 export class CrmProspectDetailPageComponent implements OnInit {
@@ -197,7 +222,7 @@ export class CrmProspectDetailPageComponent implements OnInit {
         }),
       );
       this.prospect.set(updated);
-      this.success.set('Prospecto actualizado.');
+      this.success.set(this.i18n.t('crm.prospectDetail.updatedMsg'));
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al guardar');
     } finally {
@@ -214,7 +239,7 @@ export class CrmProspectDetailPageComponent implements OnInit {
         this.api.transitionProspectStatus(this.prospectId, this.newStatus),
       );
       this.prospect.set(updated);
-      this.success.set(`Estado cambiado a "${this.newStatus}".`);
+      this.success.set(this.i18n.t('crm.prospectDetail.statusChanged', { status: this.newStatus }));
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al cambiar estado');
     } finally {
@@ -228,7 +253,7 @@ export class CrmProspectDetailPageComponent implements OnInit {
     this.error.set(null);
     try {
       await firstValueFrom(this.api.linkContactToProspect(this.prospectId, this.selectedContactId));
-      this.success.set('Contacto vinculado.');
+      this.success.set(this.i18n.t('crm.prospectDetail.linkedMsg'));
       this.selectedContactId = null;
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al vincular contacto');

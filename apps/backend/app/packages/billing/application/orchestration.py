@@ -41,17 +41,14 @@ def notify_subscription_recovered(
     actor_user_id: int,
     request_id: Optional[str] = None,
 ) -> None:
-    """Restore subscription access when payment is settled."""
+    """Restore subscription access when payment is settled / dunning recovered."""
     from app.packages.subscriptions.application.use_cases import SubscriptionUseCases
 
-    try:
-        SubscriptionUseCases(conn).update_access_state(
-            subscription_id,
-            actor_user_id=actor_user_id,
-            access_state="full",
-            also_restore_active=True,
-            reason="payment_settled",
-            request_id=request_id,
-        )
-    except Exception:
-        pass
+    SubscriptionUseCases(conn).update_access_state(
+        subscription_id,
+        actor_user_id=actor_user_id,
+        access_state="full",
+        also_restore_active=True,
+        reason="payment_settled",
+        request_id=request_id,
+    )

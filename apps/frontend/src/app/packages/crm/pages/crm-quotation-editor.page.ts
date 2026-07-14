@@ -5,166 +5,176 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Quotation, QuotationVersion, QuotationItem, QuotationItemCreateRequest } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-quotation-editor-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    LocaleDatePipe,
+    LocaleMoneyPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-quotation-editor-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">← Oportunidades</a>
-        <h1 style="margin:0">Cotización #{{ quotationId }}</h1>
+    <div class="vx-enterprise crm-page" data-testid="crm-quotation-editor-page">
+      <app-enterprise-page-header [title]="('crm.quotation.title' | t:lang()) + ' #' + quotationId">
+        <a class="btn btn--ghost" routerLink="/crm/opportunities">
+          ← {{ 'crm.quotation.backOpportunities' | t:lang() }}
+        </a>
         @if (quotation()) {
-          <span class="crm-badge crm-badge--{{ quotation()!.status }}">{{ quotation()!.status }}</span>
+          <app-enterprise-status-badge [status]="quotation()!.status" />
         }
-      </div>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="4" />
       } @else if (quotation()) {
-        <!-- Quotation summary -->
-        <div class="crm-card">
-          <h2>Resumen</h2>
-          <p class="crm-muted">
-            Oportunidad: #{{ quotation()!.opportunity_id }} · Moneda: {{ quotation()!.currency || '—' }} ·
-            Versión actual: v{{ quotation()!.current_version_no ?? '—' }}
+        <app-enterprise-section-card [title]="'crm.quotation.summary' | t:lang()">
+          <p class="muted">
+            {{ 'crm.contract.opportunity' | t:lang() }}: #{{ quotation()!.opportunity_id }} ·
+            {{ 'common.currency' | t:lang() }}: {{ quotation()!.currency || ('common.notAvailable' | t:lang()) }} ·
+            {{ 'crm.opportunityDetail.currentVersion' | t:lang() }}: v{{ quotation()!.current_version_no ?? ('common.notAvailable' | t:lang()) }}
           </p>
           @if (quotation()!.notes) {
             <p>{{ quotation()!.notes }}</p>
           }
-          <!-- Create new version -->
-          <div class="crm-actions" style="margin-top:0.6rem">
-            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
-              (click)="createVersion()">
-              + Nueva versión
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="createVersion()">
+              + {{ 'crm.quotation.newVersion' | t:lang() }}
             </button>
-          </div>
-        </div>
+          </app-enterprise-action-bar>
+        </app-enterprise-section-card>
 
-        <!-- Versions -->
         @if (versions().length) {
           @for (v of versions(); track v.id) {
-            <div class="crm-card">
-              <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem">
-                <h2 style="margin:0">Versión {{ v.version_no }}</h2>
-                <span class="crm-badge crm-badge--{{ v.status }}">{{ v.status }}</span>
-                @if (v.is_immutable) {
-                  <span class="crm-readonly-note">(enviada — solo lectura)</span>
-                }
-              </div>
+            <app-enterprise-section-card [title]="('crm.quotation.version' | t:lang()) + ' ' + v.version_no">
+              <app-enterprise-status-badge [status]="v.status" />
+              @if (v.is_immutable) {
+                <span class="muted">{{ 'crm.quotation.readOnly' | t:lang() }}</span>
+              }
 
-              <p class="crm-muted">
-                Subtotal: {{ v.subtotal ?? 0 | number:'1.2-2' }} ·
-                Descuento: {{ v.discount_pct ?? 0 }}% ·
-                Total: {{ v.total ?? 0 | number:'1.2-2' }}
+              <p class="muted">
+                {{ 'crm.quotation.subtotal' | t:lang() }}: {{ v.subtotal ?? 0 | localeMoney:quotation()!.currency || 'USD' }} ·
+                {{ 'crm.quotation.discount' | t:lang() }}: {{ v.discount_pct ?? 0 }}% ·
+                {{ 'common.total' | t:lang() }}: {{ v.total ?? 0 | localeMoney:quotation()!.currency || 'USD' }}
                 @if (v.discount_requires_approval) {
-                  <span class="crm-badge crm-badge--pending" style="margin-left:0.5rem">Requiere aprobación</span>
+                  <app-enterprise-status-badge [status]="'pending'" [label]="'crm.quotation.needsApproval' | t:lang()" />
                 }
               </p>
 
               @if (v.sent_at) {
-                <p class="crm-muted">Enviada: {{ v.sent_at | date:'medium' }}</p>
+                <p class="muted">{{ 'crm.quotation.sentAt' | t:lang() }}: {{ v.sent_at | localeDate:true }}</p>
               }
               @if (v.accepted_at) {
-                <p class="crm-muted">Aceptada: {{ v.accepted_at | date:'medium' }}</p>
+                <p class="muted">{{ 'crm.quotation.acceptedAt' | t:lang() }}: {{ v.accepted_at | localeDate:true }}</p>
               }
               @if (v.rejected_at) {
-                <p class="crm-muted">Rechazada: {{ v.rejected_at | date:'medium' }}</p>
+                <p class="muted">{{ 'crm.quotation.rejectedAt' | t:lang() }}: {{ v.rejected_at | localeDate:true }}</p>
               }
 
-              <!-- Items table -->
               @if (itemsMap()[v.id]?.length) {
-                <table class="crm-table" style="margin-bottom:0.6rem">
-                  <thead>
-                    <tr><th>Descripción</th><th>Cant.</th><th>Precio</th><th>Desc %</th><th>Total línea</th></tr>
-                  </thead>
-                  <tbody>
-                    @for (item of itemsMap()[v.id]; track item.id) {
+                <app-enterprise-data-table>
+                  <table class="data-table">
+                    <thead>
                       <tr>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>{{ item.unit_price | number:'1.2-2' }}</td>
-                        <td>{{ item.discount_pct ?? 0 }}%</td>
-                        <td>{{ item.line_total ?? 0 | number:'1.2-2' }}</td>
+                        <th>{{ 'common.description' | t:lang() }}</th>
+                        <th>{{ 'crm.quotation.qty' | t:lang() }}</th>
+                        <th>{{ 'crm.quotation.price' | t:lang() }}</th>
+                        <th>{{ 'crm.quotation.discount' | t:lang() }}</th>
+                        <th>{{ 'crm.quotation.lineTotal' | t:lang() }}</th>
                       </tr>
-                    }
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      @for (item of itemsMap()[v.id]; track item.id) {
+                        <tr>
+                          <td>{{ item.description }}</td>
+                          <td>{{ item.quantity }}</td>
+                          <td>{{ item.unit_price | localeMoney:quotation()!.currency || 'USD' }}</td>
+                          <td>{{ item.discount_pct ?? 0 }}%</td>
+                          <td>{{ item.line_total ?? 0 | localeMoney:quotation()!.currency || 'USD' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </app-enterprise-data-table>
               } @else {
-                <p class="crm-muted">Sin ítems.</p>
+                <app-enterprise-empty-state [title]="'crm.quotation.noItems' | t:lang()" />
               }
 
-              <!-- Add item (only if not immutable) -->
               @if (!v.is_immutable) {
-                <button type="button" class="crm-btn crm-btn--ghost"
-                  (click)="toggleItemForm(v.id)">
-                  {{ activeItemForm === v.id ? 'Cancelar' : '+ Añadir ítem' }}
-                </button>
+                <app-enterprise-action-bar>
+                  <button type="button" class="btn btn--ghost" (click)="toggleItemForm(v.id)">
+                    {{ (activeItemForm === v.id ? 'common.cancel' : 'crm.quotation.addItem') | t:lang() }}
+                  </button>
+                </app-enterprise-action-bar>
                 @if (activeItemForm === v.id) {
-                  <form class="crm-form" style="margin-top:0.75rem" (ngSubmit)="addItem(v.id)">
-                    <label>Descripción *
-                      <input [(ngModel)]="itemForm.description" name="description" required />
-                    </label>
-                    <label>Cantidad *
-                      <input [(ngModel)]="itemForm.quantity" name="quantity" type="number" min="1" required />
-                    </label>
-                    <label>Precio unitario *
-                      <input [(ngModel)]="itemForm.unit_price" name="unit_price" type="number" min="0" step="0.01" required />
-                    </label>
-                    <label>Descuento %
-                      <input [(ngModel)]="itemForm.discount_pct" name="discount_pct" type="number" min="0" max="100" step="0.01" />
-                    </label>
-                    <div class="crm-actions">
-                      <button type="submit" class="crm-btn"
-                        [disabled]="!itemForm.description || !itemForm.quantity || saving()">
-                        Añadir
+                  <form class="form-grid" style="margin-top: 0.75rem" (ngSubmit)="addItem(v.id)">
+                    <app-enterprise-form-field [label]="'common.description' | t:lang()" [required]="true">
+                      <input class="input" [(ngModel)]="itemForm.description" name="description" required />
+                    </app-enterprise-form-field>
+                    <app-enterprise-form-field [label]="'crm.quotation.quantity' | t:lang()" [required]="true">
+                      <input class="input" [(ngModel)]="itemForm.quantity" name="quantity" type="number" min="1" required />
+                    </app-enterprise-form-field>
+                    <app-enterprise-form-field [label]="'crm.quotation.unitPrice' | t:lang()" [required]="true">
+                      <input class="input" [(ngModel)]="itemForm.unit_price" name="unit_price" type="number" min="0" step="0.01" required />
+                    </app-enterprise-form-field>
+                    <app-enterprise-form-field [label]="'crm.quotation.discount' | t:lang()">
+                      <input class="input" [(ngModel)]="itemForm.discount_pct" name="discount_pct" type="number" min="0" max="100" step="0.01" />
+                    </app-enterprise-form-field>
+                    <div class="form-grid__actions">
+                      <button type="submit" class="btn btn--primary" [disabled]="!itemForm.description || !itemForm.quantity || saving()">
+                        {{ 'crm.quotation.addItem' | t:lang() }}
                       </button>
                     </div>
                   </form>
                 }
 
-                <div class="crm-actions" style="margin-top:0.6rem">
-                  <button type="button" class="crm-btn" [disabled]="saving()"
-                    (click)="send(v.id)">
-                    Enviar versión
+                <app-enterprise-action-bar>
+                  <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="send(v.id)">
+                    {{ 'crm.quotation.send' | t:lang() }}
                   </button>
-                  <button type="button" class="crm-btn crm-btn--warn" [disabled]="saving()"
-                    (click)="requestApproval(v.id)">
-                    Solicitar aprobación descuento
+                  <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="requestApproval(v.id)">
+                    {{ 'crm.quotation.requestApproval' | t:lang() }}
                   </button>
-                </div>
+                </app-enterprise-action-bar>
               }
 
               @if (v.status === 'sent' || v.status === 'approved') {
-                <div class="crm-actions" style="margin-top:0.6rem">
-                  <button type="button" class="crm-btn" [disabled]="saving()"
-                    (click)="accept(v.id)">
-                    Aceptar cotización
+                <app-enterprise-action-bar>
+                  <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="accept(v.id)">
+                    {{ 'crm.quotation.accept' | t:lang() }}
                   </button>
-                  <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
-                    (click)="createContractFrom(v.id)">
-                    Crear contrato desde esta versión
+                  <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="createContractFrom(v.id)">
+                    {{ 'crm.quotation.createContract' | t:lang() }}
                   </button>
-                </div>
+                </app-enterprise-action-bar>
               }
-            </div>
+            </app-enterprise-section-card>
           }
         } @else {
-          <div class="crm-card"><p class="crm-muted">Sin versiones. Crea la primera.</p></div>
+          <app-enterprise-empty-state
+            [title]="'crm.quotation.noVersions' | t:lang()"
+            [ctaLabel]="'crm.quotation.newVersion' | t:lang()"
+            (ctaClick)="createVersion()"
+          />
         }
       }
-    </section>
+    </div>
   `,
 })
 export class CrmQuotationEditorPageComponent implements OnInit {
@@ -205,7 +215,6 @@ export class CrmQuotationEditorPageComponent implements OnInit {
       ]);
       this.quotation.set(q);
       this.versions.set(vers);
-      // Load items for each version
       const map: Record<number, QuotationItem[]> = {};
       await Promise.all(
         vers.map(async (v) => {
@@ -254,7 +263,6 @@ export class CrmQuotationEditorPageComponent implements OnInit {
       this.itemsMap.set(map);
       this.activeItemForm = null;
       this.success.set('Ítem añadido.');
-      // Reload to get updated totals
       await this.load();
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al añadir ítem');
@@ -294,7 +302,7 @@ export class CrmQuotationEditorPageComponent implements OnInit {
   }
 
   async accept(versionId: number): Promise<void> {
-    if (!confirm('¿Aceptar esta versión de cotización?')) return;
+    if (!confirm(this.i18n.t('crm.quotation.acceptConfirm'))) return;
     this.saving.set(true);
     this.error.set(null);
     try {

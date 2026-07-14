@@ -6,182 +6,223 @@ import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { CustomerConversion } from '../models/crm.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 type WizardStep = 'view' | 'confirm-link' | 'claim';
 
 @Component({
   selector: 'app-crm-conversion-wizard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-conversion-wizard-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">← Oportunidades</a>
-        <h1 style="margin:0">Conversión de cliente #{{ conversionId }}</h1>
+    <div class="vx-enterprise crm-page" data-testid="crm-conversion-wizard-page">
+      <app-enterprise-page-header [title]="('crm.conversion.title' | t:lang()) + ' #' + conversionId">
+        <a class="btn btn--ghost" routerLink="/crm/opportunities">
+          ← {{ 'crm.conversion.backOpportunities' | t:lang() }}
+        </a>
         @if (conv()) {
-          <span class="crm-badge crm-badge--{{ conv()!.status }}">{{ conv()!.status }}</span>
+          <app-enterprise-status-badge [status]="conv()!.status" />
         }
-      </div>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
-      <!-- Wizard steps indicator -->
       <div class="crm-wizard-steps">
-        <span class="crm-wizard-step" [class.crm-wizard-step--active]="step === 'view'">1. Estado</span>
-        <span class="crm-wizard-step" [class.crm-wizard-step--active]="step === 'confirm-link'"
-          [class.crm-wizard-step--done]="step !== 'confirm-link'">2. Confirmar enlace</span>
-        <span class="crm-wizard-step" [class.crm-wizard-step--active]="step === 'claim'"
-          [class.crm-wizard-step--done]="step !== 'claim'">3. Reclamar token</span>
+        <span class="crm-wizard-step" [class.crm-wizard-step--active]="step === 'view'">
+          {{ 'crm.conversion.step1' | t:lang() }}
+        </span>
+        <span
+          class="crm-wizard-step"
+          [class.crm-wizard-step--active]="step === 'confirm-link'"
+          [class.crm-wizard-step--done]="step !== 'confirm-link'"
+        >
+          {{ 'crm.conversion.step2' | t:lang() }}
+        </span>
+        <span
+          class="crm-wizard-step"
+          [class.crm-wizard-step--active]="step === 'claim'"
+          [class.crm-wizard-step--done]="step !== 'claim'"
+        >
+          {{ 'crm.conversion.step3' | t:lang() }}
+        </span>
       </div>
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="3" />
       } @else if (conv()) {
-
-        <!-- Step 1: View conversion state -->
         @if (step === 'view') {
-          <div class="crm-card">
-            <h2>Estado de la conversión</h2>
-            <dl style="display:grid;grid-template-columns:auto 1fr;gap:0.3rem 1rem;font-size:0.875rem">
-              <dt class="crm-muted">Oportunidad</dt><dd>#{{ conv()!.opportunity_id }}</dd>
-              <dt class="crm-muted">Modo</dt><dd>{{ conv()!.mode }}</dd>
-              <dt class="crm-muted">Estado</dt>
-              <dd><span class="crm-badge crm-badge--{{ conv()!.status }}">{{ conv()!.status }}</span></dd>
+          <app-enterprise-section-card [title]="'crm.conversion.status' | t:lang()">
+            <div class="form-grid" style="font-size: 0.875rem">
+              <div>
+                <dt class="muted">{{ 'crm.contract.opportunity' | t:lang() }}</dt>
+                <dd>#{{ conv()!.opportunity_id }}</dd>
+              </div>
+              <div>
+                <dt class="muted">{{ 'crm.conversion.mode' | t:lang() }}</dt>
+                <dd>{{ conv()!.mode }}</dd>
+              </div>
+              <div>
+                <dt class="muted">{{ 'common.status' | t:lang() }}</dt>
+                <dd><app-enterprise-status-badge [status]="conv()!.status" /></dd>
+              </div>
               @if (conv()!.organization_id) {
-                <dt class="crm-muted">Organización vinculada</dt><dd>#{{ conv()!.organization_id }}</dd>
+                <div>
+                  <dt class="muted">{{ 'crm.conversion.linkedOrg' | t:lang() }}</dt>
+                  <dd>#{{ conv()!.organization_id }}</dd>
+                </div>
               }
               @if (conv()!.contact_id) {
-                <dt class="crm-muted">Contacto</dt><dd>#{{ conv()!.contact_id }}</dd>
+                <div>
+                  <dt class="muted">{{ 'crm.conversion.contact' | t:lang() }}</dt>
+                  <dd>#{{ conv()!.contact_id }}</dd>
+                </div>
               }
               @if (conv()!.claim_token_expires_at) {
-                <dt class="crm-muted">Token expira</dt><dd>{{ conv()!.claim_token_expires_at | date:'medium' }}</dd>
+                <div>
+                  <dt class="muted">{{ 'crm.conversion.tokenExpires' | t:lang() }}</dt>
+                  <dd>{{ conv()!.claim_token_expires_at | localeDate:true }}</dd>
+                </div>
               }
               @if (conv()!.completed_at) {
-                <dt class="crm-muted">Completado</dt><dd>{{ conv()!.completed_at | date:'medium' }}</dd>
+                <div>
+                  <dt class="muted">{{ 'crm.conversion.completed' | t:lang() }}</dt>
+                  <dd>{{ conv()!.completed_at | localeDate:true }}</dd>
+                </div>
               }
               @if (conv()!.failure_reason) {
-                <dt class="crm-muted">Motivo falla</dt><dd>{{ conv()!.failure_reason }}</dd>
+                <div>
+                  <dt class="muted">{{ 'crm.conversion.failureReason' | t:lang() }}</dt>
+                  <dd>{{ conv()!.failure_reason }}</dd>
+                </div>
               }
-              <dt class="crm-muted">Creado</dt><dd>{{ conv()!.created_at | date:'medium' }}</dd>
-            </dl>
-          </div>
-
-          @if (conv()!.status === 'completed' && conv()!.organization_id) {
-            <div class="crm-card">
-              <h2>Siguiente paso comercial</h2>
-              <p class="crm-muted">
-                La conversión está completa. Continúa con la selección explícita de plan
-                (no se crea suscripción automáticamente).
-              </p>
-              <div class="crm-actions">
-                <button type="button" class="crm-btn" [disabled]="saving()"
-                  (click)="continueToPlan()">
-                  Continuar con plan y suscripción
-                </button>
+              <div>
+                <dt class="muted">{{ 'common.created' | t:lang() }}</dt>
+                <dd>{{ conv()!.created_at | localeDate:true }}</dd>
               </div>
             </div>
+          </app-enterprise-section-card>
+
+          @if (conv()!.status === 'completed' && conv()!.organization_id) {
+            <app-enterprise-section-card [title]="'crm.conversion.nextStep' | t:lang()">
+              <p class="muted">{{ 'crm.conversion.continuePlanDesc' | t:lang() }}</p>
+              <app-enterprise-action-bar>
+                <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="continueToPlan()">
+                  {{ 'crm.conversion.continuePlan' | t:lang() }}
+                </button>
+              </app-enterprise-action-bar>
+            </app-enterprise-section-card>
           }
 
           @if (conv()!.status === 'pending' || conv()!.status === 'prepared') {
-            <div class="crm-card">
-              <h2>Continuar proceso</h2>
-              <div class="crm-actions">
+            <app-enterprise-section-card [title]="'crm.conversion.continueProcess' | t:lang()">
+              <app-enterprise-action-bar>
                 @if (conv()!.mode === 'link_existing') {
-                  <button type="button" class="crm-btn" (click)="step = 'confirm-link'">
-                    Confirmar enlace (soy el propietario de la org)
+                  <button type="button" class="btn btn--primary" (click)="step = 'confirm-link'">
+                    {{ 'crm.conversion.confirmLinkOwner' | t:lang() }}
                   </button>
                 }
                 @if (conv()!.mode === 'create_org') {
-                  <button type="button" class="crm-btn" (click)="step = 'claim'">
-                    Reclamar con token
+                  <button type="button" class="btn btn--primary" (click)="step = 'claim'">
+                    {{ 'crm.conversion.claimWithToken' | t:lang() }}
                   </button>
                 }
-              </div>
-            </div>
+              </app-enterprise-action-bar>
+            </app-enterprise-section-card>
           }
         }
 
-        <!-- Step 2: Confirm link (Path A - org owner) -->
         @if (step === 'confirm-link') {
-          <div class="crm-card">
-            <h2>Confirmar enlace de organización</h2>
-            <p class="crm-muted">
-              Confirma que eres el propietario activo de la organización y autoriza el enlace.
-            </p>
-            <div class="crm-form">
-              <label>ID de organización *
-                <input [(ngModel)]="linkOrgId" name="linkOrgId" type="number" min="1"
-                  placeholder="ID de tu organización" />
-              </label>
-              <div class="crm-actions">
-                <button type="button" class="crm-btn" [disabled]="!linkOrgId || saving()"
-                  (click)="confirmLink()">
-                  {{ saving() ? 'Procesando…' : 'Confirmar enlace' }}
+          <app-enterprise-section-card [title]="'crm.conversion.confirmLink' | t:lang()">
+            <p class="muted">{{ 'crm.conversion.confirmLinkDesc' | t:lang() }}</p>
+            <form class="form-grid">
+              <app-enterprise-form-field [label]="'crm.conversion.orgId' | t:lang()" [required]="true">
+                <input
+                  class="input"
+                  [(ngModel)]="linkOrgId"
+                  name="linkOrgId"
+                  type="number"
+                  min="1"
+                  [placeholder]="'crm.conversion.orgIdPlaceholder' | t:lang()"
+                />
+              </app-enterprise-form-field>
+              <app-enterprise-action-bar>
+                <button type="button" class="btn btn--primary" [disabled]="!linkOrgId || saving()" (click)="confirmLink()">
+                  {{ (saving() ? 'common.processing' : 'crm.conversion.confirmLink') | t:lang() }}
                 </button>
-                <button type="button" class="crm-btn crm-btn--ghost" (click)="step = 'view'">
-                  Cancelar
+                <button type="button" class="btn btn--ghost" (click)="step = 'view'">
+                  {{ 'common.cancel' | t:lang() }}
                 </button>
-              </div>
-            </div>
-          </div>
+              </app-enterprise-action-bar>
+            </form>
+          </app-enterprise-section-card>
         }
 
-        <!-- Step 3: Claim with token (Path B - signatory) -->
         @if (step === 'claim') {
-          <div class="crm-card">
-            <h2>Reclamar conversión con token</h2>
-            <div class="crm-alert crm-alert--warn">
-              El token de reclamación debe haberte sido entregado por el agente de ventas de forma segura.
-              No almacenes tokens en localStorage ni compartas por correo.
-            </div>
-            <div class="crm-form">
-              <label>Token de reclamación *
-                <input [(ngModel)]="claimToken" name="claimToken" type="password"
-                  placeholder="Pega el token aquí" autocomplete="off" />
-              </label>
-              <label>Nombre de la nueva organización *
-                <input [(ngModel)]="claimOrgName" name="claimOrgName" required />
-              </label>
-              <label>Slug de la organización *
-                <input [(ngModel)]="claimOrgSlug" name="claimOrgSlug" required
-                  placeholder="mi-empresa" pattern="[a-z0-9-]+" />
-              </label>
-              <label>Tipo de organización
-                <select [(ngModel)]="claimOrgType" name="claimOrgType">
-                  <option value="business">Empresa</option>
-                  <option value="individual">Particular</option>
-                  <option value="nonprofit">Sin ánimo de lucro</option>
+          <app-enterprise-section-card [title]="'crm.conversion.claim' | t:lang()">
+            <div class="alert alert--warn" role="status">{{ 'crm.conversion.tokenWarning' | t:lang() }}</div>
+            <form class="form-grid">
+              <app-enterprise-form-field [label]="'crm.conversion.claimTokenLabel' | t:lang()" [required]="true">
+                <input
+                  class="input"
+                  [(ngModel)]="claimToken"
+                  name="claimToken"
+                  type="password"
+                  autocomplete="off"
+                />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.conversion.orgName' | t:lang()" [required]="true">
+                <input class="input" [(ngModel)]="claimOrgName" name="claimOrgName" required />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.conversion.orgSlug' | t:lang()" [required]="true">
+                <input class="input" [(ngModel)]="claimOrgSlug" name="claimOrgSlug" required placeholder="mi-empresa" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.conversion.orgType' | t:lang()">
+                <select class="select" [(ngModel)]="claimOrgType" name="claimOrgType">
+                  <option value="business">{{ 'crm.conversion.orgTypeBusiness' | t:lang() }}</option>
+                  <option value="individual">{{ 'crm.conversion.orgTypeIndividual' | t:lang() }}</option>
+                  <option value="nonprofit">{{ 'crm.conversion.orgTypeNonprofit' | t:lang() }}</option>
                 </select>
-              </label>
-              <label>Zona horaria
-                <input [(ngModel)]="claimTimezone" name="claimTimezone" placeholder="America/Guayaquil" />
-              </label>
-              <label>Moneda
-                <input [(ngModel)]="claimCurrency" name="claimCurrency" maxlength="3" placeholder="USD" />
-              </label>
-              <div class="crm-actions">
-                <button type="button" class="crm-btn"
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.conversion.timezone' | t:lang()">
+                <input class="input" [(ngModel)]="claimTimezone" name="claimTimezone" placeholder="America/Guayaquil" />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'common.currency' | t:lang()">
+                <input class="input" [(ngModel)]="claimCurrency" name="claimCurrency" maxlength="3" placeholder="USD" />
+              </app-enterprise-form-field>
+              <app-enterprise-action-bar>
+                <button
+                  type="button"
+                  class="btn btn--primary"
                   [disabled]="!claimToken || !claimOrgName || !claimOrgSlug || saving()"
-                  (click)="claim()">
-                  {{ saving() ? 'Procesando…' : 'Reclamar' }}
+                  (click)="claim()"
+                >
+                  {{ (saving() ? 'common.processing' : 'crm.conversion.claim') | t:lang() }}
                 </button>
-                <button type="button" class="crm-btn crm-btn--ghost" (click)="step = 'view'">
-                  Cancelar
+                <button type="button" class="btn btn--ghost" (click)="step = 'view'">
+                  {{ 'common.cancel' | t:lang() }}
                 </button>
-              </div>
-            </div>
-          </div>
+              </app-enterprise-action-bar>
+            </form>
+          </app-enterprise-section-card>
         }
       }
-    </section>
+    </div>
   `,
 })
 export class CrmConversionWizardPageComponent implements OnInit {

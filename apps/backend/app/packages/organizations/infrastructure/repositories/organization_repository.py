@@ -149,6 +149,7 @@ class OrganizationRepository:
 
         from app.core.config import get_settings
         from app.packages.organizations.domain.test_org_patterns import (
+            is_canonical_demo,
             looks_like_test_organization,
         )
 
@@ -181,6 +182,10 @@ class OrganizationRepository:
                 is_test=org.is_test,
                 is_demo=org.is_demo,
             ):
+                continue
+            # Canonical product demo always visible in the selector.
+            if is_canonical_demo(org.slug):
+                out.append(org)
                 continue
             if org.is_demo and not show_demo:
                 continue

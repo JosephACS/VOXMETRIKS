@@ -1,0 +1,240 @@
+/**
+ * VOXMETRIKS global typography — Inter only for UI.
+ * JetBrains Mono reserved for codes / IDs (--font-mono), not body copy.
+ */
+
+:root {
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Type scale */
+  --type-page-title-size: 1.875rem; /* 30px */
+  --type-page-title-weight: 700;
+  --type-page-title-lh: 1.25;
+
+  --type-section-title-size: 1.375rem; /* 22px */
+  --type-section-title-weight: 700;
+  --type-section-title-lh: 1.3;
+
+  --type-card-title-size: 1.125rem; /* 18px */
+  --type-card-title-weight: 600;
+  --type-card-title-lh: 1.35;
+
+  --type-body-size: 0.9375rem; /* 15px */
+  --type-body-weight: 400;
+  --type-body-lh: 1.5;
+
+  --type-label-size: 0.8125rem; /* 13px */
+  --type-label-weight: 500;
+  --type-label-lh: 1.35;
+
+  --type-caption-size: 0.75rem; /* 12px */
+  --type-caption-weight: 400;
+  --type-caption-lh: 1.4;
+
+  --type-button-size: 0.875rem; /* 14px */
+  --type-button-weight: 600;
+  --type-button-lh: 1.25;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --type-page-title-size: 1.5rem; /* 24px */
+    --type-section-title-size: 1.25rem; /* 20px */
+  }
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea,
+optgroup,
+.btn,
+.input,
+.select,
+.table,
+.data-table,
+.app-shell,
+.sidebar,
+.main-content,
+.topbar,
+.player-bar,
+.modal,
+[role='dialog'],
+[role='menu'],
+[role='listbox'] {
+  font-family: var(--font-sans);
+}
+
+body {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+}
+
+/* Hierarchy utilities */
+.type-page-title,
+.vx-hero__title,
+.vx-enterprise .page-header h1,
+.vx-enterprise > h1,
+.plans-catalog .page-header h1,
+.subscription-overview .page-header h1,
+.biz-analytics-dashboard > h1,
+.org-page h1,
+.crm-page > h1,
+.page-shell > h1 {
+  font-family: var(--font-sans);
+  font-size: var(--type-page-title-size);
+  font-weight: var(--type-page-title-weight);
+  line-height: var(--type-page-title-lh);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.type-section-title,
+.vx-enterprise h2,
+.org-page h2,
+.vx-card > h2,
+.crm-card > h2,
+.ent-section-card__title,
+.section-card__title {
+  font-family: var(--font-sans);
+  font-size: var(--type-section-title-size);
+  font-weight: var(--type-section-title-weight);
+  line-height: var(--type-section-title-lh);
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.type-card-title,
+.vx-card h3,
+.ent-section-card__subtitle,
+.kpi-card__value,
+.ent-stat-card__value {
+  font-family: var(--font-sans);
+  font-size: var(--type-card-title-size);
+  font-weight: var(--type-card-title-weight);
+  line-height: var(--type-card-title-lh);
+}
+
+.type-body {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+}
+
+.type-label,
+label,
+.form-field__label,
+.ent-form-field__label {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-lh);
+}
+
+.type-caption,
+.vx-hero__subtitle,
+.vx-enterprise .lede,
+.vx-enterprise .subtitle,
+.page-header p,
+.muted,
+.org-page .lede {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-lh);
+  color: var(--text-muted);
+}
+
+/* Subtitles under page titles: one step above caption for readability */
+.vx-hero__subtitle,
+.vx-enterprise .lede,
+.vx-enterprise .subtitle,
+.org-page .lede {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+  color: var(--color-text-secondary, var(--text-muted));
+  max-width: 52rem;
+}
+
+.type-button,
+.btn,
+.btn--primary,
+.btn--secondary,
+.btn--ghost,
+.btn--danger,
+.btn--warn,
+.org-btn,
+.crm-btn {
+  font-family: var(--font-sans);
+  font-size: var(--type-button-size);
+  font-weight: var(--type-button-weight);
+  line-height: var(--type-button-lh);
+}
+
+/* Small section eyebrows — only place for full uppercase */
+.type-eyebrow,
+.section-eyebrow,
+.org-selector-current-label,
+.nav-group-label,
+.sidebar .nav-section-title {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-caption-lh);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* Tabular nums for money / KPIs / invoices / metrics */
+.tabular-nums,
+.locale-money,
+.kpi-value,
+.stat-card__value,
+.ent-stat-card__value,
+.mono-metric,
+.data-table td.num,
+.data-table .amount,
+.invoice-amount,
+.plan-price,
+.ledger-amount {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Status / alert text is caption-weight, not body-competing */
+.alert,
+.ent-error-state__message,
+.org-selector-error,
+[role='alert']:not(.btn) {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-body-lh);
+}
+
+/* Tables: consistent body size */
+.data-table,
+.crm-table,
+.org-table {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+}
+
+.data-table th,
+.crm-table th,
+.org-table th {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-lh);
+}
+
+/* Codes / IDs keep mono — not used as UI body */
+code,
+.mono,
+.font-mono,
+[class*='mono'] {
+  font-family: var(--font-mono);
+}

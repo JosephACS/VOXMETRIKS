@@ -2,12 +2,29 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { StatsService } from '../../analytics/services/stats.service';
 import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
 import { LoadRecord, WarehouseTableMeta, TablePreview } from '../../../shared/models/api.models';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+
+const PREFERRED_TABLES = [
+  'fact_streaming',
+  'fact_user_activity',
+  'fact_playlist_activity',
+  'fact_favorites',
+  'fact_searches',
+  'fact_stream_sessions',
+  'dim_track',
+  'dim_artista',
+  'dim_album',
+  'dim_usuario',
+  'dim_playlist',
+  'dim_genero',
+  'dim_tiempo',
+];
 
 @Component({
   selector: 'app-explorer',
@@ -18,6 +35,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 })
 export class ExplorerComponent implements OnInit {
   readonly lang = inject(I18nService).lang;
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
   isLoadingTables = signal(true);
   isLoadingPreview = signal(false);
   isLoadingLoads = signal(true);
@@ -33,13 +53,27 @@ export class ExplorerComponent implements OnInit {
   selectedTable = signal('');
   searchFilter = signal('');
   page = signal(1);
-  pageSize = 8;
+  pageSize = signal(50);
 
   filteredTables = computed(() => {
     const q = this.searchFilter().toLowerCase().trim();
-    const list = this.tables();
+    const list = this.sortedTables();
     if (!q) return list;
     return list.filter((t) => t.name.toLowerCase().includes(q));
+  });
+
+  sortedTables = computed(() => {
+    const list = [...this.tables()];
+    const rank = (name: string): number => {
+      const idx = PREFERRED_TABLES.indexOf(name);
+      return idx >= 0 ? idx : 1000 + name.charCodeAt(0);
+    };
+    return list.sort((a, b) => {
+      const ra = rank(a.name);
+      const rb = rank(b.name);
+      if (ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name);
+    });
   });
 
   activeTable = computed(() =>
@@ -81,10 +115,15 @@ export class ExplorerComponent implements OnInit {
       next: (d) => {
         this.tables.set(d ?? []);
         this.isLoadingTables.set(false);
-        const first = d?.[0]?.name;
-        if (first) {
-          this.selectedTable.set(first);
-          this.loadPreview(first, 1);
+        const fromQuery = this.route.snapshot.queryParamMap.get('table');
+        const preferred =
+          (fromQuery && d?.some((t) => t.name === fromQuery) ? fromQuery : null)
+          ?? d?.find((t) => t.name === 'fact_streaming')?.name
+          ?? d?.find((t) => t.kind === 'fact')?.name
+          ?? d?.[0]?.name;
+        if (preferred) {
+          this.selectedTable.set(preferred);
+          this.loadPreview(preferred, 1);
         }
       },
       error: (err) => this.handleRequestError(err, 'No se pudieron cargar las tablas del warehouse.'),
@@ -141,13 +180,27 @@ export class ExplorerComponent implements OnInit {
   selectTable(name: string) {
     this.selectedTable.set(name);
     this.page.set(1);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { table: name },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    this.loadPreview(name, 1);
+  }
+
+  setPageSize(size: 50 | 100) {
+    this.pageSize.set(size);
+    const name = this.selectedTable();
+    if (!name) return;
+    this.page.set(1);
     this.loadPreview(name, 1);
   }
 
   loadPreview(name: string, page: number) {
     this.isLoadingPreview.set(true);
     this.previewError.set('');
-    this.stats.getTablePreview(name, page, this.pageSize).subscribe({
+    this.stats.getTablePreview(name, page, this.pageSize()).subscribe({
       next: (d) => { this.preview.set(d); this.isLoadingPreview.set(false); },
       error: (err) => {
         this.preview.set(null);

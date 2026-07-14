@@ -195,7 +195,11 @@ def resolve_current_organization(
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
     x_organization_id: Optional[str] = Header(default=None, alias="X-Organization-Id"),
 ) -> tuple[str, Optional[OrganizationContext]]:
-    """Return (context_state, ctx|None) for /organizations/current."""
+    """Return (context_state, ctx|None) for /organizations/current.
+
+    When the user has exactly one visible active membership and no preference,
+    auto-select that organization (development / single-tenant UX).
+    """
     prefs = PreferenceRepository(conn)
     header_org = _parse_optional_org_header(x_organization_id)
     pref = prefs.get_for_user(actor.user_id)
@@ -208,11 +212,26 @@ def resolve_current_organization(
 
     org_id = header_org if header_org is not None else preferred
     source = "header" if header_org is not None else "preference"
-    if org_id is None:
-        return "none", None
 
     members = MembershipRepository(conn)
     orgs = OrganizationRepository(conn)
+
+    if org_id is None:
+        # Auto-select when the user has a single visible org membership.
+        visible = orgs.list_for_user(actor.user_id)
+        if len(visible) == 1:
+            only = visible[0]
+            if only.status == OrganizationStatus.ACTIVE.value:
+                prefs.set_active_organization(
+                    actor.user_id,
+                    only.id,
+                    updated_by=actor.user_id,
+                )
+                org_id = only.id
+                source = "auto_single"
+        if org_id is None:
+            return "none", None
+
     membership = members.get_by_org_and_user(org_id, actor.user_id)
     try:
         org = orgs.get_by_id(org_id)

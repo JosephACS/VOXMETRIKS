@@ -5,77 +5,89 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-contacts-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-contacts-list-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/dashboard">← CRM</a>
-        <h1 style="margin:0">{{ 'crm.contacts.title' | t:lang() }}</h1>
-      </div>
-      <p class="crm-muted">{{ 'crm.contacts.title' | t:lang() }} comerciales vinculados a prospectos. Requiere permiso CRM.</p>
+    <div class="vx-enterprise crm-page" data-testid="crm-contacts-list-page">
+      <app-enterprise-page-header
+        [title]="'crm.contacts.title' | t:lang()"
+        [subtitle]="'crm.contacts.subtitle' | t:lang()"
+      >
+        <a class="btn btn--ghost" routerLink="/crm/dashboard">← CRM</a>
+      </app-enterprise-page-header>
+
+      <p class="muted">{{ 'crm.contacts.permissionNote' | t:lang() }}</p>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
-      <div class="crm-card">
-        <h2>Nuevo contacto</h2>
-        <form class="crm-form" (ngSubmit)="create()">
-          <label>Nombre completo *
-            <input [(ngModel)]="form.full_name" name="full_name" required />
-          </label>
-          <label>Email
-            <input [(ngModel)]="form.email" name="email" type="email" />
-          </label>
-          <label>Teléfono
-            <input [(ngModel)]="form.phone" name="phone" />
-          </label>
-          <label>Empresa
-            <input [(ngModel)]="form.company_name" name="company_name" />
-          </label>
-          <div class="crm-actions">
-            <button type="submit" class="crm-btn" [disabled]="!form.full_name.trim() || saving()">
-              {{ saving() ? 'Creando…' : 'Crear contacto' }}
+      <app-enterprise-section-card [title]="'crm.contacts.create' | t:lang()">
+        <form class="form-grid" (ngSubmit)="create()">
+          <app-enterprise-form-field [label]="'crm.contacts.fullName' | t:lang()" [required]="true">
+            <input class="input" [(ngModel)]="form.full_name" name="full_name" required />
+          </app-enterprise-form-field>
+          <app-enterprise-form-field [label]="'common.email' | t:lang()">
+            <input class="input" [(ngModel)]="form.email" name="email" type="email" />
+          </app-enterprise-form-field>
+          <app-enterprise-form-field [label]="'crm.prospects.phone' | t:lang()">
+            <input class="input" [(ngModel)]="form.phone" name="phone" />
+          </app-enterprise-form-field>
+          <app-enterprise-form-field [label]="'crm.prospects.company' | t:lang()">
+            <input class="input" [(ngModel)]="form.company_name" name="company_name" />
+          </app-enterprise-form-field>
+          <div class="form-grid__actions">
+            <button type="submit" class="btn btn--primary" [disabled]="!form.full_name.trim() || saving()">
+              {{ (saving() ? 'crm.contacts.creating' : 'crm.contacts.create') | t:lang() }}
             </button>
           </div>
         </form>
-      </div>
+      </app-enterprise-section-card>
 
-      <div class="crm-card">
-        <h2>Listado</h2>
+      <app-enterprise-section-card [title]="'crm.contacts.list' | t:lang()">
         @if (loading()) {
-          <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+          <app-enterprise-loading-skeleton [rows]="3" />
         } @else if (contacts().length === 0) {
-          <p class="crm-muted">{{ 'crm.contacts.empty' | t:lang() }}. Crea el primero arriba.</p>
+          <app-enterprise-empty-state
+            [title]="'crm.contacts.empty' | t:lang()"
+            [description]="'crm.contacts.emptyHint' | t:lang()"
+          />
         } @else {
-          <table class="crm-table">
-            <thead>
-              <tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Empresa</th></tr>
-            </thead>
-            <tbody>
-              @for (c of contacts(); track c.id) {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td>{{ c.full_name }}</td>
-                  <td>{{ c.email || ('common.notAvailable' | t:lang()) }}</td>
-                  <td>{{ c.phone || ('common.notAvailable' | t:lang()) }}</td>
-                  <td>{{ c.company_name || ('common.notAvailable' | t:lang()) }}</td>
+                  <th>{{ 'common.name' | t:lang() }}</th>
+                  <th>{{ 'common.email' | t:lang() }}</th>
+                  <th>{{ 'crm.prospects.phone' | t:lang() }}</th>
+                  <th>{{ 'crm.prospects.company' | t:lang() }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (c of contacts(); track c.id) {
+                  <tr>
+                    <td>{{ c.full_name }}</td>
+                    <td>{{ c.email || ('common.notAvailable' | t:lang()) }}</td>
+                    <td>{{ c.phone || ('common.notAvailable' | t:lang()) }}</td>
+                    <td>{{ c.company_name || ('common.notAvailable' | t:lang()) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
-      </div>
-    </section>
+      </app-enterprise-section-card>
+    </div>
   `,
 })
 export class CrmContactsListPageComponent implements OnInit {
@@ -123,7 +135,7 @@ export class CrmContactsListPageComponent implements OnInit {
         }),
       );
       this.form = { full_name: '', email: '', phone: '', company_name: '' };
-      this.success.set('Contacto creado.');
+      this.success.set(this.i18n.t('crm.contacts.createdMsg'));
       await this.load();
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear contacto');

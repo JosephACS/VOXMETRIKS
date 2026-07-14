@@ -4,284 +4,352 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
-import { Opportunity, OpportunityStageHistory, Quotation, SalesActivity, CommercialContract, CustomerConversion, OPPORTUNITY_STAGES } from '../models/crm.models';
-
+import {
+  Opportunity,
+  OpportunityStageHistory,
+  Quotation,
+  SalesActivity,
+  CommercialContract,
+  CustomerConversion,
+  OPPORTUNITY_STAGES,
+} from '../models/crm.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-opportunity-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-opportunity-detail-page">
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
-        <a class="crm-btn crm-btn--ghost" routerLink="/crm/opportunities">← Pipeline</a>
-        <h1 style="margin:0">{{ opp()?.name || 'Oportunidad #' + oppId }}</h1>
+    <div class="vx-enterprise crm-page" data-testid="crm-opportunity-detail-page">
+      <app-enterprise-page-header [title]="opp()?.name || ('crm.lostOpportunity.closed' | t:lang()) + ' #' + oppId">
+        <a class="btn btn--ghost" routerLink="/crm/opportunities">
+          ← {{ 'crm.opportunityDetail.backPipeline' | t:lang() }}
+        </a>
         @if (opp()) {
-          <span class="crm-badge crm-badge--{{ opp()!.stage }}">{{ opp()!.stage }}</span>
+          <app-enterprise-status-badge [status]="opp()!.stage" />
         }
-      </div>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
       @if (loading()) {
-        <p class="crm-muted">{{ 'common.loading' | t:lang() }}</p>
+        <app-enterprise-loading-skeleton [rows]="4" />
       } @else if (opp()) {
-        <!-- Opportunity data -->
-        <div class="crm-card">
-          <h2>Datos</h2>
-          <form class="crm-form" (ngSubmit)="saveOpp()">
-            <label>Nombre *
-              <input [(ngModel)]="editForm.name" name="name" required />
-            </label>
-            <label>Descripción
-              <textarea [(ngModel)]="editForm.description" name="description" rows="2"></textarea>
-            </label>
-            <label>Valor esperado
-              <input [(ngModel)]="editForm.expected_value" name="expected_value" type="number" min="0" />
-            </label>
-            <label>Moneda
-              <input [(ngModel)]="editForm.currency" name="currency" maxlength="3" />
-            </label>
-            <label>Probabilidad (0–100)
-              <input [(ngModel)]="editForm.probability" name="probability" type="number" min="0" max="100" />
-            </label>
-            <label>Fecha de cierre esperada
-              <input [(ngModel)]="editForm.expected_close_date" name="expected_close_date" type="date" />
-            </label>
-            <div class="crm-actions">
-              <button type="submit" class="crm-btn" [disabled]="saving()">
-                {{ saving() ? 'Guardando…' : 'Guardar' }}
+        <app-enterprise-section-card [title]="'crm.opportunityDetail.data' | t:lang()">
+          <form class="form-grid" (ngSubmit)="saveOpp()">
+            <app-enterprise-form-field [label]="'common.name' | t:lang()" [required]="true">
+              <input class="input" [(ngModel)]="editForm.name" name="name" required />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.description' | t:lang()">
+              <textarea class="input" [(ngModel)]="editForm.description" name="description" rows="2"></textarea>
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.opportunities.expectedValue' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.expected_value" name="expected_value" type="number" min="0" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.currency' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.currency" name="currency" maxlength="3" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.opportunities.probability' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.probability" name="probability" type="number" min="0" max="100" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.opportunityDetail.closeDate' | t:lang()">
+              <input class="input" [(ngModel)]="editForm.expected_close_date" name="expected_close_date" type="date" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                {{ (saving() ? 'common.saving' : 'common.save') | t:lang() }}
               </button>
             </div>
           </form>
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Stage advance -->
         @if (!isClosedStage()) {
-          <div class="crm-card">
-            <h2>Avanzar etapa</h2>
-            <div class="crm-form">
-              <label>Nueva etapa
-                <select [(ngModel)]="newStage" name="newStage">
+          <app-enterprise-section-card [title]="'crm.opportunityDetail.advance' | t:lang()">
+            <form class="form-grid">
+              <app-enterprise-form-field [label]="'crm.opportunityDetail.newStage' | t:lang()">
+                <select class="select" [(ngModel)]="newStage" name="newStage">
                   @for (s of stages; track s) {
                     <option [value]="s" [disabled]="s === opp()!.stage">{{ s }}</option>
                   }
                 </select>
-              </label>
-              <label>Motivo (opcional)
-                <input [(ngModel)]="stageReason" name="stageReason" />
-              </label>
-              <div class="crm-actions">
-                <button type="button" class="crm-btn crm-btn--ghost"
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'common.reasonOptional' | t:lang()">
+                <input class="input" [(ngModel)]="stageReason" name="stageReason" />
+              </app-enterprise-form-field>
+              <app-enterprise-action-bar>
+                <button
+                  type="button"
+                  class="btn btn--secondary"
                   [disabled]="!newStage || newStage === opp()!.stage || saving()"
-                  (click)="advanceStage()">Avanzar etapa</button>
-                <button type="button" class="crm-btn crm-btn--danger"
-                  [disabled]="saving()"
-                  (click)="showCloseForm = !showCloseForm">
-                  Cerrar oportunidad
+                  (click)="advanceStage()"
+                >
+                  {{ 'crm.opportunityDetail.advance' | t:lang() }}
                 </button>
-              </div>
-            </div>
+                <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="showCloseForm = !showCloseForm">
+                  {{ 'crm.opportunityDetail.close' | t:lang() }}
+                </button>
+              </app-enterprise-action-bar>
+            </form>
 
             @if (showCloseForm) {
-              <div style="margin-top:1rem;border-top:1px solid var(--border,#30363d);padding-top:1rem">
-                <h3 style="font-size:0.95rem;margin:0 0 0.6rem">Cerrar oportunidad</h3>
-                <div class="crm-form">
-                  <label>Resultado *
-                    <select [(ngModel)]="closeOutcome" name="closeOutcome">
-                      <option value="won">won — ganada</option>
-                      <option value="lost">lost — perdida</option>
-                      <option value="canceled">canceled — cancelada</option>
-                    </select>
-                  </label>
-                  <label>Etapa final *
-                    <select [(ngModel)]="closeStage" name="closeStage">
+              <div style="margin-top: 1rem; border-top: 1px solid var(--border, #30363d); padding-top: 1rem">
+                <h3 style="font-size: 0.95rem; margin: 0 0 0.6rem">{{ 'crm.opportunityDetail.close' | t:lang() }}</h3>
+                <form class="form-grid">
+                  <app-enterprise-form-field [label]="'crm.opportunityDetail.outcome' | t:lang()" [required]="true">
+                    <select class="select" [(ngModel)]="closeOutcome" name="closeOutcome">
                       <option value="won">won</option>
                       <option value="lost">lost</option>
                       <option value="canceled">canceled</option>
                     </select>
-                  </label>
-                  <label>Motivo
-                    <input [(ngModel)]="closeReason" name="closeReason" />
-                  </label>
-                  <div class="crm-actions">
-                    <button type="button" class="crm-btn crm-btn--danger"
-                      [disabled]="saving()" (click)="closeOpp()">
-                      Confirmar cierre
+                  </app-enterprise-form-field>
+                  <app-enterprise-form-field [label]="'crm.opportunityDetail.finalStage' | t:lang()" [required]="true">
+                    <select class="select" [(ngModel)]="closeStage" name="closeStage">
+                      <option value="won">won</option>
+                      <option value="lost">lost</option>
+                      <option value="canceled">canceled</option>
+                    </select>
+                  </app-enterprise-form-field>
+                  <app-enterprise-form-field [label]="'common.reason' | t:lang()">
+                    <input class="input" [(ngModel)]="closeReason" name="closeReason" />
+                  </app-enterprise-form-field>
+                  <div class="form-grid__actions">
+                    <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="closeOpp()">
+                      {{ 'crm.opportunityDetail.confirmClose' | t:lang() }}
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
             }
-          </div>
+          </app-enterprise-section-card>
         }
 
-        <!-- Stage history -->
         @if (history().length) {
-          <div class="crm-card">
-            <h2>Historial de etapas</h2>
-            <table class="crm-table">
-              <thead><tr><th>Desde</th><th>Hacia</th><th>Motivo</th><th>Fecha</th></tr></thead>
-              <tbody>
-                @for (h of history(); track h.id) {
+          <app-enterprise-section-card [title]="'crm.opportunityDetail.stageHistory' | t:lang()">
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td>{{ h.from_stage || '—' }}</td>
-                    <td>{{ h.to_stage }}</td>
-                    <td>{{ h.reason || '—' }}</td>
-                    <td class="crm-muted">{{ h.occurred_at | date:'short' }}</td>
+                    <th>{{ 'common.from' | t:lang() }}</th>
+                    <th>{{ 'common.to' | t:lang() }}</th>
+                    <th>{{ 'common.reason' | t:lang() }}</th>
+                    <th>{{ 'common.date' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  @for (h of history(); track h.id) {
+                    <tr>
+                      <td>{{ h.from_stage || ('common.notAvailable' | t:lang()) }}</td>
+                      <td>{{ h.to_stage }}</td>
+                      <td>{{ h.reason || ('common.notAvailable' | t:lang()) }}</td>
+                      <td class="muted">{{ h.occurred_at | localeDate:true }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
+          </app-enterprise-section-card>
         }
 
-        <!-- Quotations -->
-        <div class="crm-card">
-          <h2>Cotizaciones</h2>
+        <app-enterprise-section-card [title]="'crm.opportunityDetail.quotations' | t:lang()">
           @if (quotations().length) {
-            <table class="crm-table">
-              <thead><tr><th>#</th><th>Estado</th><th>Moneda</th><th>Versión actual</th></tr></thead>
-              <tbody>
-                @for (q of quotations(); track q.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td><a [routerLink]="['/crm/quotations', q.id]">Q-{{ q.id }}</a></td>
-                    <td><span class="crm-badge crm-badge--{{ q.status }}">{{ q.status }}</span></td>
-                    <td>{{ q.currency || '—' }}</td>
-                    <td>v{{ q.current_version_no ?? '—' }}</td>
+                    <th>{{ 'common.id' | t:lang() }}</th>
+                    <th>{{ 'common.status' | t:lang() }}</th>
+                    <th>{{ 'common.currency' | t:lang() }}</th>
+                    <th>{{ 'crm.opportunityDetail.currentVersion' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (q of quotations(); track q.id) {
+                    <tr>
+                      <td><a [routerLink]="['/crm/quotations', q.id]">Q-{{ q.id }}</a></td>
+                      <td><app-enterprise-status-badge [status]="q.status" /></td>
+                      <td>{{ q.currency || ('common.notAvailable' | t:lang()) }}</td>
+                      <td>v{{ q.current_version_no ?? ('common.notAvailable' | t:lang()) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           } @else {
-            <p class="crm-muted">Sin cotizaciones.</p>
+            <app-enterprise-empty-state [title]="'crm.opportunityDetail.noQuotations' | t:lang()" />
           }
-          <div class="crm-actions" style="margin-top:0.6rem">
-            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
-              (click)="createQuotation()">+ Crear cotización</button>
-          </div>
-        </div>
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="createQuotation()">
+              + {{ 'crm.opportunityDetail.createQuotation' | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
+        </app-enterprise-section-card>
 
-        <!-- Contracts -->
-        <div class="crm-card">
-          <h2>Contratos</h2>
+        <app-enterprise-section-card [title]="'crm.opportunityDetail.contracts' | t:lang()">
           @if (contracts().length) {
-            <table class="crm-table">
-              <thead><tr><th>#</th><th>Razón social</th><th>Estado</th></tr></thead>
-              <tbody>
-                @for (c of contracts(); track c.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td><a [routerLink]="['/crm/contracts', c.id]">C-{{ c.id }}</a></td>
-                    <td>{{ c.legal_name || ('common.notAvailable' | t:lang()) }}</td>
-                    <td><span class="crm-badge">{{ c.status }}</span></td>
+                    <th>{{ 'common.id' | t:lang() }}</th>
+                    <th>{{ 'crm.opportunityDetail.legalName' | t:lang() }}</th>
+                    <th>{{ 'common.status' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (c of contracts(); track c.id) {
+                    <tr>
+                      <td><a [routerLink]="['/crm/contracts', c.id]">C-{{ c.id }}</a></td>
+                      <td>{{ c.legal_name || ('common.notAvailable' | t:lang()) }}</td>
+                      <td><app-enterprise-status-badge [status]="c.status" /></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           } @else {
-            <p class="crm-muted">Sin contratos. Créalos desde una cotización aceptada/enviada.</p>
+            <app-enterprise-empty-state
+              [title]="'crm.opportunityDetail.noContracts' | t:lang()"
+              [description]="'crm.opportunityDetail.noContractsHint' | t:lang()"
+            />
           }
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Conversion -->
-        <div class="crm-card">
-          <h2>Conversión a organización</h2>
-          <p class="crm-muted">
-            Prepara la conversión comercial. La suscripción/facturación se gestionan después en sus módulos.
-          </p>
+        <app-enterprise-section-card [title]="'crm.opportunityDetail.conversion' | t:lang()">
+          <p class="muted">{{ 'crm.opportunityDetail.conversionHint' | t:lang() }}</p>
           @if (conversions().length) {
-            <table class="crm-table">
-              <thead><tr><th>#</th><th>Modo</th><th>Estado</th><th>Org</th></tr></thead>
-              <tbody>
-                @for (cv of conversions(); track cv.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td><a [routerLink]="['/crm/conversions', cv.id]">CV-{{ cv.id }}</a></td>
-                    <td>{{ cv.mode }}</td>
-                    <td><span class="crm-badge">{{ cv.status }}</span></td>
-                    <td>{{ cv.organization_id ?? ('common.notAvailable' | t:lang()) }}</td>
+                    <th>{{ 'common.id' | t:lang() }}</th>
+                    <th>{{ 'common.mode' | t:lang() }}</th>
+                    <th>{{ 'common.status' | t:lang() }}</th>
+                    <th>{{ 'common.organization' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (cv of conversions(); track cv.id) {
+                    <tr>
+                      <td><a [routerLink]="['/crm/conversions', cv.id]">CV-{{ cv.id }}</a></td>
+                      <td>{{ cv.mode }}</td>
+                      <td><app-enterprise-status-badge [status]="cv.status" /></td>
+                      <td>{{ cv.organization_id ?? ('common.notAvailable' | t:lang()) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           } @else {
-            <p class="crm-muted">Sin conversiones aún.</p>
+            <app-enterprise-empty-state [title]="'crm.opportunityDetail.noConversions' | t:lang()" />
           }
-          <div class="crm-actions" style="margin-top:0.6rem">
-            <button type="button" class="crm-btn" [disabled]="saving()"
-              (click)="prepareConversion('link_existing')">Preparar conversión (vincular org)</button>
-            <button type="button" class="crm-btn crm-btn--ghost" [disabled]="saving()"
-              (click)="prepareConversion('create_org')">Preparar conversión (crear org)</button>
-          </div>
-        </div>
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="prepareConversion('link_existing')">
+              {{ 'crm.opportunityDetail.prepareLinkOrg' | t:lang() }}
+            </button>
+            <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="prepareConversion('create_org')">
+              {{ 'crm.opportunityDetail.prepareCreateOrg' | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
+        </app-enterprise-section-card>
 
-        <!-- Activities -->
-        <div class="crm-card">
-          <h2>Actividades recientes</h2>
+        <app-enterprise-section-card [title]="'crm.opportunityDetail.activities' | t:lang()">
           @if (activities().length) {
-            <table class="crm-table">
-              <thead><tr><th>Tipo</th><th>Asunto</th><th>Estado</th><th>Fecha</th></tr></thead>
-              <tbody>
-                @for (a of activities(); track a.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td>{{ a.activity_type }}</td>
-                    <td>{{ a.subject }}</td>
-                    <td><span class="crm-badge crm-badge--{{ a.status }}">{{ a.status }}</span></td>
-                    <td class="crm-muted">{{ a.created_at | date:'shortDate' }}</td>
+                    <th>{{ 'common.type' | t:lang() }}</th>
+                    <th>{{ 'crm.opportunityDetail.subject' | t:lang() }}</th>
+                    <th>{{ 'common.status' | t:lang() }}</th>
+                    <th>{{ 'common.date' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (a of activities(); track a.id) {
+                    <tr>
+                      <td>{{ a.activity_type }}</td>
+                      <td>{{ a.subject }}</td>
+                      <td><app-enterprise-status-badge [status]="a.status" /></td>
+                      <td class="muted">{{ a.created_at | localeDate }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           } @else {
-            <p class="crm-muted">Sin actividades.</p>
+            <app-enterprise-empty-state [title]="'crm.opportunityDetail.noActivities' | t:lang()" />
           }
-          <button type="button" class="crm-btn crm-btn--ghost" style="margin-top:0.6rem"
-            (click)="showActivityForm = !showActivityForm">
-            {{ showActivityForm ? 'Cancelar' : '+ Registrar actividad' }}
-          </button>
+          <app-enterprise-action-bar>
+            <button type="button" class="btn btn--secondary" (click)="showActivityForm = !showActivityForm">
+              {{ (showActivityForm ? 'common.cancel' : 'crm.opportunityDetail.addActivity') | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
           @if (showActivityForm) {
-            <form class="crm-form" style="margin-top:0.75rem" (ngSubmit)="createActivity()">
-              <label>Tipo *
-                <select [(ngModel)]="actForm.activity_type" name="activity_type" required>
-                  <option value="call">Llamada</option>
-                  <option value="email">Correo</option>
-                  <option value="meeting">Reunión</option>
-                  <option value="demo">Demo</option>
-                  <option value="note">Nota</option>
+            <form class="form-grid" style="margin-top: 0.75rem" (ngSubmit)="createActivity()">
+              <app-enterprise-form-field [label]="'common.type' | t:lang()" [required]="true">
+                <select class="select" [(ngModel)]="actForm.activity_type" name="activity_type" required>
+                  <option value="call">{{ 'crm.opportunityDetail.activityType.call' | t:lang() }}</option>
+                  <option value="email">{{ 'crm.opportunityDetail.activityType.email' | t:lang() }}</option>
+                  <option value="meeting">{{ 'crm.opportunityDetail.activityType.meeting' | t:lang() }}</option>
+                  <option value="demo">{{ 'crm.opportunityDetail.activityType.demo' | t:lang() }}</option>
+                  <option value="note">{{ 'crm.opportunityDetail.activityType.note' | t:lang() }}</option>
                 </select>
-              </label>
-              <label>Asunto *
-                <input [(ngModel)]="actForm.subject" name="subject" required />
-              </label>
-              <label>Detalle
-                <textarea [(ngModel)]="actForm.body" name="body" rows="2"></textarea>
-              </label>
-              <div class="crm-actions">
-                <button type="submit" class="crm-btn" [disabled]="!actForm.subject || saving()">
-                  Guardar actividad
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.opportunityDetail.subject' | t:lang()" [required]="true">
+                <input class="input" [(ngModel)]="actForm.subject" name="subject" required />
+              </app-enterprise-form-field>
+              <app-enterprise-form-field [label]="'crm.opportunityDetail.detail' | t:lang()">
+                <textarea class="input" [(ngModel)]="actForm.body" name="body" rows="2"></textarea>
+              </app-enterprise-form-field>
+              <div class="form-grid__actions">
+                <button type="submit" class="btn btn--primary" [disabled]="!actForm.subject || saving()">
+                  {{ 'crm.opportunityDetail.saveActivity' | t:lang() }}
                 </button>
               </div>
             </form>
           }
-        </div>
+        </app-enterprise-section-card>
 
-        <!-- Metadata -->
-        <div class="crm-card crm-muted" style="font-size:0.8rem">
-          <p>Prospecto: #{{ opp()!.prospect_id }}</p>
-          <p>Creada: {{ opp()!.created_at | date:'medium' }}</p>
-          <p>Actualizada: {{ opp()!.updated_at | date:'medium' }}</p>
-          @if (opp()!.actual_close_date) {
-            <p>Cierre real: {{ opp()!.actual_close_date | date:'shortDate' }}</p>
-          }
-        </div>
+        <app-enterprise-section-card>
+          <div class="form-grid muted" style="font-size: 0.875rem">
+            <div>
+              <dt>{{ 'crm.opportunityDetail.prospect' | t:lang() }}</dt>
+              <dd>#{{ opp()!.prospect_id }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'common.created' | t:lang() }}</dt>
+              <dd>{{ opp()!.created_at | localeDate:true }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'common.updated' | t:lang() }}</dt>
+              <dd>{{ opp()!.updated_at | localeDate:true }}</dd>
+            </div>
+            @if (opp()!.actual_close_date) {
+              <div>
+                <dt>{{ 'crm.opportunityDetail.actualClose' | t:lang() }}</dt>
+                <dd>{{ opp()!.actual_close_date | localeDate }}</dd>
+              </div>
+            }
+          </div>
+        </app-enterprise-section-card>
       }
-    </section>
+    </div>
   `,
 })
 export class CrmOpportunityDetailPageComponent implements OnInit {
@@ -303,7 +371,14 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   closeStage = 'won';
   closeReason = '';
 
-  editForm = { name: '', description: '', expected_value: 0, currency: 'USD', probability: 50, expected_close_date: '' };
+  editForm = {
+    name: '',
+    description: '',
+    expected_value: 0,
+    currency: 'USD',
+    probability: 50,
+    expected_close_date: '',
+  };
   actForm = { activity_type: 'call', subject: '', body: '', opportunity_id: 0 };
 
   readonly opp = signal<Opportunity | null>(null);

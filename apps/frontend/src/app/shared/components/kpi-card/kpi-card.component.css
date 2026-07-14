@@ -53,21 +53,21 @@
 }
 
 .kpi-label {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--type-label-size, 0.8125rem);
+  font-weight: var(--type-label-weight, 500);
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
   margin: 0;
 }
 
-/* ── Value: número principal ── */
+/* ── Value: número principal (Inter + tabular-nums) ── */
 .kpi-value {
-  font-size: 2rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
+  font-size: var(--type-card-title-size, 1.125rem);
+  font-weight: var(--type-card-title-weight, 600);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
-  line-height: 1.2;
+  line-height: var(--type-card-title-lh, 1.35);
   word-break: break-word;
 }
 
@@ -82,7 +82,8 @@
 
 .trend-value {
   font-weight: 600;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 .trend-label {

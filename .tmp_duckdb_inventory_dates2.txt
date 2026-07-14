@@ -1,0 +1,38 @@
+dim_tiempo last page 475/2372:
+[
+  {
+    "id_tiempo": 2371,
+    "fecha": "2026-06-28",
+    "anio": 2026,
+    "mes": 6,
+    "dia": 28,
+    "trimestre": 2,
+    "dia_semana": 0,
+    "nombre_mes": "June",
+    "es_fin_semana": false
+  },
+  {
+    "id_tiempo": 2372,
+    "fecha": "2026-06-29",
+    "anio": 2026,
+    "mes": 6,
+    "dia": 29,
+    "trimestre": 2,
+    "dia_semana": 1,
+    "nombre_mes": "June",
+    "es_fin_semana": true
+  }
+]
+
+agg_daily_streams columns sample keys: ['fecha', 'total_streams', 'unique_users', 'unique_tracks', 'avg_duration_ms', 'skip_count']
+date fields across pages: [["fecha", "2026-06-29"], ["fecha", "2026-06-28"], ["fecha", "2026-06-27"], ["fecha", "2026-06-26"], ["fecha", "2026-06-25"], ["fecha", "2026-06-24"], ["fecha", "2026-06-23"], ["fecha", "2026-06-22"], ["fecha", "2026-06-21"], ["fecha", "2026-06-20"], ["fecha", "2026-06-19"], ["fecha", "2026-06-18"], ["fecha", "2026-06-17"], ["fecha", "2026-06-16"], ["fecha", "2026-06-15"], ["fecha", "2026-06-14"], ["fecha", "2026-06-13"], ["fecha", "2026-06-12"], ["fecha", "2026-06-11"], ["fecha", "2026-06-10"], ["fecha", "2026-04-20"], ["fecha", "2026-04-19"], ["fecha", "2026-04-18"], ["fecha", "2026-04-17"], ["fecha", "2026-04-16"], ["fecha", "2026-04-15"], ["fecha", "2026-04-14"], ["fecha", "2026-04-13"], ["fecha", "2026-04-12"], ["fecha", "2026-04-11"], ["fecha", "2026-04-10"], ["fecha", "2026-04-09"], ["fecha", "2026-04-08"], ["fecha", "2026-04-07"], ["fecha", "2026-04-06"], ["fecha", "2026-04-05"], ["fecha", "2026-04-04"], ["fecha", "2026-04-03"], ["fecha", "2026-04-02"], ["fecha", "2026-04-01"]]
+first row: {'fecha': '2026-06-29', 'total_streams': 6500, 'unique_users': 125, 'unique_tracks': 6500, 'avg_duration_ms': 229657.0, 'skip_count': 1950}
+last row: {'fecha': '2026-04-01', 'total_streams': 6500, 'unique_users': 125, 'unique_tracks': 6500, 'avg_duration_ms': 228720.0, 'skip_count': 1300}
+
+ctl_pipeline_stages started_at min/max among 16: min=2026-06-21T14:20:04.762000 max=2026-06-28T23:17:06.921000
+
+/api/v2/users/status: {"status": "success", "module": "users"}
+
+/api/v2/users/2: {"id_usuario": 2, "nombre": "User_00001", "email": "user1@voxmetrik.io", "pais": "US", "plan": "premium", "engagement_score": 617.65, "segment": "power_users"}
+
+/api/v1/analytics/explorer/preview/app_user?page=1&limit=1: ERROR HTTP Error 403: Forbidden

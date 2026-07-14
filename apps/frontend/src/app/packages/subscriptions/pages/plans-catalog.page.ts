@@ -264,7 +264,10 @@ export class PlansCatalogPageComponent implements OnInit {
       .listPlans({ status: 'active', limit: 50 })
       .pipe(
         switchMap((r) => {
-          const items = [...(r.items || [])].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+          const commercial = new Set(['starter', 'professional', 'business', 'enterprise']);
+          const items = [...(r.items || [])]
+            .filter((p) => p.status === 'active' && commercial.has((p.code || '').toLowerCase()))
+            .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
           this.plans.set(items);
           if (!items.length) {
             return of({ prices: {}, features: {}, sub: null as Subscription | null });

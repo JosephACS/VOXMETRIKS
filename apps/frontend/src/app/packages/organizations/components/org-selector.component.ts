@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   OnInit,
@@ -11,8 +12,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OrganizationContextService } from '../services/organization-context.service';
 import { OrganizationsApiError } from '../services/organizations-api.service';
+import { OrgSelectorBridgeService } from '../services/org-selector-bridge.service';
 import { Organization } from '../models/organization.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -159,12 +162,18 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
       }
       .org-selector-link {
         display: block;
+        width: 100%;
+        text-align: left;
         padding: 0.55rem 0.65rem;
         text-decoration: none;
         color: inherit;
         border-radius: 8px;
+        border: 0;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         margin-top: 0.25rem;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
       }
       .org-selector-link:hover {
         background: color-mix(in srgb, #1ed896 12%, transparent);
@@ -194,7 +203,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
         <span class="org-selector-name">
           @if (ctx.isLoading()) {
             {{ 'organizations.selector.loading' | t:lang() }}
-          } @else if (ctx.activeOrganization(); as org) {
+          } @else if (ctx.hasOrganization() && ctx.activeOrganization(); as org) {
             {{ org.display_name }}
           } @else {
             {{ 'organizations.selector.none' | t:lang() }}
@@ -212,7 +221,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           (click)="$event.stopPropagation()"
           (keydown)="onMenuKeydown($event)"
         >
-          @if (ctx.activeOrganization(); as active) {
+          @if (ctx.hasOrganization() && ctx.activeOrganization(); as active) {
             <div class="org-selector-current">
               <span class="org-selector-current-label">{{ 'organizations.selector.current' | t:lang() }}</span>
               <div class="org-selector-current-name">{{ active.display_name }}</div>
@@ -247,9 +256,9 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
                   type="button"
                   class="org-selector-item"
                   role="option"
-                  [class.org-selector-item--active]="o.id === ctx.activeOrganization()?.id"
+                  [class.org-selector-item--active]="o.id === ctx.organizationId()"
                   [class.org-selector-item--focused]="i === focusIndex()"
-                  [attr.aria-selected]="o.id === ctx.activeOrganization()?.id"
+                  [attr.aria-selected]="o.id === ctx.organizationId()"
                   (click)="select(o)"
                   (mouseenter)="focusIndex.set(i)"
                 >
@@ -268,7 +277,15 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           <a class="org-selector-link" routerLink="/organizations/new" (click)="open.set(false)">
             {{ 'organizations.create.title' | t:lang() }}
           </a>
-          @if (!ctx.hasOrganization()) {
+          @if (ctx.hasOrganization()) {
+            <button
+              type="button"
+              class="org-selector-link"
+              (click)="enterPersonalMode()"
+            >
+              {{ 'organizations.selector.noneState' | t:lang() }}
+            </button>
+          } @else {
             <a class="org-selector-link" routerLink="/organizations/none" (click)="open.set(false)">
               {{ 'organizations.selector.noneState' | t:lang() }}
             </a>
@@ -287,6 +304,8 @@ export class OrgSelectorComponent implements OnInit {
 
   readonly ctx = inject(OrganizationContextService);
   private readonly router = inject(Router);
+  private readonly bridge = inject(OrgSelectorBridgeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly open = signal(false);
   readonly switchError = signal<string | null>(null);
@@ -309,6 +328,18 @@ export class OrgSelectorComponent implements OnInit {
     if (this.ctx.status() === 'idle') {
       await this.ctx.bootstrap();
     }
+    this.bridge.openRequests$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.open.set(true);
+      this.switchError.set(null);
+      this.query.set('');
+      this.focusIndex.set(0);
+      queueMicrotask(() => this.searchInput?.nativeElement?.focus());
+    });
+  }
+
+  /** Public API for enterprise pages / bridge. */
+  openMenu(): void {
+    this.open.set(true);
   }
 
   toggle(e: Event): void {
@@ -360,8 +391,9 @@ export class OrgSelectorComponent implements OnInit {
       await this.router.navigate(['/organizations/suspended']);
       return;
     }
-    if (id === this.ctx.activeOrganization()?.id) {
+    if (id === this.ctx.organizationId()) {
       this.open.set(false);
+      await this.router.navigate(['/organizations', id, 'settings']);
       return;
     }
     try {
@@ -375,5 +407,11 @@ export class OrgSelectorComponent implements OnInit {
           : this.i18n.t('organizations.selector.switchError'),
       );
     }
+  }
+
+  async enterPersonalMode(): Promise<void> {
+    this.open.set(false);
+    this.ctx.enterPersonalMode();
+    await this.router.navigate(['/organizations/none']);
   }
 }

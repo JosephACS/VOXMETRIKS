@@ -12,6 +12,7 @@ from app.core.query_helpers import count_rows
 from app.core.response_cache import cached_response
 
 from .constants import ACTIVITY_FACT_TABLES
+from .events_inventory import classify_activity_facts, _latest_activity_load
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,32 @@ def get_summary(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
         "total_streams": _safe_count(conn, "fact_streaming"),
         "active_users": _safe_count(conn, "dim_usuario"),
         "total_playlists": _safe_count(conn, "dim_playlist"),
+        # Scope labels — warehouse global catalog (unique rows), not personal.
+        "tracks_scope": "warehouse_catalog",
+        "artists_scope": "warehouse_catalog",
+        "albums_scope": "warehouse_catalog",
+        "playlists_scope": "warehouse_catalog",
+        "streams_scope": "warehouse_fact_streaming",
+        "events_scope": "warehouse_activity_facts",
     }
-    result["total_events"] = sum(_safe_count(conn, table) for table in ACTIVITY_FACT_TABLES)
+    # Analytical events KPI: sum of activity fact tables (see get_events_breakdown).
+    events_total = sum(_safe_count(conn, table) for table in ACTIVITY_FACT_TABLES)
+    result["total_events"] = events_total
+    try:
+        classification = classify_activity_facts(conn)
+        class_totals = {c: 0 for c in ("real", "imported", "demo", "synthetic", "unknown")}
+        class_totals[classification] = events_total
+        result["events_classification_totals"] = class_totals
+        load = _latest_activity_load(conn)
+        if load and load.get("fecha_carga") is not None:
+            fc = load["fecha_carga"]
+            result["events_updated_at"] = fc.isoformat() if hasattr(fc, "isoformat") else str(fc)
+        else:
+            result["events_updated_at"] = None
+    except Exception:
+        logger.exception("get_summary: events classification enrichment failed")
+        result["events_updated_at"] = None
+        result["events_classification_totals"] = None
 
     try:
         row = conn.execute("""

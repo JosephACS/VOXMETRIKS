@@ -4,83 +4,141 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CatalogRightsApiService } from '../services/catalog-rights-api.service';
 import { RightsConflict } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-rights-conflicts-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslatePipe,
+    StatusLabelPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise rights-conflicts-list-page">
-      <h1>{{ 'catalogRights.conflicts.title' | t:lang() }}</h1>
-      <p class="subtitle">
-        Conflicts are opened automatically when ownership percentages exceed 100% for the same
-        asset, rights type, territory, and overlapping period. Review and resolve below.
-      </p>
-
-      <div class="filters">
-        <label>
-          Asset id
-          <input type="number" [value]="assetFilter ?? ''" (change)="onAssetChange($event)" class="input" />
-        </label>
-        <label>
-          Status
-          <select [value]="statusFilter" (change)="onStatusChange($event)">
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="resolved">Resolved</option>
-            <option value="dismissed">Dismissed</option>
-          </select>
-        </label>
-      </div>
-
-      <form [formGroup]="openForm" (ngSubmit)="openConflict()" class="create-form">
-        <input formControlName="asset_id" type="number" placeholder="Asset id" class="input" />
-        <select formControlName="rights_type" class="input">
-          <option value="master">Master</option>
-          <option value="publishing">Publishing</option>
-          <option value="neighboring">Neighboring</option>
-          <option value="other">Other</option>
-        </select>
-        <input formControlName="territory_code" placeholder="Territory code" class="input" />
-        <input formControlName="details" placeholder="Details (optional)" class="input" />
-        <button type="submit" class="btn btn--primary" [disabled]="openForm.invalid">
-          Open Conflict Manually
-        </button>
-      </form>
-
-      @if (error) {
-        <p class="error">{{ error }}</p>
-      }
-
-      @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
-      } @else if (conflicts.length === 0) {
-        <p>No conflicts.</p>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <table class="data-table">
-          <thead>
-            <tr><th>Asset</th><th>Rights Type</th><th>Territory</th><th>Status</th><th>Details</th><th></th></tr>
-          </thead>
-          <tbody>
-            @for (c of conflicts; track c.id) {
-              <tr>
-                <td>#{{ c.asset_id }}</td>
-                <td>{{ c.rights_type }}</td>
-                <td>{{ c.territory_code }}</td>
-                <td><span class="badge" [class]="'badge--' + c.status">{{ c.status }}</span></td>
-                <td>{{ c.details ?? '—' }}</td>
-                <td>
-                  @if (c.status === 'open') {
-                    <button class="btn btn--secondary" (click)="resolve(c.id, 'resolved')">Resolve</button>
-                    <button class="btn btn--secondary" (click)="resolve(c.id, 'dismissed')">Dismiss</button>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <app-enterprise-page-header
+          [title]="'catalogRights.conflicts.title' | t:lang()"
+          [subtitle]="'catalogRights.conflicts.subtitle' | t:lang()"
+        />
+
+        <app-enterprise-action-bar>
+          <app-enterprise-form-field [label]="'catalogRights.conflicts.assetId' | t:lang()">
+            <input
+              type="number"
+              class="input"
+              [value]="assetFilter ?? ''"
+              (change)="onAssetChange($event)"
+            />
+          </app-enterprise-form-field>
+          <app-enterprise-form-field [label]="'common.status' | t:lang()">
+            <select class="input" [value]="statusFilter" (change)="onStatusChange($event)">
+              <option value="">{{ 'common.all' | t:lang() }}</option>
+              <option value="open">{{ 'open' | statusLabel }}</option>
+              <option value="resolved">{{ 'resolved' | statusLabel }}</option>
+              <option value="dismissed">{{ 'dismissed' | statusLabel }}</option>
+            </select>
+          </app-enterprise-form-field>
+        </app-enterprise-action-bar>
+
+        <app-enterprise-section-card [title]="'catalogRights.conflicts.open' | t:lang()">
+          <form [formGroup]="openForm" (ngSubmit)="openConflict()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'catalogRights.conflicts.assetId' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="asset_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field
+              [label]="'catalogRights.contracts.rightsType' | t:lang()"
+              [required]="true"
+            >
+              <select formControlName="rights_type" class="input">
+                <option value="master">{{ 'catalogRights.rightsType.master' | t:lang() }}</option>
+                <option value="publishing">{{ 'catalogRights.rightsType.publishing' | t:lang() }}</option>
+                <option value="neighboring">{{ 'catalogRights.rightsType.neighboring' | t:lang() }}</option>
+                <option value="other">{{ 'catalogRights.rightsType.other' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <app-enterprise-form-field
+              [label]="'catalogRights.conflicts.territory' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="territory_code" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.conflicts.detailsOptional' | t:lang()">
+              <input formControlName="details" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="openForm.invalid">
+                {{ 'catalogRights.conflicts.open' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="load()" />
+        } @else if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (conflicts.length === 0) {
+          <app-enterprise-empty-state
+            [title]="'catalogRights.conflicts.emptyTitle' | t:lang()"
+            [description]="'catalogRights.conflicts.emptyBody' | t:lang()"
+            [ctaLabel]="'catalogRights.conflicts.open' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'catalogRights.conflicts.assetId' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.contracts.rightsType' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.conflicts.territory' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'common.details' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of conflicts; track c.id) {
+                  <tr>
+                    <td>#{{ c.asset_id }}</td>
+                    <td>{{ rightsTypeLabel(c.rights_type) }}</td>
+                    <td>{{ c.territory_code }}</td>
+                    <td><app-enterprise-status-badge [status]="c.status" /></td>
+                    <td>{{ c.details || ('common.notAvailable' | t:lang()) }}</td>
+                    <td>
+                      @if (c.status === 'open') {
+                        <button
+                          type="button"
+                          class="btn btn--secondary btn--sm"
+                          (click)="resolve(c.id, 'resolved')"
+                        >
+                          {{ 'catalogRights.conflicts.resolve' | t:lang() }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          (click)="resolve(c.id, 'dismissed')"
+                        >
+                          {{ 'catalogRights.conflicts.dismiss' | t:lang() }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+        }
       }
     </div>
   `,
@@ -98,6 +156,7 @@ export class RightsConflictsListPage implements OnInit {
   error: string | null = null;
   statusFilter = '';
   assetFilter: number | null = null;
+  orgId: number | null = null;
 
   openForm = this.fb.group({
     asset_id: [null as number | null, [Validators.required]],
@@ -106,12 +165,16 @@ export class RightsConflictsListPage implements OnInit {
     details: [''],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
+  ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) return;
+    this.load();
   }
 
-  ngOnInit(): void {
-    this.load();
+  rightsTypeLabel(code: string): string {
+    const key = `catalogRights.rightsType.${code}`;
+    const translated = this.i18n.t(key);
+    return translated === key ? code : translated;
   }
 
   onStatusChange(event: Event): void {
@@ -126,10 +189,9 @@ export class RightsConflictsListPage implements OnInit {
   }
 
   load(): void {
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    this.orgId = id || null;
+    if (!this.orgId) return;
     this.loading = true;
     this.api
       .listConflicts(this.orgId, {
@@ -144,7 +206,7 @@ export class RightsConflictsListPage implements OnInit {
         },
         error: (e) => {
           this.loading = false;
-          this.error = e.error?.message ?? 'Error loading conflicts';
+          this.error = e.error?.message ?? this.i18n.t('common.failed');
         },
       });
   }
@@ -164,14 +226,15 @@ export class RightsConflictsListPage implements OnInit {
           this.openForm.reset({ rights_type: 'master' });
           this.load();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error opening conflict'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   resolve(conflictId: number, resolution: string): void {
+    if (!this.orgId) return;
     this.api.resolveConflict(this.orgId, conflictId, resolution).subscribe({
       next: () => this.load(),
-      error: (e) => (this.error = e.error?.message ?? 'Error resolving conflict'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 }

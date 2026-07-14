@@ -1,50 +1,53 @@
 <div class="login-shell">
-  <aside class="login-cover" aria-hidden="true">
-    <div class="cover-glow"></div>
-    <div class="cover-content">
-      <h2>{{ 'login.coverTitle' | t:lang() }}</h2>
-      <p>{{ 'login.coverSub' | t:lang() }}</p>
-      <div class="cover-stats">
-        @if (summary()?.total_tracks != null) {
-          <span>{{ 'login.statTracks' | t: { count: formatStat(summary()?.total_tracks) }:lang() }}</span>
-        }
-        @if (summary()?.total_artistas != null) {
-          <span>{{ 'login.statArtists' | t: { count: formatStat(summary()?.total_artistas) }:lang() }}</span>
-        }
-      </div>
+  <aside class="login-hero" aria-label="VOXMETRIKS">
+    <div class="login-hero__glow" aria-hidden="true"></div>
+    <div class="login-hero__grid" aria-hidden="true"></div>
+    <div class="login-hero__content">
+      <app-brand-mark variant="horizontal" size="lg" [decorative]="true" />
+      <h2 class="login-hero__title">{{ 'login.coverTitle' | t:lang() }}</h2>
+      <p class="login-hero__subtitle">{{ 'login.coverSub' | t:lang() }}</p>
+      <ul class="login-hero__bullets">
+        <li>
+          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          {{ 'login.coverBullet1' | t:lang() }}
+        </li>
+        <li>
+          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          {{ 'login.coverBullet2' | t:lang() }}
+        </li>
+        <li>
+          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          {{ 'login.coverBullet3' | t:lang() }}
+        </li>
+      </ul>
     </div>
   </aside>
 
-  <div class="login-card glass" role="main">
+  <div class="login-panel" role="main">
     <div class="login-toolbar">
+      <app-brand-mark class="login-panel__brand" variant="horizontal" size="sm" />
       <div class="lang-toggle" role="group" [attr.aria-label]="'settings.language' | t">
         <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t:lang() }}</button>
         <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t:lang() }}</button>
       </div>
     </div>
 
-    <div class="login-brand">
-      <picture class="login-brand-logo-wrap" aria-hidden="true">
-        <source srcset="/assets/images/voxmetrik-logo.png" type="image/png" />
-        <img src="/assets/images/voxmetrik-logo.webp" alt="VOXMETRIK" class="login-brand-logo" />
-      </picture>
-    </div>
-
     @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset') {
-      <div class="auth-tabs">
-        <button type="button" class="tab" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t:lang() }}</button>
-        <button type="button" class="tab" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t:lang() }}</button>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="tab" role="tab" [attr.aria-selected]="mode() === 'login'" [class.active]="mode() === 'login'" (click)="setMode('login')">{{ 'login.title' | t:lang() }}</button>
+        <button type="button" class="tab" role="tab" [attr.aria-selected]="mode() === 'register'" [class.active]="mode() === 'register'" (click)="setMode('register')">{{ 'login.registerTitle' | t:lang() }}</button>
       </div>
-      <div class="auth-note">{{ 'login.authNote' | t:lang() }}</div>
     }
 
     @if (mode() === 'login') {
-      <h1 class="login-title">{{ 'login.welcomeTitle' | t:lang() }}</h1>
-      <p class="login-subtitle">{{ 'login.subtitle' | t:lang() }}</p>
+      <header class="login-panel__header">
+        <h1 class="login-title">{{ 'login.welcomeTitle' | t:lang() }}</h1>
+        <p class="login-subtitle">{{ 'login.subtitle' | t:lang() }}</p>
+      </header>
 
       <form [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="loginId">{{ 'login.loginId' | t | uppercase }}</label>
+          <label class="field-label" for="loginId">{{ 'login.loginId' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="loginForm.controls.loginId.invalid && loginForm.controls.loginId.touched">
             <input id="loginId" type="text" formControlName="loginId" [placeholder]="'login.loginIdPlaceholder' | t" class="field-input" autocomplete="username" />
           </div>
@@ -53,14 +56,14 @@
           }
         </div>
         <div class="field">
-          <label class="field-label" for="password">{{ 'login.password' | t | uppercase }}</label>
+          <label class="field-label" for="password">{{ 'login.password' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched">
             <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="••••••••" class="field-input" autocomplete="current-password" />
             <button type="button" class="toggle-pw" (click)="togglePassword()" [attr.aria-label]="showPassword() ? ('login.hidePassword' | t) : ('login.showPassword' | t)">
               @if (showPassword()) {
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
               } @else {
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               }
             </button>
           </div>
@@ -83,14 +86,16 @@
         </button>
       </form>
     } @else if (mode() === 'register') {
-      <h1 class="login-title">{{ 'login.registerTitle' | t:lang() }}</h1>
-      <p class="login-subtitle">{{ 'login.registerSubtitle' | t:lang() }}</p>
+      <header class="login-panel__header">
+        <h1 class="login-title">{{ 'login.registerTitle' | t:lang() }}</h1>
+        <p class="login-subtitle">{{ 'login.registerSubtitle' | t:lang() }}</p>
+      </header>
 
       <form [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="username">{{ 'login.username' | t | uppercase }}</label>
+          <label class="field-label" for="username">{{ 'login.username' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="registerForm.controls.username.invalid && registerForm.controls.username.touched">
-            <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" />
+            <input id="username" type="text" formControlName="username" placeholder="alexrivera" class="field-input" autocomplete="username" />
           </div>
           @if (registerForm.controls.username.invalid && registerForm.controls.username.touched) {
             <span class="field-error">{{ 'login.usernameError' | t:lang() }}</span>
@@ -99,23 +104,23 @@
           }
         </div>
         <div class="field">
-          <label class="field-label" for="reg-email">{{ 'login.email' | t | uppercase }}</label>
+          <label class="field-label" for="reg-email">{{ 'login.email' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="registerForm.controls.email.invalid && registerForm.controls.email.touched">
-            <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" />
+            <input id="reg-email" type="email" formControlName="email" placeholder="you@voxmetrik.io" class="field-input" autocomplete="email" />
           </div>
           @if (registerForm.controls.email.invalid && registerForm.controls.email.touched) {
             <span class="field-error">{{ 'login.emailError' | t:lang() }}</span>
           }
         </div>
         <div class="field">
-          <label class="field-label" for="reg-password">{{ 'login.password' | t | uppercase }}</label>
+          <label class="field-label" for="reg-password">{{ 'login.password' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="registerForm.controls.password.invalid && registerForm.controls.password.touched">
-            <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" />
+            <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" autocomplete="new-password" />
           </div>
           <span class="field-help">{{ 'login.passwordHashHint' | t:lang() }}</span>
         </div>
         <div class="field">
-          <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t | uppercase }}</label>
+          <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t:lang() }}</label>
           <div class="input-wrap">
             <input id="genre" type="text" formControlName="favoriteGenre" placeholder="Pop, Rock, Latin..." class="field-input" />
           </div>
@@ -123,17 +128,19 @@
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
-        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
+        <button type="submit" class="submit-btn" [disabled]="isLoading()">
           @if (isLoading()) { {{ 'login.registerSubmitting' | t:lang() }} } @else { {{ 'login.registerSubmit' | t:lang() }} }
         </button>
       </form>
     } @else if (mode() === 'verify') {
-      <h1 class="login-title">{{ 'verify.title' | t:lang() }}</h1>
-      <p class="login-subtitle">{{ 'verify.subtitle' | t: { email: pendingEmail() }:lang() }}</p>
+      <header class="login-panel__header">
+        <h1 class="login-title">{{ 'verify.title' | t:lang() }}</h1>
+        <p class="login-subtitle">{{ 'verify.subtitle' | t: { email: pendingEmail() }:lang() }}</p>
+      </header>
 
       <form [formGroup]="verifyForm" (ngSubmit)="onVerifySubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="code">{{ 'verify.codeLabel' | t | uppercase }}</label>
+          <label class="field-label" for="code">{{ 'verify.codeLabel' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="verifyForm.controls.code.invalid && verifyForm.controls.code.touched">
             <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
                    formControlName="code" placeholder="••••••" class="field-input code-input" />
@@ -151,7 +158,7 @@
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
-        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">
+        <button type="submit" class="submit-btn" [disabled]="isLoading()">
           @if (isLoading()) { {{ 'verify.submitting' | t:lang() }} } @else { {{ 'verify.submit' | t:lang() }} }
         </button>
         <div class="verify-actions">
@@ -166,13 +173,15 @@
         </div>
       </form>
     } @else if (mode() === 'forgot') {
-      <h1 class="login-title">{{ 'reset.forgotTitle' | t:lang() }}</h1>
-      <p class="login-subtitle">{{ 'reset.forgotSubtitle' | t:lang() }}</p>
+      <header class="login-panel__header">
+        <h1 class="login-title">{{ 'reset.forgotTitle' | t:lang() }}</h1>
+        <p class="login-subtitle">{{ 'reset.forgotSubtitle' | t:lang() }}</p>
+      </header>
       <form [formGroup]="forgotForm" (ngSubmit)="onForgotSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="forgot-email">{{ 'login.email' | t | uppercase }}</label>
+          <label class="field-label" for="forgot-email">{{ 'login.email' | t:lang() }}</label>
           <div class="input-wrap">
-            <input id="forgot-email" type="email" formControlName="email" class="field-input" />
+            <input id="forgot-email" type="email" formControlName="email" class="field-input" autocomplete="email" />
           </div>
         </div>
         @if (infoMessage()) {
@@ -187,25 +196,27 @@
         </div>
       </form>
     } @else if (mode() === 'reset') {
-      <h1 class="login-title">{{ 'reset.title' | t:lang() }}</h1>
-      <p class="login-subtitle">{{ 'reset.subtitle' | t:lang() }}</p>
+      <header class="login-panel__header">
+        <h1 class="login-title">{{ 'reset.title' | t:lang() }}</h1>
+        <p class="login-subtitle">{{ 'reset.subtitle' | t:lang() }}</p>
+      </header>
       <form [formGroup]="resetForm" (ngSubmit)="onResetSubmit()" class="login-form" novalidate>
         <div class="field">
-          <label class="field-label" for="reset-email">{{ 'login.email' | t | uppercase }}</label>
+          <label class="field-label" for="reset-email">{{ 'login.email' | t:lang() }}</label>
           <div class="input-wrap">
-            <input id="reset-email" type="email" formControlName="email" class="field-input" />
+            <input id="reset-email" type="email" formControlName="email" class="field-input" autocomplete="email" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="reset-code">{{ 'reset.codeLabel' | t | uppercase }}</label>
+          <label class="field-label" for="reset-code">{{ 'reset.codeLabel' | t:lang() }}</label>
           <div class="input-wrap">
             <input id="reset-code" type="text" formControlName="code" class="field-input" />
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="reset-pw">{{ 'reset.newPassword' | t | uppercase }}</label>
+          <label class="field-label" for="reset-pw">{{ 'reset.newPassword' | t:lang() }}</label>
           <div class="input-wrap">
-            <input id="reset-pw" type="password" formControlName="newPassword" class="field-input" />
+            <input id="reset-pw" type="password" formControlName="newPassword" class="field-input" autocomplete="new-password" />
           </div>
         </div>
         @if (devCode()) {
@@ -217,7 +228,7 @@
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
-        <button type="submit" class="submit-btn accent" [disabled]="isLoading()">{{ 'reset.submit' | t:lang() }}</button>
+        <button type="submit" class="submit-btn" [disabled]="isLoading()">{{ 'reset.submit' | t:lang() }}</button>
         <div class="verify-actions">
           <button type="button" class="link-btn" (click)="setMode('login')">{{ 'verify.backToLogin' | t:lang() }}</button>
         </div>
@@ -231,9 +242,15 @@
       </div>
     }
 
-    <div class="demo-accounts">
-      <span>{{ 'login.listenerAccount' | t:lang() }}</span>
-      <span>{{ 'login.stewardAccount' | t:lang() }}</span>
-    </div>
+    @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset') {
+      <aside class="demo-card" [attr.aria-label]="'login.demoTitle' | t:lang()">
+        <h3 class="demo-card__title">{{ 'login.demoTitle' | t:lang() }}</h3>
+        <ul class="demo-card__list">
+          <li>{{ 'login.listenerAccount' | t:lang() }}</li>
+          <li>{{ 'login.stewardAccount' | t:lang() }}</li>
+        </ul>
+        <p class="demo-card__note">{{ 'login.demoRoleNote' | t:lang() }}</p>
+      </aside>
+    }
   </div>
 </div>

@@ -5,81 +5,118 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CatalogRightsApiService } from '../services/catalog-rights-api.service';
 import { CatalogAsset } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-catalog-assets-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TranslatePipe,
+    StatusLabelPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise catalog-assets-list-page">
-      <h1>{{ 'catalogRights.assets.title' | t:lang() }}</h1>
-      <p class="subtitle">
-        Rights-tracking records for songs/works. This is not a legal registry — it does not
-        assert legal validity or ownership.
-      </p>
-
-      <div class="filters">
-        <label>
-          Status
-          <select [value]="statusFilter" (change)="onStatusChange($event)">
-            <option value="">All</option>
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="archived">Archived</option>
-          </select>
-        </label>
-      </div>
-
-      <form [formGroup]="createForm" (ngSubmit)="createAsset()" class="create-form">
-        <input formControlName="title" placeholder="Asset title" class="input" />
-        <input formControlName="warehouse_track_id" type="number" placeholder="Warehouse track id (optional)" class="input" />
-        <input formControlName="artist_profile_id" type="number" placeholder="Artist profile id (optional)" class="input" />
-        <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
-          Register Asset
-        </button>
-      </form>
-
-      @if (error) {
-        <p class="error">{{ error }}</p>
-      }
-
-      @if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
-      } @else if (assets.length === 0) {
-        <p>{{ 'catalogRights.assets.empty' | t:lang() }}</p>
+      @if (!orgId) {
+        <app-enterprise-org-required />
       } @else {
-        <table class="assets-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Status</th>
-              <th>Warehouse Link</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (asset of assets; track asset.id) {
-              <tr>
-                <td>{{ asset.title }}</td>
-                <td><span class="badge" [class]="'badge--' + asset.status">{{ asset.status }}</span></td>
-                <td>
-                  @if (asset.warehouse_track_id) {
-                    <span class="badge badge--linked">Linked (#{{ asset.warehouse_track_id }})</span>
-                  } @else {
-                    <span class="badge badge--unlinked">Not linked</span>
-                  }
-                </td>
-                <td>
-                  <a [routerLink]="['/catalog-rights/assets', asset.id]">View</a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <p class="total">Total: {{ total }}</p>
+        <app-enterprise-page-header
+          [title]="'catalogRights.assets.title' | t:lang()"
+          [subtitle]="'catalogRights.assets.subtitle' | t:lang()"
+        />
+
+        <app-enterprise-action-bar>
+          <app-enterprise-form-field [label]="'common.status' | t:lang()">
+            <select class="input" [value]="statusFilter" (change)="onStatusChange($event)">
+              <option value="">{{ 'common.all' | t:lang() }}</option>
+              <option value="draft">{{ 'draft' | statusLabel }}</option>
+              <option value="active">{{ 'active' | statusLabel }}</option>
+              <option value="inactive">{{ 'inactive' | statusLabel }}</option>
+              <option value="archived">{{ 'archived' | statusLabel }}</option>
+            </select>
+          </app-enterprise-form-field>
+        </app-enterprise-action-bar>
+
+        <app-enterprise-section-card [title]="'catalogRights.assets.create' | t:lang()">
+          <form [formGroup]="createForm" (ngSubmit)="createAsset()" class="form-grid">
+            <app-enterprise-form-field
+              [label]="'catalogRights.assets.assetTitle' | t:lang()"
+              [required]="true"
+            >
+              <input formControlName="title" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.assets.warehouseTrack' | t:lang()">
+              <input formControlName="warehouse_track_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.assets.artistProfile' | t:lang()">
+              <input formControlName="artist_profile_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
+                {{ 'catalogRights.assets.create' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="load()" />
+        } @else if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (assets.length === 0) {
+          <app-enterprise-empty-state
+            [title]="'catalogRights.assets.emptyTitle' | t:lang()"
+            [description]="'catalogRights.assets.emptyBody' | t:lang()"
+            [ctaLabel]="'catalogRights.assets.create' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'catalogRights.assets.assetTitle' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'catalogRights.assets.warehouseLink' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (asset of assets; track asset.id) {
+                  <tr>
+                    <td>{{ asset.title }}</td>
+                    <td><app-enterprise-status-badge [status]="asset.status" /></td>
+                    <td>
+                      @if (asset.warehouse_track_id) {
+                        <span class="badge badge--linked">
+                          {{ 'catalogRights.assets.linked' | t:lang() }} (#{{ asset.warehouse_track_id }})
+                        </span>
+                      } @else {
+                        <span class="badge badge--unlinked">
+                          {{ 'catalogRights.assets.notLinked' | t:lang() }}
+                        </span>
+                      }
+                    </td>
+                    <td>
+                      <a
+                        [routerLink]="['/catalog-rights/assets', asset.id]"
+                        class="btn btn--ghost btn--sm"
+                      >
+                        {{ 'common.view' | t:lang() }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
+          <p class="muted">{{ 'catalogRights.assets.total' | t:lang() }}: {{ total }}</p>
+        }
       }
     </div>
   `,
@@ -97,6 +134,7 @@ export class CatalogAssetsListPage implements OnInit {
   loading = false;
   error: string | null = null;
   statusFilter = '';
+  orgId: number | null = null;
 
   createForm = this.fb.group({
     title: ['', [Validators.required]],
@@ -104,11 +142,9 @@ export class CatalogAssetsListPage implements OnInit {
     artist_profile_id: [null as number | null],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   ngOnInit(): void {
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (!this.orgId) return;
     this.load();
   }
 
@@ -118,10 +154,9 @@ export class CatalogAssetsListPage implements OnInit {
   }
 
   load(): void {
-    if (!this.orgId) {
-      this.error = this.i18n.t('common.orgRequiredContext');
-      return;
-    }
+    const id = this.orgCtx.activeOrganization()?.id ?? 0;
+    this.orgId = id || null;
+    if (!this.orgId) return;
     this.loading = true;
     this.api.listAssets(this.orgId, { status: this.statusFilter || undefined }).subscribe({
       next: (res) => {
@@ -132,7 +167,7 @@ export class CatalogAssetsListPage implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        this.error = e.error?.message ?? 'Error loading catalog assets';
+        this.error = e.error?.message ?? this.i18n.t('common.failed');
       },
     });
   }
@@ -151,7 +186,7 @@ export class CatalogAssetsListPage implements OnInit {
           this.createForm.reset();
           this.load();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error registering catalog asset'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 }

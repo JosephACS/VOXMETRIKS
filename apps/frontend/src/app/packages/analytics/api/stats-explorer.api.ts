@@ -13,7 +13,7 @@ export class StatsExplorerApi {
     return this.http.get<WarehouseTableMeta[]>(`${this.BASE}/tables`);
   }
 
-  getTablePreview(table: string, page = 1, limit = 8): Observable<TablePreview> {
+  getTablePreview(table: string, page = 1, limit = 50): Observable<TablePreview> {
     const params = new HttpParams().set('page', page).set('limit', limit);
     return this.http.get<TablePreview>(`${this.BASE}/preview/${table}`, { params });
   }

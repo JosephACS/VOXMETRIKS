@@ -6,9 +6,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
 export const organizationRequiredGuard: CanActivateFn = async () => {
   const ctx = inject(OrganizationContextService);
   const router = inject(Router);
-  if (ctx.status() === 'idle') {
-    await ctx.bootstrap();
-  }
+  await ctx.ensureReady();
   if (ctx.hasOrganization()) return true;
   const kind = ctx.contextKind();
   if (kind === 'access_revoked') {
@@ -27,9 +25,7 @@ export const organizationRequiredGuard: CanActivateFn = async () => {
 export const organizationPathContextGuard: CanActivateFn = async (route) => {
   const ctx = inject(OrganizationContextService);
   const router = inject(Router);
-  if (ctx.status() === 'idle') {
-    await ctx.bootstrap();
-  }
+  await ctx.ensureReady();
   const id = Number(route.paramMap.get('id'));
   if (!Number.isFinite(id) || id <= 0) {
     return router.createUrlTree(['/organizations/none']);
@@ -54,7 +50,7 @@ export const organizationPathContextGuard: CanActivateFn = async (route) => {
       return router.createUrlTree(['/access-denied']);
     }
   }
-  if (!ctx.hasOrganization()) {
+  if (ctx.organizationId() == null) {
     return router.createUrlTree(['/organizations/none']);
   }
   return true;
@@ -65,9 +61,7 @@ export function organizationPermissionGuard(permission: string): CanActivateFn {
   return async () => {
     const ctx = inject(OrganizationContextService);
     const router = inject(Router);
-    if (ctx.status() === 'idle') {
-      await ctx.bootstrap();
-    }
+    await ctx.ensureReady();
     if (!ctx.hasOrganization()) {
       return router.createUrlTree(['/organizations/none']);
     }

@@ -4,37 +4,87 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CustomerSuccessApiService } from '../services/customer-success-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-support-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
-    <div class="vx-enterprise page">
-      <h1>{{ 'support.list.title' | t:lang() }}</h1>
-      <p class="subtitle">Organization-scoped tickets. {{ 'support.detail.internalNote' | t:lang() }}s require staff permission.</p>
-      <nav class="subnav"><a routerLink="/customer-success">CS</a> | <a routerLink="/support">{{ 'support.list.title' | t:lang() }}</a></nav>
+    <div class="vx-enterprise support-list-page">
       @if (!orgId) {
-        <p class="error">Select an organization context.</p>
+        <app-enterprise-org-required />
       } @else {
-        <section>
-          <input [(ngModel)]="subject" placeholder="subject" />
-          <button type="button" (click)="create()" [disabled]="busy || !subject">{{ 'support.list.create' | t:lang() }}</button>
-        </section>
-        @if (loading) { <p>{{ 'common.loading' | t:lang() }}</p> }
-        @else if (error) { <p class="error">{{ error }}</p> }
-        @else if (!cases.length) { <p class="empty-state">{{ 'support.list.empty' | t:lang() }}</p> }
-        @else {
-          <ul>
-            @for (c of cases; track $index) {
-              <li>
-                <a [routerLink]="['/support', $any(c).id]">{{ $any(c).subject }}</a>
-                — {{ $any(c).status }} / {{ $any(c).priority }}
-              </li>
-            }
-          </ul>
+        <app-enterprise-page-header
+          [title]="'support.list.title' | t:lang()"
+          [subtitle]="'support.list.subtitle' | t:lang()"
+        >
+          <a routerLink="/customer-success" class="btn btn--secondary">
+            {{ 'customerSuccess.dashboard.title' | t:lang() }}
+          </a>
+        </app-enterprise-page-header>
+
+        <app-enterprise-section-card [title]="'support.list.create' | t:lang()">
+          <form class="form-grid" (ngSubmit)="create()">
+            <app-enterprise-form-field [label]="'support.list.subject' | t:lang()" [required]="true">
+              <input [(ngModel)]="subject" name="subject" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="busy || !subject">
+                {{ 'support.list.create' | t:lang() }}
+              </button>
+            </div>
+          </form>
+        </app-enterprise-section-card>
+
+        @if (loading) {
+          <app-enterprise-loading-skeleton [rows]="3" />
+        } @else if (error) {
+          <app-enterprise-error-state [message]="error" (retry)="reload()" />
+        } @else if (!cases.length) {
+          <app-enterprise-empty-state
+            [title]="'support.list.emptyTitle' | t:lang()"
+            [description]="'support.list.emptyBody' | t:lang()"
+            [ctaLabel]="'support.list.create' | t:lang()"
+          />
+        } @else {
+          <app-enterprise-data-table>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'support.list.subject' | t:lang() }}</th>
+                  <th>{{ 'common.status' | t:lang() }}</th>
+                  <th>{{ 'common.actions' | t:lang() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of cases; track $index) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/support', $any(c).id]">{{ $any(c).subject }}</a>
+                    </td>
+                    <td>
+                      <app-enterprise-status-badge [status]="$any(c).status" />
+                      / {{ $any(c).priority }}
+                    </td>
+                    <td>
+                      <a [routerLink]="['/support', $any(c).id]" class="btn btn--ghost btn--sm">
+                        {{ 'common.view' | t:lang() }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </app-enterprise-data-table>
         }
       }
     </div>

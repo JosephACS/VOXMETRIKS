@@ -105,6 +105,13 @@
 
         <!-- Data preview -->
         <h3 class="section-label">{{ 'explorer.preview' | t:lang() }}</h3>
+        <div class="preview-toolbar">
+          <span class="preview-sample-note">{{ 'explorer.sampleNote' | t:lang() }}</span>
+          <div class="page-size-toggle" role="group" [attr.aria-label]="'explorer.pageSize' | t:lang()">
+            <button type="button" class="page-btn" [class.active]="pageSize() === 50" (click)="setPageSize(50)">50</button>
+            <button type="button" class="page-btn" [class.active]="pageSize() === 100" (click)="setPageSize(100)">100</button>
+          </div>
+        </div>
         @if (isLoadingPreview()) {
           <div class="skeleton-rows">
             @for (s of [1,2,3]; track s) {

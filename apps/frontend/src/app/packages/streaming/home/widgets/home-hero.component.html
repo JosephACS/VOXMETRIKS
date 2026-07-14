@@ -8,25 +8,39 @@
     </div>
     @if (summary(); as s) {
       <div class="hero-stats">
-        <div class="hero-stat hero-stat--accent">
-          <strong>{{ fmt(s.total_events ?? s.total_streams ?? s.total_tracks) }}</strong>
+        <button
+          type="button"
+          class="hero-stat hero-stat--accent hero-stat--btn"
+          (click)="openEventsBreakdown()"
+          [attr.title]="eventsTipKey() | t:lang()"
+          [attr.aria-label]="('home.stat.events' | t:lang()) + ': ' + exact(s.total_events ?? s.total_streams)"
+        >
+          <strong
+            class="tabular-nums"
+            [attr.title]="exact(s.total_events ?? s.total_streams)"
+          >{{ fmt(s.total_events ?? s.total_streams ?? 0) }}</strong>
           <span>{{ 'home.stat.events' | t:lang() }}</span>
-        </div>
-        <div class="hero-stat">
-          <strong>{{ fmt(s.total_tracks) }}</strong>
+          <em class="hero-stat__sub">{{ eventsSubKey() | t:lang() }}</em>
+        </button>
+        <div class="hero-stat" [attr.title]="'home.stat.tracksTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_tracks)">{{ fmt(s.total_tracks) }}</strong>
           <span>{{ 'home.stat.tracks' | t:lang() }}</span>
+          <em class="hero-stat__sub">{{ 'home.stat.tracksSub' | t:lang() }}</em>
         </div>
-        <div class="hero-stat">
-          <strong>{{ fmt(s.total_artistas) }}</strong>
+        <div class="hero-stat" [attr.title]="'home.stat.artistsTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_artistas)">{{ fmt(s.total_artistas) }}</strong>
           <span>{{ 'home.stat.artists' | t:lang() }}</span>
+          <em class="hero-stat__sub">{{ 'home.stat.artistsSub' | t:lang() }}</em>
         </div>
-        <div class="hero-stat">
-          <strong>{{ fmt(s.total_albumes) }}</strong>
+        <div class="hero-stat" [attr.title]="'home.stat.albumsTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_albumes)">{{ fmt(s.total_albumes) }}</strong>
           <span>{{ 'home.stat.albums' | t:lang() }}</span>
+          <em class="hero-stat__sub">{{ 'home.stat.albumsSub' | t:lang() }}</em>
         </div>
-        <div class="hero-stat">
-          <strong>{{ fmt(playlistCount()) }}</strong>
+        <div class="hero-stat" [attr.title]="'home.stat.playlistsTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_playlists ?? playlistCount())">{{ fmt(s.total_playlists ?? playlistCount()) }}</strong>
           <span>{{ 'home.stat.playlists' | t:lang() }}</span>
+          <em class="hero-stat__sub">{{ 'home.stat.playlistsSub' | t:lang() }}</em>
         </div>
       </div>
     } @else if (summaryLoading()) {
@@ -59,3 +73,92 @@
     </nav>
   </div>
 </header>
+
+@if (eventsOpen()) {
+  <div class="events-modal-backdrop" (click)="closeEventsBreakdown()" role="presentation"></div>
+  <div
+    class="events-modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'home.events.dialogTitle' | t:lang()"
+  >
+    <div class="events-modal__head">
+      <div>
+        <h2>{{ 'home.events.dialogTitle' | t:lang() }}</h2>
+        <p>{{ 'home.events.dialogSub' | t:lang() }}</p>
+      </div>
+      <button type="button" class="events-modal__close" (click)="closeEventsBreakdown()" [attr.aria-label]="'common.close' | t:lang()">×</button>
+    </div>
+
+    @if (eventsLoading()) {
+      <p class="events-modal__status">{{ 'home.events.loading' | t:lang() }}</p>
+    } @else if (eventsError()) {
+      <p class="events-modal__status events-modal__status--err" role="alert">{{ eventsError() }}</p>
+    } @else if (eventsBreakdown(); as b) {
+      <div class="events-modal__summary">
+        <div>
+          <span class="events-modal__label">{{ 'home.events.total' | t:lang() }}</span>
+          <strong class="tabular-nums" [attr.title]="exact(b.total_events)">{{ exact(b.total_events) }}</strong>
+        </div>
+        @if (b.updated_at) {
+          <div>
+            <span class="events-modal__label">{{ 'home.events.updated' | t:lang() }}</span>
+            <span>{{ b.updated_at }}</span>
+          </div>
+        }
+        <div class="events-modal__classes">
+          @for (entry of [
+            { key: 'synthetic', n: b.classification_totals['synthetic'] || 0 },
+            { key: 'real', n: b.classification_totals['real'] || 0 },
+            { key: 'imported', n: b.classification_totals['imported'] || 0 },
+            { key: 'demo', n: b.classification_totals['demo'] || 0 },
+            { key: 'unknown', n: b.classification_totals['unknown'] || 0 }
+          ]; track entry.key) {
+            @if (entry.n > 0) {
+              <span class="events-pill">{{ ('home.events.class.' + entry.key) | t:lang() }}: {{ exact(entry.n) }}</span>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="events-table-wrap">
+        <table class="events-table">
+          <thead>
+            <tr>
+              <th>{{ 'home.events.col.table' | t:lang() }}</th>
+              <th>{{ 'home.events.col.rows' | t:lang() }}</th>
+              <th>{{ 'home.events.col.category' | t:lang() }}</th>
+              <th>{{ 'home.events.col.origin' | t:lang() }}</th>
+              <th>{{ 'home.events.col.class' | t:lang() }}</th>
+              <th>{{ 'home.events.col.updated' | t:lang() }}</th>
+              <th>{{ 'home.events.col.pct' | t:lang() }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of b.tables; track row.table) {
+              <tr>
+                <td><code>{{ row.table }}</code></td>
+                <td class="tabular-nums" [attr.title]="exact(row.row_count)">{{ exact(row.row_count) }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ row.origin }}</td>
+                <td>{{ ('home.events.class.' + row.classification) | t:lang() }}</td>
+                <td>{{ row.updated_at || '—' }}</td>
+                <td class="tabular-nums">{{ row.pct_of_total }}%</td>
+                <td>
+                  <a
+                    class="events-explore-link"
+                    routerLink="/explorer"
+                    [queryParams]="explorerQuery(row.table)"
+                    (click)="closeEventsBreakdown()"
+                  >{{ 'home.events.explore' | t:lang() }}</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="events-modal__footnote">{{ eventsTipKey() | t:lang() }}</p>
+    }
+  </div>
+}

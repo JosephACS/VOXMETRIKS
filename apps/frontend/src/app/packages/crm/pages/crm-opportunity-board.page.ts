@@ -5,92 +5,111 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Opportunity, OPPORTUNITY_STAGES, OpportunityCreateRequest, Prospect } from '../models/crm.models';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-crm-opportunity-board-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    StatusLabelPipe,
+    LocaleMoneyPipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrls: ['../styles/crm.css'],
   template: `
-    <section class="crm-page" data-testid="crm-opportunity-board-page">
-      <h1>{{ 'crm.opportunities.board' | t:lang() }}</h1>
-      <p class="lede">Vista kanban por etapa.</p>
+    <div class="vx-enterprise crm-page" data-testid="crm-opportunity-board-page">
+      <app-enterprise-page-header
+        [title]="'crm.opportunities.board' | t:lang()"
+        [subtitle]="'crm.opportunities.subtitle' | t:lang()"
+      >
+        <button type="button" class="btn btn--secondary" (click)="showCreate = !showCreate">
+          {{ (showCreate ? 'common.cancel' : 'crm.opportunities.create') | t:lang() }}
+        </button>
+      </app-enterprise-page-header>
 
       @if (error()) {
-        <div class="crm-alert crm-alert--error" role="alert">{{ error() }}</div>
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       }
       @if (success()) {
-        <div class="crm-alert crm-alert--ok" role="status">{{ success() }}</div>
+        <div class="alert alert--success" role="status">{{ success() }}</div>
       }
 
-      <!-- Create opportunity -->
-      <div class="crm-card">
-        <button type="button" class="crm-btn crm-btn--ghost" (click)="showCreate = !showCreate">
-          {{ showCreate ? 'Cancelar' : '+ Nueva oportunidad' }}
-        </button>
-        @if (showCreate) {
-          <form class="crm-form" style="margin-top:1rem" (ngSubmit)="create()">
-            <label>Prospecto *
-              <select [(ngModel)]="form.prospect_id" name="prospect_id" required>
-                <option [ngValue]="0">— Selecciona prospecto —</option>
+      @if (showCreate) {
+        <app-enterprise-section-card [title]="'crm.opportunities.create' | t:lang()">
+          <form class="form-grid" (ngSubmit)="create()">
+            <app-enterprise-form-field [label]="'crm.opportunities.prospect' | t:lang()" [required]="true">
+              <select class="select" [(ngModel)]="form.prospect_id" name="prospect_id" required>
+                <option [ngValue]="0">{{ 'crm.opportunities.selectProspect' | t:lang() }}</option>
                 @for (p of prospects(); track p.id) {
                   <option [ngValue]="p.id">{{ p.display_name }} ({{ p.company_name || '#' + p.id }})</option>
                 }
               </select>
-            </label>
-            <label>Nombre *
-              <input [(ngModel)]="form.name" name="name" required placeholder="Nombre de la oportunidad" />
-            </label>
-            <label>Valor esperado
-              <input [(ngModel)]="form.expected_value" name="expected_value" type="number" min="0" placeholder="0.00" />
-            </label>
-            <label>Moneda
-              <input [(ngModel)]="form.currency" name="currency" placeholder="USD" maxlength="3" />
-            </label>
-            <label>Probabilidad (0–100)
-              <input [(ngModel)]="form.probability" name="probability" type="number" min="0" max="100" placeholder="50" />
-            </label>
-            <div class="crm-actions">
-              <button type="submit" class="crm-btn"
-                [disabled]="!form.name || !form.prospect_id || saving()">
-                {{ saving() ? 'Creando…' : 'Crear' }}
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.name' | t:lang()" [required]="true">
+              <input
+                class="input"
+                [(ngModel)]="form.name"
+                name="name"
+                required
+                [placeholder]="'crm.opportunities.namePlaceholder' | t:lang()"
+              />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.opportunities.expectedValue' | t:lang()">
+              <input class="input" [(ngModel)]="form.expected_value" name="expected_value" type="number" min="0" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.currency' | t:lang()">
+              <input class="input" [(ngModel)]="form.currency" name="currency" maxlength="3" placeholder="USD" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'crm.opportunities.probability' | t:lang()">
+              <input class="input" [(ngModel)]="form.probability" name="probability" type="number" min="0" max="100" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="!form.name || !form.prospect_id || saving()">
+                {{ (saving() ? 'crm.contacts.creating' : 'common.create') | t:lang() }}
               </button>
             </div>
           </form>
-        }
-      </div>
+        </app-enterprise-section-card>
+      }
 
       @if (loading()) {
-        <p class="crm-muted">Cargando pipeline…</p>
+        <app-enterprise-loading-skeleton [rows]="3" />
+        <p class="muted">{{ 'crm.opportunities.loadingPipeline' | t:lang() }}</p>
       } @else {
         <div class="crm-board">
           @for (stage of stages; track stage) {
             <div class="crm-board-col">
-              <h3>{{ stage }} <span class="crm-muted">({{ byStage(stage).length }})</span></h3>
+              <h3>{{ stage | statusLabel }} <span class="muted">({{ byStage(stage).length }})</span></h3>
               @if (!byStage(stage).length) {
-                <p class="crm-muted" style="font-size:0.78rem">{{ 'crm.opportunities.empty' | t:lang() }}</p>
+                <p class="muted" style="font-size: 0.78rem">{{ 'crm.opportunities.empty' | t:lang() }}</p>
               }
               @for (opp of byStage(stage); track opp.id) {
                 <a class="crm-board-item" [routerLink]="['/crm/opportunities', opp.id]">
                   <strong>{{ opp.name }}</strong>
                   @if (opp.expected_value) {
-                    <div class="crm-muted">{{ opp.currency || 'USD' }} {{ opp.expected_value | number:'1.0-0' }}</div>
+                    <div class="muted">{{ opp.expected_value | localeMoney:opp.currency || 'USD' }}</div>
                   }
                   @if (opp.probability != null) {
-                    <div class="crm-muted">{{ opp.probability }}% prob.</div>
+                    <div class="muted">{{ 'crm.opportunities.probShort' | t:{ pct: opp.probability }:lang() }}</div>
                   }
                 </a>
               }
             </div>
           }
         </div>
-        <p class="crm-muted" style="margin-top:0.75rem">
-          Total: {{ items().length }} oportunidades
+        <p class="muted">
+          {{ 'crm.opportunities.totalCount' | t:{ count: items().length }:lang() }}
         </p>
       }
-    </section>
+    </div>
   `,
 })
 export class CrmOpportunityBoardPageComponent implements OnInit {
@@ -145,7 +164,7 @@ export class CrmOpportunityBoardPageComponent implements OnInit {
       await firstValueFrom(this.api.createOpportunity(this.form));
       this.form = { prospect_id: 0, name: '' };
       this.showCreate = false;
-      this.success.set('Oportunidad creada.');
+      this.success.set(this.i18n.t('crm.opportunities.createdMsg'));
       await this.load();
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear oportunidad');

@@ -12,24 +12,24 @@ export const ARTIST_PROFILES_ROUTES: Routes = [
     path: 'artist-profiles',
     loadComponent: () =>
       import('./pages/artist-profiles-list.page').then((m) => m.ArtistProfilesListPage),
-    title: 'Artist Profiles',
+    title: 'Perfiles de artista',
   },
   {
     path: 'artist-profiles/:id',
     loadComponent: () =>
       import('./pages/artist-profile-detail.page').then((m) => m.ArtistProfileDetailPage),
-    title: 'Artist Profile',
+    title: 'Perfil de artista',
   },
   {
     path: 'artist-profiles/:id/team',
     loadComponent: () =>
       import('./pages/artist-profile-team.page').then((m) => m.ArtistProfileTeamPage),
-    title: 'Artist Team',
+    title: 'Equipo del artista',
   },
   {
     path: 'artist-profiles/:id/history',
     loadComponent: () =>
       import('./pages/artist-profile-history.page').then((m) => m.ArtistProfileHistoryPage),
-    title: 'Artist History',
+    title: 'Historial del artista',
   },
 ];

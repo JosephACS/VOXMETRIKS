@@ -1,0 +1,281 @@
+========================================================================
+VOXMETRIKS DUCKDB WAREHOUSE INVENTORY (READ-ONLY)
+========================================================================
+Path: C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik.duckdb
+Access method: live backend connection (PID holds exclusive DuckDB lock).
+Direct duckdb.connect(read_only=True) blocked by backend process.
+BASE TABLE vs VIEW classification: cross-checked against voxmetrik_regen.duckdb information_schema.
+DB_PATH env: empty (resolved to default warehouse path)
+
+1. FILE SIZE
+   bytes: 402665472
+   human: 384.01 MB
+   wal_bytes: 42738
+
+2. BASE TABLE COUNT (main / BASE TABLE only): 171
+   regen BASE TABLE names: 42; regen VIEW names: 0
+   explorer API tables returned: 169 (blocked: app_session, app_user)
+
+3. BASE TABLES WITH ROW COUNTS (sorted by name)
+------------------------------------------------------------------------
+   agg_artist_growth: 31428
+   agg_daily_streams: 90
+   agg_distribucion_energia: 5
+   agg_genero_popularidad: 113
+   agg_genre_trends: 113
+   agg_platform_usage: 5
+   agg_recent_activity: 10
+   agg_recommendation_scores: 500
+   agg_streaming_devices: 5
+   agg_top_artistas: 31428
+   agg_top_playlists: 100
+   agg_top_searches: 20
+   agg_tracks_populares: 89740
+   agg_user_activity: 11250
+   agg_user_engagement: 3
+   agg_user_retention: 12
+   app_addon: 1
+   app_analytics_view_preference: 0
+   app_artist_assignment: 12
+   app_artist_cover: 12
+   app_artist_external_identifier: 12
+   app_artist_organization: 167
+   app_artist_profile: 149
+   app_artist_status_history: 194
+   app_artist_team_member: 12
+   app_attributable_revenue_record: 0
+   app_attribution_definition: 0
+   app_audit_log: 221
+   app_background_job: 0
+   app_backup_record: 0
+   app_billing_dunning: 5
+   app_billing_ledger_entry: 30
+   app_billing_profile: 7
+   app_business_alert: 0
+   app_business_decision: 14
+   app_business_role: 12
+   app_campaign: 2
+   app_campaign_approval: 0
+   app_campaign_budget: 2
+   app_campaign_expense: 2
+   app_campaign_objective: 0
+   app_campaign_result: 2
+   app_campaign_roi_snapshot: 0
+   app_campaign_status_history: 0
+   app_campaign_target: 0
+   app_catalog_asset: 84
+   app_catalog_asset_artist: 0
+   app_catalog_ownership: 5
+   app_catalog_release: 7
+   app_commercial_contract: 7
+   app_consent_definition: 0
+   app_consent_record: 0
+   app_credit_note: 0
+   app_crm_approval_request: 4
+   app_crm_contact: 9
+   app_crm_customer_conversion: 7
+   app_crm_opportunity: 29
+   app_crm_opportunity_stage_history: 30
+   app_crm_prospect: 55
+   app_crm_prospect_contact: 9
+   app_crm_quotation: 19
+   app_crm_quotation_item: 7
+   app_crm_quotation_version: 15
+   app_crm_sales_activity: 4
+   app_customer_health_definition: 1
+   app_customer_health_snapshot: 17
+   app_customer_intervention: 1
+   app_customer_onboarding: 1
+   app_customer_onboarding_step: 3
+   app_customer_risk: 1
+   app_data_quality_result: 0
+   app_data_request: 0
+   app_data_request_action: 0
+   app_decision_action: 1
+   app_decision_follow_up: 0
+   app_email_code: 0
+   app_email_delivery: 24
+   app_executive_report: 14
+   app_expansion_opportunity: 9
+   app_favorite: 7
+   app_feature_flag: 0
+   app_incident_action: 0
+   app_invoice: 19
+   app_invoice_item: 18
+   app_job_execution: 0
+   app_kpi_definition: 7
+   app_kpi_snapshot: 107
+   app_legal_hold: 0
+   app_member_role: 7
+   app_metric_source: 4
+   app_notification: 0
+   app_notification_delivery: 0
+   app_operational_incident: 0
+   app_organization: 1
+   app_organization_invitation: 0
+   app_organization_member: 1
+   app_payment: 12
+   app_payment_allocation: 12
+   app_payment_attempt: 19
+   app_payment_method_reference: 0
+   app_payment_provider_event: 1
+   app_permission: 83
+   app_plan: 11
+   app_plan_feature: 19
+   app_plan_price: 21
+   app_platform_permission: 29
+   app_platform_role: 4
+   app_platform_role_permission: 66
+   app_playlist: 4
+   app_playlist_track: 8
+   app_provider_configuration: 0
+   app_recommendation_record: 0
+   app_refund: 0
+   app_renewal_readiness: 9
+   app_report_approval: 13
+   app_report_definition: 14
+   app_report_generation: 14
+   app_report_section: 39
+   app_report_snapshot: 14
+   app_restore_verification: 0
+   app_retention_execution: 0
+   app_retention_policy: 0
+   app_rights_approval: 5
+   app_rights_authorized_use: 5
+   app_rights_conflict: 11
+   app_rights_contract: 52
+   app_rights_contract_party: 20
+   app_rights_status_history: 70
+   app_rights_territory: 15
+   app_role_permission: 291
+   app_security_incident: 0
+   app_sensitive_access_record: 0
+   app_session: UNAVAILABLE via explorer (security blocked); present as BASE TABLE in regen schema
+   app_subscription: 6
+   app_subscription_access_state: 5
+   app_subscription_addon: 0
+   app_subscription_change: 5
+   app_subscription_entitlement: 0
+   app_support_assignment: 0
+   app_support_case: 15
+   app_support_message: 3
+   app_support_satisfaction: 0
+   app_support_sla_event: 13
+   app_support_sla_policy: 13
+   app_terms_acceptance: 0
+   app_terms_version: 9
+   app_track_audio_source: 1932
+   app_track_cover: 642
+   app_usage_record: 0
+   app_user: UNAVAILABLE via explorer (security blocked); present as BASE TABLE in regen schema
+   app_user_organization_preference: 2
+   app_user_platform_role: 3
+   app_webhook_delivery: 0
+   app_webhook_event: 0
+   ctl_auditoria: 4
+   ctl_carga_dataset: 7
+   ctl_pipeline_stages: 16
+   dim_album: 46154
+   dim_artista: 31429
+   dim_genero: 113
+   dim_playlist: 3600
+   dim_tiempo: 2372
+   dim_track: 89740
+   dim_usuario: 11250
+   fact_favorites: 54000
+   fact_playlist_activity: 72000
+   fact_searches: 45000
+   fact_stream_sessions: 36000
+   fact_streaming: 585000
+   fact_user_activity: 108000
+   raw_spotify: 89740
+
+4. TOTALS BY PREFIX (sums of available integer row counts only)
+   dim_*: 184658
+   fact_*: 900000
+   agg_*: 164822
+   app_*: 4899
+   ctl_*: 27
+   other: 89740
+   note: excluded from sums (count unavailable): app_session, app_user
+
+5. ACTIVITY_FACT_TABLES
+   fact_streaming: 585000
+   fact_user_activity: 108000
+   fact_playlist_activity: 72000
+   fact_favorites: 54000
+   fact_searches: 45000
+   fact_stream_sessions: 36000
+   GRAND TOTAL: 900000
+   health.row_counts.streaming cross-check: 585000
+
+6. PROVENANCE-LIKE COLUMNS (%source%, %synthetic%, %origin%, %is_demo%, %dataset%)
+   app_audit_log: source (VARCHAR)
+   app_campaign_result: source_label (VARCHAR)
+   app_crm_prospect: source (VARCHAR)
+   app_kpi_definition: source_type (VARCHAR)
+   app_kpi_snapshot: source_label (VARCHAR), is_synthetic (BOOLEAN)
+   app_metric_source: origin_system (VARCHAR)
+   app_organization: is_demo (BOOLEAN)
+   app_report_snapshot: unavailable_sources_json (VARCHAR)
+   app_sensitive_access_record: resource_type (VARCHAR), resource_id (VARCHAR)
+   app_subscription: activation_source (VARCHAR)
+   app_subscription_entitlement: source (VARCHAR)
+   app_track_audio_source: source_ref (VARCHAR)
+   app_webhook_event: source (VARCHAR)
+
+7. CTL_* LOAD METADATA / TIMESTAMPS
+   --- ctl_auditoria (rows=4) ---
+   columns: id_auditoria (INTEGER), accion (VARCHAR), tabla_afectada (VARCHAR), fecha_evento (TIMESTAMP), detalles (VARCHAR)
+   sample:
+     row0: id_auditoria=1 | accion='ELT_PIPELINE' | tabla_afectada='all' | fecha_evento='2026-06-21T14:22:31.952000' | detalles='OK rows=89740'
+     row1: id_auditoria=2 | accion='ELT_PIPELINE' | tabla_afectada='all' | fecha_evento='2026-06-21T14:42:45.547000' | detalles='OK rows=89740'
+     row2: id_auditoria=3 | accion='ELT_PIPELINE' | tabla_afectada='all' | fecha_evento='2026-06-27T17:06:25.136000' | detalles='OK rows=89740'
+     row3: id_auditoria=4 | accion='ELT_PIPELINE' | tabla_afectada='all' | fecha_evento='2026-06-28T23:17:07.163000' | detalles='OK rows=89740'
+   --- ctl_carga_dataset (rows=7) ---
+   columns: id_carga (INTEGER), fecha_carga (TIMESTAMP), modo (VARCHAR), registros_nuevos (INTEGER), total_raw (INTEGER), estado (VARCHAR)
+   sample:
+     row0: id_carga=1 | fecha_carga='2026-06-21T14:22:31.950000' | modo='FULL' | registros_nuevos=89740 | total_raw=89740 | estado='EXITOSO'
+     row1: id_carga=2 | fecha_carga='2026-06-21T14:42:45.545000' | modo='FULL' | registros_nuevos=89740 | total_raw=89740 | estado='EXITOSO'
+     row2: id_carga=3 | fecha_carga='2026-06-21T14:42:47.120000' | modo='synthetic_target_700000' | registros_nuevos=610260 | total_raw=700000 | estado='OK'
+     row3: id_carga=4 | fecha_carga='2026-06-27T11:15:49.244000' | modo='synthetic_activity_target_1600000' | registros_nuevos=1300000 | total_raw=1600000 | estado='OK'
+     row4: id_carga=5 | fecha_carga='2026-06-27T17:06:25.133000' | modo='FULL' | registros_nuevos=89740 | total_raw=89740 | estado='EXITOSO'
+   --- ctl_pipeline_stages (rows=16) ---
+   columns: id_stage (INTEGER), run_id (INTEGER), stage (VARCHAR), layer (VARCHAR), started_at (TIMESTAMP), duration_ms (INTEGER), rows_in (INTEGER), rows_out (INTEGER), status (VARCHAR), details (VARCHAR)
+   sample:
+     row0: id_stage=1 | run_id=1782069604 | stage='extract' | layer='Bronze' | started_at='2026-06-21T14:20:04.762000' | duration_ms=300 | rows_in=0 | rows_out=114000 | status='OK' | details=''
+     row1: id_stage=2 | run_id=1782069604 | stage='transform' | layer='Silver' | started_at='2026-06-21T14:20:05.059000' | duration_ms=291 | rows_in=114000 | rows_out=89740 | status='OK' | details=''
+     row2: id_stage=3 | run_id=1782069604 | stage='load_staging' | layer='Gold' | started_at='2026-06-21T14:20:05.262000' | duration_ms=198 | rows_in=89740 | rows_out=89740 | status='OK' | details=''
+     row3: id_stage=4 | run_id=1782069604 | stage='build_warehouse' | layer='Gold' | started_at='2026-06-21T14:22:31.707000' | duration_ms=146438 | rows_in=89740 | rows_out=220000 | status='OK' | details=''
+     row4: id_stage=5 | run_id=1782070881 | stage='extract' | layer='Bronze' | started_at='2026-06-21T14:41:22.027000' | duration_ms=133 | rows_in=0 | rows_out=114000 | status='OK' | details=''
+   --- warehouse status last_load / recent_stages (backend) ---
+   last_load: {"id_carga": 7, "fecha_carga": "2026-06-28 23:17:08.324000", "modo": "synthetic_activity_target_900000", "registros_nuevos": 600000, "total_raw": 900000, "estado": "OK"}
+   recent_stages count: 8
+     stage: {"stage": "build_warehouse", "layer": "Gold", "duration_ms": 87029, "rows_in": 89740, "rows_out": 220000, "status": "OK", "started_at": "2026-06-28T23:17:06.921000"}
+     stage: {"stage": "load_staging", "layer": "Gold", "duration_ms": 290, "rows_in": 89740, "rows_out": 89740, "status": "OK", "started_at": "2026-06-28T23:15:39.888000"}
+     stage: {"stage": "transform", "layer": "Silver", "duration_ms": 269, "rows_in": 114000, "rows_out": 89740, "status": "OK", "started_at": "2026-06-28T23:15:39.594000"}
+     stage: {"stage": "extract", "layer": "Bronze", "duration_ms": 169, "rows_in": 0, "rows_out": 114000, "status": "OK", "started_at": "2026-06-28T23:15:39.319000"}
+     stage: {"stage": "build_warehouse", "layer": "Gold", "duration_ms": 81428, "rows_in": 89740, "rows_out": 220000, "status": "OK", "started_at": "2026-06-27T17:06:24.924000"}
+
+8. MAX(updated_at) OR SIMILAR ON FACT TABLES
+   NOTE: no arbitrary SQL endpoint; direct DuckDB locked.
+   Reporting time-like columns from DESCRIBE + warehouse KPI dates where available.
+   Attempting approximate max via ORDER BY is unavailable on preview API.
+   fact_favorites: (no updated_at/similar time columns; cols=id_favorite, id_usuario, id_track, id_tiempo, fecha_evento)
+   fact_playlist_activity: (no updated_at/similar time columns; cols=id_activity, id_playlist, id_usuario, id_track, action_type, fecha_evento)
+   fact_searches: (no updated_at/similar time columns; cols=id_search, id_usuario, query_text, results_count, id_tiempo, fecha_evento)
+   fact_stream_sessions: (no updated_at/similar time columns; cols=id_session, id_usuario, device_type, platform, session_start, session_end, tracks_played, total_ms, skips)
+   fact_streaming: (no updated_at/similar time columns; cols=id_streaming, id_track, id_usuario, id_tiempo, id_playlist, streams, duracion_ms, completado, fecha_evento, skipped, device_type, platform, session_id, hour_of_day)
+   fact_user_activity: (no updated_at/similar time columns; cols=id_activity, id_usuario, id_track, id_tiempo, action_type, device_type, duration_ms, fecha_evento)
+   health.last_pipeline_run: 2026-07-14T03:46:35.363155Z
+   warehouse.pipeline_status: healthy
+   warehouse.kpis: {"total_tracks": 89740, "total_streams": 585000, "active_users": 11250, "total_playlists": 3600, "fact_tables_rows": 900000}
+
+OTHER DUCKDB FILES IN REPO
+   C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\apps\backend\tests\.pytest_db\voxmetrik_test.duckdb: 19673088 bytes (18.76 MB)
+   C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik.duckdb: 402665472 bytes (384.01 MB)
+   C:\Users\Admin\Documents\Tarea\Proyectos\Ariosto\voxmetriks\data\warehouse\voxmetrik_regen.duckdb: 298070016 bytes (284.26 MB)
+
+========================================================================
+END OF REPORT
+========================================================================

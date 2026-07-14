@@ -11,152 +11,215 @@ import {
   RightsTerritory,
 } from '../models/catalog-rights.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-rights-contract-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TranslatePipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise rights-contract-detail-page">
-      <a routerLink="/catalog-rights/contracts">&larr; Back to contracts</a>
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else if (loading) {
+        <app-enterprise-loading-skeleton [rows]="6" />
+      } @else if (contract) {
+        <a routerLink="/catalog-rights/contracts" class="back-link">
+          {{ 'catalogRights.contractDetail.back' | t:lang() }}
+        </a>
 
-      @if (contract) {
-        <h1>Rights Contract #{{ contract.id }}</h1>
-        <p class="subtitle read-only-notice">
-          This record tracks catalog ownership/licensing rights only. It is not a substitute for
-          legal counsel and does not certify legal validity.
-        </p>
+        <app-enterprise-page-header
+          [title]="('catalogRights.contractDetail.title' | t:lang()) + ' #' + contract.id"
+          [subtitle]="'catalogRights.contractDetail.disclaimer' | t:lang()"
+        >
+          <app-enterprise-status-badge [status]="contract.status" />
+        </app-enterprise-page-header>
 
-        <div class="profile-card">
-          <div class="field"><label>Asset</label><span>#{{ contract.asset_id }}</span></div>
-          <div class="field"><label>Rights Type</label><span>{{ contract.rights_type }}</span></div>
-          <div class="field"><label>Status</label>
-            <span class="badge" [class]="'badge--' + contract.status">{{ contract.status }}</span>
-          </div>
-          <div class="field"><label>Exclusive</label><span>{{ contract.exclusive ? 'Yes' : 'No' }}</span></div>
-          <div class="field"><label>Valid From</label><span>{{ contract.valid_from }}</span></div>
-          <div class="field"><label>Valid To</label><span>{{ contract.valid_to ?? '—' }}</span></div>
-          <div class="field"><label>Evidence Ref</label><span>{{ contract.evidence_ref ?? '—' }}</span></div>
-        </div>
+        <app-enterprise-section-card [title]="'common.details' | t:lang()">
+          <dl class="meta">
+            <dt>{{ 'catalogRights.contracts.assetId' | t:lang() }}</dt>
+            <dd>#{{ contract.asset_id }}</dd>
+            <dt>{{ 'catalogRights.contracts.rightsType' | t:lang() }}</dt>
+            <dd>{{ contract.rights_type }}</dd>
+            <dt>{{ 'catalogRights.contracts.exclusive' | t:lang() }}</dt>
+            <dd>{{ contract.exclusive ? ('common.yes' | t:lang()) : ('common.no' | t:lang()) }}</dd>
+            <dt>{{ 'catalogRights.contracts.validFrom' | t:lang() }}</dt>
+            <dd>{{ contract.valid_from }}</dd>
+            <dt>{{ 'catalogRights.contracts.validTo' | t:lang() }}</dt>
+            <dd>{{ contract.valid_to ?? '—' }}</dd>
+            <dt>{{ 'catalogRights.contractDetail.evidenceRef' | t:lang() }}</dt>
+            <dd>{{ contract.evidence_ref ?? '—' }}</dd>
+          </dl>
+        </app-enterprise-section-card>
 
-        <div class="actions">
+        <app-enterprise-action-bar>
           @if (contract.status !== 'archived') {
-            <button class="btn btn--danger" (click)="archive()">Archive</button>
+            <button class="btn btn--danger" (click)="archive()">
+              {{ 'catalogRights.contractDetail.archive' | t:lang() }}
+            </button>
           }
           <a class="btn btn--secondary" [routerLink]="['/catalog-rights/contracts', contract.id, 'history']">
-            View History
+            {{ 'catalogRights.contractDetail.history' | t:lang() }}
           </a>
-        </div>
+        </app-enterprise-action-bar>
 
-        <section class="parties">
-          <h2>{{ 'catalogRights.contractDetail.parties' | t:lang() }}</h2>
-          <p class="hint">
-            Ownership percentages are validated per rights type + territory + overlapping period,
-            not as a single global sum.
-          </p>
+        <app-enterprise-section-card [title]="'catalogRights.contractDetail.parties' | t:lang()">
+          <p class="hint muted">{{ 'catalogRights.contractDetail.partiesHint' | t:lang() }}</p>
           @if (parties.length === 0) {
-            <p>No parties yet.</p>
+            <p class="muted">{{ 'catalogRights.contractDetail.noParties' | t:lang() }}</p>
           } @else {
-            <table class="data-table">
-              <thead><tr><th>Name</th><th>Type</th><th>Ownership %</th></tr></thead>
-              <tbody>
-                @for (p of parties; track p.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td>{{ p.party_name }}</td>
-                    <td>{{ p.party_type }}</td>
-                    <td>{{ p.ownership_percentage }}%</td>
+                    <th>{{ 'common.name' | t:lang() }}</th>
+                    <th>{{ 'common.type' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.contractDetail.ownershipPct' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (p of parties; track p.id) {
+                    <tr>
+                      <td>{{ p.party_name }}</td>
+                      <td>{{ p.party_type }}</td>
+                      <td>{{ p.ownership_percentage }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           }
-          <form [formGroup]="partyForm" (ngSubmit)="addParty()">
-            <input formControlName="party_name" placeholder="Party name" class="input" />
-            <select formControlName="party_type" class="input">
-              <option value="external">External</option>
-              <option value="organization">Organization</option>
-              <option value="artist">Artist</option>
-            </select>
-            <input formControlName="ownership_percentage" type="number" step="0.01" placeholder="Ownership %" class="input" />
-            <button type="submit" class="btn btn--secondary" [disabled]="partyForm.invalid">Add Party</button>
+          <form [formGroup]="partyForm" (ngSubmit)="addParty()" class="form-grid">
+            <app-enterprise-form-field [label]="'common.name' | t:lang()" [required]="true">
+              <input formControlName="party_name" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.type' | t:lang()">
+              <select formControlName="party_type" class="input">
+                <option value="external">{{ 'catalogRights.contractDetail.partyExternal' | t:lang() }}</option>
+                <option value="organization">{{ 'common.organization' | t:lang() }}</option>
+                <option value="artist">{{ 'catalogRights.assetDetail.artists' | t:lang() }}</option>
+              </select>
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'catalogRights.contractDetail.ownershipPct' | t:lang()" [required]="true">
+              <input formControlName="ownership_percentage" type="number" step="0.01" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary" [disabled]="partyForm.invalid">
+                {{ 'catalogRights.contractDetail.addParty' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (partyConflictWarning) {
             <p class="error">{{ partyConflictWarning }}</p>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="territories">
-          <h2>Territories</h2>
+        <app-enterprise-section-card [title]="'catalogRights.contractDetail.territories' | t:lang()">
           @if (territories.length === 0) {
-            <p>No territories set yet (defaults to worldwide coverage checks).</p>
+            <p class="muted">{{ 'catalogRights.contractDetail.noTerritories' | t:lang() }}</p>
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (t of territories; track t.id) {
                 <li>{{ t.territory_code }} — {{ t.territory_name }}</li>
               }
             </ul>
           }
-          <form [formGroup]="territoryForm" (ngSubmit)="addTerritory()">
-            <input formControlName="territory_code" placeholder="Territory code (e.g. US, WW)" class="input" />
-            <input formControlName="territory_name" placeholder="Territory name" class="input" />
-            <button type="submit" class="btn btn--secondary" [disabled]="territoryForm.invalid">Set Territory</button>
+          <form [formGroup]="territoryForm" (ngSubmit)="addTerritory()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.conflicts.territory' | t:lang()" [required]="true">
+              <input formControlName="territory_code" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.name' | t:lang()" [required]="true">
+              <input formControlName="territory_name" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary" [disabled]="territoryForm.invalid">
+                {{ 'catalogRights.contractDetail.setTerritory' | t:lang() }}
+              </button>
+            </div>
           </form>
           @if (territoryConflictWarning) {
             <p class="error">{{ territoryConflictWarning }}</p>
           }
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="authorized-uses">
-          <h2>Authorized Uses</h2>
+        <app-enterprise-section-card [title]="'catalogRights.contractDetail.authorizedUses' | t:lang()">
           @if (uses.length === 0) {
-            <p>No authorized uses set yet.</p>
+            <p class="muted">{{ 'catalogRights.contractDetail.noUses' | t:lang() }}</p>
           } @else {
-            <ul>
+            <ul class="ent-list">
               @for (u of uses; track u.id) {
                 <li>{{ u.use_code }} — {{ u.description ?? '—' }}</li>
               }
             </ul>
           }
-          <form [formGroup]="useForm" (ngSubmit)="addUse()">
-            <input formControlName="use_code" placeholder="Use code (e.g. streaming, sync)" class="input" />
-            <input formControlName="description" placeholder="Description (optional)" class="input" />
-            <button type="submit" class="btn btn--secondary" [disabled]="useForm.invalid">Set Use</button>
+          <form [formGroup]="useForm" (ngSubmit)="addUse()" class="form-grid">
+            <app-enterprise-form-field [label]="'catalogRights.contractDetail.useCode' | t:lang()" [required]="true">
+              <input formControlName="use_code" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'common.description' | t:lang()">
+              <input formControlName="description" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--secondary" [disabled]="useForm.invalid">
+                {{ 'catalogRights.contractDetail.setUse' | t:lang() }}
+              </button>
+            </div>
           </form>
-        </section>
+        </app-enterprise-section-card>
 
-        <section class="approvals">
-          <h2>Approvals</h2>
+        <app-enterprise-section-card [title]="'catalogRights.contractDetail.approvals' | t:lang()">
           @if (approvals.length === 0) {
-            <p>No approval requests yet.</p>
+            <p class="muted">{{ 'catalogRights.contractDetail.noApprovals' | t:lang() }}</p>
           } @else {
-            <table class="data-table">
-              <thead><tr><th>Status</th><th>Approver</th><th>Notes</th><th>Decided</th></tr></thead>
-              <tbody>
-                @for (a of approvals; track a.id) {
+            <app-enterprise-data-table>
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td><span class="badge" [class]="'badge--' + a.status">{{ a.status }}</span></td>
-                    <td>{{ a.approver_user_id ?? '—' }}</td>
-                    <td>{{ a.notes ?? '—' }}</td>
-                    <td>{{ a.decided_at ? (a.decided_at | date:'short') : '—' }}</td>
+                    <th>{{ 'common.status' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.contractDetail.approver' | t:lang() }}</th>
+                    <th>{{ 'common.notes' | t:lang() }}</th>
+                    <th>{{ 'catalogRights.contractDetail.decided' | t:lang() }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (a of approvals; track a.id) {
+                    <tr>
+                      <td><app-enterprise-status-badge [status]="a.status" /></td>
+                      <td>{{ a.approver_user_id ?? '—' }}</td>
+                      <td>{{ a.notes ?? '—' }}</td>
+                      <td>{{ a.decided_at ? (a.decided_at | localeDate: true) : '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </app-enterprise-data-table>
           }
-          <div class="approval-actions">
-            <button class="btn btn--secondary" (click)="submitForApproval()">{{ 'catalogRights.contractDetail.submit' | t:lang() }}</button>
-            <button class="btn btn--primary" (click)="decide(true)">Approve</button>
-            <button class="btn btn--danger" (click)="decide(false)">Reject</button>
-          </div>
-        </section>
-      } @else if (loading) {
-        <p>{{ 'common.loading' | t:lang() }}</p>
+          <app-enterprise-action-bar>
+            <button class="btn btn--secondary" (click)="submitForApproval()">
+              {{ 'catalogRights.contractDetail.submit' | t:lang() }}
+            </button>
+            <button class="btn btn--primary" (click)="decide(true)">
+              {{ 'catalogRights.contractDetail.approve' | t:lang() }}
+            </button>
+            <button class="btn btn--danger" (click)="decide(false)">
+              {{ 'catalogRights.contractDetail.reject' | t:lang() }}
+            </button>
+          </app-enterprise-action-bar>
+        </app-enterprise-section-card>
       }
 
       @if (error) {
-        <p class="error">{{ error }}</p>
+        <app-enterprise-error-state [message]="error" (retry)="load()" />
       }
     </div>
   `,
@@ -179,6 +242,7 @@ export class RightsContractDetailPage implements OnInit {
   error: string | null = null;
   partyConflictWarning: string | null = null;
   territoryConflictWarning: string | null = null;
+  orgId: number | null = null;
 
   partyForm = this.fb.group({
     party_name: ['', [Validators.required]],
@@ -196,21 +260,21 @@ export class RightsContractDetailPage implements OnInit {
     description: [''],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   private get contractId(): number {
     return Number(this.route.snapshot.paramMap.get('id'));
   }
 
   ngOnInit(): void {
-    this.load();
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (this.orgId) this.load();
   }
 
   load(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
     this.loading = true;
-    this.api.getContract(this.orgId, this.contractId).subscribe({
+    this.error = null;
+    this.api.getContract(orgId, this.contractId).subscribe({
       next: (c) => {
         this.contract = c;
         this.loading = false;
@@ -221,51 +285,62 @@ export class RightsContractDetailPage implements OnInit {
       },
       error: (e) => {
         this.loading = false;
-        this.error = e.error?.message ?? 'Error loading rights contract';
+        this.error = e.error?.message ?? this.i18n.t('common.failed');
       },
     });
   }
 
   loadParties(): void {
-    this.api.listContractParties(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listContractParties(orgId, this.contractId).subscribe({
       next: (items) => (this.parties = items),
       error: () => (this.parties = []),
     });
   }
 
   loadTerritories(): void {
-    this.api.listContractTerritories(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listContractTerritories(orgId, this.contractId).subscribe({
       next: (items) => (this.territories = items),
       error: () => (this.territories = []),
     });
   }
 
   loadUses(): void {
-    this.api.listAuthorizedUses(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listAuthorizedUses(orgId, this.contractId).subscribe({
       next: (items) => (this.uses = items),
       error: () => (this.uses = []),
     });
   }
 
   loadApprovals(): void {
-    this.api.listApprovals(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listApprovals(orgId, this.contractId).subscribe({
       next: (items) => (this.approvals = items),
       error: () => (this.approvals = []),
     });
   }
 
   archive(): void {
-    this.api.archiveContract(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.archiveContract(orgId, this.contractId).subscribe({
       next: (c) => (this.contract = c),
-      error: (e) => (this.error = e.error?.message ?? 'Error archiving contract'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   addParty(): void {
-    if (this.partyForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.partyForm.invalid) return;
     const value = this.partyForm.value;
     this.api
-      .addContractParty(this.orgId, this.contractId, {
+      .addContractParty(orgId, this.contractId, {
         party_name: value.party_name!,
         party_type: value.party_type || 'external',
         ownership_percentage: Number(value.ownership_percentage),
@@ -276,18 +351,19 @@ export class RightsContractDetailPage implements OnInit {
           this.loadParties();
           this.partyConflictWarning =
             res.conflicts_opened.length > 0
-              ? `${res.conflicts_opened.length} conflict(s) opened due to overlapping ownership. See Conflicts.`
+              ? this.i18n.t('catalogRights.contractDetail.partyConflict', { count: res.conflicts_opened.length })
               : null;
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error adding party'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   addTerritory(): void {
-    if (this.territoryForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.territoryForm.invalid) return;
     const value = this.territoryForm.value;
     this.api
-      .setTerritories(this.orgId, this.contractId, [
+      .setTerritories(orgId, this.contractId, [
         { territory_code: value.territory_code!, territory_name: value.territory_name! },
       ])
       .subscribe({
@@ -296,18 +372,19 @@ export class RightsContractDetailPage implements OnInit {
           this.loadTerritories();
           this.territoryConflictWarning =
             res.conflicts_opened.length > 0
-              ? `${res.conflicts_opened.length} conflict(s) opened due to overlapping territory coverage. See Conflicts.`
+              ? this.i18n.t('catalogRights.contractDetail.territoryConflict', { count: res.conflicts_opened.length })
               : null;
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error setting territory'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   addUse(): void {
-    if (this.useForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.useForm.invalid) return;
     const value = this.useForm.value;
     this.api
-      .setAuthorizedUses(this.orgId, this.contractId, [
+      .setAuthorizedUses(orgId, this.contractId, [
         { use_code: value.use_code!, description: value.description || null },
       ])
       .subscribe({
@@ -315,24 +392,28 @@ export class RightsContractDetailPage implements OnInit {
           this.useForm.reset();
           this.loadUses();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error setting authorized use'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   submitForApproval(): void {
-    this.api.submitForApproval(this.orgId, this.contractId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.submitForApproval(orgId, this.contractId).subscribe({
       next: () => this.loadApprovals(),
-      error: (e) => (this.error = e.error?.message ?? 'Error submitting for approval'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   decide(approved: boolean): void {
-    this.api.approveContract(this.orgId, this.contractId, approved).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.approveContract(orgId, this.contractId, approved).subscribe({
       next: () => {
         this.loadApprovals();
         this.load();
       },
-      error: (e) => (this.error = e.error?.message ?? 'Error deciding on approval'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 }

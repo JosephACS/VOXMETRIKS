@@ -5,72 +5,96 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ArtistsApiService } from '../services/artists-api.service';
 import { ArtistAssignment, ArtistTeamMember } from '../models/artist.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+
 @Component({
   selector: 'app-artist-profile-team',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
     <div class="vx-enterprise artist-profile-team-page">
-      <a [routerLink]="['/artist-profiles', artistId]">&larr; Back to profile</a>
-      <h1>{{ 'artists.team.title' | t:lang() }}</h1>
+      @if (!orgId) {
+        <app-enterprise-org-required />
+      } @else {
+        <a [routerLink]="['/artist-profiles', artistId]" class="back-link">
+          {{ 'artists.team.back' | t:lang() }}
+        </a>
 
-      <section class="assignments">
-        <h2>Manager Assignments</h2>
-        <form [formGroup]="assignForm" (ngSubmit)="assignManager()">
-          <input formControlName="user_id" type="number" placeholder="User id" class="input" />
-          <input formControlName="role" placeholder="Role (default: manager)" class="input" />
-          <button type="submit" class="btn btn--primary" [disabled]="assignForm.invalid">
-            Assign Manager
-          </button>
-        </form>
+        <app-enterprise-page-header [title]="'artists.team.title' | t:lang()" />
 
-        @if (assignments.length === 0) {
-          <p>No manager assignments yet.</p>
-        } @else {
-          <ul>
-            @for (a of assignments; track a.id) {
-              <li>
-                User #{{ a.user_id }} — {{ a.role }} — <span class="badge" [class]="'badge--' + a.status">{{ a.status }}</span>
-                @if (a.status === 'active') {
-                  <button class="btn btn--small btn--danger" (click)="endAssignment(a.id)">End</button>
-                }
-              </li>
-            }
-          </ul>
+        <app-enterprise-section-card [title]="'artists.team.assignments' | t:lang()">
+          <form [formGroup]="assignForm" (ngSubmit)="assignManager()" class="form-grid">
+            <app-enterprise-form-field [label]="'artists.team.userId' | t:lang()" [required]="true">
+              <input formControlName="user_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'artists.team.role' | t:lang()">
+              <input formControlName="role" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="assignForm.invalid">
+                {{ 'artists.team.assign' | t:lang() }}
+              </button>
+            </div>
+          </form>
+
+          @if (assignments.length === 0) {
+            <p class="muted">{{ 'artists.team.noAssignments' | t:lang() }}</p>
+          } @else {
+            <ul class="ent-list">
+              @for (a of assignments; track a.id) {
+                <li>
+                  User #{{ a.user_id }} — {{ a.role }} —
+                  <app-enterprise-status-badge [status]="a.status" />
+                  @if (a.status === 'active') {
+                    <button class="btn btn--small btn--danger" (click)="endAssignment(a.id)">
+                      {{ 'artists.team.end' | t:lang() }}
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </app-enterprise-section-card>
+
+        <app-enterprise-section-card [title]="'artists.team.members' | t:lang()">
+          <form [formGroup]="teamForm" (ngSubmit)="addTeamMember()" class="form-grid">
+            <app-enterprise-form-field [label]="'artists.team.userId' | t:lang()" [required]="true">
+              <input formControlName="user_id" type="number" class="input" />
+            </app-enterprise-form-field>
+            <app-enterprise-form-field [label]="'artists.team.teamRole' | t:lang()" [required]="true">
+              <input formControlName="team_role" class="input" />
+            </app-enterprise-form-field>
+            <div class="form-grid__actions">
+              <button type="submit" class="btn btn--primary" [disabled]="teamForm.invalid">
+                {{ 'artists.team.addMember' | t:lang() }}
+              </button>
+            </div>
+          </form>
+
+          @if (team.length === 0) {
+            <p class="muted">{{ 'artists.team.noMembers' | t:lang() }}</p>
+          } @else {
+            <ul class="ent-list">
+              @for (m of team; track m.id) {
+                <li>
+                  User #{{ m.user_id }} — {{ m.team_role }} —
+                  <app-enterprise-status-badge [status]="m.status" />
+                  @if (m.status === 'active') {
+                    <button class="btn btn--small btn--danger" (click)="removeTeamMember(m.id)">
+                      {{ 'artists.team.remove' | t:lang() }}
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </app-enterprise-section-card>
+
+        @if (error) {
+          <app-enterprise-error-state [message]="error" />
         }
-      </section>
-
-      <section class="team">
-        <h2>Team Members</h2>
-        <form [formGroup]="teamForm" (ngSubmit)="addTeamMember()">
-          <input formControlName="user_id" type="number" placeholder="User id" class="input" />
-          <input formControlName="team_role" placeholder="Team role (e.g. producer)" class="input" />
-          <button type="submit" class="btn btn--primary" [disabled]="teamForm.invalid">
-            Add Team Member
-          </button>
-        </form>
-
-        @if (team.length === 0) {
-          <p>No team members yet.</p>
-        } @else {
-          <ul>
-            @for (m of team; track m.id) {
-              <li>
-                User #{{ m.user_id }} — {{ m.team_role }} — <span class="badge" [class]="'badge--' + m.status">{{ m.status }}</span>
-                @if (m.status === 'active') {
-                  <button class="btn btn--small btn--danger" (click)="removeTeamMember(m.id)">Remove</button>
-                }
-              </li>
-            }
-          </ul>
-        }
-      </section>
-
-      @if (error) {
-        <p class="error">{{ error }}</p>
       }
     </div>
   `,
@@ -87,6 +111,7 @@ export class ArtistProfileTeamPage implements OnInit {
   assignments: ArtistAssignment[] = [];
   team: ArtistTeamMember[] = [];
   error: string | null = null;
+  orgId: number | null = null;
 
   assignForm = this.fb.group({
     user_id: [null as number | null, [Validators.required]],
@@ -98,72 +123,81 @@ export class ArtistProfileTeamPage implements OnInit {
     team_role: ['', [Validators.required]],
   });
 
-  private get orgId(): number {
-    return this.orgCtx.activeOrganization()?.id ?? 0;
-  }
-
   get artistId(): number {
     return Number(this.route.snapshot.paramMap.get('id'));
   }
 
   ngOnInit(): void {
-    this.loadAssignments();
-    this.loadTeam();
+    this.orgId = this.orgCtx.activeOrganization()?.id ?? null;
+    if (this.orgId) {
+      this.loadAssignments();
+      this.loadTeam();
+    }
   }
 
   loadAssignments(): void {
-    this.api.listAssignments(this.orgId, this.artistId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listAssignments(orgId, this.artistId).subscribe({
       next: (items) => (this.assignments = items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading assignments'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   loadTeam(): void {
-    this.api.listTeam(this.orgId, this.artistId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.listTeam(orgId, this.artistId).subscribe({
       next: (items) => (this.team = items),
-      error: (e) => (this.error = e.error?.message ?? 'Error loading team'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   assignManager(): void {
-    if (this.assignForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.assignForm.invalid) return;
     const value = this.assignForm.value;
     this.api
-      .assignManager(this.orgId, this.artistId, Number(value.user_id), value.role || 'manager')
+      .assignManager(orgId, this.artistId, Number(value.user_id), value.role || 'manager')
       .subscribe({
         next: () => {
           this.assignForm.reset({ role: 'manager' });
           this.loadAssignments();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error assigning manager'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   endAssignment(assignmentId: number): void {
-    this.api.endAssignment(this.orgId, this.artistId, assignmentId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.endAssignment(orgId, this.artistId, assignmentId).subscribe({
       next: () => this.loadAssignments(),
-      error: (e) => (this.error = e.error?.message ?? 'Error ending assignment'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 
   addTeamMember(): void {
-    if (this.teamForm.invalid) return;
+    const orgId = this.orgId;
+    if (!orgId || this.teamForm.invalid) return;
     const value = this.teamForm.value;
     this.api
-      .addTeamMember(this.orgId, this.artistId, Number(value.user_id), value.team_role!)
+      .addTeamMember(orgId, this.artistId, Number(value.user_id), value.team_role!)
       .subscribe({
         next: () => {
           this.teamForm.reset();
           this.loadTeam();
         },
-        error: (e) => (this.error = e.error?.message ?? 'Error adding team member'),
+        error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
       });
   }
 
   removeTeamMember(memberId: number): void {
-    this.api.removeTeamMember(this.orgId, this.artistId, memberId).subscribe({
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.api.removeTeamMember(orgId, this.artistId, memberId).subscribe({
       next: () => this.loadTeam(),
-      error: (e) => (this.error = e.error?.message ?? 'Error removing team member'),
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.failed')),
     });
   }
 }

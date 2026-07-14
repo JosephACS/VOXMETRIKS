@@ -87,12 +87,7 @@
 .plans-catalog .page-header h1,
 .subscription-overview .page-header h1,
 .biz-analytics-dashboard > h1 {
-  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
   margin: 0;
-  line-height: 1.2;
-  color: var(--text);
 }
 
 .vx-hero__subtitle,
@@ -101,10 +96,6 @@
 .page-header p,
 .biz-analytics-dashboard .subtitle {
   margin: 0.35rem 0 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--spotify-muted);
-  max-width: 52rem;
 }
 
 .vx-hero__meta {
@@ -188,8 +179,9 @@
   border-radius: 0.5rem;
   border: 1px solid transparent;
   font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--type-button-size, 0.875rem);
+  font-weight: var(--type-button-weight, 600);
+  line-height: var(--type-button-lh, 1.25);
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
@@ -737,9 +729,10 @@
 }
 
 .plan-card__amount {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: var(--type-page-title-size, 1.875rem);
+  font-weight: var(--type-page-title-weight, 700);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
@@ -916,6 +909,9 @@
   .kpi-card,
   .btn,
   .btn--primary,
+  .btn--secondary,
+  .btn--ghost,
+  .btn--danger,
   .org-btn,
   .crm-btn,
   .billing-toggle__btn {
@@ -930,4 +926,258 @@
   .loading {
     animation: none;
   }
+}
+
+/* ── Shared Angular enterprise components ────────────────────────────────── */
+
+.ent-header {
+  margin-bottom: 1.35rem;
+}
+
+.ent-header__copy {
+  min-width: min(100%, 18rem);
+  flex: 1 1 auto;
+}
+
+.ent-header__actions:empty {
+  display: none;
+}
+
+.ent-section {
+  margin-bottom: 1.15rem;
+}
+
+.ent-section__header {
+  margin-bottom: 0.85rem;
+}
+
+.ent-section__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.ent-section__subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--spotify-muted);
+}
+
+.ent-section__body {
+  min-width: 0;
+}
+
+.ent-stat {
+  margin-bottom: 0;
+}
+
+.ent-stat__label {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.ent-stat__value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ent-stat__null {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ent-stat__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.ent-empty {
+  gap: 0.75rem;
+  padding: 2.75rem 1.35rem;
+}
+
+.ent-empty__icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  opacity: 0.55;
+  color: var(--spotify-muted);
+}
+
+.ent-empty__title {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.ent-empty__description {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--spotify-muted);
+}
+
+.ent-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.ent-error__message {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
+.ent-org-required {
+  gap: 0.9rem;
+  padding: 2.75rem 1.5rem;
+  background: var(--spotify-card);
+  border: 1px solid var(--border);
+  border-style: solid;
+  box-shadow: var(--shadow-sm);
+}
+
+.ent-org-required__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.ent-org-required__icon svg {
+  display: block;
+}
+
+.ent-org-required__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.ent-org-required__body {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--spotify-muted);
+}
+
+.ent-org-required__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 0.35rem;
+}
+
+.ent-skel {
+  margin: 1rem 0;
+}
+
+.ent-action-bar {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.ent-form-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ent-form-field__label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--spotify-muted);
+}
+
+.ent-form-field__req {
+  color: var(--accent);
+  margin-left: 0.15rem;
+}
+
+.ent-form-field__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.ent-form-field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #f87171;
+  line-height: 1.4;
+}
+
+.ent-form-field--error input,
+.ent-form-field--error select,
+.ent-form-field--error textarea {
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem 1rem;
+}
+
+.form-grid__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.ent-data-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ent-data-table-toolbar:empty {
+  display: none;
+}
+
+.ent-data-table .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ent-data-table .empty-state {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }

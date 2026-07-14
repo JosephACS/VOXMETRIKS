@@ -10,11 +10,15 @@ export class AppTitleStrategy extends TitleStrategy {
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
     const routeTitle = this.buildTitle(snapshot);
-    const translatedTitle = routeTitle ? this.i18n.t(routeTitle) : '';
-    this.title.setTitle(
-      translatedTitle
-        ? `${translatedTitle} | VOXMETRIK`
-        : 'VOXMETRIK — Music Intelligence Platform',
-    );
+    if (!routeTitle) {
+      this.title.setTitle('VOXMETRIK — Music Intelligence Platform');
+      return;
+    }
+    // Route titles are often human-readable (ES/EN literals). Only look up dotted i18n keys.
+    const looksLikeKey = /^[a-z0-9]+(?:\.[a-z0-9_-]+)+$/i.test(routeTitle);
+    const label = looksLikeKey ? this.i18n.t(routeTitle) : routeTitle;
+    const missing = this.i18n.t('common.missingTranslation');
+    const display = looksLikeKey && (label === missing || label === routeTitle) ? routeTitle : label;
+    this.title.setTitle(`${display} | VOXMETRIK`);
   }
 }

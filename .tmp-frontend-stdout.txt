@@ -1,0 +1,89 @@
+
+> app@0.0.0 start
+> ng serve
+
+> Building...
+√ Building...
+Initial chunk files | Names                       |  Raw size
+main.js             | main                        | 329.16 kB | 
+chunk-XDCWU6WN.js   | -                           | 121.13 kB | 
+chunk-6T7PULS4.js   | -                           | 104.32 kB | 
+styles.css          | styles                      |  60.25 kB | 
+chunk-POAUUF7O.js   | -                           |  12.76 kB | 
+chunk-J3HU3QBA.js   | -                           |  10.34 kB | 
+chunk-JUS7O6ZB.js   | -                           |   7.65 kB | 
+chunk-7IK3RZLU.js   | -                           |   7.08 kB | 
+chunk-MH3GBPIF.js   | -                           |   5.36 kB | 
+chunk-RK74337V.js   | -                           |   4.88 kB | 
+chunk-2Y2YBG3P.js   | -                           |   3.28 kB | 
+chunk-TECS2UJV.js   | -                           |   2.84 kB | 
+chunk-4Z4GPQIX.js   | -                           |   2.78 kB | 
+chunk-DQUWDPEF.js   | -                           |   2.68 kB | 
+chunk-K342OJH5.js   | -                           |   2.21 kB | 
+chunk-2ZBOBPRG.js   | -                           |   1.57 kB | 
+chunk-EVUJQOCW.js   | -                           |   1.29 kB | 
+chunk-Q3EHA4UN.js   | -                           |   1.09 kB | 
+chunk-CZJLB7T5.js   | -                           |   1.08 kB | 
+chunk-6T6YFYUG.js   | -                           |   1.01 kB | 
+chunk-L3WYIZH3.js   | -                           | 190 bytes | 
+
+                    | Initial total               | 682.95 kB
+
+Lazy chunk files    | Names                       |  Raw size
+chunk-HJ7INSNA.js   | home-component              | 296.34 kB | 
+chunk-AP4LWBFA.js   | genres-component            | 103.91 kB | 
+chunk-JRTLITX4.js   | artists-component           | 101.77 kB | 
+chunk-2PV7XBGI.js   | tracks-component            |  98.36 kB | 
+chunk-WQJUWGWE.js   | crm-opportunity-detail-page |  97.67 kB | 
+chunk-VZXZ27SX.js   | settings-component          |  96.31 kB | 
+chunk-M6YSKII6.js   | playlists-component         |  93.74 kB | 
+chunk-U5QFLG3E.js   | login-component             |  89.29 kB | 
+chunk-FLMYLOQX.js   | users-component             |  89.00 kB | 
+chunk-HUHQYTL2.js   | elt-pipeline-component      |  86.81 kB | 
+chunk-B6CDXP3F.js   | recommendations-component   |  74.06 kB | 
+chunk-EYT3L4YM.js   | history-component           |  69.91 kB | 
+chunk-ZHX57FS2.js   | explorer-component          |  69.25 kB | 
+chunk-KKUVQ7WT.js   | trending-component          |  65.96 kB | 
+chunk-EVIIFQQL.js   | crm-conversion-wizard-page  |  65.79 kB | 
+...and 113 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [7.752 seconds] - 2026-07-14T03:32:31.435Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  ➜  Local:   http://localhost:4200/
+> Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Initial chunk files | Names                       |  Raw size
+main.js             | main                        | 328.86 kB | 
+chunk-DUBI6BKF.js   | -                           | 121.13 kB | 
+chunk-GU5G2RQJ.js   | -                           | 104.32 kB | 
+chunk-5F2IP4WX.js   | -                           |   7.65 kB | 
+chunk-IIBGHFAL.js   | -                           |   5.36 kB | 
+chunk-JWG4XE6W.js   | -                           |   2.84 kB | 
+chunk-I24HS2SH.js   | -                           |   2.21 kB | 
+chunk-Q4OE3KWA.js   | -                           |   1.29 kB | 
+chunk-N272A44H.js   | -                           |   1.09 kB | 
+chunk-HL3HC3EE.js   | -                           |   1.01 kB | 
+
+Lazy chunk files    | Names                       |  Raw size
+chunk-XHAHNWK3.js   | home-component              | 296.34 kB | 
+chunk-V6QPJCH7.js   | genres-component            | 103.91 kB | 
+chunk-MXV5E437.js   | artists-component           | 101.77 kB | 
+chunk-7AIOFEEP.js   | tracks-component            |  98.36 kB | 
+chunk-OV6JR4VQ.js   | crm-opportunity-detail-page |  97.67 kB | 
+chunk-H7LUKCQF.js   | settings-component          |  96.31 kB | 
+chunk-4S2QBGDI.js   | playlists-component         |  93.74 kB | 
+chunk-SR7C3Y53.js   | login-component             |  89.29 kB | 
+chunk-SOZN2DLU.js   | users-component             |  89.00 kB | 
+chunk-OKSNBZ2T.js   | elt-pipeline-component      |  86.81 kB | 
+chunk-YTHEG5RL.js   | recommendations-component   |  74.06 kB | 
+chunk-UPOHNF4K.js   | history-component           |  69.91 kB | 
+chunk-EO72Q7OL.js   | explorer-component          |  69.25 kB | 
+chunk-AJXXDLER.js   | trending-component          |  65.96 kB | 
+chunk-LCTJBZMX.js   | crm-conversion-wizard-page  |  65.79 kB | 
+...and 92 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [6.564 seconds] - 2026-07-14T03:44:26.045Z
+
+Page reload sent to client(s).

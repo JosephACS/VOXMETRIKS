@@ -30,6 +30,20 @@ export const STATUS_LABEL_KEYS: Record<string, string> = {
   approved: 'status.approved',
   published: 'status.published',
   rejected: 'status.rejected',
+  inactive: 'status.inactive',
+  disputed: 'status.disputed',
+  dismissed: 'status.dismissed',
+  // CRM prospect lifecycle (stored codes stay English; labels are translated)
+  new: 'status.new',
+  contacted: 'status.contacted',
+  qualified: 'status.qualified',
+  disqualified: 'status.disqualified',
+  converted: 'status.converted',
+  prospect: 'status.prospect',
+  proposal: 'status.proposal',
+  negotiation: 'status.negotiation',
+  won: 'status.won',
+  lost: 'status.lost',
 };
 
 export function statusLabelKey(code: string | null | undefined): string {
