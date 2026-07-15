@@ -640,6 +640,17 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
         except Exception:
             pass
 
+        if _table_exists(conn, "app_catalog_duplicate_candidate"):
+            conn.execute(
+                """
+                DELETE FROM app_catalog_duplicate_candidate
+                WHERE submission_id IN (
+                    SELECT id FROM app_release_submission
+                    WHERE idempotency_key LIKE 'demo-s031%'
+                )
+                """
+            )
+
         now = utc_now()
         # Artist profile
         profile_id = None
@@ -697,8 +708,16 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
         media = LocalMediaStorageProvider(root=media_root)
         uc = CatalogPublishingUseCases(conn, media=media)
 
+        # Distinct durations/sizes so each demo upload has a unique sha256
+        # (duplicate hash conflicts otherwise leave later submissions stuck in draft).
         wav = make_minimal_wav()
         png = make_minimal_png(512, 512)
+
+        def _wav(ms: int) -> bytes:
+            return make_minimal_wav(duration_ms=ms)
+
+        def _png(w: int, h: int) -> bytes:
+            return make_minimal_png(w, h)
 
         # Shared 60/40 rights contract + asset for published demo
         asset_id = 9101
@@ -853,7 +872,7 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
                 actor_user_id=artist_user_id,
                 filename="demo.wav",
                 content_type="audio/wav",
-                data=wav,
+                data=_wav(210),
             )
             uc.upload_cover(
                 submission_id=sid,
@@ -876,89 +895,152 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
             )
         created["changes_requested"] = sid
 
-        # 3) scheduled
-        sid, _, existed = _ensure_submission(
+        # 3) scheduled — unique sha256 (222ms wav / 514px cover). Re-drive pipeline
+        # if a prior seed left this in draft after duplicate-hash or partial failure.
+        sid, st, _existed = _ensure_submission(
             "demo-s031-scheduled",
             "[DEMO] Scheduled Single",
             rights_contract_id=contract_id,
             planned_release_date=date(2026, 8, 1),
         )
-        if not existed and contract_id:
-            tr = uc.add_track(
-                submission_id=sid, organization_id=org_id, title="Scheduled Track"
-            )
-            uc.upload_audio(
-                submission_id=sid,
-                track_id=tr["id"],
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="sched.wav",
-                content_type="audio/wav",
-                data=wav,
-            )
-            uc.upload_cover(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="sched.png",
-                content_type="image/png",
-                data=png,
-            )
+        if contract_id and st != "scheduled":
+            trow = conn.execute(
+                """
+                SELECT id, audio_media_id, warehouse_track_id
+                FROM app_release_submission_track
+                WHERE submission_id = ? ORDER BY id LIMIT 1
+                """,
+                [sid],
+            ).fetchone()
+            if not trow:
+                tr = uc.add_track(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    title="Scheduled Track",
+                    warehouse_track_id=DEMO_WAREHOUSE_TRACK_ID_MIN + 1,
+                )
+                tid = int(tr["id"])
+                has_audio = False
+            else:
+                tid = int(trow[0])
+                has_audio = trow[1] is not None
+                if trow[2] is None or int(trow[2] or 0) == DEMO_WAREHOUSE_TRACK_ID_MIN:
+                    conn.execute(
+                        """
+                        UPDATE app_release_submission_track
+                        SET warehouse_track_id = ?
+                        WHERE id = ?
+                        """,
+                        [DEMO_WAREHOUSE_TRACK_ID_MIN + 1, tid],
+                    )
+            if not has_audio:
+                uc.upload_audio(
+                    submission_id=sid,
+                    track_id=tid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="sched.wav",
+                    content_type="audio/wav",
+                    data=_wav(222),
+                )
+            crow = conn.execute(
+                "SELECT cover_media_id FROM app_release_submission WHERE id = ?",
+                [sid],
+            ).fetchone()
+            if not crow or crow[0] is None:
+                uc.upload_cover(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="sched.png",
+                    content_type="image/png",
+                    data=_png(514, 514),
+                )
             uc.update_metadata(
                 submission_id=sid,
                 organization_id=org_id,
                 actor_user_id=artist_user_id,
                 rights_contract_id=contract_id,
             )
-            uc.submit(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-            )
-            uc.approve(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-                notes="ok",
-            )
-            uc.schedule(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-            )
+            if st in ("draft", "changes_requested"):
+                uc.submit(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur in ("submitted", "under_review"):
+                uc.approve(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                    notes="ok",
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur == "approved":
+                uc.schedule(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                )
         created["scheduled"] = sid
 
         # 4) published (60/40 contract)
-        sid, _, existed = _ensure_submission(
+        # Unique sha256 (401ms wav / 513px cover). If a prior seed left this in draft
+        # after a duplicate-hash failure, re-drive the pipeline until published.
+        sid, st, existed = _ensure_submission(
             "demo-s031-published",
             "[DEMO] Published Single",
             rights_contract_id=contract_id,
             planned_release_date=date(2026, 7, 1),
         )
-        if not existed and contract_id:
-            tr = uc.add_track(
-                submission_id=sid,
-                organization_id=org_id,
-                title="Published Track",
-                warehouse_track_id=DEMO_WAREHOUSE_TRACK_ID_MIN,
-            )
-            uc.upload_audio(
-                submission_id=sid,
-                track_id=tr["id"],
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="pub.wav",
-                content_type="audio/wav",
-                data=wav,
-            )
-            uc.upload_cover(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="pub.png",
-                content_type="image/png",
-                data=png,
-            )
+        if contract_id and st != "published":
+            trow = conn.execute(
+                """
+                SELECT id, audio_media_id FROM app_release_submission_track
+                WHERE submission_id = ? ORDER BY id LIMIT 1
+                """,
+                [sid],
+            ).fetchone()
+            if not trow:
+                tr = uc.add_track(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    title="Published Track",
+                    warehouse_track_id=DEMO_WAREHOUSE_TRACK_ID_MIN,
+                )
+                tid = int(tr["id"])
+                has_audio = False
+            else:
+                tid = int(trow[0])
+                has_audio = trow[1] is not None
+            if not has_audio:
+                uc.upload_audio(
+                    submission_id=sid,
+                    track_id=tid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="pub.wav",
+                    content_type="audio/wav",
+                    data=_wav(401),
+                )
+            crow = conn.execute(
+                "SELECT cover_media_id FROM app_release_submission WHERE id = ?",
+                [sid],
+            ).fetchone()
+            if not crow or crow[0] is None:
+                uc.upload_cover(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="pub.png",
+                    content_type="image/png",
+                    data=_png(513, 513),
+                )
             # Link catalog asset to track for rights gate conflict check
             conn.execute(
                 """
@@ -966,7 +1048,7 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
                 SET catalog_asset_id = ?, rights_contract_id = ?
                 WHERE id = ?
                 """,
-                [asset_id, contract_id, tr["id"]],
+                [asset_id, contract_id, tid],
             )
             uc.update_metadata(
                 submission_id=sid,
@@ -974,23 +1056,46 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
                 actor_user_id=artist_user_id,
                 rights_contract_id=contract_id,
             )
-            uc.submit(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-            )
-            uc.approve(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-            )
-            uc.publish(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-                idempotency_key="demo-s031-publish",
-            )
+            if st in ("draft", "changes_requested"):
+                uc.submit(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur in ("submitted", "under_review"):
+                uc.approve(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur in ("approved", "scheduled"):
+                uc.publish(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                    idempotency_key="demo-s031-publish",
+                )
         created["published"] = sid
+        pub_row = conn.execute(
+            "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+        ).fetchone()
+        if pub_row and pub_row[0] == "published" and _table_exists(
+            conn, "app_track_audio_source"
+        ):
+            conn.execute(
+                """
+                UPDATE app_track_audio_source
+                SET status = 'ok'
+                WHERE track_id = ? AND provider = 'local_published'
+                """,
+                [DEMO_WAREHOUSE_TRACK_ID_MIN],
+            )
 
         # 5) blocked rights (90%) — stays draft with bad contract attached
         sid, _, existed = _ensure_submission(
@@ -1009,7 +1114,7 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
                 actor_user_id=artist_user_id,
                 filename="block.wav",
                 content_type="audio/wav",
-                data=wav,
+                data=_wav(230),
             )
             uc.upload_cover(
                 submission_id=sid,
@@ -1036,63 +1141,126 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
                 )
         created["blocked_rights"] = sid
 
-        # 6) withdrawn
-        sid, _, existed = _ensure_submission(
+        # 6) withdrawn — isolated warehouse id so withdraw cannot disable published audio
+        sid, st, _existed = _ensure_submission(
             "demo-s031-withdrawn",
             "[DEMO] Withdrawn Single",
             rights_contract_id=contract_id,
             planned_release_date=date(2026, 6, 1),
         )
-        if not existed and contract_id:
-            tr = uc.add_track(
-                submission_id=sid, organization_id=org_id, title="Withdrawn Track"
-            )
-            uc.upload_audio(
-                submission_id=sid,
-                track_id=tr["id"],
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="wd.wav",
-                content_type="audio/wav",
-                data=wav,
-            )
-            uc.upload_cover(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-                filename="wd.png",
-                content_type="image/png",
-                data=png,
-            )
+        withdrawn_wh = DEMO_WAREHOUSE_TRACK_ID_MIN + 2
+        if contract_id and st != "withdrawn":
+            trow = conn.execute(
+                """
+                SELECT id, audio_media_id, warehouse_track_id
+                FROM app_release_submission_track
+                WHERE submission_id = ? ORDER BY id LIMIT 1
+                """,
+                [sid],
+            ).fetchone()
+            if not trow:
+                tr = uc.add_track(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    title="Withdrawn Track",
+                    warehouse_track_id=withdrawn_wh,
+                )
+                tid = int(tr["id"])
+                has_audio = False
+            else:
+                tid = int(trow[0])
+                has_audio = trow[1] is not None
+                if trow[2] is None or int(trow[2] or 0) == DEMO_WAREHOUSE_TRACK_ID_MIN:
+                    conn.execute(
+                        """
+                        UPDATE app_release_submission_track
+                        SET warehouse_track_id = ?
+                        WHERE id = ?
+                        """,
+                        [withdrawn_wh, tid],
+                    )
+            if not has_audio:
+                uc.upload_audio(
+                    submission_id=sid,
+                    track_id=tid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="wd.wav",
+                    content_type="audio/wav",
+                    data=_wav(240),
+                )
+            crow = conn.execute(
+                "SELECT cover_media_id FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()
+            if not crow or crow[0] is None:
+                uc.upload_cover(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    filename="wd.png",
+                    content_type="image/png",
+                    data=_png(516, 516),
+                )
             uc.update_metadata(
                 submission_id=sid,
                 organization_id=org_id,
                 actor_user_id=artist_user_id,
                 rights_contract_id=contract_id,
             )
-            uc.submit(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=artist_user_id,
-            )
-            uc.approve(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-            )
-            uc.publish(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-                idempotency_key="demo-s031-withdrawn-pub",
-            )
-            uc.withdraw(
-                submission_id=sid,
-                organization_id=org_id,
-                actor_user_id=owner_user_id,
-                reason="Artist request",
-            )
+            if st in ("draft", "changes_requested"):
+                uc.submit(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur in ("submitted", "under_review"):
+                uc.approve(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur in ("approved", "scheduled"):
+                uc.publish(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                    idempotency_key="demo-s031-withdrawn-pub",
+                )
+            cur = conn.execute(
+                "SELECT status FROM app_release_submission WHERE id = ?", [sid]
+            ).fetchone()[0]
+            if cur == "published":
+                uc.withdraw(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=owner_user_id,
+                    reason="Artist request",
+                )
         created["withdrawn"] = sid
+
+        # Guard: withdrawn demo must never leave canonical published audio disabled
+        if _table_exists(conn, "app_track_audio_source"):
+            pub_ok = conn.execute(
+                """
+                SELECT status FROM app_release_submission
+                WHERE idempotency_key = 'demo-s031-published'
+                """,
+            ).fetchone()
+            if pub_ok and pub_ok[0] == "published":
+                conn.execute(
+                    """
+                    UPDATE app_track_audio_source
+                    SET status = 'ok'
+                    WHERE track_id = ? AND provider = 'local_published'
+                    """,
+                    [DEMO_WAREHOUSE_TRACK_ID_MIN],
+                )
 
         out["seeded"] = True
         out["submissions"] = created

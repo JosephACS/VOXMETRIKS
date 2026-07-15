@@ -16,15 +16,15 @@ $DuckDb = Join-Path $RepoRoot 'data\warehouse\voxmetrik.duckdb'
 $VenvPython = Join-Path $BackendDir '.venv\Scripts\python.exe'
 
 if (-not (Test-Path $BackendEnv)) {
-    Write-Error "Missing apps/backend/.env — copy from .env.example and configure before starting."
+    Write-Error 'Missing apps/backend/.env - copy from .env.example and configure before starting.'
     exit 1
 }
 if (-not (Test-Path $DuckDb)) {
-    Write-Error "Missing data/warehouse/voxmetrik.duckdb — restore DEMO-RUNTIME or seed first."
+    Write-Error 'Missing data/warehouse/voxmetrik.duckdb - restore DEMO-RUNTIME or seed first.'
     exit 1
 }
 if (-not (Test-Path $VenvPython)) {
-    Write-Error "Missing apps/backend/.venv — run .\scripts\setup_demo.ps1 first."
+    Write-Error 'Missing apps/backend/.venv - run .\scripts\setup_demo.ps1 first.'
     exit 1
 }
 
@@ -47,14 +47,15 @@ $FrontendPidFile = Join-Path $PidDir 'frontend.pid'
 
 # Backend: cmd wrapper sets EMAIL_PROVIDER=console for the uvicorn child
 $backendBat = Join-Path $PidDir 'backend_launch.cmd'
-@(
+$backendLines = @(
     '@echo off'
     'set EMAIL_PROVIDER=console'
-    "cd /d `"$BackendDir`""
-    "`"$VenvPython`" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > `"$BackendLog`" 2>&1"
-) | Set-Content -Path $backendBat -Encoding ASCII
+    ('cd /d "' + $BackendDir + '"')
+    ('"' + $VenvPython + '" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > "' + $BackendLog + '" 2>&1')
+)
+$backendLines | Set-Content -Path $backendBat -Encoding ASCII
 
-$cmdProc = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "`"$backendBat`"" -WorkingDirectory $BackendDir -PassThru -WindowStyle Hidden
+$cmdProc = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', $backendBat) -WorkingDirectory $BackendDir -PassThru -WindowStyle Hidden
 
 $backendPid = $null
 $deadline = (Get-Date).AddSeconds(20)
@@ -76,7 +77,7 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not ((Test-UrlOk 'http://127.0.0.1:8000/health') -or (Test-UrlOk 'http://127.0.0.1:8000/docs'))) {
-    Write-Error "Backend did not respond on /health or /docs within 20s. See scripts/.demo-pids/backend.log"
+    Write-Error 'Backend did not respond on /health or /docs within 20s. See scripts/.demo-pids/backend.log'
     exit 1
 }
 if (-not $backendPid) { $backendPid = [int]$cmdProc.Id }
@@ -86,13 +87,14 @@ Set-Content -Path $BackendPidFile -Value $backendPid -Encoding ASCII
 $npmCmd = (Get-Command npm.cmd -ErrorAction SilentlyContinue)
 if (-not $npmCmd) { $npmCmd = Get-Command npm -ErrorAction Stop }
 $frontendBat = Join-Path $PidDir 'frontend_launch.cmd'
-@(
+$frontendLines = @(
     '@echo off'
-    "cd /d `"$FrontendDir`""
-    "call `"$($npmCmd.Source)`" start -- --host 127.0.0.1 --port 4200 > `"$FrontendLog`" 2>&1"
-) | Set-Content -Path $frontendBat -Encoding ASCII
+    ('cd /d "' + $FrontendDir + '"')
+    ('call "' + $npmCmd.Source + '" start -- --host 127.0.0.1 --port 4200 > "' + $FrontendLog + '" 2>&1')
+)
+$frontendLines | Set-Content -Path $frontendBat -Encoding ASCII
 
-$feCmdProc = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "`"$frontendBat`"" -WorkingDirectory $FrontendDir -PassThru -WindowStyle Hidden
+$feCmdProc = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', $frontendBat) -WorkingDirectory $FrontendDir -PassThru -WindowStyle Hidden
 
 $frontendPid = $null
 $feDeadline = (Get-Date).AddSeconds(60)

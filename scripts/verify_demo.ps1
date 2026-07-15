@@ -16,10 +16,10 @@ function Test-Http {
     param([string]$Url, [string]$Label)
     try {
         $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
-        Write-Host "OK $Label HTTP $($resp.StatusCode) — $Url"
+        Write-Host ("OK {0} HTTP {1} - {2}" -f $Label, $resp.StatusCode, $Url)
         return $true
     } catch {
-        Write-Host "FAIL $Label — $Url — $($_.Exception.Message)"
+        Write-Host ("FAIL {0} - {1} - {2}" -f $Label, $Url, $_.Exception.Message)
         return $false
     }
 }
@@ -39,12 +39,12 @@ if (-not $pythonExe) {
     Write-Host 'FAIL no Python for verify_final_demo_state.py'
     $failed = $true
 } else {
-    Write-Host "Running verify_final_demo_state.py with: $pythonExe"
+    Write-Host ("Running verify_final_demo_state.py with: {0}" -f $pythonExe)
     Push-Location $BackendDir
     try {
         & $pythonExe 'scripts\verify_final_demo_state.py'
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "FAIL verify_final_demo_state.py exit=$LASTEXITCODE"
+            Write-Host ("FAIL verify_final_demo_state.py exit={0}" -f $LASTEXITCODE)
             $failed = $true
         } else {
             Write-Host 'OK verify_final_demo_state.py'

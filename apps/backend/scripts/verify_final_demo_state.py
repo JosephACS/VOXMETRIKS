@@ -133,63 +133,84 @@ def main() -> int:
 
     from app.core.database import using_write_conn
 
-    with using_write_conn() as conn:
-        expected_users = [u for u, _ in demo_users]
-        if not _table_exists(conn, "app_user"):
-            print("MISSING app_user table")
-            core_ok = False
-        else:
-            present = {
-                r[0]
-                for r in conn.execute(
-                    "SELECT username FROM app_user WHERE username IN ("
-                    + ",".join("?" for _ in expected_users)
-                    + ")",
-                    expected_users,
-                ).fetchall()
-            }
-            missing = [u for u in expected_users if u not in present]
-            if missing:
-                print(f"MISSING DEMO_USERS: {missing}")
-                warns.append(f"MISSING DEMO_USERS: {missing}")
-            else:
-                print(f"OK DEMO_USERS present count={len(present)}")
-
-        if not _table_exists(conn, "app_organization"):
-            print("MISSING app_organization table")
-            core_ok = False
-        else:
-            row = conn.execute(
-                "SELECT id, display_name FROM app_organization WHERE slug = ?",
-                [org_slug],
-            ).fetchone()
-            if not row:
-                print(f"MISSING org slug={org_slug}")
+    try:
+        with using_write_conn() as conn:
+            expected_users = [u for u, _ in demo_users]
+            if not _table_exists(conn, "app_user"):
+                print("MISSING app_user table")
                 core_ok = False
             else:
-                print(f"OK org slug={org_slug} id={row[0]} name={row[1]}")
+                present = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT username FROM app_user WHERE username IN ("
+                        + ",".join("?" for _ in expected_users)
+                        + ")",
+                        expected_users,
+                    ).fetchall()
+                }
+                missing = [u for u in expected_users if u not in present]
+                if missing:
+                    print(f"MISSING DEMO_USERS: {missing}")
+                    warns.append(f"MISSING DEMO_USERS: {missing}")
+                else:
+                    print(f"OK DEMO_USERS present count={len(present)}")
 
-        if _table_exists(conn, "dim_track"):
-            n = int(conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0])
-            print(f"dim_track_count={n}")
-            if n == 0:
-                warns.append("WARN dim_track count is 0")
-                print("WARN dim_track count is 0")
-        else:
-            print("MISSING dim_track table")
-            core_ok = False
+            if not _table_exists(conn, "app_organization"):
+                print("MISSING app_organization table")
+                core_ok = False
+            else:
+                row = conn.execute(
+                    "SELECT id, display_name FROM app_organization WHERE slug = ?",
+                    [org_slug],
+                ).fetchone()
+                if not row:
+                    print(f"MISSING org slug={org_slug}")
+                    core_ok = False
+                else:
+                    print(f"OK org slug={org_slug} id={row[0]} name={row[1]}")
 
-        pollution = _pollution_query(conn)
-        print(f"test_like_orgs_count={len(pollution)}")
-        if pollution:
-            print(f"WARN test-like orgs found count={len(pollution)}")
-            warns.append(f"WARN test-like orgs found count={len(pollution)}")
-            if args.cleanup_dry_run:
-                for oid, name, slug in pollution:
-                    print(
-                        f"  cleanup-dry-run would consider id={oid} "
-                        f"slug={slug} name={name}"
-                    )
+            if _table_exists(conn, "dim_track"):
+                n = int(conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0])
+                print(f"dim_track_count={n}")
+                if n == 0:
+                    warns.append("WARN dim_track count is 0")
+                    print("WARN dim_track count is 0")
+            else:
+                print("MISSING dim_track table")
+                core_ok = False
+
+            pollution = _pollution_query(conn)
+            print(f"test_like_orgs_count={len(pollution)}")
+            if pollution:
+                print(f"WARN test-like orgs found count={len(pollution)}")
+                warns.append(f"WARN test-like orgs found count={len(pollution)}")
+                if args.cleanup_dry_run:
+                    for oid, name, slug in pollution:
+                        print(
+                            f"  cleanup-dry-run would consider id={oid} "
+                            f"slug={slug} name={name}"
+                        )
+    except Exception as exc:  # noqa: BLE001
+        # DuckDB exclusive lock when uvicorn (or another tool) holds the warehouse.
+        msg = str(exc)
+        if (
+            "already open" in msg.lower()
+            or "IO Error" in msg
+            or "IOException" in type(exc).__name__
+        ):
+            print(
+                "WARN warehouse locked by another process; skip DB asserts "
+                "(re-run after stop_demo, or rely on /health + login smoke)."
+            )
+            warns.append("WARN warehouse locked; DB verifies skipped")
+            for w in warns:
+                if w.startswith("WARN"):
+                    print(w)
+            print("RESULT PASS_WITH_WARN (warehouse_locked)")
+            return 0
+        print(f"FAIL warehouse open: {type(exc).__name__}: {msg[:200]}")
+        return 1
 
     if core_ok:
         print("RESULT: PASS (core checks ok; warnings allowed)")

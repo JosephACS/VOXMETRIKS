@@ -100,6 +100,14 @@ $duckDest = Join-Path $RepoRoot 'data\warehouse\voxmetrik.duckdb'
 if (Test-Path $duckSrc) {
     New-Item -ItemType Directory -Force -Path (Split-Path $duckDest) | Out-Null
     Backup-IfExists $duckDest
+    # Stale sidecar files from a prior local open break DuckDB WAL replay after overwrite.
+    foreach ($sidecar in @('.wal', '.tmp', '.wal.tmp')) {
+        $side = $duckDest + $sidecar
+        if (Test-Path -LiteralPath $side) {
+            Remove-Item -LiteralPath $side -Force -ErrorAction SilentlyContinue
+            Write-Host "Removed stale $($side.Substring($RepoRoot.Length).TrimStart('\','/'))"
+        }
+    }
     Copy-Item -LiteralPath $duckSrc -Destination $duckDest -Force
     Write-Host 'OK restored data/warehouse/voxmetrik.duckdb'
 } else {
@@ -109,6 +117,7 @@ if (Test-Path $duckSrc) {
 # --- Restore media ---
 $mediaSrc = Join-Path $SourceDir 'data\media'
 $mediaDest = Join-Path $RepoRoot 'data\media'
+$mediaDestBackend = Join-Path $RepoRoot 'apps\backend\data\media'
 if (Test-Path $mediaSrc) {
     if (Test-Path $mediaDest) {
         Backup-IfExists $mediaDest
@@ -117,6 +126,14 @@ if (Test-Path $mediaSrc) {
     New-Item -ItemType Directory -Force -Path (Split-Path $mediaDest) | Out-Null
     Copy-Item -LiteralPath $mediaSrc -Destination $mediaDest -Recurse -Force
     Write-Host 'OK restored data/media'
+    # Backend serves from MEDIA_STORAGE_ROOT (often apps/backend/data/media)
+    if (Test-Path $mediaDestBackend) {
+        Backup-IfExists $mediaDestBackend
+        Remove-Item -LiteralPath $mediaDestBackend -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $mediaDestBackend) | Out-Null
+    Copy-Item -LiteralPath $mediaSrc -Destination $mediaDestBackend -Recurse -Force
+    Write-Host 'OK restored apps/backend/data/media'
 }
 
 Write-Host "RESTORE_OK SourceDir=$SourceDir RepoRoot=$RepoRoot"

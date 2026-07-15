@@ -118,7 +118,7 @@ try {
 } catch {
     $msg = $_.Exception.Message
     if ($msg -match 'being used by another process|cannot access|IOException|locking|locked') {
-        Write-Error 'DB_LOCKED — stop the demo backend (.\scripts\stop_demo.ps1) and retry export.'
+        Write-Error 'DB_LOCKED - stop the demo backend (.\scripts\stop_demo.ps1) and retry export.'
         exit 3
     }
     Write-Error "DuckDB copy failed: $msg"
@@ -140,8 +140,12 @@ $manifestEntries += [pscustomobject]@{ path = 'data/warehouse/voxmetrik.duckdb';
 $shaLines.Add("$duckHash  data/warehouse/voxmetrik.duckdb")
 Write-Host "OK duckdb copied size=$duckSize sha256=$duckHash"
 
-# --- media recursive ---
+# --- media recursive (prefer repo data/media; fall back to backend media root) ---
 $mediaSrc = Join-Path $RepoRoot 'data\media'
+$mediaSrcBackend = Join-Path $RepoRoot 'apps\backend\data\media'
+if (-not (Test-Path $mediaSrc) -and (Test-Path $mediaSrcBackend)) {
+    $mediaSrc = $mediaSrcBackend
+}
 if (Test-Path $mediaSrc) {
     New-Item -ItemType Directory -Force -Path $mediaOut | Out-Null
     Copy-Item -Path (Join-Path $mediaSrc '*') -Destination $mediaOut -Recurse -Force -ErrorAction SilentlyContinue
