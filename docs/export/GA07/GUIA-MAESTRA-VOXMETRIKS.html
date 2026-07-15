@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>VOXMETRIKS — Guía Maestra y Presentación</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  body { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.35; color: #15202b; }
+  h1 { font-size: 20pt; color: #0b3d2e; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; }
+  h2 { font-size: 14pt; color: #0f5c45; margin-top: 1.2em; }
+  h3 { font-size: 12pt; color: #1a6b52; }
+  table { border-collapse: collapse; width: 100%; margin: 0.6em 0 1em; font-size: 9pt; }
+  th, td { border: 1px solid #c5d0d6; padding: 4px 6px; vertical-align: top; }
+  th { background: #e8f5ef; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 8.5pt; }
+  pre { background: #f4f7f6; padding: 8px; overflow-x: auto; }
+  .cover { text-align: center; padding: 40px 10px 20px; }
+  .cover h1 { font-size: 26pt; page-break-before: avoid; }
+  .muted { color: #445; font-size: 10pt; }
+  .warn { background: #fff6e8; border-left: 4px solid #d48806; padding: 8px 10px; margin: 1em 0; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <h1>VOXMETRIKS</h1>
+  <p><strong>Guía maestra · Presentación de negocio · Resumen rápido</strong></p>
+  <p class="muted">Documento académico · inventarios verificados · pagos mock · sin contraseñas</p>
+  <div class="warn">La contraseña de demos vive solo en la variable de entorno <code>DEMO_ACCOUNT_PASSWORD</code>. No se imprime aquí.</div>
+</div>
+
+<article data-src='GUIA-MAESTRA-VOXMETRIKS.md'>
+<h1>GUÍA MAESTRA — VOXMETRIKS</h1>
+<p><strong>Documento para personas no técnicas y técnicas.</strong>  </p>
+<p><strong>Fecha de inventario:</strong> 2026-07-14  </p>
+<p><strong>Regla:</strong> todos los números de este documento vienen del repositorio, Specs, inventarios DuckDB verificados o conteos de código. No se inventan cifras.</p>
+<hr/>
+<h2>1. ¿Qué es VOXMETRIKS? (en palabras sencillas)</h2>
+<p><strong>VOXMETRIKS</strong> es una plataforma digital de música y gestión musical con dos caras del mismo negocio:</p>
+<ol>
+<li><strong>Para oyentes</strong> (personas): descubrir música, listas, favoritos, historial, y pagar un <strong>plan personal</strong> (Free o Premium).</li>
+<li><strong>Para empresas</strong> (disqueras, sellos, equipos comerciales): organizar clientes, vender <strong>planes empresariales</strong>, facturar, cobrar, ver resultados y administrar catálogo/derechos.</li>
+</ol>
+<p>Piensa en Spotify/Apple Music por el lado “escuchar”, y en un CRM + facturación + analítica por el lado “empresa”.</p>
+<h3>Qué problema resuelve</h3>
+<ul>
+<li>A las <strong>personas</strong>: centralizar descubrimiento musical, preferencias y suscripción en un solo producto.</li>
+<li>A las <strong>empresas</strong>: seguir el ciclo comercial completo: prospecto → oportunidad → contrato/plan → factura → pago → métricas.</li>
+<li>Al <strong>proyecto académico</strong>: demostrar con datos reales/importados y datos sintéticos controlados cómo funciona un producto de negocio punta a punta.</li>
+</ul>
+<h3>Quiénes son sus usuarios</h3>
+<table><thead><tr>
+<th>Tipo</th>
+<th>Ejemplo</th>
+<th>Qué hace</th>
+</tr></thead><tbody>
+<tr>
+<td>Oyente Free / Premium</td>
+<td><code>listener.free</code>, <code>listener.premium</code></td>
+<td>Escucha, explora, gestiona plan y factura personal</td>
+</tr>
+<tr>
+<td>Titular de household</td>
+<td><code>household.owner</code></td>
+<td>Comparte un plan familiar entre miembros</td>
+</tr>
+<tr>
+<td>Vendedor / CRM</td>
+<td><code>sales.manager</code></td>
+<td>Prospectos y oportunidades</td>
+</tr>
+<tr>
+<td>Dueño de organización</td>
+<td><code>organization.owner</code></td>
+<td>Administra la disquera / empresa</td>
+</tr>
+<tr>
+<td>Finanzas</td>
+<td><code>finance.manager</code></td>
+<td>Facturas, cobros, conciliación</td>
+</tr>
+<tr>
+<td>Presentación negocio</td>
+<td><code>demo.business</code></td>
+<td>Menú reducido centrado en ingresos</td>
+</tr>
+<tr>
+<td>Ops / admin plataforma</td>
+<td><code>platform.admin</code></td>
+<td>Operaciones y catálogos globales</td>
+</tr>
+</tbody></table>
+<h1>Cómo genera dinero</h1>
+<ul>
+<li><strong>B2C:</strong> Free $0 · Individual $4.99/$49.90 · Duo $7.99/$79.90 · Familiar $9.99/$99.90 (mock).  </li>
+<li><strong>B2B:</strong> Starter $49/$490 · Professional $99/$990 · Business $199/$1 990 · Enterprise $499/$4 990 (mock).  </li>
+<li><strong>Regalías 030:</strong> fondo aprobado ≠ ingreso total; payout <strong>simulado</strong>.  </li>
+<li><strong>Publicación 031:</strong> subir ≠ publicar.</li>
+</ul>
+<p>Inventario y cierre: <code>docs/INVENTARIO-FINAL-VERIFICADO.md</code> · <code>docs/AUDITORIA-CIERRE-FINAL.md</code> · estado <strong>ENTERPRISE_ACADEMIC_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT</strong>.</p>
+<p>Los pagos en este entorno son <strong>MOCK / simulados</strong> (académicos). No se cobró dinero real a tarjetas bancarias de producción.</p>
+<h3>B2C vs B2B (qué significan)</h3>
+<ul>
+<li><strong>B2C (Business to Consumer):</strong> la empresa vende a una <strong>persona</strong>. Aquí: plan Free/Premium, factura personal, hogar (household).</li>
+<li><strong>B2B (Business to Business):</strong> la empresa vende a <strong>otra empresa</strong>. Aquí: organización (disquera), seats, CRM, facturación empresarial.</li>
+</ul>
+<h3>Usuario personal, household y organización</h3>
+<ul>
+<li><strong>Usuario personal:</strong> una cuenta individual (tú y tu plan).</li>
+<li><strong>Household (hogar/grupo):</strong> un plan Familiar/Duo que agrupa varias cuentas personales bajo un titular.</li>
+<li><strong>Organización:</strong> la “empresa” dentro del sistema (ej. *VOXMETRIKS Demo*). Tiene miembros, roles, plan empresarial y facturas propias. No es lo mismo que un household.</li>
+</ul>
+<h3>¿Qué datos son reales, importados, sintéticos, demo o simulados?</h3>
+<table><thead><tr>
+<th>Tipo</th>
+<th>Significado</th>
+<th>En VOXMETRIKS</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Importado</strong></td>
+<td>Sacado de datasets externos (catálogo musical)</td>
+<td>Canciones, artistas, álbumes en dimensiones <code>dim_*</code></td>
+</tr>
+<tr>
+<td><strong>Sintético</strong></td>
+<td>Generado por algoritmos a partir del catálogo</td>
+<td>~900.000 eventos de actividad derivados</td>
+</tr>
+<tr>
+<td><strong>Demo</strong></td>
+<td>Sembrado solo para demos académicas</td>
+<td>Org *VOXMETRIKS Demo*, prospectos <code>[SYNTHETIC]</code>, cuentas <code>*.demo.voxmetriks.local</code></td>
+</tr>
+<tr>
+<td><strong>Simulado / MOCK</strong></td>
+<td>Parece un pago/proveedor real, pero no lo es</td>
+<td>Checkout mock, intentos de pago mock</td>
+</tr>
+<tr>
+<td><strong>Real de producto</strong></td>
+<td>Lógica de negocio real del sistema</td>
+<td>RBAC, estados de suscripción, facturas, conciliación de laboratorio</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>2. Glosario completo (técnico y no técnico)</h2>
+<p>Cada término: <strong>qué es</strong> → <strong>para qué sirve</strong>.</p>
+<h3>Negocio</h3>
+<table><thead><tr>
+<th>Término</th>
+<th>Qué es</th>
+<th>Para qué sirve</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>B2C</strong></td>
+<td>Venta a consumidor final</td>
+<td>Explicar planes personales y facturas de oyente</td>
+</tr>
+<tr>
+<td><strong>B2B</strong></td>
+<td>Venta a otra empresa</td>
+<td>Explicar planes de organización y CRM</td>
+</tr>
+<tr>
+<td><strong>Plan</strong></td>
+<td>Paquete de beneficios con precio</td>
+<td>Elegir Free/Premium o Starter/Enterprise</td>
+</tr>
+<tr>
+<td><strong>Suscripción</strong></td>
+<td>Contrato activo a un plan</td>
+<td>Mantener el acceso mientras se pague</td>
+</tr>
+<tr>
+<td><strong>Factura</strong></td>
+<td>Documento de cobro</td>
+<td>Mostrar cuánto se debe / se pagó</td>
+</tr>
+<tr>
+<td><strong>Pago (mock)</strong></td>
+<td>Intento de pagar en laboratorio</td>
+<td>Demostrar flujo de cobro sin banco real</td>
+</tr>
+<tr>
+<td><strong>Conciliación</strong></td>
+<td>Cruzar facturas vs pagos</td>
+<td>Verificar que lo cobrado cuadre</td>
+</tr>
+<tr>
+<td><strong>Refund</strong></td>
+<td>Devolución de dinero</td>
+<td>Corregir cobros (en laboratorio)</td>
+</tr>
+<tr>
+<td><strong>Credit note</strong></td>
+<td>Nota de crédito</td>
+<td>Ajuste contable sin reembolso en efectivo</td>
+</tr>
+<tr>
+<td><strong>MRR</strong></td>
+<td>Monthly Recurring Revenue — ingreso mensual recurrente</td>
+<td>Medir salud de ingresos</td>
+</tr>
+<tr>
+<td><strong>ARR</strong></td>
+<td>Annual Recurring Revenue — MRR×12 (o anualizado)</td>
+<td>Hablar de escala anual</td>
+</tr>
+<tr>
+<td><strong>past_due</strong></td>
+<td>Suscripción atrasada de pago</td>
+<td>Señal de riesgo de churn</td>
+</tr>
+<tr>
+<td><strong>Trial</strong></td>
+<td>Periodo de prueba</td>
+<td>Probar el plan antes de pagar</td>
+</tr>
+<tr>
+<td><strong>Seat</strong></td>
+<td>“Asiento” / licencia de usuario en un plan B2B</td>
+<td>Limitar cuántas personas caben en el plan</td>
+</tr>
+<tr>
+<td><strong>Entitlement</strong></td>
+<td>Derecho concreto ganado por el plan</td>
+<td>Abrir/cerrar capacidades (ej. calidad, módulos)</td>
+</tr>
+<tr>
+<td><strong>Project</strong></td>
+<td>Unidad de trabajo/proyecto en contexto empresarial</td>
+<td>Agrupar trabajo dentro de la org (cuando aplique el módulo)</td>
+</tr>
+<tr>
+<td><strong>SSO</strong></td>
+<td>Single Sign-On — un login para varios sistemas</td>
+<td>Capacidad empresarial (puede ser académica/declarada)</td>
+</tr>
+<tr>
+<td><strong>SLA</strong></td>
+<td>Service Level Agreement — acuerdo de nivel de servicio</td>
+<td>Promesas de disponibilidad/soporte en Enterprise</td>
+</tr>
+<tr>
+<td><strong>CRM</strong></td>
+<td>Customer Relationship Management</td>
+<td>Gestionar prospectos y oportunidades de venta</td>
+</tr>
+<tr>
+<td><strong>Prospecto</strong></td>
+<td>Cliente potencial</td>
+<td>Inicio del embudo comercial</td>
+</tr>
+<tr>
+<td><strong>Oportunidad</strong></td>
+<td>Negocio en negociación</td>
+<td>Mover deal hacia cierre</td>
+</tr>
+<tr>
+<td><strong>KPI</strong></td>
+<td>Key Performance Indicator</td>
+<td>Número clave de éxito</td>
+</tr>
+<tr>
+<td><strong>Customer Success (CS)</strong></td>
+<td>Equipo que ayuda a que el cliente tenga éxito</td>
+<td>Retención y expansión</td>
+</tr>
+<tr>
+<td><strong>Churn</strong></td>
+<td>Cancelación / pérdida de clientes</td>
+<td>Medir fugas de ingreso</td>
+</tr>
+<tr>
+<td><strong>ELT</strong></td>
+<td>Extract-Load-Transform (pipeline de datos)</td>
+<td>Llevar datos crudos al warehouse</td>
+</tr>
+<tr>
+<td><strong>RBAC</strong></td>
+<td>Control de acceso por roles</td>
+<td>Decidir quién ve/hace qué</td>
+</tr>
+<tr>
+<td><strong>Household</strong></td>
+<td>Grupo familiar</td>
+<td>Compartir plan Duo/Familiar</td>
+</tr>
+<tr>
+<td><strong>Organización</strong></td>
+<td>Empresa en el sistema</td>
+<td>Contenedor B2B</td>
+</tr>
+<tr>
+<td><strong>Disquera / sello</strong></td>
+<td>Tipo de organización musical</td>
+<td>Ejemplo de cliente B2B</td>
+</tr>
+</tbody></table>
+<h3>Técnica</h3>
+<table><thead><tr>
+<th>Término</th>
+<th>Qué es</th>
+<th>Para qué sirve</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Frontend</strong></td>
+<td>App web que ves (Angular)</td>
+<td>Pantallas y navegación</td>
+</tr>
+<tr>
+<td><strong>Backend</strong></td>
+<td>API (FastAPI)</td>
+<td>Reglas de negocio y datos</td>
+</tr>
+<tr>
+<td><strong>Endpoint</strong></td>
+<td>URL de la API (GET/POST…)</td>
+<td>Que el frontend pida/guarde datos</td>
+</tr>
+<tr>
+<td><strong>Caso de uso</strong></td>
+<td>Acción de negocio encapsulada</td>
+<td>“crear factura”, “iniciar trial”…</td>
+</tr>
+<tr>
+<td><strong>Package-by-domain</strong></td>
+<td>Código agrupado por dominio (billing, crm…)</td>
+<td>Mantener el sistema ordenado</td>
+</tr>
+<tr>
+<td><strong>DuckDB</strong></td>
+<td>Base analítica embebida</td>
+<td>Warehouse local de demos</td>
+</tr>
+<tr>
+<td><strong>Warehouse</strong></td>
+<td>Almacén analítico</td>
+<td>dims/facts/aggs</td>
+</tr>
+<tr>
+<td><strong>app_</strong>*</td>
+<td>Tablas de aplicación/transaccionales</td>
+<td>Usuarios, facturas, orgs</td>
+</tr>
+<tr>
+<td><strong>dim_</strong>*</td>
+<td>Dimensiones (catálogo)</td>
+<td>Canciones, artistas…</td>
+</tr>
+<tr>
+<td><strong>fact_</strong>*</td>
+<td>Hechos/eventos</td>
+<td>Reproducciones, búsquedas…</td>
+</tr>
+<tr>
+<td><strong>agg_</strong>*</td>
+<td>Agregados precalculados</td>
+<td>Dashboards rápidos</td>
+</tr>
+<tr>
+<td><strong>ctl_</strong>*</td>
+<td>Control/metadatos de carga</td>
+<td>Auditoría del pipeline</td>
+</tr>
+<tr>
+<td><strong>Bronze / Silver / Gold</strong></td>
+<td>Capas del pipeline</td>
+<td>Crudo → limpio → listo para negocio</td>
+</tr>
+<tr>
+<td><strong>Golden Path</strong></td>
+<td>Camino feliz probado punta a punta</td>
+<td>Demostrar que el flujo crítico funciona</td>
+</tr>
+<tr>
+<td><strong>SMTP</strong></td>
+<td>Protocolo de correo</td>
+<td>Envío de emails (en lab suele ir a consola)</td>
+</tr>
+<tr>
+<td><strong>i18n</strong></td>
+<td>Internacionalización</td>
+<td>ES/EN en la interfaz</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>3. Mapa de módulos (todos)</h2>
+<p>Para cada módulo: significado, uso, menú, ruta, flujo, datos, acciones, relaciones, ejemplo, términos, estado.</p>
+<h3>3.1 Música / Inicio</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Inicio / Descubrir</td>
+</tr>
+<tr>
+<td><strong>Qué es</strong></td>
+<td>Pantalla principal del oyente</td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Empezar a explorar el catálogo</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td>Cualquier usuario autenticado</td>
+</tr>
+<tr>
+<td><strong>Menú</strong></td>
+<td>PERSONAL → Inicio (cuenta presentación) / Música → Inicio</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/discover</code></td>
+</tr>
+<tr>
+<td><strong>Flujo</strong></td>
+<td>Login → Inicio → play / buscar</td>
+</tr>
+<tr>
+<td><strong>Datos</strong></td>
+<td>Rails de descubrimiento, KPIs de catálogo (tracks/artistas/eventos)</td>
+</tr>
+<tr>
+<td><strong>Acciones</strong></td>
+<td>Reproducir, navegar a detalle</td>
+</tr>
+<tr>
+<td><strong>Relación</strong></td>
+<td>Catálogo warehouse + streaming</td>
+</tr>
+<tr>
+<td><strong>Ejemplo</strong></td>
+<td>Abrir Inicio y ver canciones sugeridas</td>
+</tr>
+<tr>
+<td><strong>Términos</strong></td>
+<td>catálogo, evento analítico</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (catálogo importado)</td>
+</tr>
+</tbody></table>
+<h3>3.2 Playlists</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Listas / Playlists</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/playlists</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Crear y organizar colecciones propias</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td>Oyentes</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.3 Favoritos</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Canciones que te gustan</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/liked</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Guardar likes</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.4 Historial</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Historial</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/history</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Ver qué escuchaste</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.5 Recomendaciones</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Recomendaciones</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/recommendations</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Sugerir música (incluye capas smart/AI según feature)</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional con componentes demo/académicos según motor</td>
+</tr>
+</tbody></table>
+<h3>3.6 Analítica musical</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Analítica / trending / comparativas / insights</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/analytics</code>, <code>/trending</code>, <code>/comparatives</code>, <code>/insights/*</code>, <code>/dashboard</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Entender comportamiento de escucha sobre el warehouse</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (datos mayormente sintéticos derivados)</td>
+</tr>
+</tbody></table>
+<h3>3.7 Datos y ELT</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Pipeline ELT / Explorador</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/elt-pipeline</code>, <code>/explorer</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Ver cargas Bronze→Silver→Gold y explorar tablas</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td>roles engineer/admin</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (operación de laboratorio)</td>
+</tr>
+</tbody></table>
+<h3>3.8 Suscripciones personales (B2C)</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Plan personal / Planes personales / Facturación personal / Household</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/account/subscription</code>, <code>/account/plans</code>, <code>/account/billing</code>, <code>/account/household</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Cambiar de Free a Premium, facturar y compartir hogar</td>
+</tr>
+<tr>
+<td><strong>Planes</strong></td>
+<td>Free · Premium Individual · Premium Duo · Premium Familiar</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional + pagos <strong>simulados</strong></td>
+</tr>
+</tbody></table>
+<h3>3.9 Households</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/account/household</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Invitar miembros al plan Duo/Familiar</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.10 Organizaciones</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/organizations/*</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Crear/gestionar la empresa, miembros, invitaciones, auditoría</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.11 CRM</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/crm/dashboard</code>, <code>/crm/prospects</code>, <code>/crm/opportunities</code>, <code>/crm/contacts</code>, <code>/crm/approvals</code>, <code>/crm/audit</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Embudo comercial B2B</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (datos demo etiquetados)</td>
+</tr>
+</tbody></table>
+<h3>3.12 Suscripciones empresariales (B2B)</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/subscriptions/overview</code>, <code>/subscriptions/plans</code>, <code>/subscriptions/trial</code></td>
+</tr>
+<tr>
+<td><strong>Planes</strong></td>
+<td>Starter · Professional · Business · Enterprise</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional + trial/academia según plan</td>
+</tr>
+</tbody></table>
+<h3>3.13 Facturación / Pagos / Conciliación</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/billing/invoices</code>, <code>/billing/payment-attempts</code>, <code>/billing/reconciliation</code>, <code>/billing/refunds</code>, <code>/billing/credit-notes</code>, <code>/billing/ledger</code>, …</td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Cobrar y cuadrar dinero (laboratorio)</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional · <strong>pagos mock</strong></td>
+</tr>
+</tbody></table>
+<h3>3.14 Artistas empresariales / Catálogo / Lanzamientos / Derechos / Territorios / Usos / Conflictos</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/artist-profiles</code>, <code>/catalog-rights/assets</code>, <code>/catalog-rights/releases</code>, <code>/catalog-rights/contracts</code>, <code>/catalog-rights/conflicts</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Gestionar catálogo empresarial y derechos (ámbito académico)</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional con etiquetas demo/sintéticas; <strong>no es licencia legal real</strong></td>
+</tr>
+</tbody></table>
+<h3>3.15 Campañas</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/campaigns</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Planificar y medir campañas</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (demo seed)</td>
+</tr>
+</tbody></table>
+<h3>3.16 Analítica empresarial / KPI / Reportes / Decisiones</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/business-analytics</code>, <code>/business-analytics/kpis</code>, <code>/business-analytics/alerts</code>, <code>/reports</code>, <code>/business-decisions</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Ver resultados B2B/B2C y decidir con evidencia</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (mezcla métricas warehouse + app)</td>
+</tr>
+</tbody></table>
+<h3>3.17 Customer Success / Soporte</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/customer-success</code>, <code>/support</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Salud del cliente y tickets</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (datos demo)</td>
+</tr>
+</tbody></table>
+<h3>3.18 Privacidad / Cumplimiento</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/compliance</code>, <code>/compliance/admin</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Privacidad y controles de cumplimiento</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional (capa académica)</td>
+</tr>
+</tbody></table>
+<h3>3.19 Operaciones de plataforma</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/platform-ops</code></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Operar la plataforma a nivel global</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td>platform admin / engineer</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional</td>
+</tr>
+</tbody></table>
+<h3>3.22 Distribución musical / portal artista (Spec 031)</h3>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Distribución musical · Mi carrera</td>
+</tr>
+<tr>
+<td><strong>Qué es</strong></td>
+<td>Subir música en privado, revisión de catálogo, derechos y publicación</td>
+</tr>
+<tr>
+<td><strong>Diferencia clave</strong></td>
+<td><strong>Subir ≠ publicar</strong>. Lo subido es privado hasta aprobación</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td><code>demo.artist</code>, artist_manager, catalog_reviewer, rights</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/artist/*</code>, <code>/catalog-review/*</code></td>
+</tr>
+<tr>
+<td><strong>Media</strong></td>
+<td><code>data/media/private</code> y <code>data/media/published</code> · API <code>/api/v1/media/{id}/content</code></td>
+</tr>
+<tr>
+<td><strong>Audio</strong></td>
+<td>Prioridad <code>local_published</code> en el resolutor</td>
+</tr>
+<tr>
+<td><strong>Regalías</strong></td>
+<td>Tras publicar + eventos válidos, Spec 030 puede atribuir</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional académico · sin distribución Spotify/Apple real</td>
+</tr>
+</tbody></table>
+<hr/>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Nombre</strong></td>
+<td>Regalías y pagos</td>
+</tr>
+<tr>
+<td><strong>Qué es</strong></td>
+<td>Fondos distribuibles, liquidaciones, estados de cuenta y payouts <strong>simulados</strong></td>
+</tr>
+<tr>
+<td><strong>Para qué</strong></td>
+<td>Demostrar cómo un ingreso cobrado puede repartirse según contratos de derechos</td>
+</tr>
+<tr>
+<td><strong>Quién</strong></td>
+<td>Finance / billing_manager (gestión); artist_manager (consulta); <code>demo.business</code> (lectura)</td>
+</tr>
+<tr>
+<td><strong>Menú</strong></td>
+<td>FINANZAS / REGALÍAS Y PAGOS</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/royalties</code>, <code>/royalties/pools</code>, <code>/royalties/settlements</code>, <code>/royalties/statements</code>, <code>/payouts</code></td>
+</tr>
+<tr>
+<td><strong>Flujo</strong></td>
+<td>Pago settled → fuente → fondo aprobado → atribución → split contractual → settlement → payout simulado → statement</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td>Funcional académico · <strong>sin dinero real</strong> · sin % universal</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>4. Mapa de navegación completo</h2>
+<p>Árbol conceptual (roles típicos entre paréntesis):</p>
+<pre><code>
+Música
+
+  → PRINCIPAL: Inicio /discover (todos)
+
+  → MÚSICA: artistas, tracks, géneros, audio, search, playlists, liked, history (oyentes)
+
+  → CUENTA PERSONAL: plan, planes, household, billing (oyentes)
+
+  → RECOMENDACIONES: /recommendations (oyentes)
+
+
+
+Analítica
+
+  → ANALÍTICA musical: /analytics, /trending, /comparatives (oyentes+)
+
+  → DATOS: ELT, explorer (engineer)
+
+
+
+Clientes
+
+  → CRM: dashboard, prospects, contacts, opportunities, approvals, audit (sales_*)
+
+  → CS / Soporte (org + permisos)
+
+
+
+Suscripciones y Finanzas
+
+  → Suscripciones B2B: overview, plans, trial (org + subscription.*)
+
+  → Billing: invoices, attempts, reconciliation, refunds… (billing.* / finance)
+
+
+
+Gestión artística
+
+  → Perfiles artista, catalog-rights, campaigns (org)
+
+
+
+Dirección
+
+  → Business analytics, reports, decisions (org)
+
+
+
+Administración
+
+  → Organizaciones, compliance, platform-ops, settings
+
+</code></pre>
+<h3>Tabla “qué demuestra”</h3>
+<table><thead><tr>
+<th>Módulo</th>
+<th>Menú</th>
+<th>Ruta</th>
+<th>Rol principal</th>
+<th>Qué demuestra</th>
+</tr></thead><tbody>
+<tr>
+<td>Inicio</td>
+<td>Personal/Música</td>
+<td><code>/discover</code></td>
+<td>oyente</td>
+<td>Catálogo vivo</td>
+</tr>
+<tr>
+<td>Plan personal</td>
+<td>Personal</td>
+<td><code>/account/subscription</code></td>
+<td>oyente</td>
+<td>Estado B2C</td>
+</tr>
+<tr>
+<td>Planes personales</td>
+<td>Personal</td>
+<td><code>/account/plans</code></td>
+<td>oyente</td>
+<td>Free→Premium</td>
+</tr>
+<tr>
+<td>Facturación personal</td>
+<td>Personal</td>
+<td><code>/account/billing</code></td>
+<td>oyente</td>
+<td>Factura B2C</td>
+</tr>
+<tr>
+<td>Panel CRM</td>
+<td>Ventas</td>
+<td><code>/crm/dashboard</code></td>
+<td>sales_manager</td>
+<td>Embudo</td>
+</tr>
+<tr>
+<td>Prospectos</td>
+<td>Ventas</td>
+<td><code>/crm/prospects</code></td>
+<td>sales_manager</td>
+<td>Lead gen</td>
+</tr>
+<tr>
+<td>Oportunidades</td>
+<td>Ventas</td>
+<td><code>/crm/opportunities</code></td>
+<td>sales_manager</td>
+<td>Cierre</td>
+</tr>
+<tr>
+<td>Estado org</td>
+<td>Organización</td>
+<td><code>/organizations/.../settings</code></td>
+<td>member+</td>
+<td>Org activa</td>
+</tr>
+<tr>
+<td>Plan org</td>
+<td>Organización</td>
+<td><code>/subscriptions/overview</code></td>
+<td>billing/owner</td>
+<td>B2B plan</td>
+</tr>
+<tr>
+<td>Planes empresariales</td>
+<td>Organización</td>
+<td><code>/subscriptions/plans</code></td>
+<td>billing/owner</td>
+<td>Catálogo B2B</td>
+</tr>
+<tr>
+<td>Facturas</td>
+<td>Cobros</td>
+<td><code>/billing/invoices</code></td>
+<td>billing_manager</td>
+<td>Ingresos</td>
+</tr>
+<tr>
+<td>Intentos pago</td>
+<td>Cobros</td>
+<td><code>/billing/payment-attempts</code></td>
+<td>billing_manager</td>
+<td>Mock pay</td>
+</tr>
+<tr>
+<td>Conciliación</td>
+<td>Cobros</td>
+<td><code>/billing/reconciliation</code></td>
+<td>billing_manager</td>
+<td>Cuadre</td>
+</tr>
+<tr>
+<td>Panel empresarial</td>
+<td>Resultados</td>
+<td><code>/business-analytics</code></td>
+<td>org viewer</td>
+<td>Resultados</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>5. Inventario técnico verificado (2026-07-14)</h2>
+<h3>Cómo se midió</h3>
+<table><thead><tr>
+<th>Métrica</th>
+<th>Método</th>
+</tr></thead><tbody>
+<tr>
+<td>Specs</td>
+<td>Carpetas <code>automation/specs/NNN-*</code></td>
+</tr>
+<tr>
+<td>Paquetes BE/FE</td>
+<td>Directorios en <code>apps/backend/app/packages</code> y <code>apps/frontend/src/app/packages</code></td>
+</tr>
+<tr>
+<td>Endpoints</td>
+<td>Decoradores `@*router.(get</td>
+<td>post</td>
+<td>put</td>
+<td>patch</td>
+<td>delete)<code> en </code>apps/backend/app/**/*.py`</td>
+</tr>
+<tr>
+<td>Casos de uso</td>
+<td>Métodos/funciones públicas en archivos <code>*use_cases*.py</code> (sin <code>_privados</code>)</td>
+</tr>
+<tr>
+<td>Rutas FE</td>
+<td>Literales <code>path:</code> en <code>*routes*.ts</code></td>
+</tr>
+<tr>
+<td>Tests BE</td>
+<td><code>apps/backend/tests/test_*.py</code></td>
+</tr>
+<tr>
+<td>Tests FE</td>
+<td><code>**/*.spec.ts</code> bajo frontend/src</td>
+</tr>
+<tr>
+<td>Tamaño DuckDB</td>
+<td><code>os.path.getsize(data/warehouse/voxmetrik.duckdb)</code></td>
+</tr>
+<tr>
+<td>Filas catálogo/eventos</td>
+<td>Inventario verificable en <code>.tmp_duckdb_inventory_out.txt</code> + evidencia Specs 014/016/017 (consulta live bloqueada por proceso Python PID 15808 al momentear)</td>
+</tr>
+<tr>
+<td>Prefijos tabla</td>
+<td>Regex de nombres `app_</td>
+<td>dim_</td>
+<td>fact_</td>
+<td>agg_</td>
+<td>ctl_` referenciados en backend</td>
+</tr>
+</tbody></table>
+<h3>Cifras</h3>
+<table><thead><tr>
+<th>Ítem</th>
+<th>Cantidad exacta</th>
+<th>Nota</th>
+</tr></thead><tbody>
+<tr>
+<td>Specs <code>001</code>…<code>029</code></td>
+<td><strong>29</strong></td>
+<td>Primera <code>001-user-identity-access</code>, última <code>029-personal-music-subscriptions</code></td>
+</tr>
+<tr>
+<td>Paquetes backend</td>
+<td><strong>22</strong></td>
+<td>Ver lista abajo</td>
+</tr>
+<tr>
+<td>Paquetes frontend</td>
+<td><strong>22</strong></td>
+<td>Ver lista abajo</td>
+</tr>
+<tr>
+<td>Endpoints API (decoradores router)</td>
+<td><strong>467</strong></td>
+<td>Incluye paquetes + routers en raíz <code>app</code> (36)</td>
+</tr>
+<tr>
+<td>Casos de uso públicos (<code>*use_cases*</code>)</td>
+<td><strong>358</strong></td>
+<td>13 dominios con archivo use_cases; otros dominios usan services</td>
+</tr>
+<tr>
+<td>Literales de ruta frontend</td>
+<td><strong>110</strong></td>
+<td>15 archivos <code>*routes*.ts</code></td>
+</tr>
+<tr>
+<td>Tests backend</td>
+<td><strong>86</strong></td>
+<td><code>test_*.py</code> top-level</td>
+</tr>
+<tr>
+<td>Tests frontend</td>
+<td><strong>24</strong></td>
+<td><code>*.spec.ts</code></td>
+</tr>
+<tr>
+<td>Tamaño DuckDB actual</td>
+<td><strong>393.01 MB</strong></td>
+<td><code>voxmetrik.duckdb</code></td>
+</tr>
+<tr>
+<td>Canciones <code>dim_track</code></td>
+<td><strong>89 740</strong></td>
+<td>Inventario warehouse</td>
+</tr>
+<tr>
+<td>Artistas <code>dim_artista</code></td>
+<td><strong>31 429</strong></td>
+<td>Inventario warehouse</td>
+</tr>
+<tr>
+<td>Álbumes <code>dim_album</code></td>
+<td><strong>46 154</strong></td>
+<td>Inventario warehouse</td>
+</tr>
+<tr>
+<td>Eventos analíticos (suma ACTIVITY facts)</td>
+<td><strong>900 000</strong></td>
+<td><code>synthetic_activity_target_900000</code> (ctl)</td>
+</tr>
+<tr>
+<td>Tablas referenciadas por prefijo (código)</td>
+<td><strong>app_ 149 · dim_ 8 · fact_ 10 · agg_ 29 · ctl_ 2</strong> (+20 other); <strong>218</strong> nombres</td>
+<td>Heurística estática</td>
+</tr>
+<tr>
+<td>Filas inventariadas (snapshot)</td>
+<td>dim\* <strong>184 658</strong> + fact\* <strong>900 000</strong> + agg\* <strong>164 822</strong> + app\* <strong>4 899</strong> + ctl\* <strong>27</strong> (+ raw_spotify 89 740)</td>
+<td><code>.tmp_duckdb_inventory_out.txt</code></td>
+</tr>
+<tr>
+<td>Golden Path artefacts</td>
+<td><strong>3</strong> archivos + tests asociados Spec 028/029</td>
+<td>Ver paths abajo</td>
+</tr>
+</tbody></table>
+<p><strong>Paquetes backend (22):</strong> ai, analytics, artists, billing, business_analytics, campaigns, catalog, catalog_rights, compliance, contracts, crm, customer_success, engagement, identity, organizations, personal_subscriptions, platform_ops, platform_rbac, reporting, streaming, subscriptions, users.</p>
+<p><strong>Paquetes frontend (22):</strong> administration, ai, analytics, artists, billing, business-analytics, campaigns, catalog-rights, compliance, crm, customer-success, data-engineering, history, organizations, personal-account, platform-ops, recommendations, reporting, smart, streaming, subscriptions, users.</p>
+<h3>Endpoints por dominio (router)</h3>
+<table><thead><tr>
+<th>Dominio</th>
+<th>Endpoints</th>
+</tr></thead><tbody>
+<tr>
+<td>crm</td>
+<td>43</td>
+</tr>
+<tr>
+<td>billing</td>
+<td>39</td>
+</tr>
+<tr>
+<td>subscriptions</td>
+<td>32</td>
+</tr>
+<tr>
+<td>campaigns</td>
+<td>30</td>
+</tr>
+<tr>
+<td>catalog_rights</td>
+<td>29</td>
+</tr>
+<tr>
+<td>customer_success</td>
+<td>29</td>
+</tr>
+<tr>
+<td>analytics</td>
+<td>27</td>
+</tr>
+<tr>
+<td>compliance</td>
+<td>26</td>
+</tr>
+<tr>
+<td>catalog</td>
+<td>24</td>
+</tr>
+<tr>
+<td>reporting</td>
+<td>22</td>
+</tr>
+<tr>
+<td>platform_ops</td>
+<td>21</td>
+</tr>
+<tr>
+<td>artists</td>
+<td>19</td>
+</tr>
+<tr>
+<td>organizations</td>
+<td>19</td>
+</tr>
+<tr>
+<td>personal_subscriptions</td>
+<td>17</td>
+</tr>
+<tr>
+<td>business_analytics</td>
+<td>14</td>
+</tr>
+<tr>
+<td>engagement</td>
+<td>11</td>
+</tr>
+<tr>
+<td>identity</td>
+<td>11</td>
+</tr>
+<tr>
+<td>contracts</td>
+<td>10</td>
+</tr>
+<tr>
+<td>ai</td>
+<td>8</td>
+</tr>
+<tr>
+<td>_app_root</td>
+<td>36</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>467</strong></td>
+</tr>
+</tbody></table>
+<h3>Casos de uso por dominio (<code>*use_cases*</code>)</h3>
+<table><thead><tr>
+<th>Dominio</th>
+<th>Casos de uso</th>
+</tr></thead><tbody>
+<tr>
+<td>crm</td>
+<td>42</td>
+</tr>
+<tr>
+<td>billing</td>
+<td>40</td>
+</tr>
+<tr>
+<td>subscriptions</td>
+<td>37</td>
+</tr>
+<tr>
+<td>campaigns</td>
+<td>32</td>
+</tr>
+<tr>
+<td>catalog_rights</td>
+<td>31</td>
+</tr>
+<tr>
+<td>compliance</td>
+<td>31</td>
+</tr>
+<tr>
+<td>customer_success</td>
+<td>31</td>
+</tr>
+<tr>
+<td>platform_ops</td>
+<td>26</td>
+</tr>
+<tr>
+<td>reporting</td>
+<td>24</td>
+</tr>
+<tr>
+<td>artists</td>
+<td>20</td>
+</tr>
+<tr>
+<td>personal_subscriptions</td>
+<td>17</td>
+</tr>
+<tr>
+<td>business_analytics</td>
+<td>17</td>
+</tr>
+<tr>
+<td>contracts</td>
+<td>10</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>358</strong></td>
+</tr>
+</tbody></table>
+<h3>Tabla resumen dominio</h3>
+<table><thead><tr>
+<th>Dominio</th>
+<th>Paquetes</th>
+<th>Casos de uso</th>
+<th>Endpoints</th>
+<th>Rutas FE (aprox. por área)</th>
+<th>Tablas (prefijo típico)</th>
+<th>Tests (área)</th>
+</tr></thead><tbody>
+<tr>
+<td>Identity / users / orgs</td>
+<td>identity, users, organizations, platform_rbac</td>
+<td>(services + org/UC mixtos)</td>
+<td>11+19+…</td>
+<td>organizations + auth</td>
+<td><code>app_user*</code>, <code>app_organization*</code></td>
+<td>tests identity/org</td>
+</tr>
+<tr>
+<td>Streaming / catálogo</td>
+<td>streaming, catalog, engagement, analytics</td>
+<td>services</td>
+<td>24+11+27+…</td>
+<td>music + insights</td>
+<td><code>dim_*</code>, <code>fact_*</code></td>
+<td>analytics/events</td>
+</tr>
+<tr>
+<td>Personal subs</td>
+<td>personal_subscriptions</td>
+<td>17</td>
+<td>17</td>
+<td><code>/account/*</code> (4)</td>
+<td><code>app_*</code> personal</td>
+<td>Spec 029 tests</td>
+</tr>
+<tr>
+<td>CRM / contracts</td>
+<td>crm, contracts</td>
+<td>42+10</td>
+<td>43+10</td>
+<td><code>/crm/*</code> (14)</td>
+<td><code>app_crm_*</code></td>
+<td>Spec 017</td>
+</tr>
+<tr>
+<td>Subscriptions B2B</td>
+<td>subscriptions</td>
+<td>37</td>
+<td>32</td>
+<td><code>/subscriptions/*</code> (9)</td>
+<td><code>app_subscription*</code></td>
+<td>Specs billing/subs</td>
+</tr>
+<tr>
+<td>Billing</td>
+<td>billing</td>
+<td>40</td>
+<td>39</td>
+<td><code>/billing/*</code> (10)</td>
+<td><code>app_invoice*</code>, payments</td>
+<td>billing tests</td>
+</tr>
+<tr>
+<td>Rights / artists / campaigns</td>
+<td>catalog_rights, artists, campaigns</td>
+<td>31+20+32</td>
+<td>29+19+30</td>
+<td>rights/artists/campaigns</td>
+<td><code>app_*</code> rights</td>
+<td>Specs derechos</td>
+</tr>
+<tr>
+<td>CS / compliance / ops / reporting / biz analytics</td>
+<td>varios</td>
+<td>31+31+26+24+17</td>
+<td>…</td>
+<td>CS, compliance, ops, reports, BA</td>
+<td><code>app_*</code> + KPIs</td>
+<td>Specs 02x</td>
+</tr>
+</tbody></table>
+<p><strong>Golden Paths:</strong>  </p>
+<ul>
+<li><code>automation/specs/015-enterprise-business-foundation/business-golden-path.md</code>  </li>
+<li><code>automation/specs/028-enterprise-integration-and-final-validation/golden-path-validation.md</code>  </li>
+<li><code>apps/backend/tests/test_enterprise_golden_path_s028.py</code>  </li>
+<li>(+ golden path personal en Spec 029)</li>
+</ul>
+<hr/>
+<h2>6. Arquitectura</h2>
+<h3>Explicación sencilla</h3>
+<ol>
+<li>Tú abres la <strong>web</strong> (Angular).</li>
+<li>La web habla con la <strong>API</strong> (FastAPI).</li>
+<li>La API ejecuta <strong>casos de uso</strong> (reglas de negocio).</li>
+<li>Los datos viven en <strong>DuckDB</strong>: tablas <code>app_*</code> (día a día) y warehouse (<code>dim_/fact_/agg_</code>).</li>
+<li>Un <strong>pipeline ELT</strong> convierte datos crudos (Bronze) en limpios (Silver) y listos (Gold).</li>
+<li><strong>RBAC</strong> decide permisos. Cada organización está <strong>aislada</strong>.</li>
+<li><strong>Pagos</strong> y a veces <strong>correo</strong> están en modo laboratorio (mock / consola).</li>
+</ol>
+<h3>Diagrama textual</h3>
+<pre><code>
+Usuario
+
+  → Frontend Angular
+
+    → API FastAPI (endpoints)
+
+      → Casos de uso / servicios (package-by-domain)
+
+        → DuckDB (app_* + warehouse dim_/fact_/agg_/ctl_)
+
+      ← respuesta JSON
+
+    ← pantallas
+
+</code></pre>
+<h3>Técnica breve</h3>
+<ul>
+<li><strong>Frontend:</strong> Angular standalone components, i18n ES/EN, layout con nav por roles.</li>
+<li><strong>Backend:</strong> FastAPI, paquetes por dominio.</li>
+<li><strong>DuckDB:</strong> un archivo warehouse local (<code>data/warehouse/voxmetrik.duckdb</code>, <strong>393.01 MB</strong> al inventariar).</li>
+<li><strong>Separación app vs warehouse:</strong> operativos vs analíticos.</li>
+<li><strong>Pipeline:</strong> Bronze → Silver → Gold; control en <code>ctl_*</code>.</li>
+<li><strong>Datos:</strong> catálogo importado (89 740 tracks); actividad sintética objetivo <strong>900 000</strong>.</li>
+<li><strong>Demo seed:</strong> org + CRM + billing etiquetados <code>[SYNTHETIC]</code> / <code>(Demo)</code>.</li>
+<li><strong>SMTP:</strong> configurable; en tests suele ser <code>console</code>.</li>
+<li><strong>RBAC + aislamiento org:</strong> permisos por rol de plataforma y de organización.</li>
+<li><strong>Golden Paths:</strong> tests punta a punta Spec 028/029.</li>
+</ul>
+<hr/>
+<h2>7. Modelo de negocio</h2>
+<h3>B2C</h3>
+<table><thead><tr>
+<th>Plan</th>
+<th>Idea</th>
+<th>Beneficios (producto)</th>
+<th>Cobro</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Free</strong></td>
+<td>Entrar sin pagar</td>
+<td>Acceso básico a exploración</td>
+<td>Sin cargo</td>
+</tr>
+<tr>
+<td><strong>Premium Individual</strong></td>
+<td>Una persona paga</td>
+<td>Entitlements premium (límites/features del plan)</td>
+<td>Factura personal + pago mock</td>
+</tr>
+<tr>
+<td><strong>Premium Duo</strong></td>
+<td>Dos personas</td>
+<td>Household reducido</td>
+<td>Idem</td>
+</tr>
+<tr>
+<td><strong>Premium Familiar</strong></td>
+<td>Familia</td>
+<td>Más miembros en household</td>
+<td>Idem</td>
+</tr>
+</tbody></table>
+<p><strong>Factura personal</strong> = documento B2C. <strong>Pago simulado</strong> = confirma la factura en laboratorio.</p>
+<h3>B2B</h3>
+<table><thead><tr>
+<th>Plan</th>
+<th>Idea</th>
+<th>Capacidades típicas de producto</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Starter</strong></td>
+<td>Entrada pequeña</td>
+<td>Base org + módulos limitados</td>
+</tr>
+<tr>
+<td><strong>Professional</strong></td>
+<td>Operación comercial</td>
+<td>CRM + suscripción org (demo canónico)</td>
+</tr>
+<tr>
+<td><strong>Business</strong></td>
+<td>Escala</td>
+<td>Más seats/capacidades según catálogo</td>
+</tr>
+<tr>
+<td><strong>Enterprise</strong></td>
+<td>Gran cuenta</td>
+<td>Capacidades avanzadas (SSO/SLA pueden ser académicas)</td>
+</tr>
+</tbody></table>
+<p><strong>Organización</strong> tiene <strong>miembros</strong> con roles. <strong>Factura empresarial</strong> y <strong>pago mock</strong> cierran el MRR B2B.</p>
+<h3>Ventajas reales (no genéricas)</h3>
+<ul>
+<li>Un solo sistema muestra <strong>ingreso consumidor + ingreso empresa</strong>.</li>
+<li>El catálogo musical <strong>importado</strong> da credibilidad visual.</li>
+<li>Los <strong>900 000 eventos</strong> permiten dashboards sin esperar tráfico real.</li>
+<li>El menú de <code>demo.business</code> evita distracciones técnicas en la defensa.</li>
+</ul>
+<hr/>
+<h2>8. Cuenta <code>demo.business</code> (presentación)</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Valor</th>
+</tr></thead><tbody>
+<tr>
+<td>Usuario</td>
+<td><code>demo.business</code></td>
+</tr>
+<tr>
+<td>Email</td>
+<td><code>demo.business@demo.voxmetriks.local</code></td>
+</tr>
+<tr>
+<td>Contraseña</td>
+<td>Variable de entorno <code>DEMO_ACCOUNT_PASSWORD</code> (nunca documentar el valor)</td>
+</tr>
+<tr>
+<td>Verificada</td>
+<td>Sí (<code>email_verified</code>)</td>
+</tr>
+<tr>
+<td>Org</td>
+<td><strong>VOXMETRIKS Demo</strong></td>
+</tr>
+<tr>
+<td>Roles</td>
+<td>plataforma <code>sales_manager</code> + org <code>billing_manager</code></td>
+</tr>
+<tr>
+<td>Preferencia UI</td>
+<td><code>presentation_nav=true</code> (solo menú; <strong>no borra rutas</strong>)</td>
+</tr>
+<tr>
+<td>Plan personal</td>
+<td>Premium Individual (mock)</td>
+</tr>
+</tbody></table>
+<h3>Menú visible</h3>
+<pre><code>
+PERSONAL
+
+  - Inicio                    /discover
+
+  - Plan personal             /account/subscription
+
+  - Planes personales         /account/plans
+
+  - Facturación personal      /account/billing
+
+
+
+VENTAS
+
+  - Panel CRM                 /crm/dashboard
+
+  - Prospectos                /crm/prospects
+
+  - Oportunidades             /crm/opportunities
+
+
+
+ORGANIZACIÓN
+
+  - Estado de organización    /organizations/{id}/settings  (o /organizations/none)
+
+  - Plan de la organización   /subscriptions/overview
+
+  - Planes empresariales      /subscriptions/plans
+
+
+
+COBROS
+
+  - Facturas                  /billing/invoices
+
+  - Intentos de pago          /billing/payment-attempts
+
+  - Conciliación              /billing/reconciliation
+
+
+
+RESULTADOS
+
+  - Panel empresarial         /business-analytics
+
+</code></pre>
+<h3>Qué NO se muestra (pero el sistema sigue existiendo)</h3>
+<p>ELT, exploradores, auditorías, artistas/derechos/conflictos/campañas, CS, soporte, cumplimiento, ops, administración global, household, approvals CRM, refunds/ledger en menú, KPIs/alerts BA.</p>
+<h3>Qué puede / no puede</h3>
+<table><thead><tr>
+<th>Puede</th>
+<th>No puede (sin roles peligrosos)</th>
+</tr></thead><tbody>
+<tr>
+<td>Ver planes B2C/B2B, CRM básico, facturas, intentos, conciliación, panel BA</td>
+<td>Cerrar org como owner, platform ops globales, administrar compliance como admin</td>
+</tr>
+</tbody></table>
+<p>Otras cuentas <strong>conservan el menú completo</strong>.</p>
+<hr/>
+<h2>9. Documentos hermanos</h2>
+<ul>
+<li><code>docs/GUIA-PRESENTACION-NEGOCIO.md</code> — guion ≤7 minutos  </li>
+<li><code>docs/RESUMEN-RAPIDO-PRESENTACION.md</code> — hoja de una mirada  </li>
+<li><code>docs/DEMO-ACCOUNTS.md</code> — cuentas demo (sin contraseñas)</li>
+</ul>
+<hr/>
+<h2>10. Confirmaciones</h2>
+<ul>
+<li>No se crearon Specs nuevas.</li>
+<li>No se eliminaron módulos, rutas, endpoints ni datos.</li>
+<li>No se cambiaron reglas de negocio.</li>
+<li>No se ejecutó Git en esta entrega documental/código de presentación.</li>
+</ul>
+</article>
+<article data-src='GUIA-PRESENTACION-NEGOCIO.md'>
+<h1>Guía de presentación del negocio — VOXMETRIKS</h1>
+<p><strong>Duración objetivo:</strong> ≤ 7 minutos  </p>
+<p><strong>Cuenta principal:</strong> <code>demo.business</code>  </p>
+<p><strong>Contraseña:</strong> variable <code>DEMO_ACCOUNT_PASSWORD</code> (no verbalizar ni proyectar el valor)  </p>
+<p><strong>Organización:</strong> VOXMETRIKS Demo  </p>
+<p>Si una pantalla falla, usa el <strong>plan B</strong> de cada paso y sigue. No improvises cifras: usa solo las de la guía maestra.</p>
+<hr/>
+<h2>Preparación (30 s antes)</h2>
+<ol>
+<li>Backend y frontend arriba.</li>
+<li>Seed ejecutado: <code>VOXMETRIKS_SEED_DEMO_ACCOUNTS=1</code> + <code>DEMO_ACCOUNT_PASSWORD</code>.</li>
+<li>Login con <code>demo.business</code>.</li>
+<li>Confirmar menú reducido: PERSONAL / VENTAS / ORGANIZACIÓN / COBROS / RESULTADOS.</li>
+<li>Tener a mano: <strong>89 740 canciones</strong>, <strong>900 000 eventos sintéticos</strong>, pagos <strong>mock</strong>.</li>
+</ol>
+<hr/>
+<h2>Minuto 0:00–0:40 — Apertura</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Cuenta</strong></td>
+<td><code>demo.business</code></td>
+</tr>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Login → Inicio</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/login</code> → <code>/discover</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Iniciar sesión y mostrar el menú lateral</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Menú reducido de 5 grupos; org VOXMETRIKS Demo seleccionable</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«VOXMETRIKS es una plataforma de música y de negocio musical. Hoy demostraré cómo genera ingresos: primero con personas (B2C) y después con empresas (B2B). Uso una cuenta de presentación con menú reducido; el sistema completo sigue disponible para otras cuentas.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta probable</strong></td>
+<td>¿Por qué el menú es tan corto?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Es solo la UI de presentación: filtramos el menú para enfocarnos en ingresos. Las rutas y módulos no se borraron.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si el menú sale completo: verificar <code>username=demo.business</code> o <code>preferences.presentation_nav</code>. Relogin.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 0:40–2:10 — B2C: Free → planes → Premium → factura → pago</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Cuenta</strong></td>
+<td><code>demo.business</code> (ya Premium Individual) *o* contraste verbal con <code>listener.free</code> si está abierta en otra ventana</td>
+</tr>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Planes personales → Plan personal → Facturación personal</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/account/plans</code> → <code>/account/subscription</code> → <code>/account/billing</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Mostrar catálogo Free/Premium/Duo/Familiar; abrir plan activo; abrir factura e intento de pago mock</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Planes personales listados; suscripción Premium Individual; factura(s) personal(es); pago marcado como mock/simulado</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«En B2C vendemos a personas. Free es la puerta de entrada. Premium Individual, Duo y Familiar son planes de pago. El usuario genera una factura personal y el cobro en este laboratorio es simulado: no hay pasarela bancaria real. Así demostramos el ciclo Free → plan → factura → pago sin dinero real.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Duo y Familiar son lo mismo que una organización?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«No. Duo/Familiar son *household*: grupo de oyentes. Una *organización* es una empresa B2B.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si no hay factura: ir a Planes, repetir checkout mock, o explicar con <code>listener.premium</code> sin inventar montos.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 2:10–3:10 — Puente CRM (disquera / venta)</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Panel CRM → Prospectos → Oportunidades</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/crm/dashboard</code> → <code>/crm/prospects</code> → <code>/crm/opportunities</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Mostrar embudo: lead → oportunidad</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Cards/tablas con registros demo etiquetados sintéticos/demo</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«Para B2B no empezamos por la factura: empezamos por ventas. Un prospecto es un cliente potencial; la oportunidad es el negocio en negociación. Aquí la disquera o el equipo comercial empuja el trato hasta un plan empresarial.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Esos prospectos son clientes reales?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Son datos demo/sintéticos del seed académico, etiquetados para no confundirlos con producción.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si CRM vacío: mencionar que el seed crea prospectos; mostrar tabla vacía y pasar a suscripciones org.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 3:10–4:40 — B2B: org → plan empresarial → suscripción → factura → pago</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Pantallas</strong></td>
+<td>Estado org → Plan de la organización → Planes empresariales → Facturas → Intentos de pago → Conciliación</td>
+</tr>
+<tr>
+<td><strong>Rutas</strong></td>
+<td><code>/organizations/{id}/settings</code> → <code>/subscriptions/overview</code> → <code>/subscriptions/plans</code> → <code>/billing/invoices</code> → <code>/billing/payment-attempts</code> → <code>/billing/reconciliation</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Mostrar org activa <strong>VOXMETRIKS Demo</strong>, plan Professional (demo), catálogo Starter/Professional/Business/Enterprise, factura pagada/pendiente e intento mock, conciliación</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Org demo; overview de suscripción; lista de planes B2B; facturas; intentos; pantalla de conciliación</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«En B2B el cliente es una organización. Tiene miembros, un plan empresarial y facturas propias. Starter, Professional, Business y Enterprise cambian capacidad y precio según el catálogo del producto. El pago sigue siendo mock. La conciliación cruza facturas con pagos para demostrar control financiero.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Qué es un seat o un entitlement?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Seat = cupo de usuario del plan. Entitlement = derecho concreto que el plan desbloquea.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si billing falla por permiso: confirmar rol <code>billing_manager</code> y org activa; no usar <code>platform.admin</code> en esta demo.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 4:40–5:40 — Resultados</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Panel empresarial</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/business-analytics</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Señalar ingresos / métricas B2C-B2B disponibles en el panel</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Dashboard empresarial con KPIs (según datos seed + warehouse)</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«Cierro con resultados: aquí la organización ve el efecto del cobro y la operación. VOXMETRIKS no es solo un reproductor: es un modelo de ingresos dual.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿MRR y ARR están calculados en vivo?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«El sistema modela suscripciones y facturación; donde el KPI esté materializado en pantallas/seed se muestra. No invento un número si no aparece en pantalla.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si el panel carga vacío: volver a Facturas y decir “la evidencia de ingreso está en cobros”.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 5:40–6:20 — Regalías (si hay tiempo)</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Dashboard regalías / fondos</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/royalties</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Mostrar fondo distribuible ≠ ingreso de plataforma; badge “Pago simulado”</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«Después del cobro, finanzas puede aprobar un fondo para regalías. No hay un 70 % universal: el split sale del contrato de derechos (por ejemplo 60/40). El payout es simulado.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Ya les pagan a los artistas?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Calculamos y simulamos el desembolso. No hay pasarela bancaria real.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Saltar y mantener discurso de diseño Spec 030.</td>
+</tr>
+</tbody></table>
+<h2>Minuto 6:20–7:00 — Catálogo e inventario de datos</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Pantalla</strong></td>
+<td>Inicio (KPIs) o mención verbal si el explorador no está en el menú</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td><code>/discover</code></td>
+</tr>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Mostrar conteos de canciones/artistas/eventos en home si visibles</td>
+</tr>
+<tr>
+<td><strong>Debe aparecer</strong></td>
+<td>Referencias a catálogo warehouse; tip de eventos sintéticos</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«El catálogo musical es importado: hay 89 740 canciones, 31 429 artistas y 46 154 álbumes. Encima generamos 900 000 eventos analíticos sintéticos derivados de ese catálogo para alimentar analítica sin fingir que sea tráfico de producción.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Entonces las reproducciones son falsas?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Son sintéticas con propósito académico, derivadas del catálogo importado, y están clasificadas como synthetic en el inventario.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si los KPIs no cargan: citar el inventario documentado de la guía maestra.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Minuto 6:40–7:00 — Cierre</h2>
+<table><thead><tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Acción</strong></td>
+<td>Logout opcional</td>
+</tr>
+<tr>
+<td><strong>Ruta</strong></td>
+<td>menú usuario → Cerrar sesión</td>
+</tr>
+<tr>
+<td><strong>Texto exacto</strong></td>
+<td>«En siete minutos: B2C cobra a personas, B2B cobra a organizaciones, el CRM alimenta la venta, la facturación cierra el dinero, y el warehouse sostiene la evidencia. Gracias.»</td>
+</tr>
+<tr>
+<td><strong>Pregunta</strong></td>
+<td>¿Puedo ver ELT?</td>
+</tr>
+<tr>
+<td><strong>Respuesta</strong></td>
+<td>«Sí, con una cuenta engineer/admin; esta cuenta de presentación lo oculta a propósito.»</td>
+</tr>
+<tr>
+<td><strong>Plan B</strong></td>
+<td>Si preguntan módulos ocultos: abrir otra cuenta (<code>organization.owner</code> / <code>platform.admin</code>) *sin* cambiar <code>demo.business</code>.</td>
+</tr>
+</tbody></table>
+<hr/>
+<h2>Checklist post-demo</h2>
+<ul>
+<li>[ ] Login <code>demo.business</code></li>
+<li>[ ] Menú reducido</li>
+<li>[ ] Planes personales</li>
+<li>[ ] Planes empresariales</li>
+<li>[ ] Facturas + intentos + conciliación</li>
+<li>[ ] Panel empresarial</li>
+<li>[ ] Mención 89 740 / 900 000</li>
+<li>[ ] Logout</li>
+</ul>
+<h2>Cosas que no debes afirmar</h2>
+<ul>
+<li>Que los pagos son con tarjeta real de producción.</li>
+<li>Que los derechos de catálogo son licencias legales firmadas.</li>
+<li>Cifras de dinero que no salgan en pantalla.</li>
+<li>Que <code>demo.business</code> es administrador global.</li>
+</ul>
+</article>
+<article data-src='RESUMEN-RAPIDO-PRESENTACION.md'>
+<h1>Resumen rápido — presentación VOXMETRIKS</h1>
+<p>*(Máximo ~2 páginas. Imprimible.)*</p>
+<h2>30 segundos</h2>
+<p>VOXMETRIKS es una plataforma de <strong>música + negocio musical</strong>. A personas les vende planes <strong>B2C</strong> (Free/Premium). A empresas (disqueras) les vende planes <strong>B2B</strong> con CRM, suscripción, factura y cobro. El catálogo es <strong>importado</strong>; ~<strong>900 000</strong> eventos son <strong>sintéticos</strong>; los pagos son <strong>mock</strong>.</p>
+<p>Cuenta de presentación: <strong><code>demo.business</code></strong> (menú reducido). Contraseña: <code>DEMO_ACCOUNT_PASSWORD</code> (no escribirla aquí).</p>
+<h2>Flujo B2C</h2>
+<p>Free → Planes personales → Premium → Factura personal → Pago simulado.</p>
+<p>Rutas: <code>/account/plans</code> · <code>/account/subscription</code> · <code>/account/billing</code></p>
+<h2>Flujo B2B</h2>
+<p>Disquera (organización) → Plan empresarial → Suscripción → Factura → Pago mock → Conciliación → Panel resultados.</p>
+<p>Rutas: <code>/subscriptions/*</code> · <code>/billing/*</code> · <code>/business-analytics</code> · CRM <code>/crm/*</code></p>
+<h2>Diferencias clave</h2>
+<table><thead><tr>
+<th></th>
+<th>B2C</th>
+<th>B2B</th>
+</tr></thead><tbody>
+<tr>
+<td>Cliente</td>
+<td>Persona</td>
+<td>Organización</td>
+</tr>
+<tr>
+<td>Agrupación</td>
+<td>Household (Duo/Familiar)</td>
+<td>Miembros / seats</td>
+</tr>
+<tr>
+<td>Menú típico</td>
+<td>Cuenta personal</td>
+<td>CRM + suscripciones + cobros</td>
+</tr>
+<tr>
+<td>Factura</td>
+<td>Personal</td>
+<td>Empresarial</td>
+</tr>
+</tbody></table>
+<h2>Vocabulario esencial</h2>
+<ul>
+<li><strong>Subir ≠ publicar</strong> — privado hasta aprobación (Spec 031)  </li>
+<li><strong>B2C / B2B</strong> — vender a persona / a empresa  </li>
+<li><strong>Fondo distribuible / regalía / payout</strong> — Spec 030 (simulado)  </li>
+<li><strong>Contrato de derechos</strong> — % por obra, no 70 % universal  </li>
+<li><strong>Mock / sintético</strong> — laboratorio académico  </li>
+</ul>
+<h2>Preguntas probables → respuestas</h2>
+<table><thead><tr>
+<th>Pregunta</th>
+<th>Respuesta corta</th>
+</tr></thead><tbody>
+<tr>
+<td>¿Cómo sube música un artista?</td>
+<td>Portal <code>demo.artist</code>: borrador → audio/portada privados → envío a revisión → aprobación → publicar.</td>
+</tr>
+<tr>
+<td>¿Al subir ya se oye en el catálogo?</td>
+<td>No. Solo tras <strong>publicar</strong>.</td>
+</tr>
+<tr>
+<td>¿Quién revisa?</td>
+<td><code>catalog_reviewer</code> / admin con <code>publishing.review</code> + rights gate.</td>
+</tr>
+<tr>
+<td>¿Cobran de verdad?</td>
+<td>No: pagos mock.</td>
+</tr>
+<tr>
+<td>¿70 % al artista?</td>
+<td>No universal; sale del contrato (ej. 60/40).</td>
+</tr>
+</tbody></table>
+<h2>Datos técnicos principales (verificados)</h2>
+<table><thead><tr>
+<th>Ítem</th>
+<th>Valor</th>
+</tr></thead><tbody>
+<tr>
+<td>Specs</td>
+<td>31 (001–031; inventario histórico de guía puede desfasarse)</td>
+</tr>
+<tr>
+<td>Tracks / eventos</td>
+<td>89 740 / 900 000</td>
+</tr>
+</tbody></table>
+<p><strong>Spec 031:</strong> subir ≠ publicar · cuenta <code>demo.artist</code> · media <code>data/media</code>.</p>
+<p>Detalle: <code>docs/GUIA-MAESTRA-VOXMETRIKS.md</code>.</p>
+<h2>No afirmar</h2>
+<ul>
+<li>Dinero real cobrado a clientes.  </li>
+<li>Licencias legales reales de derechos.  </li>
+<li>Números que no salgan en pantalla o inventario.  </li>
+<li>Que esta cuenta tenga rol <code>owner</code> / <code>platform_admin</code>.</li>
+</ul>
+</article>
+<article data-src='AUDITORIA-CIERRE-FINAL.md'>
+<h1>Auditoría y cierre final — VOXMETRIKS</h1>
+<p><strong>Fecha:</strong> 2026-07-15  </p>
+<p><strong>Estado declarado:</strong> <code>ENTERPRISE_ACADEMIC_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT</code>  </p>
+<p><strong>Git:</strong> no ejecutado en esta auditoría  </p>
+<h2>Precondición</h2>
+<table><thead><tr>
+<th>Check</th>
+<th>Resultado</th>
+</tr></thead><tbody>
+<tr>
+<td>Spec 030 closure</td>
+<td><code>CLOSED_WITH_ACCEPTED_DEBT</code></td>
+</tr>
+<tr>
+<td>Spec 031 closure</td>
+<td><code>CLOSED_WITH_ACCEPTED_DEBT</code></td>
+</tr>
+<tr>
+<td>S030+S031 pytest</td>
+<td><strong>18 passed</strong></td>
+</tr>
+<tr>
+<td>S028+S029 pytest</td>
+<td><strong>19 passed</strong></td>
+</tr>
+<tr>
+<td>Integral GP</td>
+<td><strong>4 passed</strong> (<code>test_final_integral_golden_path.py</code>)</td>
+</tr>
+</tbody></table>
+<h2>Alcance cubierto (001–031)</h2>
+<p>Identidad · B2C · household · B2B · CRM · billing mock · artists/rights · campaigns · analytics · reporting · CS/support · compliance · ops · royalties 030 · publishing 031.</p>
+<h2>Defectos corregidos en esta pasada</h2>
+<p>Solo documentación/integración + script verify + test integral. No se reescribió arquitectura.  </p>
+<p>Defectos de producto no reproducidos en código (p.ej. promesas HiFi/offline en FE packages): <strong>no hallados</strong> en grep de marketing prohibido.</p>
+<h2>Organización canónica</h2>
+<p><strong>VOXMETRIKS Demo</strong> (<code>voxmetriks-demo</code>). Limpieza de orgs de test: <code>scripts/cleanup_test_organizations.py</code> (opt-in <code>--apply</code>).</p>
+<h2>Validaciones (rellenar tras suite completa)</h2>
+<p>Ver <code>evidence</code> actualizada en entrega: pytest full · lint · unit · build · Playwright NOT_VERIFIED · Docker NOT_VERIFIED.</p>
+<h2>Confirmaciones</h2>
+<ul>
+<li>No dinero real  </li>
+<li>No correos reales en tests (<code>EMAIL_PROVIDER=console</code>)  </li>
+<li>Catálogo importado 89 740 tracks verificado  </li>
+<li>No Spec 032  </li>
+<li>No métricas inventadas  </li>
+</ul>
+<h2>Documentos hermanos</h2>
+<ul>
+<li><code>INVENTARIO-FINAL-VERIFICADO.md</code>  </li>
+<li><code>MAPA-INTEGRAL-NEGOCIO.md</code>  </li>
+<li><code>MATRIZ-MODULOS-RUTAS-ROLES.md</code>  </li>
+<li><code>GOLDEN-PATH-INTEGRAL.md</code>  </li>
+<li><code>DEMO-FINAL-PASO-A-PASO.md</code>  </li>
+<li><code>DEUDAS-PRODUCCION.md</code>  </li>
+</ul>
+</article>
+<article data-src='INVENTARIO-FINAL-VERIFICADO.md'>
+<h1>Inventario final verificado — VOXMETRIKS</h1>
+<p><strong>Fecha de verificación:</strong> 2026-07-15  </p>
+<p><strong>Estado del sistema:</strong> <code>ENTERPRISE_ACADEMIC_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT</code>  </p>
+<p><strong>Git en esta auditoría:</strong> no ejecutado  </p>
+<h2>Aclaración: casos de uso</h2>
+<table><thead><tr>
+<th>Tipo</th>
+<th>Definición</th>
+<th>Conteo verificado</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Técnico</strong></td>
+<td>Métodos/funciones públicos en <code>*use_cases*.py</code> (sin <code>_privados</code>)</td>
+<td><strong>404</strong></td>
+</tr>
+<tr>
+<td><strong>Negocio (agrupados)</strong></td>
+<td>Objetivos únicos por actor (login, publicar, facturar, etc.) derivados de Specs 001–031 + menús</td>
+<td><strong>≈ 95–110</strong> (estimación documental por dominio; <strong>no</strong> 1:1 con métodos)</td>
+</tr>
+</tbody></table>
+<p>No afirmar que 404 métodos = 404 casos de negocio únicos.</p>
+<hr/>
+<h2>Cifras técnicas</h2>
+<table><thead><tr>
+<th>Ítem</th>
+<th>Valor</th>
+<th>Fuente / método</th>
+<th>Exclusiones / límites</th>
+</tr></thead><tbody>
+<tr>
+<td>Specs <code>001</code>–<code>031</code></td>
+<td><strong>31</strong></td>
+<td><code>automation/specs/^\d{3}-</code></td>
+<td>Archive fuera del prefijo</td>
+</tr>
+<tr>
+<td>Specs con closure <code>CLOSED*</code> explícito</td>
+<td><strong>7</strong> rastreadas en muestras 016–019/029–031; resto cerrado vía TRACEABILITY/028</td>
+<td>Lectura docs</td>
+<td>Histórico uneven</td>
+</tr>
+<tr>
+<td>Paquetes backend</td>
+<td><strong>24</strong></td>
+<td><code>apps/backend/app/packages</code></td>
+<td><code>__pycache__</code></td>
+</tr>
+<tr>
+<td>Paquetes frontend</td>
+<td><strong>24</strong></td>
+<td><code>apps/frontend/src/app/packages</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Endpoints <code>@*router.*</code></td>
+<td><strong>469</strong></td>
+<td>Regex en <code>apps/backend/app/**/*.py</code></td>
+<td>Helpers no-router</td>
+</tr>
+<tr>
+<td>Use-cases técnicos</td>
+<td><strong>404</strong></td>
+<td>AST <code>*use_cases*.py</code></td>
+<td>Services sin ese nombre</td>
+</tr>
+<tr>
+<td>Literales <code>path:</code> FE</td>
+<td><strong>128</strong> únicos</td>
+<td><code>*routes*.ts</code></td>
+<td>Wildcards vacíos</td>
+</tr>
+<tr>
+<td>Tests BE <code>test_*.py</code></td>
+<td><strong>88</strong></td>
+<td><code>apps/backend/tests</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Tests FE <code>*.spec.ts</code></td>
+<td><strong>37</strong></td>
+<td>frontend recursive</td>
+<td></td>
+</tr>
+<tr>
+<td>DuckDB tamaño</td>
+<td><strong>393.01 MB</strong> (412 102 656 B)</td>
+<td><code>stat</code> <code>data/warehouse/voxmetrik.duckdb</code></td>
+<td>Lock puede impedir conteos</td>
+</tr>
+<tr>
+<td>Tablas <code>main</code></td>
+<td><strong>183</strong></td>
+<td><code>information_schema</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Prefijo <code>app_</code></td>
+<td><strong>138</strong> tablas</td>
+<td>DuckDB names</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dim_track</code></td>
+<td><strong>89 740</strong></td>
+<td><code>COUNT(*)</code></td>
+<td>Importado</td>
+</tr>
+<tr>
+<td><code>dim_artista</code></td>
+<td><strong>31 429</strong></td>
+<td><code>COUNT(*)</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dim_album</code></td>
+<td><strong>46 154</strong></td>
+<td><code>COUNT(*)</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Eventos ACTIVITY facts</td>
+<td><strong>900 000</strong></td>
+<td><code>SUM(COUNT(*))</code> sobre <code>ACTIVITY_FACT_TABLES</code> (streaming+user_activity+playlist+favorites+searches+sessions); ctl <code>synthetic_activity_target_900000</code></td>
+<td>Heurística parcial sin favorites/searches da 801 000</td>
+</tr>
+<tr>
+<td>Cuentas demo seed</td>
+<td><strong>11</strong></td>
+<td><code>DEMO_USERS</code> en <code>seed_integrated_demo.py</code></td>
+<td>Password solo env</td>
+</tr>
+<tr>
+<td>Audio/portadas locales bajo <code>data/media</code></td>
+<td><strong>0</strong> en disco al inventariar</td>
+<td>Path aún no creado hasta primer upload</td>
+<td>Seed crea al correr</td>
+</tr>
+</tbody></table>
+<h3>Prefijos referidos en código (heurística estática previa)</h3>
+<p>Ver reportes Spec 030 / inventarios previos: <code>app_</code> dominante; warehouse <code>dim_/fact_/agg_/ctl_</code>.</p>
+<hr/>
+<h2>Precios canónicos (código)</h2>
+<p><strong>B2C</strong> — <code>personal_subscriptions/application/catalog.py</code>  </p>
+<p>Free $0 · Individual $4.99 / $49.90 · Duo $7.99 / $79.90 · Familiar $9.99 / $99.90  </p>
+<p><strong>B2B</strong> — <code>subscriptions/application/commercial_catalog.py</code>  </p>
+<p>Starter $49/$490 · Professional $99/$990 · Business $199/$1 990 · Enterprise $499/$4 990  </p>
+<p>Importes 75/100/200/500: solo <code>_LEGACY_DEMO_AMOUNTS</code> (retiro), no catálogo activo.</p>
+<hr/>
+<h2>Runtime a copiar a otra PC</h2>
+<ul>
+<li>Repo código  </li>
+<li><code>data/warehouse/voxmetrik.duckdb</code>  </li>
+<li><code>data/media/</code> (si existe tras seeds/uploads)  </li>
+<li><code>apps/backend/.env</code> (nunca en git; no documentar secretos)  </li>
+<li>Dependencias: venv + <code>npm install</code></li>
+</ul>
+<h2>Variables <code>.env</code> (nombres, sin valores)</h2>
+<p><code>DB_PATH</code>, <code>DEMO_ACCOUNT_PASSWORD</code>, <code>VOXMETRIKS_SEED_DEMO_ACCOUNTS</code>, <code>EMAIL_PROVIDER</code>, <code>MEDIA_STORAGE_*</code>, <code>ALLOW_DEMO_SELF_APPROVE</code>, <code>CORS_ORIGINS</code>, <code>FRONTEND_BASE_URL</code>, <code>YOUTUBE_API_KEY</code> (opcional), SMTP si aplica.</p>
+<h2>Limitaciones</h2>
+<ul>
+<li>Playwright E2E y Docker Compose: ver <code>DEUDAS-PRODUCCION.md</code> (<strong>NOT_VERIFIED</strong> en esta auditoría).  </li>
+<li>Conteos use-case de negocio son agregados documentales, no AST.</li>
+</ul>
+</article>
+<article data-src='MAPA-INTEGRAL-NEGOCIO.md'>
+<h1>Mapa integral de negocio — VOXMETRIKS</h1>
+<p><strong>Audiencia:</strong> defensa académica · lenguaje sencillo primero, técnico después.</p>
+<h2>Ciclo único (historia del producto)</h2>
+<ol>
+<li>Artista/disquera <strong>sube</strong> música (privada).  </li>
+<li>Revisión de metadatos + <strong>derechos</strong>.  </li>
+<li><strong>Publicación</strong> → búsqueda y reproducción.  </li>
+<li>Oyentes generan <strong>eventos</strong>.  </li>
+<li>Personas y empresas <strong>pagan suscripciones</strong> (mock).  </li>
+<li>Finanzas aprueba un <strong>fondo distribuible</strong>.  </li>
+<li>Atribución → contrato → <strong>regalías</strong> → statement → <strong>payout simulado</strong>.  </li>
+<li>KPI, reportes y decisiones (sin mezclar conceptos).</li>
+</ol>
+<hr/>
+<h2>Por actor</h2>
+<h3>Oyente personal (B2C)</h3>
+<p><strong>Sencillo:</strong> entra, escucha, puede pagar Premium/Duo/Familiar, ve su factura.  </p>
+<p><strong>Técnico:</strong> Spec 001/029 · <code>/discover</code> · <code>/account/*</code> · <code>personal_*</code> tables · mock pay · entitlements Free/Individual/Duo/Familiar.  </p>
+<p><strong>No ve:</strong> CRM, finanzas org, derechos globales.</p>
+<h3>Household</h3>
+<p><strong>Sencillo:</strong> un plan familiar compartido entre personas.  </p>
+<p><strong>Técnico:</strong> <code>/account/household</code> · <strong>no</strong> es organización B2B.</p>
+<h3>Artista (<code>demo.artist</code>)</h3>
+<p><strong>Sencillo:</strong> sube canciones, espera revisión, publica, consulta regalías simuladas.  </p>
+<p><strong>Técnico:</strong> Spec 031 · <code>/artist/*</code> · <code>catalog_publishing</code> · media privada/pública · Spec 021 contracts · Spec 030 statements lectura.  </p>
+<p><strong>No ve:</strong> otros artistas, CRM, pools globales.</p>
+<h3>Disquera / organización</h3>
+<p><strong>Sencillo:</strong> vende y opera como empresa: CRM → plan → factura → analítica.  </p>
+<p><strong>Técnico:</strong> Spec 016–019 · <code>/organizations</code> <code>/crm</code> <code>/subscriptions</code> <code>/billing</code> · seats/entitlements.</p>
+<h3>Ventas (<code>sales.manager</code>)</h3>
+<p>CRM prospectos/oportunidades. Sin payouts ni derechos.</p>
+<h3>Finanzas (<code>finance.manager</code>)</h3>
+<p>Facturas, conciliación, fondos/settlements/payouts <strong>simulados</strong>. Sin editar % contractuales.</p>
+<h3>Derechos / revisor</h3>
+<p>Contratos, % = 100, territorios, conflicto; revisión de catálogo Spec 031.</p>
+<h3>CS / Soporte / Compliance / Ops / Platform admin</h3>
+<p>Specs 025–027 · flujos académicos · <strong>sin</strong> certificación GDPR/ISO afirmada.</p>
+<h3>Presentación (<code>demo.business</code>)</h3>
+<p>Menú reducido ingresos B2C/B2B + regalías <strong>lectura</strong>.</p>
+<hr/>
+<h2>Qué es cada tipo de dato</h2>
+<table><thead><tr>
+<th>Etiqueta</th>
+<th>Significado</th>
+</tr></thead><tbody>
+<tr>
+<td>IMPORTADO</td>
+<td>Catálogo warehouse (~89 740 tracks)</td>
+</tr>
+<tr>
+<td>SINTÉTICO</td>
+<td>Eventos ACTIVITY (~900 000) derivados</td>
+</tr>
+<tr>
+<td>DEMO</td>
+<td>Seeds etiquetados</td>
+</tr>
+<tr>
+<td>SIMULADO</td>
+<td>Pagos y payouts sin banco real</td>
+</tr>
+</tbody></table>
+</article>
+<article data-src='GOLDEN-PATH-INTEGRAL.md'>
+<h1>Golden Path integral (Specs 001–031)</h1>
+<p><strong>Ubicación de prueba:</strong> <code>apps/backend/tests/test_final_integral_golden_path.py</code>  </p>
+<p><strong>Anclaje documental:</strong> Spec 028 integración global + evidencia final (no Spec 032).  </p>
+<p><strong>Resultado 2026-07-15:</strong> <strong>4 passed</strong></p>
+<h2>Cadena cubierta (laboratorio)</h2>
+<pre><code>
+Publicar (031) → B2C Individual 4.99 mock (029) → Fondo/regalías/payout simulado (030)
+
++ negativos: CRM 403 oyente · contrato 90% · self-approve bloqueado
+
+</code></pre>
+<p>Complementos (suites existentes):</p>
+<table><thead><tr>
+<th>Suite</th>
+<th>Rol</th>
+</tr></thead><tbody>
+<tr>
+<td>S028</td>
+<td>Enterprise org/CRM/billing/CS/reporting smoke</td>
+</tr>
+<tr>
+<td>S029</td>
+<td>Personal subscriptions full</td>
+</tr>
+<tr>
+<td>S030</td>
+<td>Royalties dedicadas</td>
+</tr>
+<tr>
+<td>S031</td>
+<td>Catalog publishing dedicadas</td>
+</tr>
+</tbody></table>
+<h2>Cómo ejecutar</h2>
+<pre><code>
+cd apps/backend
+
+set EMAIL_PROVIDER=console
+
+python -m pytest tests/test_final_integral_golden_path.py tests/test_catalog_publishing_golden_path_s031.py tests/test_royalties_golden_path_s030.py tests/test_personal_subscriptions_s029.py tests/test_enterprise_golden_path_s028.py -q
+
+</code></pre>
+<h2>Demostración manual (orden)</h2>
+<p>Ver <code>docs/DEMO-FINAL-PASO-A-PASO.md</code>.</p>
+</article>
+<article data-src='DEUDAS-PRODUCCION.md'>
+<h1>Deudas de producción (académico)</h1>
+<p><strong>Estado:</strong> no production-ready comercial.</p>
+<table><thead><tr>
+<th>ID</th>
+<th>Deuda</th>
+<th>Severidad</th>
+</tr></thead><tbody>
+<tr>
+<td>D-PAY</td>
+<td>Pagos/payouts solo MOCK/simulado</td>
+<td>Alta (esperado)</td>
+</tr>
+<tr>
+<td>D-MAIL</td>
+<td>Correo real opcional; tests = console</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-E2E</td>
+<td>Playwright E2E <strong>NOT_VERIFIED</strong> en cierre final</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-DOCKER</td>
+<td>Compose build/arranque <strong>NOT_VERIFIED</strong></td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-AV</td>
+<td>Antivirus uploads</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-CDN</td>
+<td>Object storage/CDN/DRM/transcoder</td>
+<td>Alta producto</td>
+</tr>
+<tr>
+<td>D-GDPR</td>
+<td>Sin certificación GDPR/ISO</td>
+<td>Alta legal</td>
+</tr>
+<tr>
+<td>D-FX</td>
+<td>Sin FX multi-moneda</td>
+<td>Baja</td>
+</tr>
+<tr>
+<td>D-TAX</td>
+<td>Impuestos/retenciones OUT</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-ROYL-DISP</td>
+<td>Disputa de statement artista→finanzas (flujo UX completo)</td>
+<td>Baja — deuda aceptada si no hay UI dedicada</td>
+</tr>
+<tr>
+<td>D-DUCK</td>
+<td>DuckDB académico concurrency</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>D-SLA-SSO</td>
+<td>SSO/SLA comerciales no certificados</td>
+<td>Media</td>
+</tr>
+</tbody></table>
+<h2>No afirmar</h2>
+<p>Production ready · cobro bancario real · licencias globales · streaming mundial · seguridad certificada.</p>
+</article>
+</body></html>

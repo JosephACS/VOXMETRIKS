@@ -5,6 +5,17 @@
 !.env.example
 !**/.env.example
 !**/.env.e2e.example
+!.env.demo.example
+apps/frontend/.env
+apps/frontend/.env.local
+
+# Demo runtime / laptop bundles
+runtime/
+scripts/.demo-pids/
+data/media/
+VOXMETRIKS-DEMO-RUNTIME/
+VOXMETRIKS-CLEAN-TEST/
+VOXMETRIKS-DEMO-BACKUP/
 
 # DuckDB / SQLite (never commit local warehouses)
 *.duckdb

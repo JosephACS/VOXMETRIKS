@@ -77,6 +77,12 @@ from app.packages.artists.infrastructure.schema import ensure_artist_tables
 from app.packages.artists.presentation.router import artists_profiles_router
 from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
 from app.packages.catalog_rights.presentation.router import catalog_rights_router
+from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
+from app.packages.royalties.presentation.router import royalties_router
+from app.packages.catalog_publishing.infrastructure.schema import (
+    ensure_catalog_publishing_tables,
+)
+from app.packages.catalog_publishing.presentation.router import catalog_publishing_router
 from app.packages.campaigns.infrastructure.schema import ensure_campaign_tables
 from app.packages.campaigns.presentation.router import campaigns_router
 from app.packages.business_analytics.infrastructure.schema import ensure_business_analytics_tables
@@ -139,6 +145,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 ensure_artist_tables(conn)
                 # Spec 021: Catalog Rights and Contracts
                 ensure_catalog_rights_tables(conn)
+                # Spec 030: Royalties, Settlements and Simulated Payouts
+                ensure_royalty_tables(conn)
+                # Spec 031: Artist submissions, catalog review, local publish
+                ensure_catalog_publishing_tables(conn)
                 # Spec 022: Campaigns, Budgets and ROI
                 ensure_campaign_tables(conn)
                 # Spec 023: Engagement and Business Analytics
@@ -257,6 +267,8 @@ def create_app() -> FastAPI:
     application.include_router(personal_router, prefix="/api/v1")
     application.include_router(artists_profiles_router, prefix="/api/v1")
     application.include_router(catalog_rights_router, prefix="/api/v1")
+    application.include_router(royalties_router, prefix="/api/v1")
+    application.include_router(catalog_publishing_router, prefix="/api/v1")
     application.include_router(campaigns_router, prefix="/api/v1")
     application.include_router(business_analytics_router, prefix="/api/v1")
     application.include_router(compliance_router, prefix="/api/v1")

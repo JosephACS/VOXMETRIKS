@@ -94,11 +94,61 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     { id: 'music', titleKey: 'nav.group.music', sectionIds: ['main', 'music', 'personalAccount', 'recommendations'] },
     { id: 'analytics', titleKey: 'nav.group.analytics', sectionIds: ['analytics', 'data'] },
     { id: 'clients', titleKey: 'nav.group.clients', sectionIds: ['crm', 'customerSuccess'] },
-    { id: 'finance', titleKey: 'nav.group.finance', sectionIds: ['subscriptions', 'billing'] },
-    { id: 'artists', titleKey: 'nav.group.artists', sectionIds: ['artistProfiles', 'catalogRights', 'campaigns'] },
+    { id: 'finance', titleKey: 'nav.group.finance', sectionIds: ['subscriptions', 'billing', 'royalties'] },
+    { id: 'artists', titleKey: 'nav.group.artists', sectionIds: ['artistProfiles', 'artistPortal', 'catalogRights', 'campaigns'] },
     { id: 'direction', titleKey: 'nav.group.direction', sectionIds: ['businessAnalytics', 'reporting'] },
     { id: 'admin', titleKey: 'nav.group.admin', sectionIds: ['organizations', 'compliance', 'platformOps', 'system'] },
   ];
+
+  /** Reduced presentation nav for demo.business — hides technical / ops modules only in UI. */
+  private readonly presentationNavGroupConfig: NavGroupConfig[] = [
+    { id: 'personal', titleKey: 'nav.group.presentation.personal', sectionIds: ['main', 'personalAccount'] },
+    { id: 'sales', titleKey: 'nav.group.presentation.sales', sectionIds: ['crm'] },
+    { id: 'organization', titleKey: 'nav.group.presentation.organization', sectionIds: ['organizations', 'subscriptions'] },
+    { id: 'collections', titleKey: 'nav.group.presentation.collections', sectionIds: ['billing', 'royalties'] },
+    { id: 'results', titleKey: 'nav.group.presentation.results', sectionIds: ['businessAnalytics'] },
+  ];
+
+  /** Spec 031 — demo.artist / presentation_role artist: career + optional discover + read-only royalties. */
+  private readonly presentationArtistNavGroupConfig: NavGroupConfig[] = [
+    { id: 'career', titleKey: 'nav.group.artistCareer', sectionIds: ['artistPortal'] },
+    { id: 'rights', titleKey: 'nav.group.artistRights', sectionIds: ['artistContracts'] },
+    { id: 'royalties', titleKey: 'nav.group.artistRoyalties', sectionIds: ['royalties'] },
+    { id: 'discover', titleKey: 'nav.group.music', sectionIds: ['main'] },
+  ];
+
+  private readonly presentationAllowedPaths = new Set<string>([
+    '/discover',
+    '/account/subscription',
+    '/account/plans',
+    '/account/billing',
+    '/crm/dashboard',
+    '/crm/prospects',
+    '/crm/opportunities',
+    '/organizations/none',
+    '/subscriptions/overview',
+    '/subscriptions/plans',
+    '/billing/invoices',
+    '/billing/payment-attempts',
+    '/billing/reconciliation',
+    '/royalties',
+    '/royalties/pools',
+    '/royalties/settlements',
+    '/royalties/statements',
+    '/payouts',
+    '/business-analytics',
+  ]);
+
+  private readonly artistPortalAllowedPaths = new Set<string>([
+    '/discover',
+    '/artist/profile',
+    '/artist/releases',
+    '/artist/releases/new',
+    '/artist/tracks',
+    '/catalog-rights/contracts',
+    '/royalties/statements',
+    '/payouts',
+  ]);
 
   expandedNavGroups = signal<Record<string, boolean>>(this.readNavGroupsPref());
 
@@ -115,6 +165,23 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   isDemoUser = computed(() => {
     const email = this.auth.getUser()?.email ?? '';
     return email.includes('demo@') || this.userPlan().toLowerCase() === 'demo';
+  });
+
+  /** Account flagged for reduced presentation menu (demo.business). */
+  isPresentationDemo = computed(() => {
+    const user = this.auth.getUser();
+    const username = (user?.username ?? '').toLowerCase();
+    if (username === 'demo.business') return true;
+    return user?.preferences?.presentation_nav === true;
+  });
+
+  /** Spec 031 artist portal mode (demo.artist / presentation_role artist). */
+  isArtistPortalDemo = computed(() => {
+    const user = this.auth.getUser();
+    const username = (user?.username ?? '').toLowerCase();
+    if (username === 'demo.artist') return true;
+    const role = (user?.preferences?.presentation_role ?? '').toLowerCase();
+    return role === 'artist' || role === 'artist_portal';
   });
 
   userRole = computed(() => (this.auth.getUser()?.role ?? 'user').toLowerCase());
@@ -348,6 +415,38 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      id: 'royalties',
+      titleKey: 'nav.section.royalties',
+      items: [
+        {
+          path: '/royalties',
+          labelKey: 'nav.royalties.dashboard',
+          icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+          exact: true,
+        },
+        {
+          path: '/royalties/pools',
+          labelKey: 'nav.royalties.pools',
+          icon: this.svgIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
+        },
+        {
+          path: '/royalties/settlements',
+          labelKey: 'nav.royalties.settlements',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        },
+        {
+          path: '/royalties/statements',
+          labelKey: 'nav.royalties.statements',
+          icon: this.svgIcon('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'),
+        },
+        {
+          path: '/payouts',
+          labelKey: 'nav.royalties.payouts',
+          icon: this.svgIcon('<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>'),
+        },
+      ],
+    },
+    {
       id: 'artistProfiles',
       titleKey: 'nav.section.artistProfiles',
       items: [
@@ -355,6 +454,48 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           path: '/artist-profiles',
           labelKey: 'nav.artistProfiles.list',
           icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        },
+      ],
+    },
+    {
+      id: 'artistPortal',
+      titleKey: 'nav.section.distribution',
+      items: [
+        {
+          path: '/artist/profile',
+          labelKey: 'nav.artist.profile',
+          icon: this.svgIcon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+        },
+        {
+          path: '/artist/releases',
+          labelKey: 'nav.artist.releases',
+          icon: this.svgIcon('<rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/>'),
+        },
+        {
+          path: '/artist/releases/new',
+          labelKey: 'nav.artist.newRelease',
+          icon: this.svgIcon('<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>'),
+        },
+        {
+          path: '/artist/tracks',
+          labelKey: 'nav.artist.tracks',
+          icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+        },
+        {
+          path: '/catalog-review',
+          labelKey: 'nav.catalogReview.inbox',
+          icon: this.svgIcon('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'),
+        },
+      ],
+    },
+    {
+      id: 'artistContracts',
+      titleKey: 'nav.group.artistRights',
+      items: [
+        {
+          path: '/catalog-rights/contracts',
+          labelKey: 'nav.artist.contracts',
+          icon: this.svgIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
         },
       ],
     },
@@ -545,15 +686,62 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     this.orgCtx.hasOrganization();
     this.crmCtx.hasCrmAccess();
     this.crmCtx.permissions();
+    this.isPresentationDemo();
+    this.isArtistPortalDemo();
 
     const sections = this.navSections();
     const engineer = this.auth.hasEngineerAccess();
     const hasOrg = this.orgCtx.hasOrganization();
     const crm = this.crmCtx.hasCrmAccess();
     const orgPerm = (code: string) => this.orgCtx.hasPermission(code);
+    const presentation = this.isPresentationDemo();
+    const artistPortal = this.isArtistPortalDemo();
 
-    return sections.filter((s) => {
+    if (artistPortal) {
+      const filtered = sections.filter(
+        (s) =>
+          s.id === 'artistPortal' ||
+          s.id === 'artistContracts' ||
+          s.id === 'royalties' ||
+          s.id === 'main',
+      );
+      return filtered
+        .map((s) => {
+          let items = s.items.filter((item) =>
+            this.isArtistPortalPathAllowed(item.path, s.id),
+          );
+          if (s.id === 'artistPortal') {
+            items = items.filter((item) => item.path !== '/catalog-review');
+          }
+          if (s.id === 'artistContracts') {
+            const canContracts =
+              orgPerm('catalog.view') ||
+              orgPerm('rights.view') ||
+              orgPerm('contract.view') ||
+              orgPerm('publishing.view') ||
+              hasOrg;
+            if (!canContracts) items = [];
+          }
+          return { ...s, items };
+        })
+        .filter((s) => s.items.length > 0);
+    }
+
+    const filtered = sections.filter((s) => {
+      if (presentation) {
+        return (
+          s.id === 'main' ||
+          s.id === 'personalAccount' ||
+          s.id === 'crm' ||
+          s.id === 'organizations' ||
+          s.id === 'subscriptions' ||
+          s.id === 'billing' ||
+          s.id === 'royalties' ||
+          s.id === 'businessAnalytics'
+        );
+      }
       if (s.id === 'data') return engineer;
+      if (s.id === 'artistContracts') return false;
       // Always available in personal music mode
       if (
         s.id === 'main' ||
@@ -575,6 +763,18 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       if (s.id === 'billing') {
         return hasOrg && (orgPerm('billing.view') || orgPerm('invoice.view') || orgPerm('payment.view'));
       }
+      if (s.id === 'royalties') {
+        return hasOrg && (orgPerm('royalty.view') || orgPerm('billing.view') || presentation);
+      }
+      if (s.id === 'artistPortal') {
+        return (
+          hasOrg &&
+          (orgPerm('publishing.view') ||
+            orgPerm('publishing.create') ||
+            orgPerm('publishing.review') ||
+            orgPerm('publishing.submit'))
+        );
+      }
       if (s.id === 'customerSuccess') {
         return hasOrg && (orgPerm('support.view') || orgPerm('organization.view'));
       }
@@ -583,13 +783,104 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       }
       return hasOrg;
     });
+
+    const withItemFilters = filtered.map((s) => {
+      if (s.id !== 'artistPortal') return s;
+      const items = s.items.filter((item) => {
+        if (item.path === '/catalog-review') {
+          return orgPerm('publishing.review');
+        }
+        return true;
+      });
+      return { ...s, items };
+    });
+
+    if (!presentation) return withItemFilters.filter((s) => s.items.length > 0);
+
+    return withItemFilters
+      .map((s) => {
+        const items = s.items.filter((item) => this.isPresentationPathAllowed(item.path, s.id));
+        return { ...s, items };
+      })
+      .filter((s) => s.items.length > 0);
   });
+
+  private isArtistPortalPathAllowed(path: string, sectionId: string): boolean {
+    if (this.artistPortalAllowedPaths.has(path)) return true;
+    if (sectionId === 'main') return path === '/discover';
+    if (sectionId === 'royalties') {
+      return path === '/royalties/statements' || path === '/payouts';
+    }
+    if (sectionId === 'artistContracts') {
+      return path === '/catalog-rights/contracts';
+    }
+    if (sectionId === 'artistPortal') {
+      return (
+        path === '/artist/profile' ||
+        path === '/artist/releases' ||
+        path === '/artist/releases/new' ||
+        path === '/artist/tracks'
+      );
+    }
+    return false;
+  }
+
+  private isPresentationPathAllowed(path: string, sectionId: string): boolean {
+    if (this.presentationAllowedPaths.has(path)) return true;
+    if (sectionId === 'organizations') {
+      // Active org: only settings as “organization status”
+      return /\/organizations\/\d+\/settings$/.test(path) || path === '/organizations/none';
+    }
+    if (sectionId === 'main') return path === '/discover';
+    if (sectionId === 'personalAccount') {
+      return (
+        path === '/account/subscription' ||
+        path === '/account/plans' ||
+        path === '/account/billing'
+      );
+    }
+    if (sectionId === 'crm') {
+      return (
+        path === '/crm/dashboard' ||
+        path === '/crm/prospects' ||
+        path === '/crm/opportunities'
+      );
+    }
+    if (sectionId === 'subscriptions') {
+      return path === '/subscriptions/overview' || path === '/subscriptions/plans';
+    }
+    if (sectionId === 'billing') {
+      return (
+        path === '/billing/invoices' ||
+        path === '/billing/payment-attempts' ||
+        path === '/billing/reconciliation'
+      );
+    }
+    if (sectionId === 'royalties') {
+      return (
+        path === '/royalties' ||
+        path === '/royalties/pools' ||
+        path === '/royalties/settlements' ||
+        path === '/royalties/statements' ||
+        path === '/payouts'
+      );
+    }
+    if (sectionId === 'businessAnalytics') {
+      return path === '/business-analytics';
+    }
+    return false;
+  }
 
   visibleNavGroups = computed((): NavGroupView[] => {
     this.i18n.tick();
     const sections = this.visibleNavSections();
     const byId = new Map(sections.map((s) => [s.id, s]));
-    return this.navGroupConfig
+    const groups = this.isArtistPortalDemo()
+      ? this.presentationArtistNavGroupConfig
+      : this.isPresentationDemo()
+        ? this.presentationNavGroupConfig
+        : this.navGroupConfig;
+    return groups
       .map((group) => ({
         id: group.id,
         title: this.i18n.t(group.titleKey),

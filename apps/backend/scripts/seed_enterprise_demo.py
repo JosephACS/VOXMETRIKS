@@ -137,17 +137,17 @@ def seed_enterprise_demo() -> dict[str, object]:
             skipped.append("app_organization")
             return result
 
-        existing = conn.execute(
+            existing = conn.execute(
             "SELECT id FROM app_organization WHERE slug = ?", [ORG_SLUG]
-        ).fetchone()
+            ).fetchone()
         legacy = None
         if not existing:
             legacy = conn.execute(
                 "SELECT id FROM app_organization WHERE slug = ?", [LEGACY_SLUG]
             ).fetchone()
 
-        if existing:
-            org_id = int(existing[0])
+            if existing:
+                org_id = int(existing[0])
         elif legacy:
             org_id = int(legacy[0])
             try:
@@ -174,8 +174,8 @@ def seed_enterprise_demo() -> dict[str, object]:
                 entities["organization_migrated_from_legacy"] = LEGACY_SLUG
             except Exception:
                 skipped.append("legacy_org_migrate")
-        else:
-            org_id = _next_id(conn, "app_organization")
+            else:
+                org_id = _next_id(conn, "app_organization")
             cols = (
                 "id, display_name, slug, organization_type, country_code, timezone, "
                 "default_currency, status, created_by, created_at, updated_at"
@@ -215,24 +215,24 @@ def seed_enterprise_demo() -> dict[str, object]:
             except Exception:
                 skipped.append("org_flag_refresh")
 
-        result["organization_id"] = org_id
+            result["organization_id"] = org_id
         assert org_id is not None
 
         # Membership + owner (+ administrator)
         member_id: int | None = None
-        if _table_exists(conn, "app_organization_member"):
-            member = conn.execute(
-                "SELECT id FROM app_organization_member WHERE organization_id = ? AND user_id = ?",
-                [org_id, admin_id],
-            ).fetchone()
-            if not member:
+            if _table_exists(conn, "app_organization_member"):
+                member = conn.execute(
+                    "SELECT id FROM app_organization_member WHERE organization_id = ? AND user_id = ?",
+                    [org_id, admin_id],
+                ).fetchone()
+                if not member:
                 member_id = _next_id(conn, "app_organization_member")
-                conn.execute(
-                    """
-                    INSERT INTO app_organization_member
-                        (id, organization_id, user_id, status, created_by, created_at, updated_at)
-                    VALUES (?, ?, ?, 'active', ?, ?, ?)
-                    """,
+                    conn.execute(
+                        """
+                        INSERT INTO app_organization_member
+                            (id, organization_id, user_id, status, created_by, created_at, updated_at)
+                        VALUES (?, ?, ?, 'active', ?, ?, ?)
+                        """,
                     [member_id, org_id, admin_id, admin_id, now, now],
                 )
             else:
@@ -252,17 +252,17 @@ def seed_enterprise_demo() -> dict[str, object]:
                 pref = conn.execute(
                     "SELECT user_id FROM app_user_organization_preference WHERE user_id = ?",
                     [admin_id],
-                ).fetchone()
+                        ).fetchone()
                 if pref:
-                    conn.execute(
-                        """
+                            conn.execute(
+                                """
                         UPDATE app_user_organization_preference
                         SET active_organization_id = ?, updated_at = ?, updated_by = ?
                         WHERE user_id = ?
                         """,
                         [org_id, now, admin_id, admin_id],
-                    )
-                else:
+                            )
+        else:
                     conn.execute(
                         """
                         INSERT INTO app_user_organization_preference
@@ -323,11 +323,11 @@ def seed_enterprise_demo() -> dict[str, object]:
                 sub_id = _next_id(conn, "app_subscription")
                 price_id = result.get("plan_price_id")  # type: ignore[assignment]
                 try:
-                    conn.execute(
-                        """
-                        INSERT INTO app_subscription
+                conn.execute(
+                    """
+                    INSERT INTO app_subscription
                             (id, organization_id, plan_id, plan_price_id, status, billing_currency,
-                             activation_source, access_state, created_at, updated_at)
+                         activation_source, access_state, created_at, updated_at)
                         VALUES (?, ?, ?, ?, 'active', 'USD', 'demo_seed_synthetic', 'full', ?, ?)
                         """,
                         [sub_id, org_id, plan_id, price_id, now, now],
@@ -350,7 +350,7 @@ def seed_enterprise_demo() -> dict[str, object]:
                     )
                 except Exception:
                     skipped.append("app_subscription_update")
-            result["subscription_id"] = sub_id
+                result["subscription_id"] = sub_id
             if sub_id:
                 entities["subscription"] = 1
                 try:

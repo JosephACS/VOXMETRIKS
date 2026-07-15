@@ -12,6 +12,8 @@ Spec 023 adds: biz_analytics.* org-scoped permissions (Engagement and Business A
 Spec 026 adds: compliance.*, privacy.*, incident.manage, audit.search org-scoped permissions.
 Spec 024 adds: report.generate/approve/publish/export, decision.* (Executive Reporting).
 Spec 025 adds: customer_success.*, customer_health.*, support.*, and CS/support roles.
+Spec 030 adds: royalty.* org-scoped permissions (pools, settlements, simulated payouts).
+Spec 031 adds: publishing.* org-scoped permissions + catalog_reviewer role.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ BUSINESS_ROLES: Final[tuple[tuple[str, str, str], ...]] = (
     ("auditor", "Auditor", "Read-only audit and reporting access"),
     ("customer_success_manager", "Customer Success Manager", "CS onboarding, health, risk, renewal"),
     ("support_agent", "Support Agent", "Support case handling within organization"),
+    ("catalog_reviewer", "Catalog Reviewer", "Review and publish artist release submissions"),
 )
 
 # (code, description, domain)
@@ -128,6 +131,20 @@ PERMISSIONS: Final[tuple[tuple[str, str, str], ...]] = (
     ("privacy.export", "Process and export data subject request data", "compliance"),
     ("incident.manage", "Manage security incidents and response actions", "compliance"),
     ("audit.search", "Search organization audit log with filters", "compliance"),
+    # Spec 030 — royalties, settlements, simulated payouts
+    ("royalty.view", "View royalty pools, settlements, statements, and metrics", "royalty"),
+    ("royalty.pool.manage", "Create pools and add B2C/manual B2B revenue sources", "royalty"),
+    ("royalty.settle", "Run pro-rata settlement, contract splits, and statements", "royalty"),
+    ("royalty.adjust", "Apply settlement adjustments", "royalty"),
+    ("royalty.payout", "Create and simulate payout batches (no real money)", "royalty"),
+    ("royalty.approve", "Approve pools and settlements", "royalty"),
+    # Spec 031 — artist submission / catalog review / publish
+    ("publishing.view", "View release submissions and publication history", "publishing"),
+    ("publishing.create", "Create drafts, upload media, edit submission metadata", "publishing"),
+    ("publishing.submit", "Submit releases for catalog review", "publishing"),
+    ("publishing.review", "Approve, reject, or request changes on submissions", "publishing"),
+    ("publishing.publish", "Schedule and publish approved releases", "publishing"),
+    ("publishing.takedown", "Suspend or withdraw published releases", "publishing"),
 )
 
 # role_code -> frozenset(permission_code)
@@ -223,6 +240,20 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "privacy.export",
             "incident.manage",
             "audit.search",
+            # Spec 030
+            "royalty.view",
+            "royalty.pool.manage",
+            "royalty.settle",
+            "royalty.adjust",
+            "royalty.payout",
+            "royalty.approve",
+            # Spec 031
+            "publishing.view",
+            "publishing.create",
+            "publishing.submit",
+            "publishing.review",
+            "publishing.publish",
+            "publishing.takedown",
         }
     ),
     "administrator": frozenset(
@@ -305,6 +336,20 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "privacy.export",
             "incident.manage",
             "audit.search",
+            # Spec 030
+            "royalty.view",
+            "royalty.pool.manage",
+            "royalty.settle",
+            "royalty.adjust",
+            "royalty.payout",
+            "royalty.approve",
+            # Spec 031
+            "publishing.view",
+            "publishing.create",
+            "publishing.submit",
+            "publishing.review",
+            "publishing.publish",
+            "publishing.takedown",
         }
     ),
     "billing_manager": frozenset(
@@ -328,6 +373,13 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "payment.manage",
             "refund.manage",
             "credit_note.manage",
+            # Spec 030 — finance ops without inventing platform_admin money power
+            "royalty.view",
+            "royalty.pool.manage",
+            "royalty.settle",
+            "royalty.adjust",
+            "royalty.payout",
+            "royalty.approve",
         }
     ),
     "finance": frozenset(
@@ -352,6 +404,13 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             # Spec 026
             "compliance.view",
             "audit.search",
+            # Spec 030
+            "royalty.view",
+            "royalty.pool.manage",
+            "royalty.settle",
+            "royalty.adjust",
+            "royalty.payout",
+            "royalty.approve",
         }
     ),
     "artist_manager": frozenset(
@@ -368,6 +427,12 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "rights.view",
             "rights.create",
             "rights.update",
+            # Spec 030 — view-only
+            "royalty.view",
+            # Spec 031 — create/submit only
+            "publishing.view",
+            "publishing.create",
+            "publishing.submit",
         }
     ),
     "marketing_manager": frozenset(
@@ -422,6 +487,22 @@ ROLE_PERMISSION_MATRIX: Final[dict[str, frozenset[str]]] = {
             "privacy.request",
             "support.create",
             "support.view",
+            # Spec 031
+            "publishing.view",
+            "publishing.create",
+            "publishing.submit",
+        }
+    ),
+    "catalog_reviewer": frozenset(
+        {
+            "organization.view",
+            "member.view",
+            "artist.view",
+            "rights.view",
+            "publishing.view",
+            "publishing.review",
+            "publishing.publish",
+            "publishing.takedown",
         }
     ),
     "viewer": frozenset(

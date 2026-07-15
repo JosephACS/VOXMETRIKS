@@ -172,6 +172,7 @@ def _init_test_database(db_path: Path) -> None:
     from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_tables
     from app.packages.reporting.infrastructure.schema import ensure_reporting_tables
     from app.packages.customer_success.infrastructure.schema import ensure_customer_success_tables
+    from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
 
     ensure_user_tables(conn)
     ensure_app_tables(conn)
@@ -184,6 +185,7 @@ def _init_test_database(db_path: Path) -> None:
     ensure_personal_subscription_tables(conn)
     ensure_artist_tables(conn)
     ensure_catalog_rights_tables(conn)
+    ensure_royalty_tables(conn)
     ensure_campaign_tables(conn)
     ensure_business_analytics_tables(conn)
     ensure_compliance_tables(conn)

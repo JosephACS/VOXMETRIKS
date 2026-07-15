@@ -561,6 +561,11 @@ export interface UserPreferences {
   audio_quality: string;
   recommendations_enabled: boolean;
   privacy_public: boolean;
+  /** Opt-in UI hint for presentation demo accounts (demo.business). */
+  presentation_nav?: boolean;
+  presentation_role?: string;
+  demo?: boolean;
+  language?: string;
 }
 
 export interface AppUser {

@@ -47,6 +47,9 @@ DEMO_USERS: tuple[tuple[str, str], ...] = (
     ("sales.manager", "sales.manager@demo.voxmetriks.local"),
     ("organization.owner", "organization.owner@demo.voxmetriks.local"),
     ("finance.manager", "finance.manager@demo.voxmetriks.local"),
+    # Presentation account — reduced nav in frontend (preferences.presentation_nav)
+    ("demo.business", "demo.business@demo.voxmetriks.local"),
+    ("demo.artist", "demo.artist@demo.voxmetriks.local"),
 )
 
 
@@ -95,6 +98,20 @@ def _ensure_user(conn, username: str, email: str) -> int:
             "dark_mode": True,
             "language": "es",
             "recommendations_enabled": True,
+            **(
+                {"presentation_nav": True, "presentation_role": "business_demo"}
+                if username == "demo.business"
+                else {}
+            ),
+            **(
+                {
+                    "presentation_nav": True,
+                    "presentation_role": "artist",
+                    "artist_portal": True,
+                }
+                if username == "demo.artist"
+                else {}
+            ),
         }
     )
     pwd_hash = hash_password(_demo_password())
@@ -268,26 +285,31 @@ def _seed_personal_line(conn, ids: dict[str, int]) -> dict[str, Any]:
         "household.owner",
         "household.member",
         "household.member2",
+        "demo.business",
     ):
-        ensure_free_subscription(conn, ids[uname])
+        if uname in ids:
+            ensure_free_subscription(conn, ids[uname])
 
     # Premium Individual
-    prem = ids["listener.premium"]
-    active = conn.execute(
-        """
-        SELECT s.id FROM personal_subscription s
-        JOIN personal_plan p ON p.id = s.plan_id
-        WHERE s.user_id = ? AND p.code = 'premium_individual' AND s.status = 'active'
-        """,
-        [prem],
-    ).fetchone()
-    if not active:
-        checkout = start_checkout(
-            conn, prem, plan_code="premium_individual", billing_period="monthly"
-        )
-        simulate_payment(
-            conn, prem, attempt_id=checkout["attempt_id"], scenario="succeeded"
-        )
+    for uname in ("listener.premium", "demo.business"):
+        if uname not in ids:
+            continue
+        prem = ids[uname]
+        active = conn.execute(
+            """
+            SELECT s.id FROM personal_subscription s
+            JOIN personal_plan p ON p.id = s.plan_id
+            WHERE s.user_id = ? AND p.code = 'premium_individual' AND s.status = 'active'
+            """,
+            [prem],
+        ).fetchone()
+        if not active:
+            checkout = start_checkout(
+                conn, prem, plan_code="premium_individual", billing_period="monthly"
+            )
+            simulate_payment(
+                conn, prem, attempt_id=checkout["attempt_id"], scenario="succeeded"
+            )
 
     # Familiar titular + members (Spec closure: household.owner = Familiar)
     owner = ids["household.owner"]
@@ -424,6 +446,663 @@ def _ensure_professional_subscription(conn, org_id: int, actor_id: int) -> None:
         pass
 
 
+def _seed_demo_royalties(conn, org_id: int, actor_user_id: int) -> dict[str, Any]:
+    """Light demo pool/settlement/payout labeled synthetic — no real money."""
+    out: dict[str, Any] = {"demo": True, "seeded": False}
+    if not _table_exists(conn, "app_royalty_revenue_pool"):
+        return out
+    try:
+        from datetime import date
+        from decimal import Decimal
+
+        from app.packages.royalties.application.use_cases import RoyaltiesUseCases
+        from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
+
+        ensure_royalty_tables(conn)
+        uc = RoyaltiesUseCases(conn)
+        existing = conn.execute(
+            "SELECT id FROM app_royalty_revenue_pool WHERE idempotency_key = ?",
+            ["demo-royalty-pool-s030"],
+        ).fetchone()
+        if existing:
+            out["pool_id"] = int(existing[0])
+            out["seeded"] = True
+            out["idempotent"] = True
+            return out
+
+        # Minimal rights contract (60/40) if catalog tables exist
+        asset_id = 9001
+        contract_id = None
+        if _table_exists(conn, "app_catalog_asset") and _table_exists(
+            conn, "app_rights_contract"
+        ):
+            from app.core.time_util import utc_now
+
+            now = utc_now()
+            arow = conn.execute(
+                "SELECT id FROM app_catalog_asset WHERE id = ?", [asset_id]
+            ).fetchone()
+            if not arow:
+                conn.execute(
+                    """
+                    INSERT INTO app_catalog_asset
+                        (id, organization_id, title, status, warehouse_track_id,
+                         artist_profile_id, created_by, created_at, updated_at)
+                    VALUES (?, ?, 'Demo Royalty Track', 'active', 1, NULL, ?, ?, ?)
+                    """,
+                    [asset_id, org_id, actor_user_id, now, now],
+                )
+            crow = conn.execute(
+                """
+                SELECT id FROM app_rights_contract
+                WHERE asset_id = ? AND organization_id = ? LIMIT 1
+                """,
+                [asset_id, org_id],
+            ).fetchone()
+            if crow:
+                contract_id = int(crow[0])
+            else:
+                contract_id = _next_id(conn, "app_rights_contract")
+                conn.execute(
+                    """
+                    INSERT INTO app_rights_contract
+                        (id, organization_id, asset_id, rights_type, status, exclusive,
+                         valid_from, valid_to, evidence_ref, created_by, created_at, updated_at)
+                    VALUES (?, ?, ?, 'master', 'active', FALSE, DATE '2020-01-01', NULL,
+                            'demo-synthetic', ?, ?, ?)
+                    """,
+                    [contract_id, org_id, asset_id, actor_user_id, now, now],
+                )
+                for pname, pct in (("Demo Artist A", 60), ("Demo Label B", 40)):
+                    pid = _next_id(conn, "app_rights_contract_party")
+                    conn.execute(
+                        """
+                        INSERT INTO app_rights_contract_party
+                            (id, contract_id, party_name, party_type, ownership_percentage,
+                             organization_id, artist_profile_id, created_at, updated_at)
+                        VALUES (?, ?, ?, 'external', ?, NULL, NULL, ?, ?)
+                        """,
+                        [pid, contract_id, pname, pct, now, now],
+                    )
+
+        pool = uc.create_pool(
+            actor_user_id=actor_user_id,
+            organization_id=org_id,
+            currency="USD",
+            period_start=date(2026, 1, 1),
+            period_end=date(2026, 1, 31),
+            idempotency_key="demo-royalty-pool-s030",
+            total_amount=Decimal("100.0000"),
+            label="[DEMO] Synthetic royalty pool — not real money",
+            is_demo=True,
+        )
+        uc.add_b2c_source(
+            pool_id=pool["id"],
+            actor_user_id=actor_user_id,
+            amount=Decimal("100.0000"),
+            currency="USD",
+            reason="demo synthetic B2C candidate",
+            evidence_ref="demo-synthetic",
+            organization_id=org_id,
+            approve=True,
+        )
+        uc.approve_pool(pool_id=pool["id"], actor_user_id=actor_user_id)
+        uc.seed_demo_stream_weights(pool_id=pool["id"], weights={1: 70, 2: 30})
+        if contract_id:
+            run = uc.calculate_pro_rata_settlement(
+                pool_id=pool["id"],
+                actor_user_id=actor_user_id,
+                idempotency_key="demo-royalty-settle-s030",
+                asset_scopes=[
+                    {
+                        "asset_id": asset_id,
+                        "warehouse_track_id": 1,
+                        "rights_contract_id": contract_id,
+                    },
+                    {
+                        "asset_id": asset_id,
+                        "warehouse_track_id": 2,
+                        "rights_contract_id": contract_id,
+                    },
+                ],
+                synthetic_event_counts={1: 70, 2: 30},
+            )
+            try:
+                uc.calculate_contract_splits(
+                    settlement_run_id=run["id"], actor_user_id=actor_user_id
+                )
+                uc.generate_statements(
+                    settlement_run_id=run["id"], actor_user_id=actor_user_id
+                )
+                uc.approve_settlement(
+                    settlement_run_id=run["id"], actor_user_id=actor_user_id
+                )
+                batch = uc.create_payout_batch(
+                    settlement_run_id=run["id"],
+                    actor_user_id=actor_user_id,
+                    idempotency_key="demo-royalty-payout-s030",
+                    destination_type="demo_wallet",
+                    destination_ref_prefix="demo_wallet",
+                )
+                uc.simulate_payouts(
+                    batch_id=batch["id"], actor_user_id=actor_user_id, scenario="succeed"
+                )
+                out["settlement_id"] = run["id"]
+                out["payout_batch_id"] = batch["id"]
+            except Exception as exc:
+                out["settlement_note"] = str(exc)
+        out["pool_id"] = pool["id"]
+        out["seeded"] = True
+        out["label"] = "demo/synthetic"
+    except Exception as exc:
+        out["error"] = str(exc)
+    return out
+
+
+def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_user_id: int) -> dict[str, Any]:
+    """Spec 031 demo submissions — idempotent; no analytics mass-insert; reserved warehouse ids only."""
+    out: dict[str, Any] = {"demo": True, "seeded": False}
+    try:
+        from pathlib import Path
+
+        from app.core.config import get_settings
+        from app.core.time_util import utc_now
+        from app.packages.artists.infrastructure.schema import ensure_artist_tables
+        from app.packages.catalog_publishing.application.use_cases import (
+            CatalogPublishingUseCases,
+        )
+        from app.packages.catalog_publishing.infrastructure.local_media_storage import (
+            LocalMediaStorageProvider,
+            make_minimal_png,
+            make_minimal_wav,
+        )
+        from app.packages.catalog_publishing.infrastructure.schema import (
+            DEMO_WAREHOUSE_TRACK_ID_MIN,
+            ensure_catalog_publishing_tables,
+        )
+        from app.packages.catalog_rights.infrastructure.schema import (
+            ensure_catalog_rights_tables,
+        )
+        from app.packages.engagement.services.app_storage import ensure_app_tables
+        from app.packages.organizations.infrastructure.schema import (
+            ensure_organization_tables,
+        )
+
+        ensure_organization_tables(conn)
+        try:
+            ensure_artist_tables(conn)
+        except Exception:
+            pass
+        ensure_catalog_rights_tables(conn)
+        ensure_catalog_publishing_tables(conn)
+        try:
+            ensure_app_tables(conn)
+        except Exception:
+            pass
+
+        now = utc_now()
+        # Artist profile
+        profile_id = None
+        if _table_exists(conn, "app_artist_profile"):
+            prow = conn.execute(
+                """
+                SELECT id FROM app_artist_profile
+                WHERE organization_id = ? AND normalized_name = 'demo artist s031'
+                LIMIT 1
+                """,
+                [org_id],
+            ).fetchone()
+            if prow:
+                profile_id = int(prow[0])
+            else:
+                profile_id = _next_id(conn, "app_artist_profile")
+                conn.execute(
+                    """
+                    INSERT INTO app_artist_profile
+                        (id, organization_id, display_name, legal_name, normalized_name,
+                         status, warehouse_artist_id, created_by, created_at, updated_at)
+                    VALUES (?, ?, 'Demo Artist', 'Demo Artist LLC', 'demo artist s031',
+                            'active', NULL, ?, ?, ?)
+                    """,
+                    [profile_id, org_id, artist_user_id, now, now],
+                )
+
+        # Org membership artist_manager + portal access
+        _ensure_org_member(conn, org_id, artist_user_id, ["artist_manager", "artist"])
+        if profile_id:
+            existing_portal = conn.execute(
+                """
+                SELECT id FROM app_artist_portal_access
+                WHERE user_id = ? AND artist_profile_id = ? AND organization_id = ?
+                LIMIT 1
+                """,
+                [artist_user_id, profile_id, org_id],
+            ).fetchone()
+            if not existing_portal:
+                pid = _next_id(conn, "app_artist_portal_access")
+                conn.execute(
+                    """
+                    INSERT INTO app_artist_portal_access
+                        (id, user_id, artist_profile_id, organization_id, status, created_at)
+                    VALUES (?, ?, ?, ?, 'active', ?)
+                    """,
+                    [pid, artist_user_id, profile_id, org_id, now],
+                )
+
+        # Catalog reviewer (owner) already has publish perms via owner role
+        settings = get_settings()
+        media_root = Path(settings.media_storage_root)
+        if not media_root.is_absolute():
+            media_root = Path.cwd() / media_root
+        media = LocalMediaStorageProvider(root=media_root)
+        uc = CatalogPublishingUseCases(conn, media=media)
+
+        wav = make_minimal_wav()
+        png = make_minimal_png(512, 512)
+
+        # Shared 60/40 rights contract + asset for published demo
+        asset_id = 9101
+        contract_id = None
+        if _table_exists(conn, "app_catalog_asset"):
+            arow = conn.execute(
+                "SELECT id FROM app_catalog_asset WHERE id = ?", [asset_id]
+            ).fetchone()
+            if not arow:
+                conn.execute(
+                    """
+                    INSERT INTO app_catalog_asset
+                        (id, organization_id, title, status, warehouse_track_id,
+                         artist_profile_id, created_by, created_at, updated_at)
+                    VALUES (?, ?, '[DEMO-SUBMIT] Published Single', 'active', ?,
+                            ?, ?, ?, ?)
+                    """,
+                    [
+                        asset_id,
+                        org_id,
+                        DEMO_WAREHOUSE_TRACK_ID_MIN,
+                        profile_id,
+                        owner_user_id,
+                        now,
+                        now,
+                    ],
+                )
+            crow = conn.execute(
+                """
+                SELECT id FROM app_rights_contract
+                WHERE asset_id = ? AND organization_id = ? AND evidence_ref = 'demo-s031'
+                LIMIT 1
+                """,
+                [asset_id, org_id],
+            ).fetchone()
+            if crow:
+                contract_id = int(crow[0])
+            else:
+                contract_id = _next_id(conn, "app_rights_contract")
+                conn.execute(
+                    """
+                    INSERT INTO app_rights_contract
+                        (id, organization_id, asset_id, rights_type, status, exclusive,
+                         valid_from, valid_to, evidence_ref, created_by, created_at, updated_at)
+                    VALUES (?, ?, ?, 'master', 'active', FALSE, DATE '2020-01-01', NULL,
+                            'demo-s031', ?, ?, ?)
+                    """,
+                    [contract_id, org_id, asset_id, owner_user_id, now, now],
+                )
+                for pname, pct in (("Demo Artist S031", 60), ("Demo Label S031", 40)):
+                    pid = _next_id(conn, "app_rights_contract_party")
+                    conn.execute(
+                        """
+                        INSERT INTO app_rights_contract_party
+                            (id, contract_id, party_name, party_type, ownership_percentage,
+                             organization_id, artist_profile_id, created_at, updated_at)
+                        VALUES (?, ?, ?, 'external', ?, NULL, NULL, ?, ?)
+                        """,
+                        [pid, contract_id, pname, pct, now, now],
+                    )
+
+        # Blocked rights contract 90%
+        bad_asset = 9102
+        bad_contract = None
+        if _table_exists(conn, "app_catalog_asset"):
+            if not conn.execute(
+                "SELECT 1 FROM app_catalog_asset WHERE id = ?", [bad_asset]
+            ).fetchone():
+                conn.execute(
+                    """
+                    INSERT INTO app_catalog_asset
+                        (id, organization_id, title, status, warehouse_track_id,
+                         artist_profile_id, created_by, created_at, updated_at)
+                    VALUES (?, ?, '[DEMO-SUBMIT] Blocked Rights', 'active', NULL,
+                            ?, ?, ?, ?)
+                    """,
+                    [bad_asset, org_id, profile_id, owner_user_id, now, now],
+                )
+            brow = conn.execute(
+                """
+                SELECT id FROM app_rights_contract
+                WHERE asset_id = ? AND evidence_ref = 'demo-s031-bad'
+                LIMIT 1
+                """,
+                [bad_asset],
+            ).fetchone()
+            if brow:
+                bad_contract = int(brow[0])
+            else:
+                bad_contract = _next_id(conn, "app_rights_contract")
+                conn.execute(
+                    """
+                    INSERT INTO app_rights_contract
+                        (id, organization_id, asset_id, rights_type, status, exclusive,
+                         valid_from, valid_to, evidence_ref, created_by, created_at, updated_at)
+                    VALUES (?, ?, ?, 'master', 'active', FALSE, DATE '2020-01-01', NULL,
+                            'demo-s031-bad', ?, ?, ?)
+                    """,
+                    [bad_contract, org_id, bad_asset, owner_user_id, now, now],
+                )
+                pid = _next_id(conn, "app_rights_contract_party")
+                conn.execute(
+                    """
+                    INSERT INTO app_rights_contract_party
+                        (id, contract_id, party_name, party_type, ownership_percentage,
+                         organization_id, artist_profile_id, created_at, updated_at)
+                    VALUES (?, ?, 'Solo 90', 'external', 90, NULL, NULL, ?, ?)
+                    """,
+                    [pid, bad_contract, now, now],
+                )
+
+        def _ensure_submission(key: str, title: str, **kwargs):
+            row = conn.execute(
+                "SELECT id, status FROM app_release_submission WHERE idempotency_key = ?",
+                [key],
+            ).fetchone()
+            if row:
+                return int(row[0]), str(row[1]), True
+            draft = uc.create_draft(
+                actor_user_id=artist_user_id,
+                organization_id=org_id,
+                artist_profile_id=profile_id or 1,
+                title=title,
+                release_type="single",
+                idempotency_key=key,
+                is_demo=True,
+                rights_contract_id=kwargs.get("rights_contract_id"),
+                planned_release_date=kwargs.get("planned_release_date"),
+            )
+            return int(draft["id"]), "draft", False
+
+        from datetime import date
+
+        created = {}
+
+        # 1) draft
+        sid, _, _ = _ensure_submission("demo-s031-draft", "[DEMO] Draft Single")
+        created["draft"] = sid
+
+        # 2) changes_requested
+        sid, st, existed = _ensure_submission(
+            "demo-s031-changes", "[DEMO] Changes Requested"
+        )
+        if not existed:
+            tr = uc.add_track(
+                submission_id=sid, organization_id=org_id, title="Changes Track"
+            )
+            uc.upload_audio(
+                submission_id=sid,
+                track_id=tr["id"],
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="demo.wav",
+                content_type="audio/wav",
+                data=wav,
+            )
+            uc.upload_cover(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="cover.png",
+                content_type="image/png",
+                data=png,
+            )
+            uc.submit(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+            )
+            uc.request_changes(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+                notes="Please fix metadata",
+            )
+        created["changes_requested"] = sid
+
+        # 3) scheduled
+        sid, _, existed = _ensure_submission(
+            "demo-s031-scheduled",
+            "[DEMO] Scheduled Single",
+            rights_contract_id=contract_id,
+            planned_release_date=date(2026, 8, 1),
+        )
+        if not existed and contract_id:
+            tr = uc.add_track(
+                submission_id=sid, organization_id=org_id, title="Scheduled Track"
+            )
+            uc.upload_audio(
+                submission_id=sid,
+                track_id=tr["id"],
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="sched.wav",
+                content_type="audio/wav",
+                data=wav,
+            )
+            uc.upload_cover(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="sched.png",
+                content_type="image/png",
+                data=png,
+            )
+            uc.update_metadata(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                rights_contract_id=contract_id,
+            )
+            uc.submit(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+            )
+            uc.approve(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+                notes="ok",
+            )
+            uc.schedule(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+            )
+        created["scheduled"] = sid
+
+        # 4) published (60/40 contract)
+        sid, _, existed = _ensure_submission(
+            "demo-s031-published",
+            "[DEMO] Published Single",
+            rights_contract_id=contract_id,
+            planned_release_date=date(2026, 7, 1),
+        )
+        if not existed and contract_id:
+            tr = uc.add_track(
+                submission_id=sid,
+                organization_id=org_id,
+                title="Published Track",
+                warehouse_track_id=DEMO_WAREHOUSE_TRACK_ID_MIN,
+            )
+            uc.upload_audio(
+                submission_id=sid,
+                track_id=tr["id"],
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="pub.wav",
+                content_type="audio/wav",
+                data=wav,
+            )
+            uc.upload_cover(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="pub.png",
+                content_type="image/png",
+                data=png,
+            )
+            # Link catalog asset to track for rights gate conflict check
+            conn.execute(
+                """
+                UPDATE app_release_submission_track
+                SET catalog_asset_id = ?, rights_contract_id = ?
+                WHERE id = ?
+                """,
+                [asset_id, contract_id, tr["id"]],
+            )
+            uc.update_metadata(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                rights_contract_id=contract_id,
+            )
+            uc.submit(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+            )
+            uc.approve(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+            )
+            uc.publish(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+                idempotency_key="demo-s031-publish",
+            )
+        created["published"] = sid
+
+        # 5) blocked rights (90%) — stays draft with bad contract attached
+        sid, _, existed = _ensure_submission(
+            "demo-s031-blocked-rights",
+            "[DEMO] Blocked Rights",
+            rights_contract_id=bad_contract,
+        )
+        if not existed:
+            tr = uc.add_track(
+                submission_id=sid, organization_id=org_id, title="Blocked Track"
+            )
+            uc.upload_audio(
+                submission_id=sid,
+                track_id=tr["id"],
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="block.wav",
+                content_type="audio/wav",
+                data=wav,
+            )
+            uc.upload_cover(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="block.png",
+                content_type="image/png",
+                data=png,
+            )
+            if bad_contract:
+                conn.execute(
+                    """
+                    UPDATE app_release_submission_track
+                    SET catalog_asset_id = ?, rights_contract_id = ?
+                    WHERE id = ?
+                    """,
+                    [bad_asset, bad_contract, tr["id"]],
+                )
+                uc.update_metadata(
+                    submission_id=sid,
+                    organization_id=org_id,
+                    actor_user_id=artist_user_id,
+                    rights_contract_id=bad_contract,
+                )
+        created["blocked_rights"] = sid
+
+        # 6) withdrawn
+        sid, _, existed = _ensure_submission(
+            "demo-s031-withdrawn",
+            "[DEMO] Withdrawn Single",
+            rights_contract_id=contract_id,
+            planned_release_date=date(2026, 6, 1),
+        )
+        if not existed and contract_id:
+            tr = uc.add_track(
+                submission_id=sid, organization_id=org_id, title="Withdrawn Track"
+            )
+            uc.upload_audio(
+                submission_id=sid,
+                track_id=tr["id"],
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="wd.wav",
+                content_type="audio/wav",
+                data=wav,
+            )
+            uc.upload_cover(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                filename="wd.png",
+                content_type="image/png",
+                data=png,
+            )
+            uc.update_metadata(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+                rights_contract_id=contract_id,
+            )
+            uc.submit(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=artist_user_id,
+            )
+            uc.approve(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+            )
+            uc.publish(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+                idempotency_key="demo-s031-withdrawn-pub",
+            )
+            uc.withdraw(
+                submission_id=sid,
+                organization_id=org_id,
+                actor_user_id=owner_user_id,
+                reason="Artist request",
+            )
+        created["withdrawn"] = sid
+
+        out["seeded"] = True
+        out["submissions"] = created
+        out["artist_profile_id"] = profile_id
+        out["contract_id"] = contract_id
+    except Exception as exc:
+        out["error"] = str(exc)
+    return out
+
+
 def seed_integrated_demo() -> dict[str, Any]:
     from app.core.database import using_write_conn
     from app.core.time_util import utc_now
@@ -442,12 +1121,28 @@ def seed_integrated_demo() -> dict[str, Any]:
     with using_write_conn() as conn:
         ensure_platform_rbac_tables(conn)
         ensure_subscription_tables(conn)
+        try:
+            from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
+            from app.packages.catalog_rights.infrastructure.schema import (
+                ensure_catalog_rights_tables,
+            )
+            from app.packages.catalog_publishing.infrastructure.schema import (
+                ensure_catalog_publishing_tables,
+            )
+
+            ensure_catalog_rights_tables(conn)
+            ensure_royalty_tables(conn)
+            ensure_catalog_publishing_tables(conn)
+        except Exception:
+            pass
         ids: dict[str, int] = {}
         for username, email in DEMO_USERS:
             ids[username] = _ensure_user(conn, username, email)
 
         _assign_platform_role(conn, ids["platform.admin"], "platform_admin")
         _assign_platform_role(conn, ids["sales.manager"], "sales_manager")
+        # Presentation demo: CRM (sales_manager) + cobros (billing_manager) — no owner/admin
+        _assign_platform_role(conn, ids["demo.business"], "sales_manager")
 
         org_id = _ensure_canonical_org(conn, ids["organization.owner"])
         _ensure_org_member(conn, org_id, ids["organization.owner"], ["owner"])
@@ -455,12 +1150,24 @@ def seed_integrated_demo() -> dict[str, Any]:
         _ensure_org_member(
             conn, org_id, ids["finance.manager"], ["billing_manager", "finance"]
         )
+        _ensure_org_member(
+            conn, org_id, ids["demo.business"], ["billing_manager"]
+        )
         _ensure_professional_subscription(conn, org_id, ids["organization.owner"])
         personal = _seed_personal_line(conn, ids)
+        royalties = _seed_demo_royalties(conn, org_id, ids["finance.manager"])
+        publishing = _seed_demo_catalog_publishing(
+            conn,
+            org_id,
+            ids["demo.artist"],
+            ids["organization.owner"],
+        )
 
         report["ok"] = True
         report["organization_id"] = org_id
         report["personal"] = personal
+        report["royalties"] = royalties
+        report["catalog_publishing"] = publishing
         report["accounts"] = [
             {
                 "username": u,
