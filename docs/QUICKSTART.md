@@ -111,7 +111,7 @@ curl http://localhost:8000/health
 curl http://localhost:8000/
 ```
 
-- Documentación interactiva: http://localhost:8000/docs  
+- Documentación interactiva: http://localhost:8000/docs
 - OpenAPI: prefijo `/api/v1`
 - `/health` público no expone ruta de DB ni nombres de tablas por defecto.
 
@@ -163,6 +163,10 @@ Contraseña: variable **`DEMO_ACCOUNT_PASSWORD`** (solo hash en DB; placeholder 
 
 Planes **personales** (`/account/*`) ≠ planes **empresariales** (`/subscriptions/*`).
 
+**Regalías (Spec 030):** `/royalties`, `/payouts` — fondos distribuibles + payout **simulado** (no banco real). Ver `automation/specs/030-royalties-settlements-and-simulated-payouts/`.
+
+**Distribución artística (Spec 031):** `/artist/*`, `/catalog-review/*` — subir privado → revisar → publicar. Media en `data/media/`. Cuenta `demo.artist`. Ver `automation/specs/031-artist-music-submission-catalog-review-and-release-publishing/`.
+
 ---
 
 ## 7. Tests y smoke (opcional)
@@ -198,8 +202,8 @@ La regresión cubre health, login, logout server-side, RBAC engineer, explorer, 
 docker compose -f infrastructure/docker/docker-compose.yml up --build
 ```
 
-- `pipeline` — job one-shot ELT  
-- `api` — http://localhost:8000 (tras pipeline OK)  
+- `pipeline` — job one-shot ELT
+- `api` — http://localhost:8000 (tras pipeline OK)
 - `pocketbase` — http://localhost:8090 (opcional)
 
 Re-ejecutar solo ELT:
@@ -290,7 +294,7 @@ Nota: rutas `/api/v1/artists` de negocio ≠ catálogo streaming (`/api/v1/catal
 
 ## Documentación relacionada
 
-- [README.md](../README.md) — visión y estructura del repo  
-- [automation/specs/028-enterprise-integration-and-final-validation/](../automation/specs/028-enterprise-integration-and-final-validation/) — cierre empresarial  
-- [docs/uml/README.md](uml/README.md) — diagramas PlantUML  
+- [README.md](../README.md) — visión y estructura del repo
+- [automation/specs/028-enterprise-integration-and-final-validation/](../automation/specs/028-enterprise-integration-and-final-validation/) — cierre empresarial
+- [docs/uml/README.md](uml/README.md) — diagramas PlantUML
 - [../voxmetriks-entregas](../voxmetriks-entregas) — entrega académica TGA07 (docx)

@@ -7,8 +7,10 @@ import { ORGANIZATIONS_ROUTES } from './packages/organizations/organizations.rou
 import { CRM_ROUTES } from './packages/crm/crm.routes';
 import { SUBSCRIPTIONS_ROUTES } from './packages/subscriptions/subscriptions.routes';
 import { BILLING_ROUTES } from './packages/billing/billing.routes';
+import { ROYALTIES_ROUTES } from './packages/royalties/royalties.routes';
 import { ARTIST_PROFILES_ROUTES } from './packages/artists/artists.routes';
 import { CATALOG_RIGHTS_ROUTES } from './packages/catalog-rights/catalog-rights.routes';
+import { CATALOG_PUBLISHING_ROUTES } from './packages/catalog-publishing/catalog-publishing.routes';
 import { CAMPAIGNS_ROUTES } from './packages/campaigns/campaigns.routes';
 import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/business-analytics.routes';
 import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
@@ -254,8 +256,10 @@ export const APP_ROUTES: Routes = [
       ...CRM_ROUTES,
       ...SUBSCRIPTIONS_ROUTES,
       ...BILLING_ROUTES,
+      ...ROYALTIES_ROUTES,
       ...ARTIST_PROFILES_ROUTES,
       ...CATALOG_RIGHTS_ROUTES,
+      ...CATALOG_PUBLISHING_ROUTES,
       ...CAMPAIGNS_ROUTES,
       ...BUSINESS_ANALYTICS_ROUTES,
       ...COMPLIANCE_ROUTES,

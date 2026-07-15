@@ -1,14 +1,47 @@
 # Matriz Maestra de Trazabilidad — Capa Operativa Voxmetriks
 
-**Versión:** 3.3.0 | **Ratificado documental:** 2026-06-20 | **Última actualización:** 2026-07-14  
-**Alcance:** Specs operativas `001`–`011` + fundamento **015** + **016–029** (incluye **029** Personal Music Subscriptions)  
-**Estado del sistema empresarial:** **ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT** (028)  
-**Línea B2C personal:** Spec **029** — `CLOSED_WITH_ACCEPTED_DEBT`  
-**Nota:** Numeración corregida — **024 ≠ Royalties**, **025 ≠ Payouts**. Royalties/Payouts quedan **OUT_OF_SCOPE** (specs futuras no numeradas).  
-**Cadena:** OE → OT → OO → Meta → Departamento → Paquete → CU → HU → FR → CA → Impl → Evidencia  
-**Constitución vigente:** 2.0.0 (`.specify/memory/constitution.md`)
+**Versión:** 3.6.0 | **Última actualización:** 2026-07-15
+**Estado del sistema:** **ENTERPRISE_ACADEMIC_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT**
+**Alcance Specs:** **001–031** trazadas (B2C 029 · regalías 030 · publicación 031 · integración 028)
+**feature.json activo:** Spec **031** (cierre académico; integración documentada aquí)
+**Golden Path integral:** `tests/test_final_integral_golden_path.py` · docs `GOLDEN-PATH-INTEGRAL.md`
+**Inventario:** `docs/INVENTARIO-FINAL-VERIFICADO.md`
+
+**Nota:** No production-ready comercial. Pagos/payouts simulados. Playwright/Docker NOT_VERIFIED en cierre final.
 
 Referencia: Constitución §12. Documento canónico transversal; las specs individuales incluyen subconjunto y detalle de casos de uso / historias de usuario.
+
+### Artist Music Submission, Catalog Review and Release Publishing — Spec 031 (cierre 2026-07-15)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `031-artist-music-submission-catalog-review-and-release-publishing` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Alcance | Borrador → revisión → derechos → publicar · media local privada/publicada · portal `demo.artist` |
+| Código | `packages/catalog_publishing` BE · `packages/catalog-publishing` FE |
+| API | `/api/v1/releases/*`, `/media/*`, `/catalog-review/*`, `/artist-portal/*` |
+| Gates | pytest S031 · S030/S029/S028 · FE lint/unit/build |
+| feature.json | apunta a **031** |
+| Media root | `data/media/{private,published}` · env `MEDIA_*` |
+| Catálogo importado | Intact ids &lt; 100000; demo inserts solo ≥ 9_000_000 `[DEMO-SUBMIT]` si hace falta |
+
+Debt: antivirus/CDN/DRM/transcoder/fingerprint/Playwright.
+
+### Royalties, Settlements and Simulated Payouts — Spec 030 (cierre 2026-07-15)
+
+| Campo | Valor |
+|-------|-------|
+| Spec | `030-royalties-settlements-and-simulated-payouts` |
+| Cierre | **CLOSED_WITH_ACCEPTED_DEBT** |
+| Alcance | Fondos distribuibles · atribución PRO_RATA / MANUAL · splits contractuales · statements · payout **simulado** |
+| Código | `packages/royalties` BE · `packages/royalties` FE |
+| API | `/api/v1/royalties/*`, `/api/v1/settlements/*`, `/api/v1/payouts/*` |
+| Gates | pytest S030 golden · S029/S028 golden · FE lint/unit/build |
+| feature.json | apunta a **030** |
+| Demo | seed hooks + menú `demo.business` lectura controlada |
+| Reglas | Ingreso plataforma ≠ fondo; derechos ≠ regalías; regalías ≠ payout; sin % universal; sin dinero real |
+
+Debt: impuestos/retenciones OUT; FX no; pasarela real no; list APIs settlement/payout batches parciales.
 
 ### Personal Music Subscriptions — Spec 029 (cierre 2026-07-14)
 
@@ -37,9 +70,9 @@ Debt: Playwright NOT_VERIFIED; MOCK pay/email; queue avanzado soft-flag; renewal
 | Gates | golden-path pytest PASS · reporting R* · CS S* · FE lint/unit/build |
 | Código | `test_enterprise_golden_path_s028.py` · packages `reporting`, `customer_success` |
 | Evidencia | `automation/specs/028-enterprise-integration-and-final-validation/` |
-| feature.json | historial 028; activo **029** mientras se cierra personal |
+| feature.json | historial 028/029/030; activo **031** |
 
-Debt: Playwright/Docker NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; royalties/payouts OUT_OF_SCOPE.
+Debt: Playwright/Docker NOT_VERIFIED; MOCK email/payment; no GDPR cert; DuckDB academic; royalties/payouts → **Spec 030**.
 
 ### Executive Reporting and Business Decisions — Spec 024 (cierre 2026-07-12)
 

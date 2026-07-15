@@ -76,6 +76,17 @@ class AudioResolver:
 
         if not force:
             cached = read_cache(conn, track_id)
+            if cached and cached.get("provider") == "local_published":
+                log_resolution(
+                    ResolutionLog(
+                        track_id=track_id,
+                        provider=cached["provider"],
+                        outcome=cached["status"],
+                        elapsed_ms=0.0,
+                        from_cache=True,
+                    )
+                )
+                return self._from_cache(cached)
             if cached and is_cache_usable(cached):
                 log_resolution(
                     ResolutionLog(
@@ -87,9 +98,17 @@ class AudioResolver:
                     )
                 )
                 return self._from_cache(cached)
+        else:
+            cached = read_cache(conn, track_id)
+            if cached and cached.get("provider") == "local_published":
+                return self._from_cache(cached)
 
         result = self._resolve_providers(ctx, skip_provider=skip_provider)
         if result is not None:
+            # Never overwrite local_published with external providers
+            existing = read_cache(conn, track_id)
+            if existing and existing.get("provider") == "local_published":
+                return self._from_cache(existing)
             write_cache(conn, result)
         return result
 

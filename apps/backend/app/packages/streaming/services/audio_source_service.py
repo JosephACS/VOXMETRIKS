@@ -87,8 +87,16 @@ def get_audio_source_response(
     async_resolve: bool = True,
     skip_provider: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Return cached audio source or schedule background resolution on miss."""
+    """Return cached audio source or schedule background resolution on miss.
+
+    Priority 1: ``local_published`` (Spec 031) — never overwrite with YouTube/Audius.
+    """
     migrate_audio_source_columns(conn)
+
+    # Prefer local_published before warehouse context (demo synthetic tracks).
+    cached = read_cache(conn, track_id)
+    if cached and cached.get("provider") == "local_published":
+        return _api_dict(cached)
 
     from .audio.resolver import build_track_context
 
@@ -99,7 +107,6 @@ def get_audio_source_response(
     query = build_search_query(ctx.track_name, ctx.artist_name)
 
     if not force:
-        cached = read_cache(conn, track_id)
         if cached and is_cache_usable(cached):
             return _api_dict(cached)
 
@@ -118,6 +125,10 @@ def get_audio_source_response(
 
     with using_write_conn() as write_conn:
         migrate_audio_source_columns(write_conn)
+        # Re-check local_published under write conn
+        cached_w = read_cache(write_conn, track_id)
+        if cached_w and cached_w.get("provider") == "local_published":
+            return _api_dict(cached_w)
         return resolve_audio_source(
             write_conn, track_id, force=force, skip_provider=skip_provider
         )

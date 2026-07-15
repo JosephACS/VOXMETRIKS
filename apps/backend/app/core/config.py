@@ -118,6 +118,16 @@ class Settings(BaseSettings):
     # Show is_demo / enterprise-demo orgs in the selector (opt-in).
     show_demo_organizations: bool = False
 
+    # Spec 031 — local media / catalog publishing
+    media_storage_root: str = "data/media"
+    media_max_audio_size_mb: float = 50.0
+    media_max_image_size_mb: float = 10.0
+    media_min_cover_px: int = 500
+    # Allow creator==reviewer only for is_demo submissions when set.
+    allow_demo_self_approve: bool = Field(
+        default=False, validation_alias="ALLOW_DEMO_SELF_APPROVE"
+    )
+
     # Platform jobs (Phase 5)
     jobs_enabled: bool = True
     jobs_interval_sec: int = 300
