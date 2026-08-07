@@ -1,5 +1,8 @@
+import {
+  filterSpaceNavSections,
+  spaceNavSectionsFor,
+} from './space-nav.config';
 import { homePathForSpace, personalSpace, organizationSpace, dataOpsSpace } from './space.models';
-import { spaceNavSectionsFor } from './space-nav.config';
 
 describe('space models & nav (045)', () => {
   it('maps home paths per space kind', () => {
@@ -16,18 +19,63 @@ describe('space models & nav (045)', () => {
     expect(paths).not.toContain('/recommendations');
   });
 
-  it('organization nav includes hub and catalog routes', () => {
-    const paths = spaceNavSectionsFor('organization', { organizationId: 5 }).flatMap((s) =>
-      s.items.map((i) => i.path),
+  it('organization nav includes hub and catalog routes with permission metadata', () => {
+    const items = spaceNavSectionsFor('organization', { organizationId: 5 }).flatMap(
+      (s) => s.items,
     );
+    const paths = items.map((i) => i.path);
     expect(paths).toContain('/organizations/5');
     expect(paths).toContain('/catalog');
     expect(paths).toContain('/artist-profiles');
+    const royalties = items.find((i) => i.path === '/royalties');
+    expect(royalties?.orgPermission).toBe('royalty.view');
+    expect(royalties?.orgModule).toBe('operational');
+    const invoices = items.find((i) => i.path === '/billing/invoices');
+    expect(invoices?.orgPermission).toBe('invoice.view');
+  });
+
+  it('hides org items when canAccessOrgModule returns false', () => {
+    const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
+    const filtered = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: (module, perm) =>
+        module === 'org_admin_basic' && perm === 'organization.view',
+    });
+    const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toEqual(['/organizations/1']);
+    expect(paths).not.toContain('/royalties');
+    expect(paths).not.toContain('/reports');
+  });
+
+  it('shows reports only for staff in organization space', () => {
+    const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
+    const asMember = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: () => true,
+    });
+    expect(asMember.flatMap((s) => s.items.map((i) => i.path))).not.toContain('/reports');
+
+    const asStaff = filterSpaceNavSections(raw, {
+      hasStaffAccess: true,
+      canAccessOrgModule: () => true,
+    });
+    expect(asStaff.flatMap((s) => s.items.map((i) => i.path))).toContain('/reports');
   });
 
   it('data ops nav includes ELT and explorer', () => {
     const paths = spaceNavSectionsFor('data_ops').flatMap((s) => s.items.map((i) => i.path));
     expect(paths).toContain('/elt-pipeline');
     expect(paths).toContain('/explorer');
+  });
+
+  it('platform admin nav excludes /users profile and /business marketing', () => {
+    const paths = spaceNavSectionsFor('platform_admin').flatMap((s) =>
+      s.items.map((i) => i.path),
+    );
+    expect(paths).toContain('/platform-ops');
+    expect(paths).toContain('/workpanel');
+    expect(paths).not.toContain('/users');
+    expect(paths).not.toContain('/business');
+    expect(paths).not.toContain('/subscriptions/plans');
   });
 });

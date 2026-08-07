@@ -129,3 +129,12 @@ No existe un **selector de espacios** unificado. El selector de organización cu
 
 No existe endpoint del estilo `GET /api/v1/artists/mine` que liste perfiles donde `app_artist_assignment` / `app_artist_team_member` vinculan al `user_id` actual.  
 v1: `listArtistSpaces() → []` y no se muestran entradas Artist en el selector.
+
+## 15. Corrección Fase 1 (2026-08-07)
+
+Ver [phase1-correction.md](./phase1-correction.md):
+
+- productSurfaceGuard ya estaba wired vía `withProductSurfaceGuard`; se extrajo helper + tests de contrato.
+- Nav Organización filtrada por `organizationModuleGuard` permissions/tiers reales.
+- Platform Admin sin `/users` (perfil) ni `/business` (marketing).
+- Data Ops visible para admin+engineer por `hasEngineerAccess()` (sin cambio de roles).

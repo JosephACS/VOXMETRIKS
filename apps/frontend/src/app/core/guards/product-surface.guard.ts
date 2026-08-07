@@ -1,55 +1,41 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import {
-  classifyProductDeepLink,
-  normalizeIdentityRole,
-} from '../navigation/nav-access.policy';
+import { normalizeIdentityRole, type NavAccessContext } from '../navigation/nav-access.policy';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
 import { SpaceContextService } from '../spaces/space-context.service';
-import { spaceAllowsProductPath } from '../spaces/space-access.policy';
+import {
+  decideProductSurfaceAccess,
+  presentationModeFromUser,
+} from './product-surface.policy';
 
-function presentationModeFromAuth(auth: AuthService): boolean {
-  const user = auth.getUser();
-  const username = (user?.username || '').toLowerCase();
-  const prefs = user?.preferences as
-    | { presentation_nav?: boolean; presentation_role?: string }
-    | undefined;
-  return !!(
-    prefs?.presentation_nav ||
-    prefs?.presentation_role ||
-    username === 'demo.business' ||
-    username === 'demo.artist' ||
-    username === 'finance.manager'
-  );
-}
+export { decideProductSurfaceAccess, presentationModeFromUser } from './product-surface.policy';
+export { presentationModeFromUser as presentationModeFromAuth } from './product-surface.policy';
 
 /**
  * Spec 038 — block deep links to out-of-product demo modules.
- * Spec 045 — allow org-commercial / platform / data paths when the active
- * product space explicitly includes them (backend RBAC still authoritative).
+ * Spec 045 — allow org-commercial paths when active space is organization.
+ *
+ * Wired via withProductSurfaceGuard in app.routes.ts for CRM/Billing/etc.
+ * NOT applied to Platform Ops (platformAdminGuard).
  */
-export const productSurfaceGuard: CanActivateFn = (_route, state) => {
+export const productSurfaceGuard: CanActivateFn = (_route, state): boolean | UrlTree => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const crm = inject(CrmContextService);
   const spaces = inject(SpaceContextService);
 
-  const ctx = {
+  const ctx: NavAccessContext = {
     identityRole: normalizeIdentityRole(auth.role()),
     platformAdmin: crm.roles().includes('platform_admin'),
-    presentationMode: presentationModeFromAuth(auth),
+    presentationMode: presentationModeFromUser(auth.getUser()),
   };
 
-  if (spaceAllowsProductPath(state.url, spaces.activeSpaceKind())) {
-    const staffVerdict = classifyProductDeepLink(state.url, ctx);
-    if (staffVerdict === 'staff-block') {
-      return router.createUrlTree(['/error/403']);
-    }
-    return true;
-  }
-
-  const verdict = classifyProductDeepLink(state.url, ctx);
+  const verdict = decideProductSurfaceAccess(
+    state.url,
+    ctx,
+    spaces.activeSpaceKind(),
+  );
   if (verdict === 'allow') return true;
   if (verdict === 'staff-block') {
     return router.createUrlTree(['/error/403']);

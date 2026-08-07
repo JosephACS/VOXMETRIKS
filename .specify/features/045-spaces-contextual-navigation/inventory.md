@@ -13,7 +13,11 @@
 | `apps/frontend/src/app/core/spaces/space-nav.config.spec.ts` | Tests |
 | `apps/frontend/src/app/core/spaces/space-context.service.ts` | Servicio |
 | `apps/frontend/src/app/core/spaces/index.ts` | Barrel |
-| `apps/frontend/src/app/shared/components/space-selector/space-selector.component.ts` | UI selector |
+| `apps/frontend/src/app/core/guards/product-surface.policy.ts` | Decisiones puras 038/045 |
+| `apps/frontend/src/app/core/guards/product-surface.routes.ts` | prependRouteGuard + lista packages |
+| `apps/frontend/src/app/core/guards/with-product-surface-guard.ts` | Wrapper usado por app.routes |
+| `apps/frontend/src/app/core/guards/product-surface.guard.spec.ts` | Tests wiring + deep links |
+| `.specify/.../phase1-correction.md` | Corrección Fase 1 |
 
 ## Modificados
 

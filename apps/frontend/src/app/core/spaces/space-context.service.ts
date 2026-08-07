@@ -16,7 +16,7 @@ import {
   isPersistedSpaceStillValid,
   toPersistedRef,
 } from './space-access.policy';
-import { SpaceNavSection, spaceNavSectionsFor } from './space-nav.config';
+import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
 
 /**
  * Product space context (045).
@@ -53,10 +53,21 @@ export class SpaceContextService {
   );
 
   readonly navSections = computed((): SpaceNavSection[] => {
+    this.i18n.tick();
     const space = this._active();
-    if (!space) return spaceNavSectionsFor('personal');
-    return spaceNavSectionsFor(space.kind, {
-      organizationId: space.organizationId ?? null,
+    const kind = space?.kind ?? 'personal';
+    const raw = spaceNavSectionsFor(kind, {
+      organizationId: space?.organizationId ?? null,
+    });
+    const role = this.auth.role();
+    const hasStaffAccess =
+      role === 'admin' ||
+      role === 'engineer' ||
+      this.crmCtx.roles().includes('platform_admin');
+    return filterSpaceNavSections(raw, {
+      hasStaffAccess,
+      canAccessOrgModule: (moduleKind, requiredPermission) =>
+        this.orgCtx.canAccessModule(moduleKind, requiredPermission ?? null),
     });
   });
 

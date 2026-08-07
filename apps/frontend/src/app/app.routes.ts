@@ -1,8 +1,13 @@
 import { Routes } from '@angular/router';
 import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { ProfilesLayoutComponent } from './layouts/profiles-layout/profiles-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { engineerGuard } from './core/guards/engineer.guard';
+import { staffCapabilityGuard } from './core/guards/staff-capability.guard';
+import {
+  withProductSurfaceGuard,
+} from './core/guards/with-product-surface-guard';
 import { ORGANIZATIONS_ROUTES } from './packages/organizations/organizations.routes';
 import { CRM_ROUTES } from './packages/crm/crm.routes';
 import { SUBSCRIPTIONS_ROUTES } from './packages/subscriptions/subscriptions.routes';
@@ -16,6 +21,9 @@ import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/busines
 import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
 import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
 import { REPORTING_ROUTES } from './packages/reporting/reporting.routes';
+import { SIMPLE_REPORTS_ROUTES } from './packages/simple-reports/simple-reports.routes';
+import { WORKPANEL_ROUTES } from './packages/workpanel/workpanel.routes';
+import { COMPLEX_REPORTS_ROUTES } from './packages/complex-reports/complex-reports.routes';
 import { CUSTOMER_SUCCESS_ROUTES } from './packages/customer-success/customer-success.routes';
 import { PERSONAL_ACCOUNT_ROUTES } from './packages/personal-account/personal-account.routes';
 
@@ -34,6 +42,21 @@ export const APP_ROUTES: Routes = [
     ],
   },
   {
+    path: 'account/profiles',
+    component: ProfilesLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        title: 'personal.profiles.title',
+        loadComponent: () =>
+          import('./packages/personal-account/pages/profile-selector.page').then(
+            (m) => m.ProfileSelectorPage,
+          ),
+      },
+    ],
+  },
+  {
     path: '',
     component: DashboardLayoutComponent,
     canActivate: [authGuard],
@@ -45,11 +68,8 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'dashboard',
-        title: 'nav.analyticsHub',
-        loadComponent: () =>
-          import('./packages/analytics/dashboard/dashboard.component').then(
-            (m) => m.DashboardComponent,
-          ),
+        redirectTo: 'workpanel',
+        pathMatch: 'full',
       },
       {
         path: 'discover',
@@ -61,19 +81,13 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'insights/analytics',
-        title: 'nav.streamsAnalytics',
-        loadComponent: () =>
-          import('./packages/analytics/stream-insights/analytics.component').then(
-            (m) => m.AnalyticsFeatureComponent,
-          ),
+        redirectTo: 'workpanel',
+        pathMatch: 'full',
       },
       {
         path: 'insights/tracks',
-        title: 'nav.topTracks',
-        loadComponent: () =>
-          import('./packages/analytics/top-tracks/tracks.component').then(
-            (m) => m.TracksFeatureComponent,
-          ),
+        redirectTo: 'complex-reports',
+        pathMatch: 'full',
       },
       {
         path: 'insights/users',
@@ -82,7 +96,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'dashboard/analytics',
-        redirectTo: '/analytics',
+        redirectTo: 'workpanel',
         pathMatch: 'full',
       },
       {
@@ -166,6 +180,14 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        path: 'activity',
+        title: 'activity.title',
+        loadComponent: () =>
+          import('./packages/streaming/activity/activity.page').then(
+            (m) => m.ActivityPageComponent
+          ),
+      },
+      {
         path: 'genres',
         title: 'nav.genres',
         loadComponent: () =>
@@ -183,19 +205,13 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'trending',
-        title: 'nav.trending',
-        loadComponent: () =>
-          import('./packages/analytics/trending/trending.component').then(
-            (m) => m.TrendingComponent
-          ),
+        redirectTo: 'complex-reports',
+        pathMatch: 'full',
       },
       {
         path: 'analytics',
-        title: 'nav.analytics',
-        loadComponent: () =>
-          import('./packages/analytics/analytics/analytics.component').then(
-            (m) => m.AnalyticsComponent
-          ),
+        redirectTo: 'workpanel',
+        pathMatch: 'full',
       },
       {
         path: 'elt-pipeline',
@@ -203,7 +219,7 @@ export const APP_ROUTES: Routes = [
         canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/elt-pipeline/elt-pipeline.component').then(
-            (m) => m.EltPipelineComponent
+            (m) => m.EltPipelineComponent,
           ),
       },
       {
@@ -217,23 +233,20 @@ export const APP_ROUTES: Routes = [
         canActivate: [engineerGuard],
         loadComponent: () =>
           import('./packages/data-engineering/explorer/explorer.component').then(
-            (m) => m.ExplorerComponent
+            (m) => m.ExplorerComponent,
           ),
       },
       {
         path: 'comparatives',
-        title: 'nav.comparatives',
-        loadComponent: () =>
-          import('./packages/analytics/comparatives/comparatives.component').then(
-            (m) => m.ComparativesComponent
-          ),
+        redirectTo: 'complex-reports',
+        pathMatch: 'full',
       },
       {
         path: 'recommendations',
         title: 'nav.recommendations',
         loadComponent: () =>
           import('./packages/recommendations/recommendations.component').then(
-            (m) => m.RecommendationsComponent
+            (m) => m.RecommendationsComponent,
           ),
       },
       {
@@ -241,7 +254,7 @@ export const APP_ROUTES: Routes = [
         title: 'shell.myProfile',
         loadComponent: () =>
           import('./packages/users/users.component').then(
-            (m) => m.UsersComponent
+            (m) => m.UsersComponent,
           ),
       },
       {
@@ -249,23 +262,26 @@ export const APP_ROUTES: Routes = [
         title: 'nav.settings',
         loadComponent: () =>
           import('./packages/administration/settings/settings.component').then(
-            (m) => m.SettingsComponent
+            (m) => m.SettingsComponent,
           ),
       },
       ...ORGANIZATIONS_ROUTES,
-      ...CRM_ROUTES,
-      ...SUBSCRIPTIONS_ROUTES,
-      ...BILLING_ROUTES,
-      ...ROYALTIES_ROUTES,
+      ...withProductSurfaceGuard(CRM_ROUTES),
+      ...withProductSurfaceGuard(SUBSCRIPTIONS_ROUTES),
+      ...withProductSurfaceGuard(BILLING_ROUTES),
+      ...withProductSurfaceGuard(ROYALTIES_ROUTES),
       ...ARTIST_PROFILES_ROUTES,
       ...CATALOG_RIGHTS_ROUTES,
       ...CATALOG_PUBLISHING_ROUTES,
-      ...CAMPAIGNS_ROUTES,
-      ...BUSINESS_ANALYTICS_ROUTES,
-      ...COMPLIANCE_ROUTES,
+      ...withProductSurfaceGuard(CAMPAIGNS_ROUTES),
+      ...withProductSurfaceGuard(BUSINESS_ANALYTICS_ROUTES),
+      ...withProductSurfaceGuard(COMPLIANCE_ROUTES),
       ...PLATFORM_OPS_ROUTES,
-      ...REPORTING_ROUTES,
-      ...CUSTOMER_SUCCESS_ROUTES,
+      ...withProductSurfaceGuard(REPORTING_ROUTES),
+      ...SIMPLE_REPORTS_ROUTES,
+      ...WORKPANEL_ROUTES,
+      ...COMPLEX_REPORTS_ROUTES,
+      ...withProductSurfaceGuard(CUSTOMER_SUCCESS_ROUTES),
       ...PERSONAL_ACCOUNT_ROUTES,
       {
         path: 'error/401',
@@ -278,6 +294,14 @@ export const APP_ROUTES: Routes = [
         title: 'errors.403.title',
         loadComponent: () =>
           import('./pages/http-errors/http-error.pages').then((m) => m.Error403PageComponent),
+      },
+      {
+        path: 'error/module-unavailable',
+        title: 'errors.moduleUnavailable.title',
+        loadComponent: () =>
+          import('./pages/module-unavailable/module-unavailable.page').then(
+            (m) => m.ModuleUnavailablePageComponent,
+          ),
       },
       {
         path: 'error/500',
