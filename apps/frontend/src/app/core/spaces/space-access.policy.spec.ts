@@ -58,7 +58,7 @@ describe('space-access.policy (045)', () => {
     expect(engineer.some((s) => s.kind === 'data_ops')).toBe(true);
   });
 
-  it('adds platform admin space for identity admin or CRM platform_admin', () => {
+  it('adds platform admin space for identity admin or CRM platform_admin, not pure engineer', () => {
     const admin = buildAvailableSpaces({
       authenticated: true,
       identityRole: 'admin',
@@ -68,6 +68,17 @@ describe('space-access.policy (045)', () => {
       artistMemberships: [],
     });
     expect(admin.some((s) => s.kind === 'platform_admin')).toBe(true);
+
+    const engineerOnly = buildAvailableSpaces({
+      authenticated: true,
+      identityRole: 'engineer',
+      hasEngineerAccess: true,
+      hasPlatformAdminSpace: false,
+      organizations: [],
+      artistMemberships: [],
+    });
+    expect(engineerOnly.some((s) => s.kind === 'data_ops')).toBe(true);
+    expect(engineerOnly.some((s) => s.kind === 'platform_admin')).toBe(false);
   });
 
   it('never invents artist spaces when memberships are empty', () => {

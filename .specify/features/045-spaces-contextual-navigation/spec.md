@@ -138,3 +138,12 @@ Ver [phase1-correction.md](./phase1-correction.md):
 - Nav Organización filtrada por `organizationModuleGuard` permissions/tiers reales.
 - Platform Admin sin `/users` (perfil) ni `/business` (marketing).
 - Data Ops visible para admin+engineer por `hasEngineerAccess()` (sin cambio de roles).
+
+## 16. Hotfix Platform Admin (2026-08-07)
+
+| Espacio | Elegibilidad |
+|---------|--------------|
+| Data Ops | `admin` \| `engineer` (`hasEngineerAccess`) |
+| Platform Admin | `admin` \| CRM `platform_admin` (`canAccessPlatformAdmin` / `platformAdminGuard`) |
+
+Engineer puro: Data Ops sí; Platform Admin / `/platform-ops` no.

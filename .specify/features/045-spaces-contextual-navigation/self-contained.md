@@ -1,8 +1,18 @@
 ﻿# Spec 045 — Self-contained branch validation
 
-## Claim
+## Platform Admin vs Data Ops (hotfix)
 
-`feature/045-spaces-contextual-navigation` is intended to be **self-contained for frontend compile**: a clean checkout of the branch tip must resolve all relative imports reachable from Spec 045 / shell entrypoints without relying on uncommitted WT files.
+| Espacio | Elegibilidad FE |
+|---------|-----------------|
+| **Data Ops** | `hasEngineerAccess()` → identity `admin` **o** `engineer` |
+| **Platform Admin** | identity `admin` **o** CRM `platform_admin` |
+
+`platformAdminGuard` **no** usa `hasEngineerAccess()`. Un engineer puro:
+- ve Data Ops;
+- **no** ve el espacio Platform Admin;
+- **no** entra a `/platform-ops` (acceso denegado).
+
+Ver `platform-admin.guard.ts` + `canAccessPlatformAdmin`.
 
 ## What was missing before
 
