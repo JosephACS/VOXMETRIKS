@@ -1,3 +1,5 @@
 {
-  "feature_directory": "automation/specs/031-artist-music-submission-catalog-review-and-release-publishing"
+  "feature_directory": ".specify/features/045-spaces-contextual-navigation",
+  "previous_feature_directory": "automation/specs/044-product-consolidation-and-data-clarity",
+  "note": "Phase 045: product spaces and contextual navigation. No Git. Do not delete modules."
 }

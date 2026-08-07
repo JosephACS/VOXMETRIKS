@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AppUser, AuthResponse, AuthConfig } from '../../shared/models/api.models';
 import { UiPreferencesService } from './ui-preferences.service';
+import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -29,6 +30,8 @@ export interface RegisterResult {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly ui = inject(UiPreferencesService);
+  /** Optional to avoid hard circular DI with org context during early bootstrap. */
+  private readonly orgCtx = inject(OrganizationContextService, { optional: true });
   private readonly API = `${environment.apiUrl}/users`;
   private readonly AUTH_KEY = 'voxmetrik_auth_token';
   private readonly USER_KEY = 'voxmetrik_user';
@@ -211,7 +214,30 @@ export class AuthService {
     localStorage.removeItem(this.USER_KEY);
     sessionStorage.removeItem(this.AUTH_KEY);
     sessionStorage.removeItem(this.USER_KEY);
+    // New auth session should re-evaluate “Who’s listening?” (unless remember-profile).
+    try {
+      sessionStorage.removeItem('voxmetriks_profile_session_selected');
+    } catch {
+      /* ignore */
+    }
     this.authState.set({ isAuthenticated: false, user: null, token: null });
+    // Spec 043 hotfix: clear org signals so the next account cannot reuse them.
+    try {
+      this.orgCtx?.clearOrganizationScopedState();
+    } catch {
+      /* optional / circular-safe */
+    }
+    // Spec 045: clear product space selection with the session.
+    try {
+      localStorage.removeItem('voxmetriks_active_space_v1');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Apply a fresh auth session (e.g. after PIN unlock switch). */
+  applySession(res: AuthResponse, remember = true): void {
+    this.persistSession(res, remember);
   }
 
   private persistSession(res: AuthResponse, remember: boolean): void {
