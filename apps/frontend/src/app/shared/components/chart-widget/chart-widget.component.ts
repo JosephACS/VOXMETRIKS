@@ -28,7 +28,7 @@ echarts.use([
   CanvasRenderer,
 ]);
 
-export type ChartWidgetType = 'line' | 'bar' | 'pie';
+export type ChartWidgetType = 'line' | 'bar' | 'pie' | 'hbar' | 'stacked-bar';
 
 export interface ChartSeries {
   name: string;
@@ -164,17 +164,21 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
       };
     }
 
+    const horizontal = type === 'hbar';
+    const stacked = type === 'stacked-bar';
+    const seriesType: 'line' | 'bar' = type === 'line' ? 'line' : 'bar';
     const useDual = this.dualAxis() && type === 'line' && seriesInput.length >= 2;
+
     const echartsSeries = seriesInput.map((s, i) => {
-      const seriesType = type as 'line' | 'bar';
       return {
         name: s.name,
         type: seriesType,
+        stack: stacked ? 'total' : undefined,
         smooth: type === 'line',
         symbol: type === 'line' ? 'circle' : undefined,
         symbolSize: 6,
         yAxisIndex: useDual ? (s.yAxisIndex ?? i) : 0,
-        barMaxWidth: 36,
+        barMaxWidth: horizontal ? 22 : 36,
         itemStyle: { color: s.color ?? palette[i % palette.length] },
         areaStyle:
           type === 'line' && (s.yAxisIndex ?? i) === 0
@@ -191,17 +195,17 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
       };
     });
 
-    const yAxis: EChartsOption['yAxis'] = useDual
+    const valueAxis = useDual
       ? [
           {
-            type: 'value',
+            type: 'value' as const,
             name: seriesInput[0]?.name,
             nameTextStyle: { color: 'rgba(255,255,255,0.45)', fontSize: 10 },
             splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
             axisLabel: { color: 'rgba(255,255,255,0.45)' },
           },
           {
-            type: 'value',
+            type: 'value' as const,
             name: seriesInput[1]?.name,
             nameTextStyle: { color: 'rgba(255,255,255,0.45)', fontSize: 10 },
             splitLine: { show: false },
@@ -209,25 +213,32 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
           },
         ]
       : {
-          type: 'value',
+          type: 'value' as const,
           splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
           axisLabel: { color: 'rgba(255,255,255,0.45)' },
         };
+
+    const categoryAxis = {
+      type: 'category' as const,
+      data: labels,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.45)' },
+    };
 
     return {
       backgroundColor: 'transparent',
       animationDuration: animDuration,
       animationEasing: 'cubicOut',
-      grid: { left: 48, right: useDual ? 48 : 16, top: 36, bottom: 28 },
+      grid: {
+        left: horizontal ? 96 : 48,
+        right: useDual ? 48 : 16,
+        top: 36,
+        bottom: horizontal ? 28 : 28,
+      },
       tooltip: { trigger: 'axis' },
       legend: { top: 0, textStyle: { color: 'rgba(255,255,255,0.55)' } },
-      xAxis: {
-        type: 'category',
-        data: labels,
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-        axisLabel: { color: 'rgba(255,255,255,0.45)' },
-      },
-      yAxis,
+      xAxis: horizontal ? valueAxis : categoryAxis,
+      yAxis: horizontal ? categoryAxis : valueAxis,
       series: echartsSeries as EChartsOption['series'],
       color: palette,
     };

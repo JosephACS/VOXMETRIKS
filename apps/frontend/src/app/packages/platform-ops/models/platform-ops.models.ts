@@ -36,3 +36,40 @@ export interface BackupRecord {
   file_path: string;
   labeled_academic: boolean;
 }
+
+export interface UnresolvedAudioItem {
+  track_id: number;
+  provider: string;
+  status: string;
+  query?: string | null;
+  resolved_at?: string | null;
+  failure_count: number;
+  track_name?: string | null;
+  artist_name?: string | null;
+  duration_ms?: number | null;
+}
+
+export interface UnresolvedAudioList {
+  items: UnresolvedAudioItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AudioCandidate {
+  video_id: string;
+  title: string;
+  duration_sec?: number;
+  channel_title?: string;
+  query?: string;
+  score?: number;
+  accepted?: boolean;
+}
+
+export interface AudioCandidatesResponse {
+  track_id: number;
+  track_name: string;
+  artist_name: string;
+  duration_ms?: number | null;
+  candidates: AudioCandidate[];
+}

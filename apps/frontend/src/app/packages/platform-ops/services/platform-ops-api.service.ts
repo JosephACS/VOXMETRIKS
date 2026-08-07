@@ -1,8 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { BackupRecord, BackgroundJob, FeatureFlag, HealthStatus, ProviderConfig } from '../models/platform-ops.models';
+import {
+  AudioCandidatesResponse,
+  BackupRecord,
+  BackgroundJob,
+  FeatureFlag,
+  HealthStatus,
+  ProviderConfig,
+  UnresolvedAudioList,
+} from '../models/platform-ops.models';
+import { AudioSource } from '../../../shared/models/api.models';
 
 const base = environment.apiUrl;
 
@@ -28,5 +37,49 @@ export class PlatformOpsApiService {
 
   listBackups(): Observable<BackupRecord[]> {
     return this.http.get<BackupRecord[]>(`${base}/platform-ops/backups`);
+  }
+
+  listUnresolvedAudio(opts?: {
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }): Observable<UnresolvedAudioList> {
+    let params = new HttpParams();
+    if (opts?.q) params = params.set('q', opts.q);
+    if (opts?.limit != null) params = params.set('limit', String(opts.limit));
+    if (opts?.offset != null) params = params.set('offset', String(opts.offset));
+    return this.http.get<UnresolvedAudioList>(`${base}/platform-ops/audio-unresolved`, {
+      params,
+    });
+  }
+
+  searchAudioCandidates(trackId: number): Observable<AudioCandidatesResponse> {
+    return this.http.get<AudioCandidatesResponse>(
+      `${base}/platform-ops/audio-unresolved/${trackId}/candidates`,
+    );
+  }
+
+  saveManualAudio(
+    trackId: number,
+    body: { video_id?: string; url?: string; validate?: boolean },
+  ): Observable<AudioSource> {
+    return this.http.post<AudioSource>(
+      `${base}/platform-ops/audio-unresolved/${trackId}/manual`,
+      body,
+    );
+  }
+
+  markAudioUnavailable(trackId: number, reason = 'manual'): Observable<AudioSource> {
+    return this.http.post<AudioSource>(
+      `${base}/platform-ops/audio-unresolved/${trackId}/unavailable`,
+      { reason },
+    );
+  }
+
+  reresolveAudio(trackId: number): Observable<AudioSource> {
+    return this.http.post<AudioSource>(
+      `${base}/platform-ops/audio-unresolved/${trackId}/reresolve`,
+      {},
+    );
   }
 }
