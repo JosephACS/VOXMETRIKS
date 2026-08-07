@@ -137,6 +137,10 @@ export function spaceAllowsProductPath(
     const p = (path || '').split('?')[0];
     if (p === '/platform-ops' || p.startsWith('/platform-ops/')) return true;
   }
+  if (spaceKind === 'artist') {
+    const p = (path || '').split('?')[0];
+    if (p === '/artist-space' || p.startsWith('/artist-space/')) return true;
+  }
   if (spaceKind === 'data_ops') {
     const p = (path || '').split('?')[0];
     if (

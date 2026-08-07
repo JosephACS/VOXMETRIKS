@@ -86,6 +86,11 @@ export function spaceNavSectionsFor(
           items: [
             { path: '/account/plans', labelKey: 'nav.personal.plans', exact: true },
             { path: '/account/subscription', labelKey: 'nav.personal.subscription', exact: true },
+            {
+              path: '/artist-space/claim',
+              labelKey: 'artistSpace.claim.title',
+              exact: true,
+            },
             { path: '/settings', labelKey: 'nav.settings', exact: true },
           ],
         },
@@ -201,6 +206,11 @@ export function spaceNavSectionsFor(
           items: [
             { path: '/platform-ops', labelKey: 'nav.platformOps.dashboard', exact: false },
             {
+              path: '/platform-ops/artist-requests',
+              labelKey: 'nav.platformOps.artistRequests',
+              exact: true,
+            },
+            {
               path: '/platform-ops/audio-unresolved',
               labelKey: 'nav.platformOps.audioUnresolved',
               exact: true,
@@ -212,17 +222,21 @@ export function spaceNavSectionsFor(
         },
       ];
     case 'artist':
-      // Prepared structure — space not listed until artist membership API exists.
+      // Spec 046 — membership-backed Artist Space only (no royalties/billing/plan/ads).
       return [
         {
           id: 'space-artist',
           titleKey: 'spaces.nav.group.artist',
           items: [
-            { path: '/artist/profile', labelKey: 'nav.artist.profile', exact: true },
-            { path: '/artist/tracks', labelKey: 'nav.artist.tracks', exact: false },
-            { path: '/artist/releases', labelKey: 'nav.artist.releases', exact: false },
-            { path: '/royalties', labelKey: 'nav.royalties.dashboard', exact: false },
-            { path: '/settings', labelKey: 'nav.settings', exact: true },
+            { path: '/artist-space', labelKey: 'spaces.nav.artist.summary', exact: true },
+            { path: '/artist-space/profile', labelKey: 'spaces.nav.artist.profile', exact: true },
+            { path: '/artist-space/tracks', labelKey: 'spaces.nav.artist.tracks', exact: false },
+            {
+              path: '/artist-space/releases',
+              labelKey: 'spaces.nav.artist.releases',
+              exact: false,
+            },
+            { path: '/artist-space/team', labelKey: 'spaces.nav.artist.team', exact: true },
           ],
         },
       ];

@@ -2,13 +2,20 @@ import {
   filterSpaceNavSections,
   spaceNavSectionsFor,
 } from './space-nav.config';
-import { homePathForSpace, personalSpace, organizationSpace, dataOpsSpace } from './space.models';
+import {
+  homePathForSpace,
+  personalSpace,
+  organizationSpace,
+  dataOpsSpace,
+  artistSpace,
+} from './space.models';
 
-describe('space models & nav (045)', () => {
+describe('space models & nav (045/046)', () => {
   it('maps home paths per space kind', () => {
     expect(homePathForSpace(personalSpace())).toBe('/discover');
     expect(homePathForSpace(organizationSpace(3, 'Org'))).toBe('/organizations/3');
     expect(homePathForSpace(dataOpsSpace())).toBe('/elt-pipeline');
+    expect(homePathForSpace(artistSpace(7, 'Act'))).toBe('/artist-space');
   });
 
   it('personal nav includes library activity without audio-features', () => {
@@ -73,9 +80,24 @@ describe('space models & nav (045)', () => {
       s.items.map((i) => i.path),
     );
     expect(paths).toContain('/platform-ops');
+    expect(paths).toContain('/platform-ops/artist-requests');
     expect(paths).toContain('/workpanel');
     expect(paths).not.toContain('/users');
     expect(paths).not.toContain('/business');
     expect(paths).not.toContain('/subscriptions/plans');
+  });
+
+  it('artist nav is membership surface only (no royalties/billing)', () => {
+    const paths = spaceNavSectionsFor('artist').flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toEqual([
+      '/artist-space',
+      '/artist-space/profile',
+      '/artist-space/tracks',
+      '/artist-space/releases',
+      '/artist-space/team',
+    ]);
+    expect(paths).not.toContain('/royalties');
+    expect(paths).not.toContain('/billing/invoices');
+    expect(paths).not.toContain('/settings');
   });
 });

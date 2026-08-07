@@ -68,9 +68,7 @@ export function homePathForSpace(space: AppSpace): string {
         ? `/organizations/${space.organizationId}`
         : '/discover';
     case 'artist':
-      return space.artistProfileId != null
-        ? `/artist-profiles/${space.artistProfileId}`
-        : '/discover';
+      return '/artist-space';
     case 'data_ops':
       return '/elt-pipeline';
     case 'platform_admin':

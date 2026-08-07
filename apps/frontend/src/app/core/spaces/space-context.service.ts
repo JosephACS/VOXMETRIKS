@@ -1,9 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { I18nService } from '../services/i18n.service';
 import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
+import { ArtistContextService } from '../../packages/artist-space/services/artist-context.service';
+import { ArtistSpaceApiService } from '../../packages/artist-space/services/artist-space-api.service';
+import { ArtistSpaceMineItem } from '../../packages/artist-space/models/artist-space.models';
 import {
   AppSpace,
   PersistedSpaceRef,
@@ -19,16 +23,18 @@ import {
 import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
 
 /**
- * Product space context (045).
- * Selects Personal / Organization / Data Ops / Platform Admin.
+ * Product space context (045 + 046).
+ * Selects Personal / Organization / Artist / Data Ops / Platform Admin.
  * Does NOT change identity role. Does NOT stop the global player.
- * Artist spaces are architected but empty until a real membership API exists.
+ * Artist spaces come only from GET /artist-space/mine (real memberships).
  */
 @Injectable({ providedIn: 'root' })
 export class SpaceContextService {
   private readonly auth = inject(AuthService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly crmCtx = inject(CrmContextService);
+  private readonly artistCtx = inject(ArtistContextService);
+  private readonly artistApi = inject(ArtistSpaceApiService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
@@ -37,17 +43,17 @@ export class SpaceContextService {
   private readonly _active = signal<AppSpace | null>(null);
   private readonly _error = signal<string | null>(null);
   private readonly _artistBackendMissing = signal(true);
+  private artistMembershipCache: ArtistSpaceMineItem[] = [];
 
   readonly status = this._status.asReadonly();
   readonly availableSpaces = this._available.asReadonly();
   readonly activeSpace = this._active.asReadonly();
   readonly error = this._error.asReadonly();
-  /** True until GET artists/mine (or equivalent) exists. */
+  /** False once GET /artist-space/mine succeeds (even if empty). */
   readonly artistBackendMissing = this._artistBackendMissing.asReadonly();
 
   readonly activeSpaceKind = computed(() => this._active()?.kind ?? null);
   readonly hasMultipleSpaces = computed(() => this._available().length > 1);
-  /** Selector is prominent only when more than one space is available. */
   readonly showSpaceSelector = computed(
     () => this.auth.isAuthenticated() && this._available().length > 1,
   );
@@ -86,10 +92,6 @@ export class SpaceContextService {
     return this.readyPromise;
   }
 
-  /**
-   * Switch space. Never stops playback. Never changes identity role.
-   * @param navigate when true, go to space home (default true on user action)
-   */
   async selectSpace(spaceId: string, options?: { navigate?: boolean }): Promise<boolean> {
     const target = this._available().find((s) => s.id === spaceId);
     if (!target) {
@@ -99,12 +101,13 @@ export class SpaceContextService {
     return true;
   }
 
-  /** Clear on logout. */
   clear(): void {
     this._available.set([]);
     this._active.set(null);
     this._status.set('idle');
     this._error.set(null);
+    this.artistMembershipCache = [];
+    this.artistCtx.clear();
     try {
       localStorage.removeItem(SPACE_STORAGE_KEY);
     } catch {
@@ -123,6 +126,7 @@ export class SpaceContextService {
       await Promise.all([
         this.orgCtx.ensureReady(),
         this.crmCtx.bootstrap().catch(() => undefined),
+        this.fetchArtistMemberships(),
       ]);
 
       const spaces = this.rebuildAvailable();
@@ -135,7 +139,6 @@ export class SpaceContextService {
         spaces.find((s) => s.kind === 'personal') ??
         personalSpace(this.i18n.t('spaces.personal'));
 
-      // Re-validate after rebuild
       if (!spaces.some((s) => s.id === chosen.id)) {
         chosen = spaces[0] ?? personalSpace(this.i18n.t('spaces.personal'));
       }
@@ -148,6 +151,18 @@ export class SpaceContextService {
       const fallback = personalSpace(this.i18n.t('spaces.personal'));
       this._available.set([fallback]);
       this._active.set(fallback);
+      this.artistCtx.clear();
+    }
+  }
+
+  private async fetchArtistMemberships(): Promise<void> {
+    try {
+      const items = await firstValueFrom(this.artistApi.listMine());
+      this.artistMembershipCache = Array.isArray(items) ? items : [];
+      this._artistBackendMissing.set(false);
+    } catch {
+      this.artistMembershipCache = [];
+      this._artistBackendMissing.set(true);
     }
   }
 
@@ -157,9 +172,10 @@ export class SpaceContextService {
     const hasPlatformAdminSpace =
       role === 'admin' || crmRoles.includes('platform_admin');
 
-    // Artist memberships: no user-scoped API yet — never invent.
-    const artistMemberships: { id: number; name: string }[] = [];
-    this._artistBackendMissing.set(true);
+    const artistMemberships = this.artistMembershipCache.map((m) => ({
+      id: m.artist_profile_id,
+      name: m.display_name,
+    }));
 
     return buildAvailableSpaces({
       authenticated: this.auth.isAuthenticated(),
@@ -187,11 +203,11 @@ export class SpaceContextService {
     space: AppSpace,
     opts: { persist: boolean; navigate: boolean },
   ): Promise<void> {
-    // Data context: org activate vs personal clear. Never touch player.
     if (space.kind === 'organization' && space.organizationId != null) {
       if (this.orgCtx.organizationId() !== space.organizationId) {
         await this.orgCtx.activate(space.organizationId);
       }
+      this.artistCtx.clear();
     } else if (
       space.kind === 'personal' ||
       space.kind === 'data_ops' ||
@@ -200,8 +216,21 @@ export class SpaceContextService {
       if (this.orgCtx.hasOrganization()) {
         this.orgCtx.enterPersonalMode();
       }
+      this.artistCtx.clear();
+    } else if (space.kind === 'artist' && space.artistProfileId != null) {
+      // Never activate OrganizationContext for independent artists (org_id=0).
+      if (this.orgCtx.hasOrganization()) {
+        this.orgCtx.enterPersonalMode();
+      }
+      const membership = this.artistMembershipCache.find(
+        (m) => m.artist_profile_id === space.artistProfileId,
+      );
+      if (membership) {
+        this.artistCtx.activate(membership);
+      } else {
+        this.artistCtx.clear();
+      }
     }
-    // artist: when implemented, would set org context if required by APIs
 
     this._active.set(space);
     if (opts.persist) {

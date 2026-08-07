@@ -20,6 +20,7 @@ import { CAMPAIGNS_ROUTES } from './packages/campaigns/campaigns.routes';
 import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/business-analytics.routes';
 import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
 import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
+import { ARTIST_SPACE_ROUTES } from './packages/artist-space/artist-space.routes';
 import { REPORTING_ROUTES } from './packages/reporting/reporting.routes';
 import { SIMPLE_REPORTS_ROUTES } from './packages/simple-reports/simple-reports.routes';
 import { WORKPANEL_ROUTES } from './packages/workpanel/workpanel.routes';
@@ -277,6 +278,7 @@ export const APP_ROUTES: Routes = [
       ...withProductSurfaceGuard(BUSINESS_ANALYTICS_ROUTES),
       ...withProductSurfaceGuard(COMPLIANCE_ROUTES),
       ...PLATFORM_OPS_ROUTES,
+      ...ARTIST_SPACE_ROUTES,
       ...withProductSurfaceGuard(REPORTING_ROUTES),
       ...SIMPLE_REPORTS_ROUTES,
       ...WORKPANEL_ROUTES,
