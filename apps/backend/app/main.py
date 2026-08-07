@@ -80,6 +80,12 @@ from app.packages.personal_subscriptions.infrastructure.schema import (
 from app.packages.personal_subscriptions.presentation.router import personal_router
 from app.packages.artists.infrastructure.schema import ensure_artist_tables
 from app.packages.artists.presentation.router import artists_profiles_router
+from app.packages.artists.identity_access.router import (
+    artist_access_router,
+    artist_invitations_router,
+    artist_space_router,
+    platform_artist_requests_router,
+)
 from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
 from app.packages.catalog_rights.presentation.router import catalog_rights_router
 from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
@@ -272,6 +278,11 @@ def create_app() -> FastAPI:
     application.include_router(billing_router, prefix="/api/v1")
     application.include_router(personal_router, prefix="/api/v1")
     application.include_router(artists_profiles_router, prefix="/api/v1")
+    # Spec 046 — Artist Space (membership-authenticated; no X-Organization-Id)
+    application.include_router(artist_space_router, prefix="/api/v1")
+    application.include_router(artist_access_router, prefix="/api/v1")
+    application.include_router(artist_invitations_router, prefix="/api/v1")
+    application.include_router(platform_artist_requests_router, prefix="/api/v1")
     application.include_router(catalog_rights_router, prefix="/api/v1")
     application.include_router(royalties_router, prefix="/api/v1")
     application.include_router(catalog_publishing_router, prefix="/api/v1")

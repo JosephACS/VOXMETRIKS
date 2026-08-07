@@ -41,12 +41,20 @@ ARTISTS_TABLES = (
     "app_artist_team_member",
     "app_artist_external_identifier",
     "app_artist_status_history",
+    # Spec 046 — Artist Space membership (source of truth; not assignment/team/portal)
+    "app_artist_membership",
+    "app_artist_access_request",
+    "app_artist_invitation",
 )
 
 
 def ensure_artist_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all artists tables (idempotent)."""
     if schema_ready():
+        # Spec 046 additive tables on already-bootstrapped DBs
+        _create_artist_membership(conn)
+        _create_artist_access_request(conn)
+        _create_artist_invitation(conn)
         return
 
     _create_artist_profile(conn)
@@ -55,6 +63,9 @@ def ensure_artist_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_artist_team_member(conn)
     _create_artist_external_identifier(conn)
     _create_artist_status_history(conn)
+    _create_artist_membership(conn)
+    _create_artist_access_request(conn)
+    _create_artist_invitation(conn)
 
     logger.info("Artists schema ensured (%s tables)", len(ARTISTS_TABLES))
 
@@ -201,4 +212,100 @@ def _create_artist_status_history(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_artist_status_history_artist
         ON app_artist_status_history(artist_id)
+    """)
+
+
+def _create_artist_membership(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 046 — sole source of Artist Space access (not assignment/team/portal)."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_artist_membership (
+            id                  INTEGER PRIMARY KEY,
+            artist_profile_id   INTEGER NOT NULL,
+            user_id             INTEGER NOT NULL,
+            role                VARCHAR NOT NULL,
+            status              VARCHAR NOT NULL DEFAULT 'active',
+            created_at          TIMESTAMP NOT NULL,
+            updated_at          TIMESTAMP NOT NULL,
+            revoked_at          TIMESTAMP,
+            CHECK (role IN ('owner', 'administrator', 'member', 'reader')),
+            CHECK (status IN ('active', 'revoked'))
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_membership_user
+        ON app_artist_membership(user_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_membership_artist
+        ON app_artist_membership(artist_profile_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_membership_user_status
+        ON app_artist_membership(user_id, status)
+    """)
+
+
+def _create_artist_access_request(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 046 — claim_ownership / request_access / create_new."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_artist_access_request (
+            id                        INTEGER PRIMARY KEY,
+            applicant_user_id         INTEGER NOT NULL,
+            request_type              VARCHAR NOT NULL,
+            target_artist_profile_id  INTEGER,
+            warehouse_artist_id       INTEGER,
+            proposed_display_name     VARCHAR,
+            proposed_role             VARCHAR DEFAULT 'member',
+            status                    VARCHAR NOT NULL DEFAULT 'pending',
+            created_at                TIMESTAMP NOT NULL,
+            reviewed_at               TIMESTAMP,
+            reviewer_user_id          INTEGER,
+            rejection_reason          VARCHAR,
+            CHECK (request_type IN ('claim_ownership', 'request_access', 'create_new')),
+            CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled'))
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_access_req_applicant
+        ON app_artist_access_request(applicant_user_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_access_req_status
+        ON app_artist_access_request(status)
+    """)
+
+
+def _create_artist_invitation(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 046 — mirror org invitation; role never owner."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_artist_invitation (
+            id                  INTEGER PRIMARY KEY,
+            artist_profile_id   INTEGER NOT NULL,
+            email_normalized    VARCHAR NOT NULL,
+            token_hash          VARCHAR NOT NULL,
+            role                VARCHAR NOT NULL,
+            status              VARCHAR NOT NULL DEFAULT 'pending',
+            expires_at          TIMESTAMP NOT NULL,
+            invited_by          INTEGER NOT NULL,
+            accepted_by         INTEGER,
+            accepted_at         TIMESTAMP,
+            revoked_by          INTEGER,
+            revoked_at          TIMESTAMP,
+            created_at          TIMESTAMP NOT NULL,
+            updated_at          TIMESTAMP NOT NULL,
+            CHECK (role IN ('administrator', 'member', 'reader')),
+            CHECK (status IN ('pending', 'accepted', 'expired', 'revoked'))
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_invitation_artist
+        ON app_artist_invitation(artist_profile_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_invitation_token
+        ON app_artist_invitation(token_hash)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_artist_invitation_email
+        ON app_artist_invitation(email_normalized)
     """)
