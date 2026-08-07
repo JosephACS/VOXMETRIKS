@@ -1,5 +1,5 @@
 {
-  "feature_directory": ".specify/features/045-spaces-contextual-navigation",
-  "previous_feature_directory": "automation/specs/044-product-consolidation-and-data-clarity",
-  "note": "Phase 045: product spaces and contextual navigation. No Git. Do not delete modules."
+  "feature_directory": ".specify/features/046-artist-identity-access",
+  "previous_feature_directory": ".specify/features/045-spaces-contextual-navigation",
+  "note": "Phase 046: artist identity, membership-based Artist Spaces, claim/access flows. Do not start 047."
 }
