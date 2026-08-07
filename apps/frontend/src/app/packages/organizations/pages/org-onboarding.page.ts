@@ -17,8 +17,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     <section class="org-page" data-testid="org-onboarding-page">
       <h1>{{ 'organizations.onboarding.title' | t:lang() }}</h1>
       <p class="lede">
-        Solo perfil básico e invitación opcional. Sin plan, pago, billing, artista ni campaña.
-        Puedes salir y seguir usando la app en modo personal.
+        {{ 'organizations.onboarding.lede' | t:lang() }}
       </p>
 
       <div class="org-steps" aria-label="Pasos de onboarding">
@@ -119,11 +118,21 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
       @if (step() === 4) {
         <div class="org-card">
-          <h2>Onboarding completo</h2>
-          <p>Puedes gestionar la organización desde el menú y el selector del shell.</p>
+          <h2>{{ 'organizations.onboarding.choosePlanTitle' | t:lang() }}</h2>
+          <p>{{ 'organizations.onboarding.choosePlanBody' | t:lang() }}</p>
           <div class="org-actions">
-            <a class="org-btn" [routerLink]="settingsLink()">Ir a configuración</a>
-            <a class="org-btn org-btn--ghost" routerLink="/discover">Ir a inicio</a>
+            <a class="org-btn" routerLink="/subscriptions/select-plan">{{
+              'business.forEnterprises.ctaChoosePlan' | t:lang()
+            }}</a>
+            <a class="org-btn" routerLink="/subscriptions/trial">{{
+              'business.forEnterprises.ctaTrial' | t:lang()
+            }}</a>
+            <a class="org-btn org-btn--ghost" [routerLink]="settingsLink()">{{
+              'organizations.onboarding.openSettings' | t:lang()
+            }}</a>
+            <a class="org-btn org-btn--ghost" routerLink="/discover">{{
+              'business.forEnterprises.ctaPersonal' | t:lang()
+            }}</a>
           </div>
         </div>
       }

@@ -76,7 +76,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <button class="org-btn" type="submit" [disabled]="submitting() || !displayName.trim() || !slug.trim()">
             {{ submitting() ? ('organizations.create.submitting' | t:lang()) : ('organizations.create.title' | t:lang()) }}
           </button>
-          <a class="org-btn org-btn--ghost" routerLink="/organizations/none">Cancelar</a>
+          <a class="org-btn org-btn--ghost" routerLink="/business">Cancelar</a>
         </div>
       </form>
     </section>

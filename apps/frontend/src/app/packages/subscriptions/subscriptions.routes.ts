@@ -1,4 +1,8 @@
 import { Routes } from '@angular/router';
+import {
+  organizationModuleGuard,
+  organizationRequiredGuard,
+} from '../organizations/guards/organization.guards';
 
 export const SUBSCRIPTIONS_ROUTES: Routes = [
   {
@@ -9,6 +13,7 @@ export const SUBSCRIPTIONS_ROUTES: Routes = [
   {
     path: 'subscriptions/plans',
     title: 'Planes — Voxmetrik',
+    // Authenticated users may browse the catalog before creating an org.
     loadComponent: () =>
       import('./pages/plans-catalog.page').then((m) => m.PlansCatalogPageComponent),
   },
@@ -21,36 +26,42 @@ export const SUBSCRIPTIONS_ROUTES: Routes = [
   {
     path: 'subscriptions/overview',
     title: 'Mi Suscripción — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('onboarding', 'subscription.view')],
     loadComponent: () =>
       import('./pages/subscription-overview.page').then((m) => m.SubscriptionOverviewPageComponent),
   },
   {
     path: 'subscriptions/trial',
     title: 'Iniciar Trial — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('onboarding', 'subscription.create')],
     loadComponent: () =>
       import('./pages/trial-start.page').then((m) => m.TrialStartPageComponent),
   },
   {
     path: 'subscriptions/select-plan',
     title: 'Seleccionar plan — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('onboarding', 'subscription.create')],
     loadComponent: () =>
       import('./pages/subscription-select-plan.page').then((m) => m.SubscriptionSelectPlanPage),
   },
   {
     path: 'subscriptions/:id/cancel',
     title: 'Cancelar Suscripción — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('recovery', 'subscription.change')],
     loadComponent: () =>
       import('./pages/subscription-cancel.page').then((m) => m.SubscriptionCancelPageComponent),
   },
   {
     path: 'subscriptions/:id/addons',
     title: 'Addons — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'subscription.change')],
     loadComponent: () =>
       import('./pages/subscription-addons.page').then((m) => m.SubscriptionAddonsPageComponent),
   },
   {
     path: 'subscriptions/:id/usage',
     title: 'Uso — Voxmetrik',
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'subscription.view')],
     loadComponent: () =>
       import('./pages/subscription-usage.page').then((m) => m.SubscriptionUsagePageComponent),
   },

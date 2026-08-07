@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { OrganizationContextService } from '../services/organization-context.service';
+import type { OrgModuleKind } from '../organization-access';
 
 /** UX-only: requires an active validated organization context. Backend remains authority. */
 export const organizationRequiredGuard: CanActivateFn = async () => {
@@ -15,8 +16,44 @@ export const organizationRequiredGuard: CanActivateFn = async () => {
   if (kind === 'invalid') {
     return router.createUrlTree(['/organizations/closed']);
   }
+  // Pure personal accounts → business landing, not a permanent org sidebar shell.
+  if (!ctx.organizations().length) {
+    return router.createUrlTree(['/business']);
+  }
   return router.createUrlTree(['/organizations/none']);
 };
+
+/**
+ * Gate enterprise modules by membership + subscription tier + optional permission.
+ * UX-only; backend still authorizes each request.
+ */
+export function organizationModuleGuard(
+  moduleKind: OrgModuleKind,
+  requiredPermission?: string | null,
+): CanActivateFn {
+  return async () => {
+    const ctx = inject(OrganizationContextService);
+    const router = inject(Router);
+    await ctx.ensureReady();
+    if (!ctx.hasOrganization()) {
+      if (!ctx.organizations().length) {
+        return router.createUrlTree(['/business']);
+      }
+      return router.createUrlTree(['/organizations/none']);
+    }
+    if (ctx.canAccessModule(moduleKind, requiredPermission ?? null)) {
+      return true;
+    }
+    const tier = ctx.accessTier();
+    if (tier === 'onboarding') {
+      return router.createUrlTree(['/organizations/onboarding']);
+    }
+    if (tier === 'recovery') {
+      return router.createUrlTree(['/subscriptions/overview']);
+    }
+    return router.createUrlTree(['/access-denied']);
+  };
+}
 
 /**
  * Syncs active org to route :id via activate API (clears previous permissions).

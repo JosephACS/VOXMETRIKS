@@ -296,9 +296,14 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
             }
           </div>
 
-          <a class="org-selector-link" routerLink="/organizations/new" (click)="open.set(false)">
-            {{ 'organizations.create.title' | t:lang() }}
+          <a class="org-selector-link" routerLink="/business" (click)="open.set(false)">
+            {{ 'business.forEnterprises.menu' | t:lang() }}
           </a>
+          @if (ctx.organizations().length) {
+            <a class="org-selector-link" routerLink="/organizations/new" (click)="open.set(false)">
+              {{ 'organizations.create.title' | t:lang() }}
+            </a>
+          }
           @if (ctx.hasOrganization()) {
             <button
               type="button"
@@ -307,10 +312,6 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
             >
               {{ 'organizations.selector.noneState' | t:lang() }}
             </button>
-          } @else {
-            <a class="org-selector-link" routerLink="/organizations/none" (click)="open.set(false)">
-              {{ 'organizations.selector.noneState' | t:lang() }}
-            </a>
           }
           @if (switchError()) {
             <div class="org-selector-error" role="alert">{{ switchError() }}</div>

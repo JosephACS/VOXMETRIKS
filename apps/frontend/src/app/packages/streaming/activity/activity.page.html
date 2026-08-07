@@ -1,0 +1,170 @@
+<section class="activity-page" data-testid="activity-page">
+  <header class="activity-header">
+    <h1>{{ 'activity.title' | t:lang() }}</h1>
+    <p class="lede">{{ 'activity.subtitle' | t:lang() }}</p>
+
+    <div class="period-tabs" role="tablist" [attr.aria-label]="'activity.periodLabel' | t:lang()">
+      @for (p of periods; track p.id) {
+        <button
+          type="button"
+          role="tab"
+          class="period-tab"
+          [class.active]="period() === p.id"
+          [attr.aria-selected]="period() === p.id"
+          (click)="setPeriod(p.id)"
+        >
+          {{ p.labelKey | t:lang() }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="muted" role="status">{{ 'activity.loading' | t:lang() }}</p>
+  } @else if (error()) {
+    <div class="empty-state" role="alert">
+      <p>{{ 'activity.error' | t:lang() }}</p>
+      <button type="button" class="btn" (click)="load()">{{ 'activity.retry' | t:lang() }}</button>
+    </div>
+  } @else if (empty()) {
+    <div class="empty-state" data-testid="activity-empty">
+      <p>{{ data()?.message || ('activity.empty' | t:lang()) }}</p>
+      <div class="empty-actions">
+        <a routerLink="/discover" class="btn">{{ 'activity.ctaDiscover' | t:lang() }}</a>
+        <a routerLink="/search" class="btn btn-ghost">{{ 'activity.ctaSearch' | t:lang() }}</a>
+      </div>
+    </div>
+  } @else {
+    <section class="summary-grid" [attr.aria-label]="'activity.summary' | t:lang()">
+      <article class="stat-card">
+        <span class="stat-label">{{ 'activity.stat.minutes' | t:lang() }}</span>
+        <strong class="stat-value">{{ summary()?.listened_minutes ?? 0 }}</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">{{ 'activity.stat.plays' | t:lang() }}</span>
+        <strong class="stat-value">{{ summary()?.plays ?? 0 }}</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">{{ 'activity.stat.tracks' | t:lang() }}</span>
+        <strong class="stat-value">{{ summary()?.distinct_tracks ?? 0 }}</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">{{ 'activity.stat.artists' | t:lang() }}</span>
+        <strong class="stat-value">{{ summary()?.distinct_artists ?? 0 }}</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">{{ 'activity.stat.activeDays' | t:lang() }}</span>
+        <strong class="stat-value">{{ summary()?.active_days ?? 0 }}</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>{{ 'activity.timeline' | t:lang() }}</h2>
+      @if (timeline().length === 0) {
+        <p class="muted">{{ 'activity.noTimeline' | t:lang() }}</p>
+      } @else {
+        <div class="timeline" role="img" [attr.aria-label]="'activity.timeline' | t:lang()">
+          @for (d of timeline(); track d.date) {
+            <div class="timeline-bar-wrap" [title]="d.date + ': ' + d.plays">
+              <div
+                class="timeline-bar"
+                [style.height.%]="(100 * d.plays) / maxTimelinePlays()"
+              ></div>
+              <span class="timeline-day">{{ d.date | slice:5 }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <div class="columns">
+      <section class="panel">
+        <h2>{{ 'activity.topTracks' | t:lang() }}</h2>
+        <ol class="rank-list">
+          @for (t of topTracks(); track t.id_track) {
+            <li class="rank-item">
+              <span class="rank">{{ t.rank }}</span>
+              @if (cover(t.id_track); as url) {
+                <img class="cover" [src]="url" alt="" width="40" height="40" />
+              } @else {
+                <div class="cover cover-ph" aria-hidden="true"></div>
+              }
+              <div class="meta">
+                <div class="title">{{ titleOf(t) }}</div>
+                <div class="sub">{{ artistOf(t) }} · {{ t.plays }} {{ 'activity.plays' | t:lang() }}</div>
+                @if (t.source_unavailable) {
+                  <span class="badge-unavail">{{ 'activity.unavailable' | t:lang() }}</span>
+                }
+              </div>
+              <button
+                type="button"
+                class="play-btn"
+                [disabled]="!!t.source_unavailable"
+                [attr.aria-label]="('activity.play' | t:lang()) + ' ' + titleOf(t)"
+                (click)="playTrack(t)"
+              >
+                ▶
+              </button>
+            </li>
+          }
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>{{ 'activity.topArtists' | t:lang() }}</h2>
+        <ol class="rank-list">
+          @for (a of topArtists(); track a.id_artista) {
+            <li class="rank-item">
+              <span class="rank">{{ a.rank }}</span>
+              <div class="meta">
+                <a class="title" [routerLink]="['/artists', a.id_artista]">{{ a.nombre_artista }}</a>
+                <div class="sub">{{ a.plays }} {{ 'activity.plays' | t:lang() }} · {{ a.listened_minutes }} min</div>
+              </div>
+            </li>
+          }
+        </ol>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>{{ 'activity.topGenres' | t:lang() }}</h2>
+      <ul class="genre-list">
+        @for (g of topGenres(); track g.id_genero) {
+          <li>
+            <div class="genre-row">
+              <span>{{ g.nombre_genero }}</span>
+              <span class="muted">{{ g.plays }} · {{ g.share_pct }}%</span>
+            </div>
+            <div class="genre-bar" [style.width.%]="g.share_pct"></div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>{{ 'activity.recent' | t:lang() }}</h2>
+      <ul class="rank-list">
+        @for (t of recent(); track t.id) {
+          <li class="rank-item">
+            <div class="meta">
+              <div class="title">{{ titleOf(t) }}</div>
+              <div class="sub">{{ artistOf(t) }} · {{ t.played_at }}</div>
+              @if (t.source_unavailable) {
+                <span class="badge-unavail">{{ 'activity.unavailable' | t:lang() }}</span>
+              }
+            </div>
+            <button
+              type="button"
+              class="play-btn"
+              [disabled]="!!t.source_unavailable"
+              [attr.aria-label]="('activity.play' | t:lang()) + ' ' + titleOf(t)"
+              (click)="playTrack(t)"
+            >
+              ▶
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</section>

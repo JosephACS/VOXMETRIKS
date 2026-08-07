@@ -50,6 +50,13 @@ export interface OrganizationCreateResponse {
   idempotency_mode?: string;
 }
 
+export interface OrgSubscriptionAccess {
+  has_subscription: boolean;
+  status?: string | null;
+  access_state?: string | null;
+  tier?: string;
+}
+
 export interface CurrentOrganizationResponse {
   context: 'none' | 'active' | 'invalid' | 'access_revoked';
   organization?: Organization | null;
@@ -57,6 +64,7 @@ export interface CurrentOrganizationResponse {
   roles?: string[];
   permissions?: string[];
   source?: string | null;
+  subscription_access?: OrgSubscriptionAccess | null;
 }
 
 export interface Invitation {

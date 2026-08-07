@@ -372,6 +372,8 @@ export interface PlaylistTrackItem {
   popularity?: number;
   nombre_artista?: string;
   nombre_genero?: string;
+  playback_status?: string;
+  source_unavailable?: boolean;
 }
 
 export interface PlaylistDetail extends PlaylistSummary {
@@ -480,10 +482,18 @@ export interface TrackDetail {
 }
 
 export interface HistoryEntry {
+  id?: number;
   id_track: number;
   nombre_track: string;
   nombre_artista?: string;
   viewed_at: string;
+  played_at?: string;
+  event_key?: string;
+  progress_ms?: number;
+  listened_ms?: number;
+  completed?: boolean;
+  source?: string | null;
+  duration_ms?: number | null;
 }
 
 export interface AuditRecord {

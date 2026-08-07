@@ -1,0 +1,454 @@
+/* Full-screen “Who’s listening?” — cinematic VOXMETRIKS profiles */
+
+.who-listening {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.25rem, 3vh, 2rem);
+  padding-bottom: 1rem;
+}
+
+.who-listening--leaving {
+  opacity: 0;
+  transform: scale(0.985);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .who-listening--leaving {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.who-listening__brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+  opacity: 0.95;
+}
+
+.who-listening__hero h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 4.5vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #f7faf8;
+}
+
+.who-listening__subtitle {
+  margin: 0.55rem 0 0;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  color: rgba(244, 247, 245, 0.62);
+}
+
+.who-listening__banner {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(249, 112, 102, 0.35);
+  background: rgba(249, 112, 102, 0.1);
+  color: #fecaca;
+  max-width: 36rem;
+}
+
+.who-listening__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+  justify-content: center;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  width: 100%;
+  max-width: 920px;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.wl-card {
+  appearance: none;
+  border: 2px solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem;
+  border-radius: 1.15rem;
+  transition: transform 180ms ease, border-color 180ms ease;
+  animation: wl-rise 420ms ease both;
+}
+
+@keyframes wl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-card {
+    animation: none;
+  }
+}
+
+.wl-card:hover,
+.wl-card--focused,
+.wl-card:focus-visible {
+  transform: scale(1.06);
+  outline: none;
+}
+
+.wl-card--selected,
+.wl-card:hover .wl-avatar,
+.wl-card--focused .wl-avatar,
+.wl-card:focus-visible .wl-avatar {
+  box-shadow: 0 0 0 3px rgba(30, 216, 150, 0.85), 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.wl-card--selected {
+  border-color: rgba(30, 216, 150, 0.55);
+}
+
+.wl-avatar {
+  position: relative;
+  width: clamp(88px, 16vw, 128px);
+  height: clamp(88px, 16vw, 128px);
+  border-radius: 1rem;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.6rem, 3.5vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  overflow: hidden;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.wl-card__lock {
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.82;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.wl-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wl-card__name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl-card__role {
+  font-size: 0.8rem;
+  color: rgba(244, 247, 245, 0.55);
+}
+
+.wl-card__you {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1ed896;
+}
+
+.who-listening__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.wl-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: rgba(244, 247, 245, 0.72);
+  cursor: pointer;
+  user-select: none;
+}
+
+.wl-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #1ed896;
+}
+
+.who-listening__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
+.wl-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4f7f5;
+  border-radius: 999px;
+  padding: 0.55rem 1.15rem;
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.wl-btn:hover,
+.wl-btn:focus-visible {
+  background: rgba(30, 216, 150, 0.12);
+  border-color: rgba(30, 216, 150, 0.45);
+  outline: none;
+}
+
+.wl-btn--primary {
+  background: #1ed896;
+  border-color: #1ed896;
+  color: #04140e;
+  font-weight: 600;
+}
+
+.wl-btn--primary:hover,
+.wl-btn--primary:focus-visible {
+  background: #2be4a3;
+  border-color: #2be4a3;
+}
+
+.wl-btn--ghost {
+  background: transparent;
+}
+
+.who-listening__loading,
+.who-listening__error {
+  color: rgba(244, 247, 245, 0.75);
+}
+
+.who-listening__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wl-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  animation: wl-fade 180ms ease both;
+}
+
+@keyframes wl-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wl-modal {
+  width: min(420px, 100%);
+  padding: 1.5rem 1.35rem 1.25rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(165deg, #12181e, #0b0f13);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  text-align: left;
+}
+
+.wl-modal h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.25rem;
+}
+
+.wl-modal p {
+  margin: 0 0 0.75rem;
+  color: rgba(244, 247, 245, 0.72);
+  line-height: 1.45;
+}
+
+.wl-modal__name {
+  color: #1ed896 !important;
+  font-weight: 600;
+}
+
+.wl-modal .who-listening__actions {
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+/* PIN modal — Netflix-style */
+.wl-modal--pin {
+  width: min(380px, 100%);
+  text-align: center;
+  padding: 1.75rem 1.35rem 1.35rem;
+}
+
+.wl-pin-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.wl-pin-avatar {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 0.85rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.wl-pin-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wl-pin-name {
+  margin: 0;
+  font-weight: 600;
+  color: rgba(244, 247, 245, 0.88);
+}
+
+.wl-modal--pin h2 {
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.wl-pin-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.wl-pin-input {
+  flex: 1;
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-size: 1.35rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f4f7f5;
+}
+
+.wl-pin-toggle {
+  border: none;
+  background: transparent;
+  color: rgba(30, 216, 150, 0.9);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+}
+
+.wl-pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  max-width: 220px;
+  margin: 0 auto 0.85rem;
+}
+
+.wl-pin-key {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 247, 245, 0.9);
+  border-radius: 0.55rem;
+  padding: 0.55rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.wl-pin-key--wide {
+  grid-column: span 3;
+}
+
+.wl-pin-key:disabled,
+.wl-pin-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.wl-pin-error {
+  color: #ff8a8a;
+  font-size: 0.88rem;
+  margin: 0 0 0.75rem;
+}
+
+.wl-pin-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.wl-btn--link {
+  background: transparent;
+  border: none;
+  color: rgba(244, 247, 245, 0.55);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-modal-backdrop,
+  .wl-card {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .who-listening__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 22rem;
+  }
+
+  .wl-avatar {
+    width: 92px;
+    height: 92px;
+    border-radius: 0.85rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .who-listening__grid {
+    grid-template-columns: repeat(3, minmax(130px, 160px));
+  }
+}

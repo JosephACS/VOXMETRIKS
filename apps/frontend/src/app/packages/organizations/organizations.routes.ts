@@ -1,10 +1,19 @@
 import { Routes } from '@angular/router';
 import {
   organizationPathContextGuard,
-  organizationPermissionGuard,
+  organizationModuleGuard,
+  organizationRequiredGuard,
 } from './guards/organization.guards';
 
 export const ORGANIZATIONS_ROUTES: Routes = [
+  {
+    path: 'business',
+    title: 'VOXMETRIKS para empresas',
+    loadComponent: () =>
+      import('./pages/business-for-enterprises.page').then(
+        (m) => m.BusinessForEnterprisesPageComponent,
+      ),
+  },
   {
     path: 'organizations/new',
     title: 'Crear organización',
@@ -14,6 +23,7 @@ export const ORGANIZATIONS_ROUTES: Routes = [
   {
     path: 'organizations/onboarding',
     title: 'Onboarding organización',
+    canActivate: [organizationRequiredGuard],
     loadComponent: () =>
       import('./pages/org-onboarding.page').then((m) => m.OrgOnboardingPageComponent),
   },
@@ -36,16 +46,33 @@ export const ORGANIZATIONS_ROUTES: Routes = [
       import('./pages/org-closed.page').then((m) => m.OrgClosedPageComponent),
   },
   {
+    path: 'organizations/:id',
+    title: 'Organización',
+    canActivate: [
+      organizationPathContextGuard,
+      organizationModuleGuard('org_admin_basic', 'organization.view'),
+    ],
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./pages/org-hub.page').then((m) => m.OrgHubPage),
+  },
+  {
     path: 'organizations/:id/settings',
     title: 'Perfil organización',
-    canActivate: [organizationPathContextGuard, organizationPermissionGuard('organization.view')],
+    canActivate: [
+      organizationPathContextGuard,
+      organizationModuleGuard('org_admin_basic', 'organization.view'),
+    ],
     loadComponent: () =>
       import('./pages/org-settings.page').then((m) => m.OrgSettingsPageComponent),
   },
   {
     path: 'organizations/:id/members',
     title: 'Miembros',
-    canActivate: [organizationPathContextGuard, organizationPermissionGuard('member.view')],
+    canActivate: [
+      organizationPathContextGuard,
+      organizationModuleGuard('org_admin_advanced', 'member.view'),
+    ],
     loadComponent: () =>
       import('./pages/org-members.page').then((m) => m.OrgMembersPageComponent),
   },
@@ -54,7 +81,7 @@ export const ORGANIZATIONS_ROUTES: Routes = [
     title: 'Invitaciones',
     canActivate: [
       organizationPathContextGuard,
-      organizationPermissionGuard('member.invite'),
+      organizationModuleGuard('org_admin_advanced', 'member.invite'),
     ],
     loadComponent: () =>
       import('./pages/org-invitations.page').then((m) => m.OrgInvitationsPageComponent),
@@ -62,14 +89,20 @@ export const ORGANIZATIONS_ROUTES: Routes = [
   {
     path: 'organizations/:id/roles',
     title: 'Roles',
-    canActivate: [organizationPathContextGuard, organizationPermissionGuard('role.view')],
+    canActivate: [
+      organizationPathContextGuard,
+      organizationModuleGuard('org_admin_advanced', 'role.view'),
+    ],
     loadComponent: () =>
       import('./pages/org-roles.page').then((m) => m.OrgRolesPageComponent),
   },
   {
     path: 'organizations/:id/audit',
     title: 'Auditoría',
-    canActivate: [organizationPathContextGuard, organizationPermissionGuard('audit.view')],
+    canActivate: [
+      organizationPathContextGuard,
+      organizationModuleGuard('org_admin_advanced', 'audit.view'),
+    ],
     loadComponent: () =>
       import('./pages/org-audit.page').then((m) => m.OrgAuditPageComponent),
   },

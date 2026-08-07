@@ -123,3 +123,9 @@ Esta corrección **no** cambia roles globales (sin evidencia Spec de separar adm
 - **043:** shells por rol, hubs, UX.
 - **044:** consolidación / claridad de datos.
 - **045:** espacios contextuales + selector; reutiliza org context y product surface 038; corrección Fase 1 endurece permisos nav + Platform Admin honesto + tests de wiring.
+
+---
+
+## Self-contained FE closure (follow-up)
+
+See `dependency-closure.md` and `self-contained.md`. Branch tip must include Spec 043/044 FE files imported by HEAD routes/guards; org commercial routes use `organizationRequiredGuard` + `organizationModuleGuard`.
