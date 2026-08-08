@@ -37,6 +37,7 @@ import { resolveModuleContext, type ModuleContextView } from '../../shared/navig
 import { ModuleContextChromeComponent } from '../../shared/components/module-context-chrome.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SpaceContextService } from '../../core/spaces/space-context.service';
+import { spaceNavIconMarkup } from '../../core/spaces/space-nav.icons';
 import { SpaceSelectorComponent } from '../../shared/components/space-selector/space-selector.component';
 
 interface NavItemConfig {
@@ -1170,9 +1171,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   /** Spec 045 — map SpaceNavSection[] into shell NavGroupView. */
   private buildSpaceNavGroups(): NavGroupView[] {
-    const defaultIcon = this.svgIcon(
-      '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/>',
-    );
     return this.spaceCtx.navSections().map((section) => ({
       id: section.id,
       title: this.i18n.t(section.titleKey),
@@ -1180,12 +1178,16 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         {
           id: section.id,
           title: this.i18n.t(section.titleKey),
-          items: section.items.map((item) => ({
-            path: item.path,
-            label: this.i18n.t(item.labelKey),
-            icon: defaultIcon,
-            exact: item.exact ?? false,
-          })),
+          items: section.items.map((item) => {
+            const label = this.i18n.t(item.labelKey);
+            return {
+              path: item.path,
+              label,
+              // title/aria come from template — keep full label for truncated sidebar text.
+              icon: this.svgIcon(spaceNavIconMarkup(item.iconId)),
+              exact: item.exact ?? false,
+            };
+          }),
         },
       ],
     }));

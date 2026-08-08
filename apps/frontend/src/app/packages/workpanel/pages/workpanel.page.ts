@@ -38,15 +38,8 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
         </div>
       </header>
 
-      @if (data?.includes_synthetic_events || data?.data_classification === 'synthetic' || data?.data_classification === 'mixed') {
-        <p class="wp-chip" role="status">
-          {{ data?.classification_note || 'Incluye datos sintéticos del warehouse (pruebas analíticas).' }}
-        </p>
-      }
-      @if (data?.monetary_classification === 'simulated') {
-        <p class="wp-chip wp-chip--warn" role="status">
-          Importes simulados — no representan cobros reales.
-        </p>
+      @if (dataNotice) {
+        <p class="wp-chip wp-chip--warn" role="status">{{ dataNotice }}</p>
       }
 
       @if (loading) {
@@ -63,9 +56,6 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
               </div>
               <span class="wp-badge">{{ sec.badge }}</span>
             </div>
-            @if (sec.scope === 'global_analytics' && data.includes_synthetic_events) {
-              <p class="wp-chip" role="status">Datos sintéticos</p>
-            }
             <div class="wp-kpis">
               @for (m of metricsForSection(sec); track m.id) {
                 <a
@@ -434,6 +424,29 @@ export class WorkpanelPage implements OnInit {
   loading = false;
   error = '';
   data: WorkpanelResponse | null = null;
+
+  /** Single honest notice when synthetic and/or simulated monetary data is present. */
+  get dataNotice(): string | null {
+    if (!this.data) return null;
+    const synthetic =
+      this.data.includes_synthetic_events ||
+      this.data.data_classification === 'synthetic' ||
+      this.data.data_classification === 'mixed';
+    const simulated = this.data.monetary_classification === 'simulated';
+    if (!synthetic && !simulated) return null;
+
+    const parts: string[] = [];
+    if (synthetic) {
+      parts.push(
+        this.data.classification_note ||
+          this.i18n.t('workpanel.notice.syntheticFallback'),
+      );
+    }
+    if (simulated) {
+      parts.push(this.i18n.t('workpanel.notice.simulatedAmounts'));
+    }
+    return parts.join(' ');
+  }
 
   get displaySections(): WorkpanelSection[] {
     if (this.data?.sections?.length) return this.data.sections;

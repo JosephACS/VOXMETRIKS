@@ -72,7 +72,8 @@ export function homePathForSpace(space: AppSpace): string {
     case 'data_ops':
       return '/elt-pipeline';
     case 'platform_admin':
-      return '/platform-ops';
+      // Ops dashboard remains deep-linkable; land on the first useful surface.
+      return '/platform-ops/artist-requests';
     default:
       return '/discover';
   }

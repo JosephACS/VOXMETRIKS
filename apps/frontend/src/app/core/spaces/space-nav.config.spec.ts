@@ -2,12 +2,14 @@ import {
   filterSpaceNavSections,
   spaceNavSectionsFor,
 } from './space-nav.config';
+import { SPACE_NAV_ICON_PATHS, spaceNavIconMarkup } from './space-nav.icons';
 import {
   homePathForSpace,
   personalSpace,
   organizationSpace,
   dataOpsSpace,
   artistSpace,
+  platformAdminSpace,
 } from './space.models';
 
 describe('space models & nav (045/046)', () => {
@@ -16,6 +18,7 @@ describe('space models & nav (045/046)', () => {
     expect(homePathForSpace(organizationSpace(3, 'Org'))).toBe('/organizations/3');
     expect(homePathForSpace(dataOpsSpace())).toBe('/elt-pipeline');
     expect(homePathForSpace(artistSpace(7, 'Act'))).toBe('/artist-space');
+    expect(homePathForSpace(platformAdminSpace())).toBe('/platform-ops/artist-requests');
   });
 
   it('personal nav includes library activity without audio-features', () => {
@@ -24,6 +27,14 @@ describe('space models & nav (045/046)', () => {
     expect(paths).toContain('/activity');
     expect(paths).not.toContain('/audio-features');
     expect(paths).not.toContain('/recommendations');
+  });
+
+  it('personal claim nav uses short label key and keeps page title key separate', () => {
+    const claim = spaceNavSectionsFor('personal')
+      .flatMap((s) => s.items)
+      .find((i) => i.path === '/artist-space/claim');
+    expect(claim?.labelKey).toBe('spaces.nav.artist.claimShort');
+    expect(claim?.labelKey).not.toBe('artistSpace.claim.title');
   });
 
   it('organization nav includes hub and catalog routes with permission metadata', () => {
@@ -75,16 +86,34 @@ describe('space models & nav (045/046)', () => {
     expect(paths).toContain('/explorer');
   });
 
-  it('platform admin nav excludes /users profile and /business marketing', () => {
+  it('platform admin lands on artist-requests and hides empty Ops dashboard from nav', () => {
     const paths = spaceNavSectionsFor('platform_admin').flatMap((s) =>
       s.items.map((i) => i.path),
     );
-    expect(paths).toContain('/platform-ops');
     expect(paths).toContain('/platform-ops/artist-requests');
+    expect(paths).toContain('/platform-ops/audio-unresolved');
     expect(paths).toContain('/workpanel');
+    expect(paths).toContain('/reports');
+    expect(paths).toContain('/settings');
+    expect(paths).not.toContain('/platform-ops');
     expect(paths).not.toContain('/users');
     expect(paths).not.toContain('/business');
     expect(paths).not.toContain('/subscriptions/plans');
+  });
+
+  it('assigns distinct typed icons per space (never a single shared default)', () => {
+    const kinds = ['personal', 'organization', 'data_ops', 'platform_admin', 'artist'] as const;
+    for (const kind of kinds) {
+      const items = spaceNavSectionsFor(kind, { organizationId: 1 }).flatMap((s) => s.items);
+      expect(items.length).toBeGreaterThan(1);
+      expect(items.every((i) => !!i.iconId)).toBe(true);
+      const markups = items.map((i) => spaceNavIconMarkup(i.iconId));
+      expect(new Set(markups).size).toBeGreaterThan(1);
+      expect(markups.every((m) => m === markups[0])).toBe(false);
+    }
+    // Catalog of glyph bodies must itself stay non-uniform.
+    const allGlyphs = Object.values(SPACE_NAV_ICON_PATHS);
+    expect(new Set(allGlyphs).size).toBe(allGlyphs.length);
   });
 
   it('artist nav is membership surface only (no royalties/billing)', () => {

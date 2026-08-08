@@ -22,6 +22,7 @@ export const LOCALE_ES = {
     'spaces.nav.artist.tracks': 'Música',
     'spaces.nav.artist.releases': 'Lanzamientos',
     'spaces.nav.artist.team': 'Equipo',
+    'spaces.nav.artist.claimShort': 'Perfiles de artista',
     'artistSpace.summary.title': 'Espacio de artista',
     'artistSpace.summary.subtitle': 'Resumen del artista que gestionas',
     'artistSpace.summary.team': 'Tamaño del equipo',
@@ -130,6 +131,10 @@ export const LOCALE_ES = {
     // Nav items
     'nav.home': 'Descubrir',
     'nav.workpanel': 'Workpanel',
+    'workpanel.notice.syntheticFallback':
+      'Incluye datos sintéticos del warehouse (pruebas analíticas).',
+    'workpanel.notice.simulatedAmounts':
+      'Importes académicos/simulados — no representan cobros reales.',
     'nav.analyticsHub': 'Centro analítico',
     'nav.streamsAnalytics': 'Analítica de streaming',
     'nav.topTracks': 'Canciones destacadas',

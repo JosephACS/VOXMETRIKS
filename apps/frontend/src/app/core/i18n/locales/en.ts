@@ -22,6 +22,7 @@ export const LOCALE_EN = {
     'spaces.nav.artist.tracks': 'Music',
     'spaces.nav.artist.releases': 'Releases',
     'spaces.nav.artist.team': 'Team',
+    'spaces.nav.artist.claimShort': 'Artist profiles',
     'artistSpace.summary.title': 'Artist space',
     'artistSpace.summary.subtitle': 'Overview of your managed artist',
     'artistSpace.summary.team': 'Team size',
@@ -128,6 +129,10 @@ export const LOCALE_EN = {
 
     'nav.home': 'Discover',
     'nav.workpanel': 'Workpanel',
+    'workpanel.notice.syntheticFallback':
+      'Includes synthetic warehouse data (analytical tests).',
+    'workpanel.notice.simulatedAmounts':
+      'Academic/simulated amounts — not real charges.',
     'nav.analyticsHub': 'Analytics Hub',
     'nav.streamsAnalytics': 'Stream analytics',
     'nav.topTracks': 'Top tracks',
