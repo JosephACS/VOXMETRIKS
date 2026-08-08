@@ -188,7 +188,7 @@ Creadas en runtime por la API (no por ELT).
 | `app_favorite` | Favoritos por usuario |
 | `app_playlist` | Playlists de usuario |
 | `app_playlist_track` | Tracks en playlist |
-| `app_track_audio_source` | Cache URL audio (YouTube/yt-dlp) |
+| `app_track_audio_source` | Cache URL audio (YouTube Data API / proveedores aprobados) |
 | `app_track_cover` | Cache portadas |
 
 ---
@@ -228,4 +228,4 @@ erDiagram
 3. **Catálogo** → `dim_*` con paginación.
 4. **Auth / UX** → `app_*` vía servicios legacy.
 
-Ver [performance.md](../11-performance/performance.md) para optimización de queries.
+Ver [performance.md](../performance/performance.md) para optimización de queries.

@@ -104,7 +104,7 @@ Migrar warehouse a cloud OLAP; frontend CDN global.
 Snowflake, dbt, Terraform, Kubernetes, Kafka
 
 ### Impacto
-Escala a millones de eventos/día; SLA 99.9%
+Objetivos aspiracionales (no comprobados en este repo): mayor volumen de eventos y disponibilidad formal. Sin SLA medido aquí.
 
 ---
 
@@ -118,4 +118,4 @@ Escala a millones de eventos/día; SLA 99.9%
 | Enterprise | Alto | Muy alto | Medio |
 | Cloud | Muy alto | Estratégico | Alto |
 
-Ver [audit-report.md](../12-audit/audit-report.md) para estado actual.
+Estado actual del producto: [STATUS.md](../STATUS.md). Informes históricos retirados: [archive/README.md](../archive/README.md).

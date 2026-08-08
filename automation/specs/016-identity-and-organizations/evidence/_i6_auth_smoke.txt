@@ -1,7 +1,0 @@
-health=200
-login=200
-me=200
-orgs_current=200 context=active
-orgs_list=200 n=9
-logout=200
-me_after_logout=401

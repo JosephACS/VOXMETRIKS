@@ -43,4 +43,4 @@ Cierre controlado Fase 5: correcciones mínimas para demo estable derivadas de a
 
 ### Documentación
 
-- Nuevo [docs/AUDIT_REPORT_ENTERPRISE.md](docs/AUDIT_REPORT_ENTERPRISE.md) con hallazgos, correcciones y validaciones Fase 5.
+- El informe histórico de Fase 5 fue **retirado** del working tree; es recuperable con `git show d2f6a27f:<ruta-del-informe>` (ver [docs/archive/README.md](docs/archive/README.md)). El archivo `docs/archive/README.md` solo documenta cómo recuperar material retirado — **no** contiene el informe.

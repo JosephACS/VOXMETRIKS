@@ -166,11 +166,11 @@ if ($cm) {
 }
 
 if (-not $PlanPath) {
-    # Discover plan.md exactly one level deep (specs/<feature>/plan.md),
-    # matching the bash glob specs/*/plan.md. Wrap in try/catch so access errors under
+    # Discover plan.md exactly one level deep (.specify/features/<feature>/plan.md),
+    # matching the bash glob .specify/features/*/plan.md. Wrap in try/catch so access errors under
     # $ErrorActionPreference = 'Stop' don't abort the script.
     try {
-        $specsDir = Join-Path $ProjectRoot 'specs'
+        $specsDir = Join-Path (Join-Path $ProjectRoot '.specify') 'features'
         $candidate = Get-ChildItem -Path $specsDir -Directory -ErrorAction SilentlyContinue |
             ForEach-Object { Get-Item -LiteralPath (Join-Path $_.FullName 'plan.md') -ErrorAction SilentlyContinue } |
             Where-Object { $_ } |

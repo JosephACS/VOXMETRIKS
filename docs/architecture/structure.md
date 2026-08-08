@@ -1,29 +1,26 @@
-# Estructura del repositorio (Enterprise)
+# Estructura del repositorio
 
-Mapa oficial del monorepo **Voxmetriks**.
+Mapa oficial del monorepo **Voxmetriks** (post-consolidación documental).
 
 ```
 voxmetriks/
-├── apps/                         # Aplicaciones desplegables
-│   ├── backend/                  # FastAPI — API REST
-│   └── frontend/                 # Angular 21 — SPA
-├── analytics/                    # Ingeniería de datos
-│   └── elt/                      # Pipeline Medallion (PocketBase → DuckDB)
-├── automation/                   # Herramientas de automatización
-│   ├── scripts/                  # Ops, smoke, warehouse
-│   ├── e2e/                      # Playwright E2E
-│   ├── specs/                    # SDD 001–013
-│   └── playwright/               # Config npm Playwright
-├── infrastructure/               # Infraestructura y entorno
-│   ├── docker/                   # Dockerfile, compose, .dockerignore
-│   ├── pocketbase/               # Dataset cloud + migraciones
-│   ├── hooks/                    # Git hooks
-│   └── environments/             # .env.example
-├── docs/                         # Documentación técnica
-├── data/                         # Datasets Medallion (warehouse, bronze, …)
-├── archive/                      # Histórico + generated/
-├── Makefile                      # Delega a infrastructure/Makefile
-├── package.json                  # Delega e2e a automation/playwright
+├── apps/
+│   ├── backend/                  # FastAPI
+│   └── frontend/                 # Angular SPA
+├── analytics/elt/                # Pipeline Medallion → DuckDB
+├── automation/
+│   ├── scripts/
+│   ├── e2e/
+│   └── playwright/               # Config Playwright (reports locales)
+├── infrastructure/
+│   ├── docker/                   # Dockerfile canónico backend+ELT
+│   ├── pocketbase/
+│   └── environments/
+├── .specify/                     # Spec Kit + history + features 045–047
+├── docs/                         # Documentación canónica
+├── data/                         # Datasets locales (no secretos)
+├── compose.yml                   # Compose canónico
+├── Makefile
 └── README.md
 ```
 
@@ -31,31 +28,19 @@ voxmetriks/
 
 | Dominio | Rol |
 |---------|-----|
-| `apps/backend/` | API 93 endpoints, auth, recomendaciones, explorer |
-| `apps/frontend/` | UI streaming + analytics hub (ECharts) |
-| `analytics/elt/` | Ingesta batch PocketBase → Parquet → DuckDB |
-| `apps/backend/app/etl/` | Builders incrementales al arrancar API |
-| `data/` | Artefactos generados; catálogo fuente en PocketBase |
-| `automation/scripts/` | Smoke tests, warehouse, actividad sintética |
-| `automation/specs/` | Requisitos trazables CU→FR→CA |
-| `infrastructure/` | Docker, PocketBase, variables de entorno |
-| `archive/` | Código superseded; `archive/generated/` para artefactos E2E |
+| `apps/backend/` | API FastAPI |
+| `apps/frontend/` | SPA Angular |
+| `analytics/elt/` | ELT canónico |
+| `.specify/` | Constitución, features cerradas, history |
+| `docs/` | Documentación; verdad en `docs/STATUS.md` |
+| `compose.yml` | `docker compose up --build` |
 
-## Puntos de entrada
+## Entradas
 
 | Acción | Comando / doc |
 |--------|----------------|
-| Arranque | [quickstart.md](../quickstart.md) |
-| Docker | `make up` |
-| ELT completo | `make pipeline` |
-| API dev | `make dev` |
-| Tests backend | `make test` |
-| E2E | `npm run e2e` (desde raíz) |
-| Docs índice | [README.md](../README.md) |
-
-## Convenciones
-
-- **ELT** (Extract-Load-Transform): `analytics/elt/` + documentación
-- **Imports Python `elt.*`**: requieren `PYTHONPATH` con raíz del repo + `analytics/` (`make` lo exporta)
-- **Contenedor Docker**: rutas internas `/app/backend` y `/app/elt` (sin cambios)
-- **No CSV en `data/`**: Bronze es cache Parquet desde PocketBase
+| Arranque | [../QUICKSTART.md](../QUICKSTART.md) |
+| Docker | `docker compose up --build` / `make up` |
+| ELT | `make pipeline` |
+| Estado producto | [../STATUS.md](../STATUS.md) |
+| Specs históricas | [../../.specify/history/README.md](../../.specify/history/README.md) |

@@ -132,7 +132,7 @@ v1: `listArtistSpaces() → []` y no se muestran entradas Artist en el selector.
 
 ## 15. Corrección Fase 1 (2026-08-07)
 
-Ver [phase1-correction.md](./phase1-correction.md):
+Ver [phase1-correction.md](./closure.md):
 
 - productSurfaceGuard ya estaba wired vía `withProductSurfaceGuard`; se extrajo helper + tests de contrato.
 - Nav Organización filtrada por `organizationModuleGuard` permissions/tiers reales.

@@ -1,6 +1,6 @@
 # Setup en Windows
 
-Guía específica de Windows. Para el flujo general ver [`quickstart.md`](quickstart.md).
+Guía específica de Windows. Para el flujo general ver [`../QUICKSTART.md`](../QUICKSTART.md).
 
 ## Requisitos
 
@@ -78,7 +78,7 @@ scripts\dev_start.bat
 Levanta PocketBase → ELT → API → frontend con una sola orden:
 
 ```powershell
-docker compose -f infrastructure/docker/docker-compose.yml up --build
+docker compose up --build
 ```
 
 - Frontend: http://localhost:8080

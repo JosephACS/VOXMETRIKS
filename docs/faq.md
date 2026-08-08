@@ -9,7 +9,7 @@ Plataforma de streaming musical con analytics avanzado sobre dataset Spotify. Co
 No. Es una **plataforma de demostración académica/profesional** que replica patrones UX de streaming y añade capa analítica Medallion no presente en Spotify consumer.
 
 ### ¿Usa machine learning?
-El motor de recomendaciones es **heurístico y explicable** (scoring ponderado SQL). ML está planificado en v3.0 ([roadmap.md](../14-roadmap/roadmap.md)).
+El motor de recomendaciones es **heurístico y explicable** (scoring ponderado SQL). ML está planificado en v3.0 ([roadmap.md](roadmap/roadmap.md)).
 
 ---
 
@@ -31,8 +31,8 @@ OpenAPI automático, async nativo, validación Pydantic, tipado, performance com
 Framework enterprise con DI, lazy loading, i18n, Material Design. Standalone components (v21) eliminan complejidad NgModule.
 
 ### ¿Cómo escala el sistema?
-**Actual:** single-node, DuckDB local, cache in-process — apto demo/académico y miles de usuarios concurrentes ligeros.  
-**Futuro:** Redis cache, read replicas, Snowflake warehouse, K8s horizontal pod scaling ([roadmap.md](../14-roadmap/roadmap.md)).
+**Actual:** single-node, DuckDB local, cache in-process — apto demo/académico. No hay evidencia en este repo de capacidad concurrente medida ni SLA.
+**Futuro (propuesto, no comprobado):** Redis cache, read replicas, warehouse cloud, orquestación — ver [roadmap.md](roadmap/roadmap.md).
 
 ### ¿Cómo migrar a Snowflake?
 1. Export Parquet desde DuckDB gold tables
@@ -45,7 +45,7 @@ Framework enterprise con DI, lazy loading, i18n, Material Design. Standalone com
 Similar: export → GCS → BigQuery load job → dbt para transforms → API lee via BigQuery client.
 
 ### ¿Cómo agregar IA?
-v3.0 roadmap: embeddings con sentence-transformers, vector search, hybrid ranking (heurístico + ML score). Ver [presentation-guide.md](../13-presentation/presentation-guide.md).
+v3.0 roadmap (propuesto): embeddings, vector search, hybrid ranking — ver [roadmap.md](roadmap/roadmap.md). Estado vigente: [STATUS.md](STATUS.md).
 
 ---
 
@@ -64,7 +64,7 @@ python analytics/elt/pipelines/elt_pipeline.py
 `demo` / `demo123` (solo development). Engineer: `admin` / `admin123`.
 
 ### ¿Por qué no veo /docs en producción?
-`ENVIRONMENT=production` desactiva Swagger por seguridad. Usar [api.md](../07-api/api.md).
+`ENVIRONMENT=production` desactiva Swagger por seguridad. Usar [api.md](api/api.md).
 
 ### ¿El frontend no conecta al backend?
 Verificar CORS (`CORS_ORIGINS`), proxy nginx, y que API corre en `:8000`.
@@ -74,9 +74,7 @@ Verificar CORS (`CORS_ORIGINS`), proxy nginx, y que API corre en `:8000`.
 ## Académicas
 
 ### ¿Qué specs cubre el proyecto?
-Specs 001–011 en `specs/` — trazabilidad CU→FR→Impl en `TRACEABILITY-MASTER.md`.
+Historial 001–031 (y cierre 045–047) en [`.specify/history/`](../.specify/history/README.md) y [`.specify/features/`](../.specify/features/). Estado de producto: [STATUS.md](STATUS.md).
 
 ### ¿Dónde están los diagramas UML?
-`docs/uml/` — PlantUML: casos de uso, componentes, secuencias, ELT.
-
-Ver [presentation-guide.md](../13-presentation/presentation-guide.md) para defensa oral.
+`docs/uml/` — PlantUML retenido (casos de uso, componentes, secuencias, ELT).

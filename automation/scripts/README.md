@@ -49,4 +49,4 @@ make etl        # backend/app/etl (boot builders)
 make pipeline   # elt/pipelines/elt_pipeline.py (completo)
 ```
 
-Scripts académicos (TGA07, rebuild 700k) viven en [`../voxmetriks-entregas`](../voxmetriks-entregas).
+Material académico histórico retirado del working tree: ver [`docs/archive/README.md`](../../docs/archive/README.md) (`git show d2f6a27f:<path>`).

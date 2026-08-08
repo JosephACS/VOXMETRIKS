@@ -1,6 +1,6 @@
 # Contributing — Guía de contribución
 
-Gracias por interesar en VOXMETRIK_V2. Este proyecto sigue principios Spec-Driven Development (SDD) documentados en `specs/` y `.specify/memory/constitution.md`.
+Gracias por interesarte en VOXMETRIKS. Este proyecto sigue Spec-Driven Development (SDD) documentado en `.specify/memory/constitution.md` y features bajo `.specify/features/`.
 
 ## Cómo contribuir
 
@@ -43,10 +43,13 @@ Tipos: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 ## Estructura de specs
 
-Antes de features nuevas, consultar o crear spec en `specs/NNN-feature-name/`:
+Antes de features nuevas, crear/consultar spec en `.specify/features/NNN-feature-name/`:
 - `spec.md` — requisitos
 - `plan.md` — diseño
 - `tasks.md` — tareas
+- `quickstart.md` — guía local de la feature
+
+Historial cerrado: `.specify/history/` (no crear features nuevas ahí).
 
 ## Tests obligatorios
 

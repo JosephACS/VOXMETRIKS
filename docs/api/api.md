@@ -263,4 +263,4 @@ Obtener token: `POST /api/v1/users/login`
 - Auth: `AUTH_RATE_LIMIT` / `AUTH_RATE_WINDOW_SEC`
 - Global: `GLOBAL_RATE_LIMIT` / `GLOBAL_RATE_WINDOW_SEC`
 
-Ver [security.md](../10-security/security.md).
+Ver [security.md](../security/security.md).

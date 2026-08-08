@@ -89,7 +89,7 @@ Variable `SKIP_SYSTEM_BOOT=1` desactiva boot en tests.
 
 ## Configuración
 
-Toda la config vive en `app/core/config.py` via variables de entorno. Ver [deployment.md](../09-deployment/deployment.md).
+Toda la config vive en `app/core/config.py` via variables de entorno. Ver [deployment.md](../deployment/deployment.md).
 
 ## Ejecución local
 
@@ -105,4 +105,4 @@ uvicorn app.main:app --reload --port 8000
 pytest tests/ -v
 ```
 
-Ver [testing.md](../08-testing/testing.md).
+Ver [testing.md](../testing/testing.md).

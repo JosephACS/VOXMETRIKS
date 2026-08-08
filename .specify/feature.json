@@ -1,5 +1,6 @@
 {
   "feature_directory": ".specify/features/047-repository-recovery-hardening",
   "previous_feature_directory": ".specify/features/046-artist-identity-access",
-  "note": "Phase 047: selective recovery of Specs 033–044 packages into post-046 baseline; preserve Artist Spaces; no monetization; no merge to main in this phase."
+  "status": "closed",
+  "note": "No active implementation feature. Directory 047 retained for Spec Kit tool compatibility. Product truth: docs/STATUS.md. Historical specs: .specify/history/."
 }

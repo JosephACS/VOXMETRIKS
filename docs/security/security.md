@@ -95,4 +95,4 @@ Respuesta 429:
 - Secrets manager (Vault, AWS SM)
 - Audit log export a SIEM
 
-Ver [faq.md](../01-introduction/faq.md) para preguntas de defensa.
+Ver [faq.md](../faq.md) para preguntas de defensa.

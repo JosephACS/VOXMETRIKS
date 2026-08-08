@@ -142,6 +142,6 @@ sequenceDiagram
 
 ## Referencias
 
-- [database.md](../03-database/database.md) — Catálogo de tablas
-- [backend.md](../04-backend/backend.md) — Detalle de módulos Python
-- [frontend.md](../05-frontend/frontend.md) — Rutas y componentes Angular
+- [database.md](../database/database.md) — Catálogo de tablas
+- [backend.md](../backend/backend.md) — Detalle de módulos Python
+- [frontend.md](../frontend/frontend.md) — Rutas y componentes Angular

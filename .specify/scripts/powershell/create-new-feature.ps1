@@ -80,7 +80,8 @@ $repoRoot = Get-RepoRoot
 
 Set-Location $repoRoot
 
-$specsDir = Join-Path $repoRoot 'specs'
+$specsDir = Join-Path (Join-Path $repoRoot '.specify') 'features'
+# Active features only — never create or number from .specify/history or a root specs/ folder.
 if (-not $DryRun) {
     New-Item -ItemType Directory -Path $specsDir -Force | Out-Null
 }

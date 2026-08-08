@@ -63,11 +63,10 @@ apps/backend/tests/**/*.duckdb
 .ruff_cache/
 .coverage
 htmlcov/
-automation/e2e/.auth/
-archive/generated/playwright-report/
-archive/generated/test-results/
+automation/playwright/e2e/.auth/
 **/test-results/
 **/playwright-report/
+docs/uml/_rendered/
 pytest-*.txt
 
 # Agent / local temp capture
@@ -95,8 +94,7 @@ VOXMETRIKS.git/
 logs/
 apps/backend/logs/
 
-# Review / agent temp artifacts (Spec 014 G)
-automation/specs/**/*.zip
+# Review / agent temp artifacts
 apps/backend/_*.txt
 apps/frontend/_*.txt
 apps/backend/tests/_*.json

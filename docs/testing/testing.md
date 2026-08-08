@@ -118,7 +118,7 @@ Variables **solo** en entorno E2E (ver `apps/backend/.env.e2e.example`):
 En dev/prod los defaults son `AUTH_RATE_LIMIT=20` y `GLOBAL_RATE_LIMIT=120` (`apps/backend/.env.example`).  
 Si `GLOBAL_RATE_LIMIT=0` se define fuera de pytest/E2E, el backend lo ignora y usa 120.
 
-Detalle de cierre: [v2-delivery-closure.md](../12-audit/v2-delivery-closure.md)
+Detalle de archivo documental (documentos retirados): [archive/README.md](../archive/README.md). Estado vigente: [STATUS.md](../STATUS.md).
 
 ## CI recomendado
 

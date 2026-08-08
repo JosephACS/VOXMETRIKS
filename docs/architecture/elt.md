@@ -110,4 +110,4 @@ python automation/scripts/validate_warehouse.py
 | `ctl_auditoria` | Operaciones DDL/DML |
 | `ctl_pipeline_stages` | Duración por etapa Medallion |
 
-Ver [database.md](../03-database/database.md) para catálogo completo.
+Ver [database.md](../database/database.md) para catálogo completo.

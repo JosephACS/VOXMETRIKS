@@ -11,10 +11,10 @@
 
 Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
 
-**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`.  
-**Suscripciones personales B2C (spec 029):** Free / Premium Individual / Duo / Familiar — `CLOSED_WITH_ACCEPTED_DEBT`. Separadas de planes empresariales.  
-Cuentas demo locales: [`docs/DEMO-ACCOUNTS.md`](docs/DEMO-ACCOUNTS.md) (`DEMO_ACCOUNT_PASSWORD`, seed opt-in).
-Royalties/Payouts: **OUT_OF_SCOPE**. Detalle: [automation/specs/028-enterprise-integration-and-final-validation/](automation/specs/028-enterprise-integration-and-final-validation/) · [automation/specs/029-personal-music-subscriptions/](automation/specs/029-personal-music-subscriptions/).
+**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`.
+**Suscripciones personales B2C (spec 029):** Free / Premium Individual / Duo / Familiar — `CLOSED_WITH_ACCEPTED_DEBT`. Separadas de planes empresariales.
+Cuentas demo locales: seed opt-in (`DEMO_ACCOUNT_PASSWORD` / `.env.example`). Detalle de estado: [`docs/STATUS.md`](docs/STATUS.md).
+Royalties/Payouts: **OUT_OF_SCOPE** (simulado). Specs históricas: [`.specify/history/`](.specify/history/README.md).
 
 ---
 
@@ -42,7 +42,7 @@ flowchart LR
 | Customer Success / Support | 025 | **IMPLEMENTED** (`/customer-success`, `/support`) |
 | Royalties / Payouts | — | **OUT_OF_SCOPE** (futuro; no son 024/025) |
 
-Detalle: [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md) · Empresa: [automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md](automation/specs/028-enterprise-integration-and-final-validation/architecture-as-implemented.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md)
+Detalle: [docs/STATUS.md](docs/STATUS.md) · Specs históricas: [.specify/history/](.specify/history/README.md) · ELT: [docs/architecture/elt.md](docs/architecture/elt.md)
 
 ---
 
@@ -102,8 +102,8 @@ Playwright (`automation/playwright`) y Docker Compose son **opcionales**; no asu
 
 ## Specs SDD
 
-Especificaciones: [automation/specs/](automation/specs/README.md)  
-Spec de estabilización: `automation/specs/014-repository-stabilization-domain-foundation/`
+Especificaciones: [.specify/history/](.specify/history/README.md)
+Spec de estabilización: `.specify/history/014-repository-stabilization-domain-foundation/`
 
 ---
 
@@ -114,7 +114,7 @@ Spec de estabilización: `automation/specs/014-repository-stabilization-domain-f
 | Documento | Enlace |
 |-----------|--------|
 | Quickstart | [QUICKSTART.md](docs/QUICKSTART.md) |
-| Features | [PRODUCT_FEATURES.md](docs/PRODUCT_FEATURES.md) |
-| Release Notes | [RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
+| Estado de producto | [STATUS.md](docs/STATUS.md) |
+| Modelo de negocio | [BUSINESS-MODEL.md](docs/product/BUSINESS-MODEL.md) |
 | API | [api.md](docs/api/api.md) |
 | Seguridad | [security.md](docs/security/security.md) |

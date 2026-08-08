@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-at automation/specs/013-academic-defense-deliverables/plan.md
+For Spec Kit context, product status, and technology constraints, read:
+.specify/memory/constitution.md and docs/STATUS.md.
+Historical specs live under .specify/history/.
 <!-- SPECKIT END -->

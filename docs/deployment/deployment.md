@@ -12,7 +12,7 @@
 
 ## Variables de entorno
 
-Copiar `.env.example` → `.env` en raíz y `apps/backend/.env`.
+Copiar plantilla a `.env` en raíz (`infrastructure/environments/.env.example`) y/o `apps/backend/.env`.
 
 ### Esenciales
 
@@ -23,17 +23,20 @@ SECRET_KEY=<generar-clave-segura>
 CORS_ORIGINS=https://tu-dominio.com
 HOST=0.0.0.0
 PORT=8000
+RUN_ETL_ON_BOOT=never
 ```
 
-### PocketBase (ELT)
+### Fuente ELT (opcional; fuera de Compose)
+
+PocketBase u otras fuentes se configuran para el pipeline en el **host**, no como servicios del Compose canónico.
 
 ```env
-POCKETBASE_URL=http://pocketbase:8090
+POCKETBASE_URL=http://127.0.0.1:8090
 POCKETBASE_EMAIL=admin@example.com
 POCKETBASE_PASSWORD=***
 ```
 
-### Logging producción
+### Logging
 
 ```env
 LOG_JSON=true
@@ -44,40 +47,43 @@ ENVIRONMENT=production   # desactiva /docs
 
 Ver lista completa en `apps/backend/.env.example`.
 
-## Docker Compose (recomendado)
+## Docker Compose (canónico)
+
+Archivo: **`compose.yml` en la raíz del repo**. Servicios: `backend`, `frontend`.
 
 ```bash
-docker compose -f infrastructure/docker/docker-compose.yml up --build -d
+# Instalación nueva: warehouse primero (Compose no ejecuta ELT con RUN_ETL_ON_BOOT=never)
+make pipeline
+docker compose up --build -d
 ```
 
 | Servicio | Puerto | Rol |
 |----------|--------|-----|
-| pocketbase | 8090 | Dataset fuente |
-| pipeline | — | ELT one-shot |
-| api | 8000 | FastAPI |
-| frontend | 8080 | nginx + SPA |
-
-Orden: pocketbase → pipeline → api → frontend.
+| `backend` | `8000:8000` | FastAPI + DuckDB montado desde `./data` |
+| `frontend` | `8080:80` | nginx + SPA (proxy `/api`) |
 
 ### Comandos útiles
 
 ```bash
-docker compose -f infrastructure/docker/infrastructure/docker/docker-compose.yml logs -f api
-docker compose run --rm pipeline      # re-ETL
-docker compose -f infrastructure/docker/docker-compose.yml up -d pocketbase api frontend  # sin pipeline
-docker compose -f infrastructure/docker/infrastructure/docker/docker-compose.yml down
+docker compose logs -f backend
+docker compose down
+make pipeline   # ELT en el host; no es servicio Compose
 ```
+
+No usar rutas Compose distintas del `compose.yml` de la raíz, ni inventar servicios Compose `api`, `pipeline` o `pocketbase`.
 
 ## Despliegue manual
 
 ### Backend
 
 ```bash
-cd apps/backend
+# Desde la raíz del repo
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python ../elt/pipelines/elt_pipeline.py
+# Windows: .venv\Scripts\activate
+source .venv/bin/activate
+pip install -r apps/backend/requirements.txt
+python analytics/elt/pipelines/elt_pipeline.py
+cd apps/backend
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
@@ -119,19 +125,19 @@ curl http://localhost:8000/api/v1/health/enterprise
 ## Makefile
 
 ```bash
-make up      # docker compose -f infrastructure/docker/docker-compose.yml up --build
+make up      # docker compose up --build
 make down
 make logs
-make etl
+make pipeline
 make test
 ```
 
-## Checklist producción
+## Checklist de despliegue controlado
 
-- [ ] `ENVIRONMENT=production`
+- [ ] `ENVIRONMENT` acorde al entorno
 - [ ] `SECRET_KEY` único
 - [ ] `CORS_ORIGINS` explícitos (no `*`)
 - [ ] SMTP configurado (o desactivar registro público)
-- [ ] Warehouse generado y validado
+- [ ] Warehouse generado con `make pipeline` / `python analytics/elt/pipelines/elt_pipeline.py`
 - [ ] Logs rotativos activos
-- [ ] Backups de `voxmetrik.duckdb` programados
+- [ ] Backups de `voxmetrik.duckdb` programados (si aplica)

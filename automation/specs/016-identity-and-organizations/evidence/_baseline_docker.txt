@@ -1,4 +1,0 @@
-﻿NOT_AVAILABLE
-docker --version failed: command not found on PATH
-
-EXIT=1
