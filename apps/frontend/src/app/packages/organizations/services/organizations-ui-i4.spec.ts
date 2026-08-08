@@ -46,8 +46,10 @@ describe('OrgSelectorComponent (I4)', () => {
     const btn = fixture.nativeElement.querySelector('.org-selector-btn') as HTMLButtonElement;
     btn.click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No hay organizaciones');
-    expect(fixture.nativeElement.textContent).toContain('Crear organización');
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('No hay organizaciones');
+    // Empty selector steers to enterprise entry; create link appears once the user already has orgs.
+    expect(text).toContain('VOXMETRIKS para empresas');
   });
 });
 

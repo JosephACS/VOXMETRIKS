@@ -3,6 +3,18 @@
  * Polyfills browser APIs that the app relies on but jsdom does not ship.
  */
 
+import { getTestBed } from '@angular/core/testing';
+import {
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
+
+// Angular's unit-test builder may already init TestBed; plain `vitest run` does not.
+const testBed = getTestBed();
+if (!(testBed as { platform?: unknown }).platform) {
+  testBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+}
+
 /** In-memory Storage implementation for localStorage / sessionStorage. */
 function memoryStorage(): Storage {
   let store: Record<string, string> = {};

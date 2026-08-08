@@ -1,4 +1,7 @@
 import { CanActivateFn } from '@angular/router';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   decideProductSurfaceAccess,
   presentationModeFromUser,
@@ -8,6 +11,7 @@ import {
   prependRouteGuard,
 } from './product-surface.routes';
 
+const here = dirname(fileURLToPath(import.meta.url));
 const noopGuard: CanActivateFn = () => true;
 
 describe('prependRouteGuard (038 wiring helper)', () => {
@@ -48,12 +52,7 @@ describe('prependRouteGuard (038 wiring helper)', () => {
 
 describe('app.routes.ts product-surface attachment (source contract)', () => {
   it('wraps 038 demo packages and leaves platform-ops unwrapped', () => {
-    const fs = require('fs') as typeof import('fs');
-    const path = require('path') as typeof import('path');
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../app.routes.ts'),
-      'utf8',
-    );
+    const src = readFileSync(join(here, '../../app.routes.ts'), 'utf8');
     for (const pkg of PRODUCT_SURFACE_WRAPPED_PACKAGES) {
       expect(src).toContain(`withProductSurfaceGuard(${pkg})`);
     }

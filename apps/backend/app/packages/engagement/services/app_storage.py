@@ -17,10 +17,18 @@ def _demo_user_id(conn: duckdb.DuckDBPyConnection) -> int | None:
 
 
 def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
-    """Seed demo playlists/favorites if demo user has none."""
+    """Seed demo playlists/favorites if demo user has none.
+
+    Requires warehouse gold table ``dim_track``. If missing (empty app DB /
+    no ELT), skip favorites/playlists seed so lifespan can still complete.
+    """
+    from app.core.database import table_exists
+
     ensure_user_tables(conn)
     uid = _demo_user_id(conn)
     if not uid:
+        return
+    if not table_exists(conn, "dim_track"):
         return
 
     fav_count = conn.execute(
@@ -110,6 +118,12 @@ def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
 
 
 def ensure_app_tables(conn: duckdb.DuckDBPyConnection) -> None:
+    # Listening history must be ensured even when schema_ready short-circuits.
+    from app.packages.engagement.services.listening_history_service import (
+        ensure_listening_history_table,
+    )
+
+    ensure_listening_history_table(conn)
     if schema_ready():
         return
     migrate_user_scoping(conn)

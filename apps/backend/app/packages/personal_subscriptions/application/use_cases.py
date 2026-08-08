@@ -935,6 +935,14 @@ def refund_latest_paid(
 # ── Household ──────────────────────────────────────────────────────────────
 
 
+def _profile_initials(username: Optional[str], email: Optional[str] = None) -> str:
+    raw = (username or email or "?").strip()
+    parts = [p for p in raw.replace(".", " ").replace("_", " ").split() if p]
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[1][0]).upper()[:2]
+    return raw[:2].upper()
+
+
 def get_household(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dict[str, Any]]:
     ensure_personal_subscription_tables(conn)
     row = conn.execute(
@@ -1000,6 +1008,132 @@ def get_household(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dic
             for i in invites
         ],
     }
+
+
+def list_household_profiles(
+    conn: duckdb.DuckDBPyConnection, user_id: int
+) -> Dict[str, Any]:
+    """Safe profile cards for the shared-device selector (no emails / login hints)."""
+    hh = get_household(conn, user_id)
+    if not hh:
+        return {
+            "household": None,
+            "profiles": [],
+            "show_selector": False,
+            "plan_active": True,
+            "plan_code": None,
+            "plan_name": None,
+        }
+
+    owner_id = int(hh["owner_user_id"])
+    plan_name_row = conn.execute(
+        "SELECT display_name FROM personal_plan WHERE code = ? LIMIT 1",
+        [hh.get("plan_code")],
+    ).fetchone()
+    plan_name = str(plan_name_row[0]) if plan_name_row else str(hh.get("plan_code") or "")
+
+    owner_sub = conn.execute(
+        """
+        SELECT s.status, p.code
+        FROM personal_subscription s
+        JOIN personal_plan p ON p.id = s.plan_id
+        WHERE s.user_id = ? AND p.is_free = FALSE
+        ORDER BY s.id DESC LIMIT 1
+        """,
+        [owner_id],
+    ).fetchone()
+    plan_status = str(owner_sub[0]).lower() if owner_sub else None
+    plan_active = plan_status in ("active", "trialing", "past_due", "processing")
+
+    from app.packages.identity.services.profile_security import pin_enabled_for_users
+
+    member_ids = [int(m["user_id"]) for m in hh["members"]]
+    pin_map = pin_enabled_for_users(conn, member_ids)
+
+    profiles: List[Dict[str, Any]] = []
+    for m in hh["members"]:
+        uid = int(m["user_id"])
+        uname = str(m.get("username") or "").strip() or None
+        email = str(m.get("email") or "").strip() or None
+        prefs: Dict[str, Any] = {}
+        prefs_row = conn.execute(
+            "SELECT preferences_json FROM app_user WHERE id = ?", [uid]
+        ).fetchone()
+        if prefs_row and prefs_row[0]:
+            try:
+                prefs = (
+                    json.loads(prefs_row[0])
+                    if isinstance(prefs_row[0], str)
+                    else dict(prefs_row[0])
+                )
+            except (TypeError, ValueError, json.JSONDecodeError):
+                prefs = {}
+        custom_name = str(prefs.get("profile_display_name") or "").strip()
+        avatar_url = str(prefs.get("avatar_url") or "").strip() or None
+        avatar_preset = str(prefs.get("avatar_preset") or "").strip() or None
+        display = custom_name or uname or (email.split("@")[0] if email else f"user-{uid}")
+        profiles.append(
+            {
+                "profile_key": f"p{uid}",
+                "user_id": uid,
+                "display_name": display,
+                "initials": _profile_initials(display, email),
+                "avatar_hue": int(prefs.get("avatar_hue") or (uid % 360)),
+                "avatar_url": avatar_url,
+                "avatar_preset": avatar_preset,
+                "role": m["role"],
+                "is_me": uid == int(user_id),
+                "pin_enabled": bool(pin_map.get(uid)),
+            }
+        )
+
+    if not plan_active:
+        profiles = [p for p in profiles if p["is_me"]]
+
+    return {
+        "household_id": hh["id"],
+        "plan_name": plan_name,
+        "plan_code": hh.get("plan_code"),
+        "plan_active": plan_active,
+        "my_role": hh.get("my_role"),
+        "profiles": profiles,
+        "show_selector": plan_active and len(profiles) > 1,
+    }
+
+
+def prepare_profile_switch(
+    conn: duckdb.DuckDBPyConnection, actor_user_id: int, target_user_id: int
+) -> Dict[str, Any]:
+    """Return a login hint only after an explicit, authorized switch intent.
+
+    Never impersonates. Caller must still authenticate with their own password.
+    """
+    hh = get_household(conn, actor_user_id)
+    if not hh:
+        raise PersonalForbiddenError("No perteneces a un grupo compartido")
+    target = next(
+        (m for m in hh["members"] if int(m["user_id"]) == int(target_user_id)),
+        None,
+    )
+    if not target:
+        raise PersonalForbiddenError("Ese perfil no pertenece a tu grupo")
+    if int(target_user_id) == int(actor_user_id):
+        raise PersonalForbiddenError("Ya estás en ese perfil")
+
+    row = conn.execute(
+        "SELECT username, email FROM app_user WHERE id = ?", [int(target_user_id)]
+    ).fetchone()
+    if not row:
+        raise PersonalForbiddenError("Usuario no encontrado")
+    username = str(row[0] or "").strip()
+    email = str(row[1] or "").strip()
+    hint = username or email
+    if not hint:
+        raise PersonalForbiddenError("No hay identificador de acceso para ese perfil")
+    display = str(target.get("username") or "").strip() or (
+        email.split("@")[0] if email else hint
+    )
+    return {"login_hint": hint, "display_name": display}
 
 
 def invite_member(

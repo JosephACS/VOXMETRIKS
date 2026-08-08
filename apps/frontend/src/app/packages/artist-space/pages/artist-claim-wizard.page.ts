@@ -28,7 +28,14 @@ import { SpaceContextService } from '../../../core/spaces/space-context.service'
             {{ 'common.search' | t:lang() }}
           </button>
         </form>
-        @if (results().length) {
+        @if (searched() && !results().length) {
+          <app-enterprise-empty-state
+            [title]="'artistSpace.claim.noResultsTitle' | t:lang()"
+            [description]="'artistSpace.claim.noResultsBody' | t:lang()"
+            [ctaLabel]="'artistSpace.claim.createNew' | t:lang()"
+            (ctaClick)="focusCreateNew()"
+          />
+        } @else if (results().length) {
           <ul class="results">
             @for (a of results(); track a.id_artista) {
               <li>
@@ -47,6 +54,9 @@ import { SpaceContextService } from '../../../core/spaces/space-context.service'
       </app-enterprise-section-card>
 
       <app-enterprise-section-card [title]="'artistSpace.claim.createNew' | t:lang()">
+        <p class="muted hint" id="artist-claim-create">
+          {{ 'artistSpace.claim.requestAccessHint' | t:lang() }}
+        </p>
         <form [formGroup]="createForm" (ngSubmit)="createNew()" class="form-grid">
           <app-enterprise-form-field
             [label]="'artistSpace.claim.proposedName' | t:lang()"
@@ -117,6 +127,7 @@ export class ArtistClaimWizardPage {
 
   readonly lang = this.i18n.lang;
   readonly results = signal<Array<{ id_artista: number; nombre_artista: string }>>([]);
+  readonly searched = signal(false);
   readonly mine = signal<ArtistAccessRequest[]>([]);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -135,9 +146,20 @@ export class ArtistClaimWizardPage {
   search(): void {
     const q = this.searchForm.value.q?.trim() || '';
     this.api.searchCatalogArtists(q).subscribe({
-      next: (r) => this.results.set(r.items || []),
+      next: (r) => {
+        this.results.set(r.items || []);
+        this.searched.set(true);
+      },
       error: (e) => this.error.set(e?.message || 'search_failed'),
     });
+  }
+
+  focusCreateNew(): void {
+    const name = this.searchForm.value.q?.trim() || '';
+    if (name) {
+      this.createForm.patchValue({ name });
+    }
+    document.getElementById('artist-claim-create')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   claim(warehouseId: number): void {

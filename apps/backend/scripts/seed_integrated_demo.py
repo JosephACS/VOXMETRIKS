@@ -11,13 +11,19 @@ Run (from apps/backend):
 
     set VOXMETRIKS_SEED_DEMO_ACCOUNTS=1
     set DEMO_ACCOUNT_PASSWORD=your-local-secret
+    set DB_PATH=..\..\data\warehouse\voxmetrik-demo.duckdb
     python scripts/seed_integrated_demo.py
+
+``DB_PATH`` may point to a path that does not exist yet — the seed creates the
+parent directory and an empty DuckDB file, then ensures identity tables before
+platform RBAC (so default ``SEED_DEMO_CRM_USERS`` stays enabled). No prior ELT
+or warehouse gold tables are required.
 
 Optional cleanup of pytest / Golden Path pollution first:
 
     python scripts/seed_integrated_demo.py --cleanup-first
 
-Does not touch music warehouse tables (dim_*/fact_*).
+Does not require music warehouse tables (dim_*/fact_*); those stay optional.
 """
 
 from __future__ import annotations
@@ -1271,9 +1277,31 @@ def _seed_demo_catalog_publishing(conn, org_id: int, artist_user_id: int, owner_
     return out
 
 
+def _prepare_seed_database() -> Path:
+    """Ensure DB_PATH parent + empty DuckDB exist (seed-local; app still refuses missing DBs)."""
+    import duckdb
+
+    from app.core.config import get_settings
+    from app.core.database import close_read_pool
+    from app.db.duckdb_client import shutdown_duckdb_client
+
+    path = Path(get_settings().db_path_resolved)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        # Create an empty DuckDB file without going through using_write_conn
+        # (which intentionally refuses missing warehouse files for the API).
+        bootstrap = duckdb.connect(str(path))
+        bootstrap.close()
+    # Drop any stale process handles so subsequent using_write_conn sees the file.
+    shutdown_duckdb_client()
+    close_read_pool()
+    return path
+
+
 def seed_integrated_demo() -> dict[str, Any]:
     from app.core.database import using_write_conn
     from app.core.time_util import utc_now
+    from app.packages.identity.services.user_storage import ensure_user_tables
     from app.packages.platform_rbac.infrastructure.schema import ensure_platform_rbac_tables
     from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
 
@@ -1286,7 +1314,12 @@ def seed_integrated_demo() -> dict[str, Any]:
         "seeded_at": None,
     }
 
+    db_path = _prepare_seed_database()
+    report["db_path"] = str(db_path)
+
     with using_write_conn() as conn:
+        # Identity first — platform RBAC demo CRM seeding queries app_user.
+        ensure_user_tables(conn)
         ensure_platform_rbac_tables(conn)
         ensure_subscription_tables(conn)
         try:

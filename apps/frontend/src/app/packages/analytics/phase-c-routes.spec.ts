@@ -24,18 +24,15 @@ describe('Phase C route stability (spec 014)', () => {
     }
   });
 
-  it('points dashboard and insights to packages/analytics loaders', () => {
-    const dashSrc = String(child('dashboard')?.loadComponent);
-    const aSrc = String(child('insights/analytics')?.loadComponent);
-    const tSrc = String(child('insights/tracks')?.loadComponent);
-    // Angular compiles loaders; ensure routes still declare loadComponent.
-    expect(child('dashboard')?.loadComponent).toBeTypeOf('function');
-    expect(child('insights/analytics')?.loadComponent).toBeTypeOf('function');
-    expect(child('insights/tracks')?.loadComponent).toBeTypeOf('function');
-    expect(child('analytics')?.loadComponent).toBeTypeOf('function');
+  it('keeps dashboard/insights as stable redirects into staff surfaces', () => {
+    // Spec 037/044 recovery: legacy analytics entrypoints redirect to Workpanel / complex reports.
+    expect(child('dashboard')?.redirectTo).toBe('workpanel');
+    expect(child('insights/analytics')?.redirectTo).toBe('workpanel');
+    expect(child('insights/tracks')?.redirectTo).toBe('complex-reports');
+    expect(child('analytics')?.redirectTo).toBe('workpanel');
+    expect(child('trending')?.redirectTo).toBe('complex-reports');
+    expect(child('comparatives')?.redirectTo).toBe('complex-reports');
     expect(child('tracks')?.loadComponent).toBeTypeOf('function');
-    void dashSrc;
-    void aSrc;
-    void tSrc;
+    expect(child('tracks/:id')?.loadComponent).toBeTypeOf('function');
   });
 });

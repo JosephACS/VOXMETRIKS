@@ -1159,7 +1159,10 @@ class CatalogPublishingUseCases:
             if wtid < 100000 and not sub.get("is_demo"):
                 # Reuse existing imported track for linking — do not mutate it.
                 return wtid
-            if wtid >= DEMO_WAREHOUSE_TRACK_ID_MIN or wtid < 100000:
+            if wtid >= DEMO_WAREHOUSE_TRACK_ID_MIN:
+                self._upsert_public_dim_track(wtid, track, sub)
+                return wtid
+            if wtid < 100000:
                 return wtid
 
         if not _table_exists(self._conn, "dim_track"):
@@ -1179,8 +1182,100 @@ class CatalogPublishingUseCases:
             [DEMO_WAREHOUSE_TRACK_ID_MIN - 1, DEMO_WAREHOUSE_TRACK_ID_MIN],
         ).fetchone()
         wtid = max(int(nxt_row[0]), DEMO_WAREHOUSE_TRACK_ID_MIN)
-        title = f"{DEMO_TRACK_TITLE_PREFIX} {track['title']}"
-        # Minimal insert — only required columns that commonly exist
+        self._upsert_public_dim_track(wtid, track, sub)
+        return wtid
+
+    def _public_catalog_title(self, track: dict[str, Any], sub: dict[str, Any]) -> str:
+        track_title = (track.get("title") or "").strip()
+        release_title = (sub.get("title") or "").strip()
+        tl = track_title.lower()
+        placeholder = (
+            not track_title
+            or tl in ("track", "untitled", "song", "published track")
+            or tl.endswith(" track")
+        )
+        # Prefer intentional release title (e.g. "[DEMO] Published Single").
+        if release_title and (placeholder or release_title.upper().startswith("[DEMO")):
+            chosen = release_title
+        else:
+            chosen = track_title or release_title or "Untitled"
+        if (
+            sub.get("is_demo")
+            and DEMO_TRACK_TITLE_PREFIX not in chosen
+            and not chosen.upper().startswith("[DEMO")
+        ):
+            chosen = f"{DEMO_TRACK_TITLE_PREFIX} {chosen}"
+        return chosen
+
+    def _ensure_warehouse_artist_id(self, sub: dict[str, Any]) -> Optional[int]:
+        """Resolve / create dim_artista for the submission artist profile."""
+        if not _table_exists(self._conn, "dim_artista"):
+            return None
+        profile_id = sub.get("artist_profile_id")
+        display = "Demo Artist"
+        warehouse_artist_id = None
+        if profile_id and _table_exists(self._conn, "app_artist_profile"):
+            prow = self._conn.execute(
+                """
+                SELECT display_name, warehouse_artist_id
+                FROM app_artist_profile WHERE id = ?
+                """,
+                [int(profile_id)],
+            ).fetchone()
+            if prow:
+                display = (prow[0] or display).strip() or display
+                if prow[1] is not None:
+                    warehouse_artist_id = int(prow[1])
+
+        if warehouse_artist_id is not None:
+            exists = self._conn.execute(
+                "SELECT 1 FROM dim_artista WHERE id_artista = ?",
+                [warehouse_artist_id],
+            ).fetchone()
+            if exists:
+                return warehouse_artist_id
+
+        by_name = self._conn.execute(
+            """
+            SELECT id_artista FROM dim_artista
+            WHERE lower(trim(nombre_artista)) = lower(trim(?))
+            LIMIT 1
+            """,
+            [display],
+        ).fetchone()
+        if by_name:
+            aid = int(by_name[0])
+        else:
+            # Reserved artist ids for published demo profiles (avoid colliding with imports)
+            nxt = self._conn.execute(
+                "SELECT COALESCE(MAX(id_artista), 9000000) + 1 FROM dim_artista WHERE id_artista >= 9000000"
+            ).fetchone()
+            aid = max(int(nxt[0]), 9_000_000)
+            self._conn.execute(
+                "INSERT INTO dim_artista (id_artista, nombre_artista) VALUES (?, ?)",
+                [aid, display],
+            )
+
+        if profile_id and _table_exists(self._conn, "app_artist_profile"):
+            self._conn.execute(
+                """
+                UPDATE app_artist_profile
+                SET warehouse_artist_id = ?, updated_at = ?
+                WHERE id = ? AND (warehouse_artist_id IS NULL OR warehouse_artist_id = 0)
+                """,
+                [aid, _now(), int(profile_id)],
+            )
+        return aid
+
+    def _upsert_public_dim_track(
+        self, wtid: int, track: dict[str, Any], sub: dict[str, Any]
+    ) -> None:
+        """Create or refresh the discoverable dim_track row for a published track."""
+        if not _table_exists(self._conn, "dim_track"):
+            return
+        title = self._public_catalog_title(track, sub)
+        artist_id = self._ensure_warehouse_artist_id(sub)
+        duration = int(track.get("duration_ms") or 0)
         cols = {
             r[0]
             for r in self._conn.execute(
@@ -1188,20 +1283,52 @@ class CatalogPublishingUseCases:
                 "WHERE table_name = 'dim_track'"
             ).fetchall()
         }
+        existing = self._conn.execute(
+            "SELECT 1 FROM dim_track WHERE id_track = ?", [wtid]
+        ).fetchone()
+        if existing:
+            # DuckDB ART indexes can raise duplicate-key on UPDATE; replace row.
+            self._conn.execute("DELETE FROM dim_track WHERE id_track = ?", [wtid])
+
         fields = ["id_track", "nombre_track"]
         values: list[Any] = [wtid, title]
         if "duration_ms" in cols:
             fields.append("duration_ms")
-            values.append(track.get("duration_ms") or 0)
+            values.append(duration)
         if "popularity" in cols:
             fields.append("popularity")
-            values.append(0)
+            values.append(90)
+        if "id_artista" in cols and artist_id is not None:
+            fields.append("id_artista")
+            values.append(artist_id)
+
+        # Build search_fold before insert so discoverability is immediate.
+        if "search_fold" in cols:
+            from app.core.search_fold import _row_search_fold
+            from app.packages.catalog.services.text_search import fold_text
+
+            artist_name = None
+            if artist_id is not None and _table_exists(self._conn, "dim_artista"):
+                arow = self._conn.execute(
+                    "SELECT nombre_artista FROM dim_artista WHERE id_artista = ?",
+                    [artist_id],
+                ).fetchone()
+                if arow:
+                    artist_name = arow[0]
+            release_title = (sub.get("title") or "").strip()
+            folded = _row_search_fold(title, artist_name, None)
+            if release_title:
+                rt = fold_text(release_title)
+                if rt and rt not in folded:
+                    folded = f"{folded} {rt}".strip()
+            fields.append("search_fold")
+            values.append(folded)
+
         placeholders = ", ".join("?" for _ in fields)
         self._conn.execute(
             f"INSERT INTO dim_track ({', '.join(fields)}) VALUES ({placeholders})",
             values,
         )
-        return wtid
 
     def _ensure_catalog_asset(
         self,

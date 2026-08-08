@@ -13,6 +13,8 @@ apps/frontend/.env.local
 runtime/
 scripts/.demo-pids/
 data/media/
+apps/backend/data/media/
+apps/backend/data/smoke-*
 VOXMETRIKS-DEMO-RUNTIME/
 VOXMETRIKS-CLEAN-TEST/
 VOXMETRIKS-DEMO-BACKUP/

@@ -73,4 +73,19 @@ describe('resolveModuleContext (043 hotfix)', () => {
     expect(resolveModuleContext('/discover')).toBeNull();
     expect(resolveModuleContext('/liked')).toBeNull();
   });
+
+  it('resolves platform-ops hub chrome with tabs', () => {
+    const hub = resolveModuleContext('/platform-ops');
+    expect(hub?.moduleId).toBe('platformOps');
+    expect(hub?.hubPath).toBe('/platform-ops');
+    expect(hub?.showBack).toBe(false);
+    expect(hub?.activeTabPath).toBe('/platform-ops');
+    expect(hub?.tabs.some((t) => t.path === '/platform-ops/artist-requests')).toBe(true);
+
+    const requests = resolveModuleContext('/platform-ops/artist-requests');
+    expect(requests?.moduleId).toBe('platformOps');
+    expect(requests?.showBack).toBe(true);
+    expect(requests?.activeTabPath).toBe('/platform-ops/artist-requests');
+    expect(requests?.crumbs.some((c) => c.label === 'Solicitudes de artista')).toBe(true);
+  });
 });

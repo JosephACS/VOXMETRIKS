@@ -68,6 +68,8 @@ export const LOCALE_EN = {
     'artistSpace.claim.myRequests': 'My requests',
     'artistSpace.claim.noRequests': 'No requests yet',
     'artistSpace.claim.requestAccessHint': 'Access can be requested when a profile already has an owner.',
+    'artistSpace.claim.noResultsTitle': "We couldn't find that artist",
+    'artistSpace.claim.noResultsBody': 'Try another name or request a new artist profile.',
     'artistSpace.inviteAccept.title': 'Accept artist invitation',
     'artistSpace.inviteAccept.subtitle': 'Paste the invitation token you received to join an artist space',
     'artistSpace.inviteAccept.pasteTitle': 'Paste invitation token',

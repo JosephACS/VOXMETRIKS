@@ -173,6 +173,26 @@ def household(
     return data or {"household": None}
 
 
+@personal_router.get("/household/profiles")
+def household_profiles(
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    return uc.list_household_profiles(conn, int(user["user_id"]))
+
+
+@personal_router.post("/household/profiles/{target_user_id}/prepare-switch")
+def prepare_profile_switch(
+    target_user_id: int,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return uc.prepare_profile_switch(conn, int(user["user_id"]), int(target_user_id))
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
 @personal_router.post("/household/invitations")
 def invite(
     body: InviteRequest,

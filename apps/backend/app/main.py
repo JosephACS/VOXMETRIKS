@@ -54,10 +54,12 @@ from app.packages.catalog.routes import (
 from app.packages.engagement.routes import (
     dashboard_router,
     favorites_router,
+    listening_activity_router,
+    listening_history_router,
     playlists_router,
 )
 from app.packages.engagement.services.app_storage import ensure_app_tables
-from app.packages.identity.routes import users_router
+from app.packages.identity.routes import users_router, security_router
 from app.packages.identity.services.user_storage import ensure_user_tables
 from app.packages.organizations.infrastructure.schema import ensure_organization_tables
 from app.packages.organizations.routes import organizations_router
@@ -104,6 +106,9 @@ from app.packages.platform_ops.infrastructure.schema import ensure_platform_ops_
 from app.packages.platform_ops.presentation.router import platform_ops_router
 from app.packages.reporting.infrastructure.schema import ensure_reporting_tables
 from app.packages.reporting.presentation.router import business_decisions_router, reports_router
+from app.packages.simple_reports.presentation.router import simple_reports_router
+from app.packages.workpanel.router import workpanel_router
+from app.packages.complex_reports.router import complex_reports_router
 from app.packages.customer_success.infrastructure.schema import ensure_customer_success_tables
 from app.packages.customer_success.presentation.router import customer_success_router, support_router
 
@@ -178,6 +183,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 except Exception as exc:
                     logger.error(
                         "Secondary index/search_fold bootstrap failed: %s",
+                        exc,
+                        exc_info=True,
+                    )
+                try:
+                    from app.packages.catalog_publishing.application.sync_catalog import (
+                        sync_published_tracks_to_catalog,
+                    )
+
+                    sync_published_tracks_to_catalog(conn)
+                except Exception as exc:
+                    logger.error(
+                        "Published catalog sync failed: %s",
                         exc,
                         exc_info=True,
                     )
@@ -262,6 +279,8 @@ def create_app() -> FastAPI:
     application.include_router(catalog_playlists_router, prefix="/api/v1")
     application.include_router(playlists_router, prefix="/api/v1")
     application.include_router(favorites_router, prefix="/api/v1")
+    application.include_router(listening_history_router, prefix="/api/v1")
+    application.include_router(listening_activity_router, prefix="/api/v1")
     application.include_router(dashboard_router, prefix="/api/v1")
     application.include_router(stats_router, prefix="/api/v1")
     application.include_router(analytics_router, prefix="/api/v1")
@@ -269,6 +288,7 @@ def create_app() -> FastAPI:
     application.include_router(ai_router, prefix="/api/v1")
     application.include_router(platform_router, prefix="/api/v1")
     application.include_router(users_router, prefix="/api/v1")
+    application.include_router(security_router, prefix="/api/v1")
     application.include_router(organizations_router, prefix="/api/v1")
     application.include_router(crm_router, prefix="/api/v1")
     application.include_router(contracts_router, prefix="/api/v1")
@@ -291,6 +311,9 @@ def create_app() -> FastAPI:
     application.include_router(compliance_router, prefix="/api/v1")
     application.include_router(platform_ops_router, prefix="/api/v1")
     application.include_router(reports_router, prefix="/api/v1")
+    application.include_router(simple_reports_router, prefix="/api/v1")
+    application.include_router(workpanel_router, prefix="/api/v1")
+    application.include_router(complex_reports_router, prefix="/api/v1")
     application.include_router(business_decisions_router, prefix="/api/v1")
     application.include_router(customer_success_router, prefix="/api/v1")
     application.include_router(support_router, prefix="/api/v1")

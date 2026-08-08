@@ -14,7 +14,12 @@ from .app_storage import ensure_app_tables
 
 
 def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[str, Any]]:
+    from app.core.database import table_exists
+
     ensure_app_tables(conn)
+    # Empty warehouse (no gold): chrome may still call /favorites — return [].
+    if not table_exists(conn, "dim_track"):
+        return []
     rows = conn.execute("""
         SELECT
             dt.id_track, dt.nombre_track, dt.id_artista, dt.id_genero,
@@ -41,7 +46,11 @@ def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[s
 
 
 def add_favorite(conn: duckdb.DuckDBPyConnection, user_id: int, track_id: int) -> bool:
+    from app.core.database import table_exists
+
     ensure_app_tables(conn)
+    if not table_exists(conn, "dim_track"):
+        return False
     row = conn.execute(
         "SELECT 1 FROM dim_track WHERE id_track = ?", [track_id]
     ).fetchone()

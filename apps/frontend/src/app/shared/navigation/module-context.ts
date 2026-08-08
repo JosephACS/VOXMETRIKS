@@ -19,7 +19,7 @@ export interface BreadcrumbCrumb {
 }
 
 export interface ModuleContextView {
-  moduleId: 'catalog' | 'organization' | 'reports' | 'engineering';
+  moduleId: 'catalog' | 'organization' | 'reports' | 'engineering' | 'platformOps';
   hubLabel: string;
   hubPath: string;
   hubQueryParams?: Record<string, string>;
@@ -279,14 +279,59 @@ function reportsContext(
   };
 }
 
+function platformOpsContext(path: string): ModuleContextView | null {
+  if (!path.startsWith('/platform-ops')) return null;
+
+  const tabs: ModuleTab[] = [
+    {
+      label: 'Panel de Ops',
+      path: '/platform-ops',
+      matchPrefixes: ['/platform-ops'],
+      exact: true,
+    },
+    {
+      label: 'Audio no resuelto',
+      path: '/platform-ops/audio-unresolved',
+      matchPrefixes: ['/platform-ops/audio-unresolved'],
+    },
+    {
+      label: 'Solicitudes de artista',
+      path: '/platform-ops/artist-requests',
+      matchPrefixes: ['/platform-ops/artist-requests'],
+    },
+  ];
+
+  const isAudio = path.includes('audio');
+  const isArtistReq = path.includes('artist-requests');
+  const crumbs: BreadcrumbCrumb[] = [
+    { label: 'Administración de plataforma', path: '/platform-ops' },
+  ];
+  if (isAudio) crumbs.push({ label: 'Audio no resuelto' });
+  else if (isArtistReq) crumbs.push({ label: 'Solicitudes de artista' });
+  else crumbs.push({ label: 'Panel de Ops' });
+
+  return {
+    moduleId: 'platformOps',
+    hubLabel: 'Administración de plataforma',
+    hubPath: '/platform-ops',
+    backLabel: 'Volver a Administración de plataforma',
+    showBack: path !== '/platform-ops',
+    crumbs,
+    tabs,
+    activeTabPath: isAudio
+      ? '/platform-ops/audio-unresolved'
+      : isArtistReq
+        ? '/platform-ops/artist-requests'
+        : '/platform-ops',
+  };
+}
+
 function engineeringContext(path: string): ModuleContextView | null {
   const isEng =
     path.startsWith('/elt-pipeline') ||
-    path.startsWith('/explorer') ||
-    path.startsWith('/platform-ops');
+    path.startsWith('/explorer');
   if (!isEng) return null;
 
-  // Keep Ops out of primary tabs; only show when already on that surface
   const tabs: ModuleTab[] = [
     {
       label: 'Ingeniería de datos',
@@ -302,15 +347,10 @@ function engineeringContext(path: string): ModuleContextView | null {
 
   const isElt = path.startsWith('/elt-pipeline');
   const isExplorer = path.startsWith('/explorer');
-  const isOps = path.startsWith('/platform-ops');
 
   const crumbs: BreadcrumbCrumb[] = [{ label: 'Datos', path: '/elt-pipeline' }];
   if (isExplorer) {
     crumbs.push({ label: 'Explorador del almacén' });
-  } else if (isOps) {
-    crumbs.push({ label: 'Herramientas técnicas' });
-    if (path.includes('audio')) crumbs.push({ label: 'Audio no resuelto' });
-    else crumbs.push({ label: 'Panel de Ops' });
   } else if (isElt) {
     crumbs.push({ label: 'Ingeniería de datos' });
   }
@@ -322,7 +362,7 @@ function engineeringContext(path: string): ModuleContextView | null {
     backLabel: 'Volver a Ingeniería de datos',
     showBack: !isElt || path !== '/elt-pipeline',
     crumbs,
-    tabs: isOps ? tabs : tabs,
+    tabs,
     activeTabPath: isExplorer ? '/explorer' : isElt ? '/elt-pipeline' : null,
   };
 }
@@ -352,6 +392,7 @@ export function resolveModuleContext(url: string): ModuleContextView | null {
     catalogContext(path) ||
     orgContext(path) ||
     reportsContext(path, query) ||
+    platformOpsContext(path) ||
     engineeringContext(path)
   );
 }

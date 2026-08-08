@@ -68,6 +68,8 @@ export const LOCALE_ES = {
     'artistSpace.claim.myRequests': 'Mis solicitudes',
     'artistSpace.claim.noRequests': 'Sin solicitudes aún',
     'artistSpace.claim.requestAccessHint': 'El acceso se solicita cuando el perfil ya tiene owner.',
+    'artistSpace.claim.noResultsTitle': 'No encontramos ese artista',
+    'artistSpace.claim.noResultsBody': 'Prueba con otro nombre o solicita un perfil nuevo.',
     'artistSpace.inviteAccept.title': 'Aceptar invitación de artista',
     'artistSpace.inviteAccept.subtitle': 'Pega el token de invitación que recibiste para unirte a un espacio de artista',
     'artistSpace.inviteAccept.pasteTitle': 'Pegar token de invitación',
