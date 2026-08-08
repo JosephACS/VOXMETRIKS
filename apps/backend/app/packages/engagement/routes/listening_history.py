@@ -19,6 +19,8 @@ class StartRequest(BaseModel):
     track_id: int = Field(gt=0)
     event_key: Optional[str] = None
     source: Optional[str] = Field(default="player", max_length=64)
+    progress_ms: Optional[int] = Field(default=None, ge=0)
+    listened_ms: Optional[int] = Field(default=None, ge=0)
 
 
 class ProgressRequest(BaseModel):
@@ -58,6 +60,8 @@ def start(
             body.track_id,
             event_key=body.event_key,
             source=body.source,
+            progress_ms=body.progress_ms,
+            listened_ms=body.listened_ms,
         )
     except ValueError as exc:
         if str(exc) == "track_not_found":

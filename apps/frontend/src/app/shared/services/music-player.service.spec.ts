@@ -10,6 +10,7 @@ import { ListenStatsService } from '../../packages/streaming/services/listen-sta
 import { PlayableTrack } from '../models/player.models';
 import { QueueManager } from '../../playback-core/queue.manager';
 import { PlaybackEngine } from '../../playback-core/playback.engine';
+import type { PlaybackEngineHooks } from './player/player-playback.engine';
 
 function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
   return {
@@ -54,12 +55,14 @@ describe('MusicPlayerService', () => {
   let svc: MusicPlayerService;
   let historyAdd: ReturnType<typeof vi.fn>;
   let mockEngine: ReturnType<typeof createMockEngine>;
+  let engineHooks: PlaybackEngineHooks | null;
 
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
     historyAdd = vi.fn();
     mockEngine = createMockEngine();
+    engineHooks = null;
 
     TestBed.configureTestingModule({
       providers: [
@@ -68,14 +71,16 @@ describe('MusicPlayerService', () => {
         {
           provide: PlaybackEngine,
           useValue: {
-            init: () => undefined,
+            init: (hooks: PlaybackEngineHooks) => {
+              engineHooks = hooks;
+            },
             get instance() { return mockEngine; },
             isReady: true,
             destroy: vi.fn(),
           },
         },
         { provide: CoverArtService, useValue: { gradientFor: () => 'grad' } },
-        { provide: HistoryService, useValue: { add: historyAdd, remove: vi.fn() } },
+        { provide: HistoryService, useValue: { add: historyAdd, remove: vi.fn(), updateProgress: vi.fn(), completeCurrent: vi.fn(), pauseListenClock: vi.fn() } },
         {
           provide: TracksService,
           useValue: {
@@ -158,6 +163,56 @@ describe('MusicPlayerService', () => {
       expect(svc.audioMode()).toBe('loading');
       expect(mockEngine.startDemo).not.toHaveBeenCalled();
     });
+
+    it('auto-skips to next after failPlayback message (~1200ms)', async () => {
+      vi.useFakeTimers();
+      const a = sampleTrack({ id: 1, title: 'A', audioUrl: '/assets/audio/demo-01.wav' });
+      const b = sampleTrack({ id: 2, title: 'B', youtubeVideoId: 'b' });
+      svc.setQueue([a, b], 0);
+      expect(svc.status()).toBe('error');
+      expect(svc.playbackError()).toBeTruthy();
+      await vi.advanceTimersByTimeAsync(1200);
+      expect(svc.currentTrack()?.id).toBe(2);
+      vi.useRealTimers();
+    });
+  });
+
+  describe('listen progress wiring', () => {
+    it('calls history.updateProgress from onTick while playing', () => {
+      const history = TestBed.inject(HistoryService) as unknown as {
+        updateProgress: ReturnType<typeof vi.fn>;
+      };
+      svc.playTrack(sampleTrack({ youtubeVideoId: 'abc' }));
+      mockEngine.getCurrentTime.mockReturnValue(12);
+      mockEngine._tick();
+      expect(history.updateProgress).toHaveBeenCalledWith(12, expect.any(Number));
+    });
+
+    it('pause and seek pause the listen clock so seeks do not inflate listen time', () => {
+      const history = TestBed.inject(HistoryService) as unknown as {
+        pauseListenClock: ReturnType<typeof vi.fn>;
+        completeCurrent: ReturnType<typeof vi.fn>;
+      };
+      svc.playTrack(sampleTrack({ youtubeVideoId: 'abc' }));
+      svc.pause();
+      expect(history.pauseListenClock).toHaveBeenCalled();
+      history.pauseListenClock.mockClear();
+      svc.seek(30);
+      expect(history.pauseListenClock).toHaveBeenCalled();
+    });
+
+    it('stopPlayback and track change close the listen session via completeCurrent', () => {
+      const history = TestBed.inject(HistoryService) as unknown as {
+        completeCurrent: ReturnType<typeof vi.fn>;
+      };
+      svc.playTrack(sampleTrack({ id: 1, youtubeVideoId: 'a' }));
+      history.completeCurrent.mockClear();
+      svc.playTrack(sampleTrack({ id: 2, youtubeVideoId: 'b' }));
+      expect(history.completeCurrent).toHaveBeenCalled();
+      history.completeCurrent.mockClear();
+      svc.stopPlayback();
+      expect(history.completeCurrent).toHaveBeenCalled();
+    });
   });
 
   describe('transport controls', () => {
@@ -208,6 +263,41 @@ describe('MusicPlayerService', () => {
       expect(added).toBe(true);
       expect(svc.queue().length).toBe(2);
       expect(svc.currentTrack()?.id).toBe(1);
+    });
+  });
+
+  describe('repeat-one via real onEnded callback', () => {
+    it('completes once, opens a new history session, and resumes the same track', () => {
+      const history = TestBed.inject(HistoryService) as unknown as {
+        completeCurrent: ReturnType<typeof vi.fn>;
+        add: ReturnType<typeof vi.fn>;
+      };
+      expect(engineHooks?.onEnded).toEqual(expect.any(Function));
+
+      const track = sampleTrack({ id: 9, title: 'Loop Me', artist: 'Looper', youtubeVideoId: 'loopVid' });
+      svc.setRepeatMode('one');
+      svc.playTrack(track);
+
+      history.completeCurrent.mockClear();
+      historyAdd.mockClear();
+      mockEngine.seek.mockClear();
+      mockEngine.playYoutube.mockClear();
+
+      // Invoke the productive callback registered by MusicPlayerService constructor.
+      engineHooks!.onEnded!();
+
+      expect(history.completeCurrent).toHaveBeenCalledTimes(1);
+      expect(historyAdd).toHaveBeenCalledTimes(1);
+      expect(historyAdd).toHaveBeenCalledWith({
+        id_track: track.id,
+        nombre_track: track.title,
+        nombre_artista: track.artist,
+      });
+      expect(mockEngine.seek).toHaveBeenCalledWith(0);
+      expect(svc.currentTrack()?.id).toBe(track.id);
+      expect(svc.status()).toBe('playing');
+      // New session via history.add — must not reuse prior identity by replaying loadTrack.
+      expect(svc.currentTrack()?.youtubeVideoId).toBe('loopVid');
     });
   });
 });

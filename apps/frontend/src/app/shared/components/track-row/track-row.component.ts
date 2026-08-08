@@ -37,7 +37,9 @@ import { PlayableTrack } from '../../models/player.models';
       <div class="tr-main">
         <a class="tr-title" [routerLink]="['/tracks', track.id]" (click)="$event.stopPropagation()">{{ track.title }}</a>
         <span class="tr-artist">{{ track.artist }}</span>
-        @if (energyPct != null) {
+        @if (sourceUnavailable) {
+          <span class="tr-unavailable">Fuente no disponible</span>
+        } @else if (energyPct != null) {
           <span class="tr-meta">Energía {{ energyPct }}%</span>
         }
       </div>
@@ -149,6 +151,10 @@ import { PlayableTrack } from '../../models/player.models';
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .tr-unavailable {
+      font-size: 0.68rem;
+      color: #f59e0b;
+    }
     .tr-meta {
       font-size: 0.6875rem;
       color: rgba(30, 216, 150, 0.75);
@@ -224,6 +230,7 @@ export class TrackRowComponent {
   @Input() showPopularity = false;
   @Input() popularity?: number | null;
   @Input() energy?: number | null;
+  @Input() sourceUnavailable = false;
 
   coverUrl = signal<string | null>(null);
   coverLoading = signal(false);

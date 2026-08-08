@@ -35,12 +35,25 @@ def migrate_audio_source_columns(conn: duckdb.DuckDBPyConnection) -> None:
         "failure_count": "INTEGER DEFAULT 0",
         "last_checked_at": "TIMESTAMP",
         "confidence_score": "DOUBLE",
+        "query": "VARCHAR",
+        "resolved_at": "TIMESTAMP",
+        "youtube_video_id": "VARCHAR",
+        "provider": "VARCHAR",
+        "status": "VARCHAR",
     }
     for col, col_type in additions.items():
         if col not in existing:
             conn.execute(
                 f"ALTER TABLE app_track_audio_source ADD COLUMN {col} {col_type}"
             )
+    # UPSERT target for write_cache (no-op when track_id is already PRIMARY KEY).
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_app_track_audio_source_track_id "
+            "ON app_track_audio_source(track_id)"
+        )
+    except Exception:
+        pass
 
 
 def read_cache(
@@ -91,17 +104,54 @@ def is_cache_usable(cached: Dict[str, Any]) -> bool:
     return True
 
 
-def write_cache(conn: duckdb.DuckDBPyConnection, resolved: ResolvedSource) -> None:
+def write_cache(
+    conn: duckdb.DuckDBPyConnection,
+    resolved: ResolvedSource,
+    *,
+    preserve_failure_count: bool = False,
+) -> None:
+    """Atomically upsert by track_id via a single INSERT ... ON CONFLICT.
+
+    Decision logic lives entirely in SQL (CASE / WHERE) so a concurrent
+    ``local_published`` insert cannot be overwritten by an external provider
+    that read an older row before upserting.
+
+    - Existing ``local_published`` is never replaced by YouTube/Audius/etc.
+    - A new ``local_published`` may replace an external source.
+    - ``preserve_failure_count=True`` keeps the existing failure_count.
+    - ``preserve_failure_count=False`` resets failure_count to 0 on update.
+    - Fresh inserts always start with failure_count=0.
+    """
+    migrate_audio_source_columns(conn)
     yt_id = resolved.youtube_video_id
     if resolved.provider == "youtube" and resolved.source_ref and not yt_id:
         yt_id = resolved.source_ref
-    conn.execute("DELETE FROM app_track_audio_source WHERE track_id = ?", [resolved.track_id])
+    now = utc_now()
+
     conn.execute(
         """
         INSERT INTO app_track_audio_source
             (track_id, provider, youtube_video_id, source_ref, playable_url,
              query, status, failure_count, confidence_score, resolved_at, last_checked_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+        ON CONFLICT (track_id) DO UPDATE SET
+            provider = EXCLUDED.provider,
+            youtube_video_id = EXCLUDED.youtube_video_id,
+            source_ref = EXCLUDED.source_ref,
+            playable_url = EXCLUDED.playable_url,
+            query = EXCLUDED.query,
+            status = EXCLUDED.status,
+            failure_count = CASE
+                WHEN ? THEN COALESCE(app_track_audio_source.failure_count, 0)
+                ELSE 0
+            END,
+            confidence_score = EXCLUDED.confidence_score,
+            resolved_at = EXCLUDED.resolved_at,
+            last_checked_at = EXCLUDED.last_checked_at
+        WHERE NOT (
+            COALESCE(app_track_audio_source.provider, '') = 'local_published'
+            AND COALESCE(EXCLUDED.provider, '') <> 'local_published'
+        )
         """,
         [
             resolved.track_id,
@@ -112,8 +162,9 @@ def write_cache(conn: duckdb.DuckDBPyConnection, resolved: ResolvedSource) -> No
             resolved.query,
             resolved.status,
             resolved.confidence_score,
-            utc_now(),
-            utc_now(),
+            now,
+            now,
+            bool(preserve_failure_count),
         ],
     )
 

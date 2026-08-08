@@ -63,6 +63,7 @@
                   [track]="playlistQueue(det.tracks)[i]"
                   [index]="i + 1"
                   [queue]="playlistQueue(det.tracks)"
+                  [sourceUnavailable]="!!t.source_unavailable"
                 />
                 @if (!isCatalogDetail()) {
                   <button type="button" class="btn-remove-track" [title]="'playlists.removeTrack' | t" (click)="removeTrack(t.id_track)">×</button>

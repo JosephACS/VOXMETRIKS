@@ -225,6 +225,7 @@ export class MusicPlayerService {
   pause() {
     this.engine.pause();
     this.setStatus('paused');
+    this.history.pauseListenClock();
     this.schedulePersist();
   }
 
@@ -283,6 +284,8 @@ export class MusicPlayerService {
 
   seek(seconds: number) {
     this.currentTime.set(this.engine.seek(seconds));
+    // Seeking must not inflate listened_ms — pause the wall-clock sample gap.
+    this.history.pauseListenClock();
     this.schedulePersist();
   }
 
@@ -357,6 +360,7 @@ export class MusicPlayerService {
   }
 
   stopPlayback() {
+    this.history.completeCurrent(this.currentTime() || undefined);
     this.playbackToken++;
     this.audioResolver.cancel();
     this.audioResolver.resetRetries();
@@ -388,6 +392,7 @@ export class MusicPlayerService {
     const d = this.engine.getDuration(this.duration());
     if (d && Math.abs(d - this.duration()) > 1) this.duration.set(d);
     if (this.currentTime() > 0 && this.currentTime() % 5 < 0.3) this.schedulePersist();
+    this.history.updateProgress(this.currentTime(), this.duration());
   }
 
   private setStatus(playing: PlaybackStatus) {
@@ -434,6 +439,12 @@ export class MusicPlayerService {
     const leaving = this.currentTrack();
     if (leaving && leaving.id !== track.id && !options.skipHistory) {
       this.queueState.recordPlayed(leaving);
+    }
+
+    // Close prior listen session before opening a new one — including reload
+    // of the same track (repeat-one / replay) so each play gets a fresh event key.
+    if (leaving) {
+      this.history.completeCurrent(this.currentTime() || undefined);
     }
 
     // Cancel prior resolve so a late response cannot swap the current track.
@@ -581,6 +592,7 @@ export class MusicPlayerService {
 
   private failPlayback(_track: PlayableTrack, token?: number, phase: AudioResolvePhase = 'unavailable') {
     if (token != null && token !== this.playbackToken) return;
+    this.history.completeCurrent(this.currentTime() || undefined);
     this.audioMode.set('loading');
     this.resolvePhase.set(phase);
     this.playbackError.set(RESOLVE_FRIENDLY_ERROR);
@@ -595,8 +607,18 @@ export class MusicPlayerService {
   }
 
   private onEnded() {
+    this.history.completeCurrent(this.currentTime() || this.duration());
     if (this.repeatMode() === 'one') {
+      const track = this.currentTrack();
       this.seek(0);
+      // New listening session after each completion (new event key).
+      if (track) {
+        this.history.add({
+          id_track: track.id,
+          nombre_track: track.title,
+          nombre_artista: track.artist,
+        });
+      }
       this.resume();
       return;
     }

@@ -92,7 +92,7 @@ describe('Playback Engine Phase 2', () => {
           },
         },
         { provide: CoverArtService, useValue: { gradientFor: () => 'grad' } },
-        { provide: HistoryService, useValue: { add: vi.fn(), remove: vi.fn() } },
+        { provide: HistoryService, useValue: { add: vi.fn(), remove: vi.fn(), updateProgress: vi.fn(), completeCurrent: vi.fn(), pauseListenClock: vi.fn() } },
         {
           provide: TracksService,
           useValue: {

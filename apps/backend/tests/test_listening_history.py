@@ -83,11 +83,54 @@ def test_start_progress_complete_idempotent(hist_db):
     assert a["id"] == b["id"]
     update_progress(conn, uid, "e1", progress_ms=1000, listened_ms=1000)
     update_progress(conn, uid, "e1", progress_ms=500)  # monotonic
-    complete_playback(conn, uid, "e1", progress_ms=180000)
+    # Explicit listened_ms required for completion threshold; progress is position only.
+    complete_playback(conn, uid, "e1", progress_ms=180000, listened_ms=180000)
     page = list_history(conn, uid, page=1, limit=10)
     assert page["total"] == 1
     assert page["items"][0]["completed"] is True
     assert page["items"][0]["progress_ms"] >= 180000
+    assert page["items"][0]["listened_ms"] >= 180000
+
+
+def test_complete_does_not_infer_listened_from_progress(hist_db):
+    from app.packages.engagement.services.listening_history_service import (
+        complete_playback,
+        get_entry,
+        meets_listen_threshold,
+        start_playback,
+        update_progress,
+    )
+
+    conn, users = hist_db
+    uid = users["owner"]
+    start_playback(conn, uid, 1, event_key="inf1")
+    update_progress(conn, uid, "inf1", progress_ms=5000, listened_ms=5000)
+    # Seek to end without listening that long — must not treat progress as listen time.
+    out = complete_playback(conn, uid, "inf1", progress_ms=180000)
+    assert out["listened_ms"] == 5000
+    assert out["progress_ms"] >= 180000
+    assert out["completed"] is False  # below 30s threshold
+    assert meets_listen_threshold(5000, 180000) is False
+    entry = get_entry(conn, uid, out["id"])
+    assert entry["listened_ms"] == 5000
+
+
+def test_short_track_threshold_uses_listened_ms(hist_db):
+    from app.packages.engagement.services.listening_history_service import (
+        complete_playback,
+        meets_listen_threshold,
+        start_playback,
+    )
+
+    conn, users = hist_db
+    uid = users["owner"]
+    conn.execute("UPDATE dim_track SET duration_ms = 40000 WHERE id_track = 2")
+    start_playback(conn, uid, 2, event_key="short1")
+    # 50% of 40s = 20s
+    assert meets_listen_threshold(20_000, 40_000) is True
+    out = complete_playback(conn, uid, "short1", progress_ms=40000, listened_ms=20_000)
+    assert out["completed"] is True
+    assert out["listened_ms"] == 20_000
 
 
 def test_isolation_and_delete(hist_db):
@@ -167,3 +210,106 @@ def test_pagination_order(hist_db):
     page2 = list_history(conn, uid, page=2, limit=2)
     assert len(page2["items"]) == 1
     assert page2["items"][0]["id_track"] == 1
+
+
+def test_start_playback_concurrent_same_event_key(hist_db):
+    """Serialized transactional start: same user/event_key → one row, same session."""
+    import threading
+
+    from app.packages.engagement.services.listening_history_service import (
+        list_history,
+        start_playback,
+    )
+
+    conn, users = hist_db
+    uid = users["owner"]
+    results: list[dict] = []
+    errors: list[BaseException] = []
+    barrier = threading.Barrier(4)
+
+    def worker() -> None:
+        try:
+            barrier.wait(timeout=5)
+            results.append(
+                start_playback(conn, uid, 1, event_key="conc-same", source="player")
+            )
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(results) == 4
+    ids = {r["id"] for r in results}
+    assert len(ids) == 1
+    page = list_history(conn, uid, page=1, limit=50)
+    matching = [i for i in page["items"] if i.get("event_key") == "conc-same"]
+    assert len(matching) == 1
+
+
+def test_start_playback_concurrent_distinct_event_keys(hist_db):
+    """Distinct event_keys under concurrency get distinct ids without constraint errors."""
+    import threading
+
+    from app.packages.engagement.services.listening_history_service import (
+        list_history,
+        start_playback,
+    )
+
+    conn, users = hist_db
+    uid = users["owner"]
+    results: list[dict] = []
+    errors: list[BaseException] = []
+    barrier = threading.Barrier(6)
+
+    def worker(key: str, track_id: int) -> None:
+        try:
+            barrier.wait(timeout=5)
+            results.append(
+                start_playback(conn, uid, track_id, event_key=key, source="player")
+            )
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=worker, args=(f"conc-d{i}", (i % 5) + 1))
+        for i in range(6)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(results) == 6
+    ids = [r["id"] for r in results]
+    assert len(ids) == len(set(ids))
+    page = list_history(conn, uid, page=1, limit=50)
+    keys = {i["event_key"] for i in page["items"] if str(i["event_key"]).startswith("conc-d")}
+    assert keys == {f"conc-d{i}" for i in range(6)}
+
+
+def test_start_playback_retry_metrics_monotonic(hist_db):
+    from app.packages.engagement.services.listening_history_service import (
+        get_entry,
+        start_playback,
+    )
+
+    conn, users = hist_db
+    uid = users["owner"]
+    a = start_playback(
+        conn, uid, 1, event_key="mono1", progress_ms=5_000, listened_ms=4_000
+    )
+    b = start_playback(
+        conn, uid, 1, event_key="mono1", progress_ms=2_000, listened_ms=1_000
+    )
+    c = start_playback(
+        conn, uid, 1, event_key="mono1", progress_ms=9_000, listened_ms=8_000
+    )
+    assert a["id"] == b["id"] == c["id"]
+    entry = get_entry(conn, uid, a["id"])
+    assert entry is not None
+    assert entry["progress_ms"] == 9_000
+    assert entry["listened_ms"] == 8_000

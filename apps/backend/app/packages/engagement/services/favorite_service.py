@@ -10,7 +10,23 @@ from app.core.time_util import utc_now
 
 from app.packages.catalog.services.display_text import clean_catalog_rows
 
+from app.packages.catalog.services.tracks.playback_availability import (
+    playback_status_for_cache,
+)
+from app.packages.streaming.services.audio.cache import read_cache
+
 from .app_storage import ensure_app_tables
+
+
+def _with_playback_status(
+    conn: duckdb.DuckDBPyConnection, items: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    for item in items:
+        tid = int(item.get("id_track") or 0)
+        cached = read_cache(conn, tid) if tid else None
+        item["playback_status"] = playback_status_for_cache(cached)
+        item["source_unavailable"] = item["playback_status"] != "playable"
+    return items
 
 
 def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[str, Any]]:
@@ -42,7 +58,7 @@ def list_favorites(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[s
         item = dict(zip(cols, r))
         item["added_at"] = str(item["added_at"]) if item["added_at"] else None
         result.append(item)
-    return clean_catalog_rows(result)
+    return _with_playback_status(conn, clean_catalog_rows(result))
 
 
 def add_favorite(conn: duckdb.DuckDBPyConnection, user_id: int, track_id: int) -> bool:

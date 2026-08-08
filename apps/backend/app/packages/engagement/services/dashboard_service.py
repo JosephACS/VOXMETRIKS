@@ -34,9 +34,33 @@ def get_home_feed(
 ) -> Dict[str, Any]:
     """Aggregate home rails in one DuckDB connection."""
     page = max(1, min(int(discover_page), 200))
-    discover_rows, discover_total = get_tracks(conn, page=page, limit=discover_limit)
+    discover_rows, discover_total = get_tracks(
+        conn, page=page, limit=discover_limit, playable_only=True
+    )
     genre_rows, _ = get_genre_stats(conn, page=1, limit=genre_limit)
     artist_rows, _ = get_artists(conn, page=1, limit=artist_limit)
+    # Split-collab artist expansion can map distinct names to the same source id_artista.
+    # Deduplicate by id so UI track-by-id and /artists/:id links stay stable.
+    seen_artists: set[int] = set()
+    unique_artists: list[Dict[str, Any]] = []
+    for row in artist_rows:
+        aid = int(row.get("id_artista") or 0)
+        if not aid or aid in seen_artists:
+            continue
+        seen_artists.add(aid)
+        unique_artists.append(row)
+    # Top up if dedupe shortened the rail.
+    if len(unique_artists) < artist_limit:
+        extra, _ = get_artists(conn, page=1, limit=artist_limit * 4)
+        for row in extra:
+            aid = int(row.get("id_artista") or 0)
+            if not aid or aid in seen_artists:
+                continue
+            seen_artists.add(aid)
+            unique_artists.append(row)
+            if len(unique_artists) >= artist_limit:
+                break
+    artist_rows = unique_artists[:artist_limit]
     # Home rail = popular warehouse playlists (not the user's personal lists).
     playlists = list_popular_catalog_playlists(conn, limit=playlist_limit)
     my_playlist_count = 0

@@ -150,7 +150,8 @@ export class ProfileSwitchService {
     this.player.stopPlayback();
     this.orgCtx.clearOrganizationScopedState();
     try {
-      this.history?.clear?.();
+      // Never wipe account history on profile switch / logout — local cache only.
+      this.history?.clearLocalCache?.();
     } catch {
       /* optional */
     }

@@ -9,6 +9,10 @@ import duckdb
 from app.core.time_util import utc_now
 
 from app.packages.catalog.services.display_text import clean_catalog_row
+from app.packages.catalog.services.tracks.playback_availability import (
+    playback_status_for_cache,
+)
+from app.packages.streaming.services.audio.cache import read_cache
 
 from .app_storage import ensure_app_tables
 
@@ -44,7 +48,12 @@ def _enrich_tracks(conn: duckdb.DuckDBPyConnection, track_ids: List[int]) -> Lis
         "duration_ms", "popularity", "nombre_artista", "nombre_genero",
     ]
     by_id = {r[0]: clean_catalog_row(dict(zip(cols, r))) for r in rows}
-    return [by_id[tid] for tid in track_ids if tid in by_id]
+    ordered = [by_id[tid] for tid in track_ids if tid in by_id]
+    for item in ordered:
+        cached = read_cache(conn, int(item["id_track"]))
+        item["playback_status"] = playback_status_for_cache(cached)
+        item["source_unavailable"] = item["playback_status"] != "playable"
+    return ordered
 
 
 def list_playlists(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[str, Any]]:

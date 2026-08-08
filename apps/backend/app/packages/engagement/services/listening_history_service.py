@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 import duckdb
 
+from app.core.database import transactional
 from app.core.time_util import utc_now
 from app.packages.catalog.services.display_text import clean_catalog_rows
 from app.packages.engagement.services.app_storage import ensure_app_tables
@@ -127,39 +128,74 @@ def start_playback(
     *,
     event_key: Optional[str] = None,
     source: Optional[str] = None,
+    progress_ms: Optional[int] = None,
+    listened_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
-    ensure_app_tables(conn)
-    ensure_listening_history_table(conn)
     tid = int(track_id)
-    if not _track_exists(conn, tid):
-        raise ValueError("track_not_found")
-
     key = (event_key or "").strip() or f"play:{user_id}:{tid}:{secrets.token_hex(8)}"
     now = utc_now()
+    init_progress = max(0, int(progress_ms or 0))
+    init_listened = max(0, int(listened_ms or 0))
 
-    existing = conn.execute(
-        "SELECT id FROM app_listening_history WHERE event_key = ? AND user_id = ?",
-        [key, user_id],
-    ).fetchone()
-    if existing:
-        # Idempotent retry: return existing row. Avoid UPDATE on UNIQUE-indexed
-        # DuckDB tables (known ART index duplicate-key quirks on UPDATE).
-        return get_entry(conn, user_id, int(existing[0])) or {
-            "id": int(existing[0]),
+    # Single serialized unit under transactional(): schema ensure, track check,
+    # event_key lookup, idempotent update / id+insert, and result read.
+    # No network I/O inside this context.
+    with transactional(conn):
+        ensure_app_tables(conn)
+        ensure_listening_history_table(conn)
+        if not _track_exists(conn, tid):
+            raise ValueError("track_not_found")
+
+        existing = conn.execute(
+            "SELECT id, progress_ms, listened_ms FROM app_listening_history WHERE event_key = ? AND user_id = ?",
+            [key, user_id],
+        ).fetchone()
+        if existing:
+            # Idempotent retry: bump metrics monotonically so a late /start still
+            # retains the listen that qualified the event.
+            eid = int(existing[0])
+            new_progress = max(init_progress, int(existing[1] or 0))
+            new_listened = max(init_listened, int(existing[2] or 0))
+            if new_progress != int(existing[1] or 0) or new_listened != int(existing[2] or 0):
+                conn.execute(
+                    """
+                    UPDATE app_listening_history
+                    SET progress_ms = ?, listened_ms = ?, updated_at = ?
+                    WHERE id = ? AND user_id = ?
+                    """,
+                    [new_progress, new_listened, now, eid, user_id],
+                )
+            return get_entry(conn, user_id, eid) or {
+                "id": eid,
+                "event_key": key,
+            }
+
+        new_id = _next_id(conn)
+        conn.execute(
+            """
+            INSERT INTO app_listening_history (
+                id, user_id, track_id, event_key, played_at,
+                progress_ms, listened_ms, completed, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, ?)
+            """,
+            [
+                new_id,
+                user_id,
+                tid,
+                key,
+                now,
+                init_progress,
+                init_listened,
+                source or "player",
+                now,
+                now,
+            ],
+        )
+        return get_entry(conn, user_id, new_id) or {
+            "id": new_id,
             "event_key": key,
+            "id_track": tid,
         }
-
-    new_id = _next_id(conn)
-    conn.execute(
-        """
-        INSERT INTO app_listening_history (
-            id, user_id, track_id, event_key, played_at,
-            progress_ms, listened_ms, completed, source, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 0, 0, FALSE, ?, ?, ?)
-        """,
-        [new_id, user_id, tid, key, now, source or "player", now, now],
-    )
-    return get_entry(conn, user_id, new_id) or {"id": new_id, "event_key": key, "id_track": tid}
 
 
 def update_progress(
@@ -215,17 +251,18 @@ def complete_playback(
     progress_ms: Optional[int] = None,
     listened_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
-    # Completion at a progress position implies at least that much listen time
-    # when the client omits listened_ms (player "ended" events).
-    effective_listened = listened_ms
-    if effective_listened is None and progress_ms is not None:
-        effective_listened = progress_ms
+    """Mark complete using explicit listened_ms only.
+
+    ``progress_ms`` is playback position and must never be inferred as
+    ``listened_ms``. When ``listened_ms`` is omitted, the previously stored
+    value is kept (via ``update_progress``).
+    """
     return update_progress(
         conn,
         user_id,
         event_key,
         progress_ms=progress_ms,
-        listened_ms=effective_listened,
+        listened_ms=listened_ms,
         completed=True,
     )
 

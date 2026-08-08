@@ -19,6 +19,12 @@ from app.packages.platform_ops.application.use_cases import (
 from app.packages.platform_ops.domain.errors import PlatformOpsError
 from app.packages.platform_ops.presentation.dependencies import require_ops_permission
 from app.packages.platform_ops.presentation.error_mapping import raise_platform_ops_http
+from app.shared.schemas.models import (
+    AudioSourceManualRequest,
+    AudioSourceUnavailableRequest,
+    MusicSearchRepairRequest,
+    YoutubeSourcesRefreshRequest,
+)
 from app.packages.platform_ops.presentation.schemas import (
     BackgroundJobOut,
     BackupOut,
@@ -317,3 +323,132 @@ def create_ops_incident(
         request_id=ctx["request_id"],
     )
     return OperationalIncidentOut(**inc.__dict__)
+
+
+# ── Unresolved external audio tray ───────────────────────────────────────────
+
+
+@platform_ops_router.get("/audio-unresolved")
+def list_audio_unresolved(
+    q: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    ctx: dict = Depends(require_ops_permission("ops.view")),
+) -> dict:
+    from app.packages.streaming.services.audio_source_service import list_unresolved_audio
+
+    return list_unresolved_audio(ctx["conn"], limit=limit, offset=offset, q=q)
+
+
+@platform_ops_router.get("/audio-unresolved/{track_id}/candidates")
+def audio_unresolved_candidates(
+    track_id: int,
+    ctx: dict = Depends(require_ops_permission("ops.view")),
+) -> dict:
+    from app.packages.streaming.services.audio_source_service import search_audio_candidates
+    from fastapi import HTTPException
+
+    data = search_audio_candidates(ctx["conn"], track_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return data
+
+
+@platform_ops_router.post("/audio-unresolved/{track_id}/manual")
+def audio_unresolved_manual(
+    track_id: int,
+    body: AudioSourceManualRequest,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> dict:
+    from app.packages.streaming.services.audio_source_service import (
+        YoutubeProviderUnavailableError,
+        save_manual_youtube_source,
+    )
+    from fastapi import HTTPException
+
+    raw = body.video_id or body.url or ""
+    try:
+        result = save_manual_youtube_source(
+            ctx["conn"], track_id, video_id_or_url=str(raw)
+        )
+    except YoutubeProviderUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "provider_unavailable", "message": str(exc)},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return result
+
+
+@platform_ops_router.post("/audio-unresolved/{track_id}/unavailable")
+def audio_unresolved_mark_unavailable(
+    track_id: int,
+    body: AudioSourceUnavailableRequest | None = None,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> dict:
+    from app.packages.streaming.services.audio_source_service import mark_audio_unavailable
+    from fastapi import HTTPException
+
+    reason = (body.reason if body and body.reason else None) or "manual"
+    result = mark_audio_unavailable(ctx["conn"], track_id, reason=str(reason))
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return result
+
+
+@platform_ops_router.post("/audio-unresolved/{track_id}/reresolve")
+def audio_unresolved_reresolve(
+    track_id: int,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> dict:
+    from app.packages.streaming.services.audio_source_service import resolve_audio_source
+    from fastapi import HTTPException
+
+    result = resolve_audio_source(ctx["conn"], track_id, force=True)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
+    return result
+
+
+@platform_ops_router.post("/youtube-sources/refresh")
+def youtube_sources_refresh(
+    body: YoutubeSourcesRefreshRequest | None = None,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> dict:
+    """Explicit small-batch refresh of stale YouTube metadata (never on Discover)."""
+    from app.packages.streaming.services.audio.refresh_youtube_metadata import (
+        refresh_youtube_metadata_batch,
+    )
+
+    req = body or YoutubeSourcesRefreshRequest()
+    return refresh_youtube_metadata_batch(
+        ctx["conn"], limit=req.limit, max_age_days=req.max_age_days
+    )
+
+
+@platform_ops_router.post("/youtube-sources/repair")
+def youtube_sources_repair(
+    body: MusicSearchRepairRequest,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> dict:
+    """Reassign a YouTube videoId away from an incompatible Track."""
+    from app.packages.catalog.services.music_search_service import (
+        repair_youtube_source_association,
+    )
+    from app.packages.streaming.services.audio_source_service import (
+        YoutubeProviderUnavailableError,
+    )
+    from fastapi import HTTPException
+
+    try:
+        return repair_youtube_source_association(ctx["conn"], video_id=body.video_id)
+    except YoutubeProviderUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "provider_unavailable", "message": str(exc)},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

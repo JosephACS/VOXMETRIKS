@@ -30,9 +30,15 @@
 
         (ngModelChange)="onInput($event)"
 
+        (keydown)="onSearchKeydown($event)"
+
         autofocus
 
       />
+
+      <button type="button" class="search-submit" (click)="runSearch(query(), true)">
+        Buscar
+      </button>
 
     </div>
 
@@ -46,6 +52,9 @@
     @if (nlIntent()) {
       <p class="nl-intent">Intención detectada: {{ nlIntent() }}</p>
     }
+    @if (statusMessage()) {
+      <p class="search-status" data-testid="search-status">{{ statusMessage() }}</p>
+    }
 
   </header>
 
@@ -53,7 +62,7 @@
 
 
 
-  @if (isLoading()) {
+  @if (isLoading() && !hasResults()) {
 
     <div class="results-grid">
 
@@ -61,7 +70,7 @@
 
     </div>
 
-  } @else if (hasError()) {
+  } @else if (hasError() && !hasResults()) {
 
     <div class="empty error glass-panel">
 
@@ -73,13 +82,13 @@
 
     </div>
 
-  } @else if (searched() && !hasResults()) {
+  } @else if (searched() && !hasResults() && !isLoading()) {
 
     <div class="empty glass-panel">
 
       <span [innerHTML]="icon('music', 32)"></span>
 
-      <p>{{ 'search.noResults' | t: { query: query() }:lang() }}</p>
+      <p>{{ statusMessage() || ('search.noResults' | t: { query: query() }:lang()) }}</p>
 
       <small>{{ 'search.noResultsHint' | t:lang() }}</small>
 
@@ -115,7 +124,7 @@
 
     @if (trackResults().length) {
 
-      <h2 class="section-title">{{ 'search.tracksSection' | t: { count: trackTotal() }:lang() }}</h2>
+      <h2 class="section-title">Resultados de VOXMETRIKS ({{ trackTotal() }})</h2>
 
       <cdk-virtual-scroll-viewport itemSize="96" class="search-tracks-viewport">
         <div class="result-card glass-panel card-hover" *cdkVirtualFor="let r of trackResults(); trackBy: trackId">
@@ -148,6 +157,45 @@
 
     }
 
+    @if (externalResults().length) {
+      <h2 class="section-title">Resultados de YouTube ({{ externalResults().length }})</h2>
+      <p class="external-hint">{{ statusMessage() || 'No encontramos esta canción disponible en VOXMETRIKS. Estos son resultados encontrados en YouTube.' }}</p>
+      <div class="external-list">
+        @for (item of externalResults(); track item.video_id) {
+          <div class="result-card glass-panel card-hover external-card" [class.is-adopting]="adoptingVideoId() === item.video_id">
+            <button
+              type="button"
+              class="r-play"
+              (click)="playExternal(item, $event)"
+              [disabled]="adoptingVideoId() === item.video_id"
+              aria-label="Reproducir desde YouTube"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div class="r-cover-link r-thumb" [style.background-image]="item.thumbnail ? 'url(' + item.thumbnail + ')' : null">
+              @if (!item.thumbnail) { {{ item.title.charAt(0) }} }
+            </div>
+            <div class="r-body">
+              <span class="r-track">{{ item.title }}</span>
+              <span class="r-artist">{{ item.channel_title || 'YouTube' }}</span>
+              <span class="r-meta">
+                <span class="origin-badge">YouTube</span>
+                <span class="mono">{{ formatDuration(item.duration_sec) }}</span>
+              </span>
+            </div>
+            <div class="external-actions">
+              <button type="button" class="ext-btn" (click)="playExternal(item, $event)" [disabled]="!!adoptingVideoId()">
+                Reproducir
+              </button>
+              <button type="button" class="ext-btn ext-btn--secondary" (click)="addExternal(item, $event)" [disabled]="!!adoptingVideoId()">
+                Añadir a VOXMETRIKS
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
     </div>
 
   }
@@ -169,5 +217,3 @@
   }
 
 </div>
-
-

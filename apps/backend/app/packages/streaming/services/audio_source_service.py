@@ -8,6 +8,7 @@ We never download or re-host copyrighted audio.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from typing import Any, Dict, Optional
 
@@ -25,6 +26,7 @@ from .audio.cache import (
     mark_failure,
     migrate_audio_source_columns,
     read_cache,
+    write_cache,
 )
 from .audio.resolver import get_audio_resolver
 from .audio.youtube_scoring import (
@@ -49,6 +51,13 @@ __all__ = [
     "get_audio_source_response",
     "resolve_audio_source",
     "report_source_failure",
+    "list_unresolved_audio",
+    "search_audio_candidates",
+    "save_manual_youtube_source",
+    "persist_validated_youtube_source",
+    "validate_youtube_video_id",
+    "YoutubeProviderUnavailableError",
+    "mark_audio_unavailable",
 ]
 
 _scheduled_lock = threading.Lock()
@@ -160,6 +169,259 @@ def report_source_failure(
     """Increment failure count when frontend playback fails."""
     migrate_audio_source_columns(conn)
     mark_failure(conn, track_id)
+
+
+def list_unresolved_audio(
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    q: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Admin tray: tracks whose external audio is not_found / error / disabled."""
+    migrate_audio_source_columns(conn)
+    limit = max(1, min(int(limit), 200))
+    offset = max(0, int(offset))
+    params: list[Any] = []
+    where = "s.status IN ('not_found', 'error', 'disabled')"
+    if q and q.strip():
+        where += (
+            " AND (LOWER(COALESCE(t.nombre_track, '')) LIKE ? "
+            "OR LOWER(COALESCE(a.nombre_artista, '')) LIKE ? "
+            "OR CAST(s.track_id AS VARCHAR) = ?)"
+        )
+        like = f"%{q.strip().lower()}%"
+        params.extend([like, like, q.strip()])
+    params.extend([limit, offset])
+    rows = conn.execute(
+        f"""
+        SELECT s.track_id, s.provider, s.status, s.query, s.resolved_at,
+               s.failure_count, t.nombre_track, a.nombre_artista, t.duration_ms
+        FROM app_track_audio_source s
+        LEFT JOIN dim_track t ON t.id_track = s.track_id
+        LEFT JOIN dim_artista a ON a.id_artista = t.id_artista
+        WHERE {where}
+          AND COALESCE(s.provider, '') <> 'local_published'
+        ORDER BY s.resolved_at DESC NULLS LAST, s.track_id DESC
+        LIMIT ? OFFSET ?
+        """,
+        params,
+    ).fetchall()
+    items = [
+        {
+            "track_id": int(r[0]),
+            "provider": r[1],
+            "status": r[2],
+            "query": r[3],
+            "resolved_at": r[4].isoformat() if r[4] is not None else None,
+            "failure_count": int(r[5] or 0),
+            "track_name": r[6],
+            "artist_name": r[7],
+            "duration_ms": int(r[8]) if r[8] is not None else None,
+        }
+        for r in rows
+    ]
+    count_params = params[:-2] if q and q.strip() else []
+    count_where = "s.status IN ('not_found', 'error', 'disabled')"
+    if q and q.strip():
+        count_where += (
+            " AND (LOWER(COALESCE(t.nombre_track, '')) LIKE ? "
+            "OR LOWER(COALESCE(a.nombre_artista, '')) LIKE ? "
+            "OR CAST(s.track_id AS VARCHAR) = ?)"
+        )
+    total = conn.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM app_track_audio_source s
+        LEFT JOIN dim_track t ON t.id_track = s.track_id
+        LEFT JOIN dim_artista a ON a.id_artista = t.id_artista
+        WHERE {count_where}
+          AND COALESCE(s.provider, '') <> 'local_published'
+        """,
+        count_params,
+    ).fetchone()[0]
+    return {"items": items, "total": int(total), "limit": limit, "offset": offset}
+
+
+def search_audio_candidates(
+    conn: duckdb.DuckDBPyConnection, track_id: int
+) -> Optional[Dict[str, Any]]:
+    """Admin: live-search candidates without writing cache."""
+    from .audio.resolver import build_track_context
+    from .audio.youtube_provider import YouTubeProvider
+
+    ctx = build_track_context(conn, track_id)
+    if ctx is None:
+        return None
+    candidates = YouTubeProvider().search_candidates(ctx)
+    return {
+        "track_id": track_id,
+        "track_name": ctx.track_name,
+        "artist_name": ctx.artist_name,
+        "duration_ms": ctx.duration_ms,
+        "candidates": candidates,
+    }
+
+
+def save_manual_youtube_source(
+    conn: duckdb.DuckDBPyConnection,
+    track_id: int,
+    *,
+    video_id_or_url: str,
+) -> Optional[Dict[str, Any]]:
+    """Admin: paste YouTube URL/ID, always validate via Data API, cache as ok.
+
+    Callers that already validated should use ``persist_validated_youtube_source``.
+    """
+    from .audio.metadata_normalize import extract_youtube_video_id
+    from .audio.models import ResolvedSource
+    from .audio.resolver import build_track_context
+
+    migrate_audio_source_columns(conn)
+    existing = read_cache(conn, track_id)
+    if existing and existing.get("provider") == "local_published":
+        return _api_dict(existing)
+
+    ctx = build_track_context(conn, track_id)
+    if ctx is None:
+        return None
+
+    video_id = extract_youtube_video_id(video_id_or_url)
+    if not video_id:
+        raise ValueError("Invalid YouTube URL or video ID")
+
+    outcome = validate_youtube_video_id(video_id)
+    if outcome == "invalid":
+        raise ValueError("YouTube video is unavailable or invalid")
+    if outcome == "provider_unavailable":
+        raise YoutubeProviderUnavailableError(
+            "YouTube Data API is unavailable; video validity is unknown"
+        )
+
+    resolved = ResolvedSource(
+        track_id=track_id,
+        provider="youtube",
+        status=STATUS_OK,
+        source_ref=video_id,
+        youtube_video_id=video_id,
+        query=f"manual:{video_id}",
+        confidence_score=1.0,
+    )
+    write_cache(conn, resolved)
+    return resolved.to_api_dict()
+
+
+def persist_validated_youtube_source(
+    conn: duckdb.DuckDBPyConnection,
+    track_id: int,
+    *,
+    video_id: str,
+    query: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Persist a YouTube source that was already validated via Data API."""
+    from .audio.models import ResolvedSource
+    from .audio.resolver import build_track_context
+
+    migrate_audio_source_columns(conn)
+    existing = read_cache(conn, track_id)
+    if existing and existing.get("provider") == "local_published":
+        return _api_dict(existing)
+    if build_track_context(conn, track_id) is None:
+        return None
+    vid = (video_id or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", vid):
+        raise ValueError("Invalid YouTube URL or video ID")
+    resolved = ResolvedSource(
+        track_id=track_id,
+        provider="youtube",
+        status=STATUS_OK,
+        source_ref=vid,
+        youtube_video_id=vid,
+        query=query or f"manual:{vid}",
+        confidence_score=1.0,
+    )
+    write_cache(conn, resolved)
+    return resolved.to_api_dict()
+
+
+class YoutubeProviderUnavailableError(Exception):
+    """Raised when YouTube validity cannot be determined (no key / API failure)."""
+
+    code = "provider_unavailable"
+
+
+def mark_audio_unavailable(
+    conn: duckdb.DuckDBPyConnection, track_id: int, *, reason: str = "manual"
+) -> Optional[Dict[str, Any]]:
+    """Admin: explicitly mark track as not_found (never touches local_published)."""
+    from .audio.models import ResolvedSource
+    from .audio.resolver import build_track_context
+
+    migrate_audio_source_columns(conn)
+    existing = read_cache(conn, track_id)
+    if existing and existing.get("provider") == "local_published":
+        return _api_dict(existing)
+    ctx = build_track_context(conn, track_id)
+    if ctx is None:
+        return None
+    resolved = ResolvedSource(
+        track_id=track_id,
+        provider="youtube",
+        status=STATUS_NOT_FOUND,
+        query=f"unavailable:{reason}",
+        confidence_score=0.0,
+    )
+    write_cache(conn, resolved)
+    return resolved.to_api_dict()
+
+
+def validate_youtube_video_id(video_id: str) -> str:
+    """Validate via YouTube Data API only (no oEmbed).
+
+    Returns one of: ``valid``, ``invalid``, ``provider_unavailable``.
+    Never treats provider failure as a known-invalid video.
+    """
+    vid = (video_id or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", vid):
+        return "invalid"
+    try:
+        from app.core.config import get_settings
+
+        api_key = get_settings().youtube_api_key.strip()
+        if not api_key:
+            return "provider_unavailable"
+        import httpx
+
+        r = httpx.get(
+            "https://www.googleapis.com/youtube/v3/videos",
+            params={
+                "part": "status,contentDetails",
+                "id": vid,
+                "key": api_key,
+            },
+            timeout=8.0,
+        )
+        if r.status_code != 200:
+            return "provider_unavailable"
+        items = (r.json() or {}).get("items") or []
+        if not items:
+            return "invalid"
+        status = items[0].get("status") or {}
+        if status.get("privacyStatus") not in (None, "public", "unlisted"):
+            return "invalid"
+        if status.get("embeddable") is False:
+            return "invalid"
+        return "valid"
+    except Exception:
+        return "provider_unavailable"
+
+
+def _validate_youtube_video_id(video_id: str) -> bool:
+    """Legacy bool adapter for tests. Provider unavailable → False (not valid).
+
+    Prefer ``validate_youtube_video_id`` for coherent HTTP mapping.
+    """
+    return validate_youtube_video_id(video_id) == "valid"
 
 
 def _api_dict(cached: dict) -> dict:

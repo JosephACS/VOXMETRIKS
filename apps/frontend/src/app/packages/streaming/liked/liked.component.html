@@ -45,6 +45,7 @@
           [track]="likedQueue()[i]"
           [index]="i + 1"
           [queue]="likedQueue()"
+          [sourceUnavailable]="!!t.source_unavailable"
         />
       }
     </div>

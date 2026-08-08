@@ -9,6 +9,36 @@ import {
   TrackSearchResult, TrackDetail, AudioSource, CoverArt,
 } from '../../../shared/models/api.models';
 
+export interface MusicSearchExternalItem {
+  video_id: string;
+  title: string;
+  channel_title?: string;
+  duration_sec?: number;
+  thumbnail?: string;
+  score?: number;
+  origin?: string;
+}
+
+export interface MusicSearchResponse {
+  query: string;
+  phase: string;
+  message: string;
+  local: { items: TrackSearchResult[]; total: number; page: number; limit: number };
+  external: MusicSearchExternalItem[];
+  missing_local?: TrackSearchResult[];
+  external_available: boolean;
+}
+
+export interface MusicAdoptResponse {
+  track_id: number;
+  created: boolean;
+  video_id: string;
+  title?: string;
+  channel_title?: string;
+  duration_ms?: number | null;
+  thumbnail?: string;
+}
+
 /**
  * Catalog CRUD / search / audio-source API (`/api/v1/tracks`).
  * Canonical for streaming catalog.
@@ -58,6 +88,41 @@ export class TracksService {
   searchTracks(q: string, page = 1, limit = 20): Observable<PaginatedResponse<TrackSearchResult>> {
     const params = new HttpParams().set('q', q).set('page', page).set('limit', limit);
     return this.http.get<PaginatedResponse<TrackSearchResult>>(`${this.API_URL}/search`, { params });
+  }
+
+  musicSearch(
+    q: string,
+    page = 1,
+    limit = 20,
+    allowExternal = true,
+  ): Observable<MusicSearchResponse> {
+    const params = new HttpParams()
+      .set('q', q)
+      .set('page', page)
+      .set('limit', limit)
+      .set('allow_external', allowExternal ? 'true' : 'false');
+    return this.http.get<MusicSearchResponse>(`${this.API_URL}/music-search`, { params });
+  }
+
+  adoptYoutubeResult(
+    videoId: string,
+    trackId?: number,
+    opts?: { requirePreferred?: boolean },
+  ): Observable<MusicAdoptResponse> {
+    const body: {
+      video_id: string;
+      track_id?: number;
+      require_preferred?: boolean;
+    } = { video_id: videoId };
+    if (trackId != null) body.track_id = trackId;
+    if (opts?.requirePreferred) body.require_preferred = true;
+    return this.http.post<MusicAdoptResponse>(`${this.API_URL}/music-search/adopt`, body);
+  }
+
+  repairYoutubeSource(videoId: string): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.API_URL}/music-search/repair-source`, {
+      video_id: videoId,
+    });
   }
 
   getTrackDetail(id: number): Observable<TrackDetail> {

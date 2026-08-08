@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _Base(BaseModel):
@@ -76,6 +76,61 @@ class TrackUpdate(BaseModel):
     id_genero:        Optional[int] = None
     explicit:         Optional[bool] = None
     duration_ms:      Optional[int] = None
+
+
+_YT_VIDEO_ID = r"^[A-Za-z0-9_-]{11}$"
+
+
+class MusicSearchAdoptRequest(BaseModel):
+    """Adopt a YouTube result into the local catalog (authenticated)."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    video_id: str = Field(..., pattern=_YT_VIDEO_ID)
+    track_id: Optional[int] = Field(default=None, gt=0)
+    require_preferred: bool = False
+
+
+class MusicSearchRepairRequest(BaseModel):
+    """Repair a mismatched YouTube→Track association."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    video_id: str = Field(..., pattern=_YT_VIDEO_ID)
+
+
+class AudioSourceManualRequest(BaseModel):
+    """Platform Ops: attach a validated YouTube source (always validated server-side)."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    video_id: Optional[str] = Field(default=None, pattern=_YT_VIDEO_ID)
+    url: Optional[str] = None
+
+    @model_validator(mode="after")
+    def exactly_one_of_video_id_or_url(self) -> "AudioSourceManualRequest":
+        has_vid = bool(self.video_id and str(self.video_id).strip())
+        has_url = bool(self.url and str(self.url).strip())
+        if has_vid == has_url:
+            raise ValueError("Exactly one of video_id or url is required")
+        return self
+
+
+class YoutubeSourcesRefreshRequest(BaseModel):
+    """Platform Ops: small-batch YouTube metadata refresh."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    limit: int = Field(default=25, ge=1, le=100)
+    max_age_days: int = Field(default=30, ge=1)
+
+
+class AudioSourceUnavailableRequest(BaseModel):
+    """Platform Ops: mark a track audio source unavailable."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    reason: Optional[str] = Field(default=None, max_length=500)
 
 
 class AudioSource(BaseModel):
@@ -207,6 +262,8 @@ class PlaylistTrackItem(BaseModel):
     popularity:     Optional[int] = None
     nombre_artista: Optional[str] = None
     nombre_genero:  Optional[str] = None
+    playback_status: Optional[str] = None
+    source_unavailable: Optional[bool] = None
 
 class PlaylistDetail(PlaylistSummary):
     tracks: List[PlaylistTrackItem] = []
@@ -221,6 +278,8 @@ class FavoriteTrack(BaseModel):
     nombre_artista: Optional[str] = None
     nombre_genero:  Optional[str] = None
     added_at:       Optional[str] = None
+    playback_status: Optional[str] = None
+    source_unavailable: Optional[bool] = None
 
 class TrackSearchResult(BaseModel):
     id_track:       int

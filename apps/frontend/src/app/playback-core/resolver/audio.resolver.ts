@@ -311,7 +311,10 @@ export class AudioResolver {
       return;
     }
 
-    if (resolved.provider === 'audius' && resolved.streamUrl) {
+    if (
+      (resolved.provider === 'audius' || resolved.provider === 'local_published') &&
+      resolved.streamUrl
+    ) {
       callbacks.onTrackUpdated({ ...track, audioUrl: resolved.streamUrl });
       this.emitDiag(track.id, requestId, cacheHit, providersTried, started, null, callbacks);
       callbacks.onStream(resolved.streamUrl);

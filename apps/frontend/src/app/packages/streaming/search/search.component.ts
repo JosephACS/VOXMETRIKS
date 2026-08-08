@@ -8,7 +8,10 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
-import { TracksService } from '../services/tracks.service';
+import {
+  MusicSearchExternalItem,
+  TracksService,
+} from '../services/tracks.service';
 import { ArtistsService } from '../services/artists.service';
 import { TrackSearchResult, Artista } from '../../../shared/models/api.models';
 import { primaryArtistName } from '../../../shared/utils/artist.util';
@@ -25,6 +28,18 @@ import { Subject, combineLatest, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 
 const TRACK_PAGE_SIZE = 20;
+
+type SearchPhase =
+  | 'idle'
+  | 'local'
+  | 'local_empty'
+  | 'external_loading'
+  | 'external'
+  | 'external_empty'
+  | 'external_unavailable'
+  | 'external_error'
+  | 'adopting'
+  | 'ai';
 
 @Component({
   selector: 'app-search',
@@ -48,7 +63,7 @@ export class SearchComponent implements OnInit {
   private artistsSvc = inject(ArtistsService);
   private searchHistory = inject(SearchHistoryService);
   private aiSvc = inject(AIService);
-  private search$ = new Subject<string>();
+  private search$ = new Subject<{ q: string; allowExternal: boolean }>();
 
   readonly aiDialog = viewChild(AiPlaylistDialogComponent);
 
@@ -59,6 +74,11 @@ export class SearchComponent implements OnInit {
   trackTotal = signal(0);
   trackPage = signal(1);
   artistResults = signal<Artista[]>([]);
+  externalResults = signal<MusicSearchExternalItem[]>([]);
+  missingLocal = signal<TrackSearchResult[]>([]);
+  phase = signal<SearchPhase>('idle');
+  statusMessage = signal('');
+  adoptingVideoId = signal<string | null>(null);
   isLoading = signal(false);
   searched = signal(false);
   hasError = signal(false);
@@ -75,22 +95,14 @@ export class SearchComponent implements OnInit {
   ngOnInit() {
     this.search$.pipe(
       debounceTime(350),
-      distinctUntilChanged(),
-      tap((q) => {
+      distinctUntilChanged((a, b) => a.q === b.q && a.allowExternal === b.allowExternal),
+      tap(({ q }) => {
         const term = q.trim();
         if (!term) {
-          this.trackResults.set([]);
-          this.trackTotal.set(0);
-          this.trackPage.set(1);
-          this.artistResults.set([]);
-          this.searched.set(false);
-          this.hasError.set(false);
-          this.errorMessage.set('');
-          this.nlIntent.set(null);
-          this.isLoading.set(false);
+          this._resetResults();
         }
       }),
-      switchMap((q) => {
+      switchMap(({ q, allowExternal }) => {
         const term = q.trim();
         if (!term) return of(null);
         this.isLoading.set(true);
@@ -98,12 +110,15 @@ export class SearchComponent implements OnInit {
         this.hasError.set(false);
         this.errorMessage.set('');
         this.trackPage.set(1);
+        this.externalResults.set([]);
+        this.statusMessage.set('Buscando en VOXMETRIKS…');
+        this.phase.set('local');
 
         if (this.aiMode() || this._looksNatural(term)) {
           return this.aiSvc.naturalSearch(term).pipe(
             map((res) => ({
               term,
-              ai: true as const,
+              kind: 'ai' as const,
               tracks: (res.tracks ?? []).map((t) => ({
                 id_track: Number(t['id_track']),
                 nombre_track: String(t['nombre_track'] ?? ''),
@@ -115,7 +130,7 @@ export class SearchComponent implements OnInit {
             })),
             catchError(() => of({
               term,
-              ai: true as const,
+              kind: 'ai' as const,
               tracks: [] as TrackSearchResult[],
               total: 0,
               intent: 'error',
@@ -124,24 +139,40 @@ export class SearchComponent implements OnInit {
         }
 
         return combineLatest([
-          this.tracksSvc.searchTracks(term, 1, TRACK_PAGE_SIZE).pipe(
-            map((res) => ({ ok: true as const, items: res.items ?? [], total: res.total ?? 0 })),
-            catchError(() => of({ ok: false as const, items: [] as TrackSearchResult[], total: 0 })),
+          this.tracksSvc.musicSearch(term, 1, TRACK_PAGE_SIZE, allowExternal).pipe(
+            map((res) => ({ ok: true as const, res })),
+            catchError(() => of({
+              ok: false as const,
+              res: null,
+            })),
           ),
           this.artistsSvc.listArtists(1, 20, term).pipe(
             map((res) => ({ ok: true as const, items: res.items ?? [] })),
             catchError(() => of({ ok: false as const, items: [] as Artista[] })),
           ),
-        ]).pipe(map(([tracks, artists]) => ({ term, ai: false as const, tracks, artists })));
+        ]).pipe(
+          map(([music, artists]) => ({
+            term,
+            kind: 'music' as const,
+            allowExternal,
+            music,
+            artists,
+          })),
+        );
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((result) => {
       if (!result) return;
-      if ('ai' in result && result.ai) {
+
+      if (result.kind === 'ai') {
         this.trackResults.set(result.tracks);
         this.trackTotal.set(result.total);
         this.artistResults.set([]);
+        this.externalResults.set([]);
+        this.missingLocal.set([]);
         this.nlIntent.set(result.intent);
+        this.phase.set('ai');
+        this.statusMessage.set('');
         this.isLoading.set(false);
         if (!result.tracks.length) {
           this.hasError.set(true);
@@ -149,30 +180,72 @@ export class SearchComponent implements OnInit {
         }
         return;
       }
-      const { term, tracks, artists } = result;
-      this.trackResults.set(tracks.items);
-      this.trackTotal.set(tracks.total);
-      this.artistResults.set(artists.items);
+
+      const { term, music, artists, allowExternal } = result;
       this.nlIntent.set(null);
-      this.isLoading.set(false);
-      const failed = (tracks.ok ? 0 : 1) + (artists.ok ? 0 : 1);
-      if (failed > 0) {
+      this.artistResults.set(artists.items);
+
+      if (!music.ok || !music.res) {
+        this.isLoading.set(false);
         this.hasError.set(true);
-        this.errorMessage.set(
-          failed === 2
-            ? 'No se pudo consultar el catálogo. Verifica que el backend esté activo.'
-            : 'Algunos resultados no se pudieron cargar. Intenta nuevamente.',
-        );
+        this.errorMessage.set('No se pudo consultar el catálogo. Verifica que el backend esté activo.');
+        this.phase.set('external_error');
+        return;
+      }
+
+      const res = music.res;
+      this.trackResults.set(res.local?.items ?? []);
+      this.trackTotal.set(res.local?.total ?? 0);
+      this.externalResults.set(res.external ?? []);
+      this.missingLocal.set(res.missing_local ?? []);
+      this.statusMessage.set(res.message || '');
+      this.phase.set((res.phase as SearchPhase) || 'local');
+      this.isLoading.set(false);
+
+      if (!artists.ok) {
+        this.hasError.set(true);
+        this.errorMessage.set('Algunos resultados no se pudieron cargar. Intenta nuevamente.');
       } else {
-        this.searchHistory.add(term, tracks.total, artists.items.length);
+        this.searchHistory.add(term, res.local?.total ?? 0, artists.items.length);
+      }
+
+      // Auto YouTube fallback when local typing pass found nothing playable.
+      if (
+        !allowExternal &&
+        (res.local?.total ?? 0) === 0 &&
+        !this.aiMode()
+      ) {
+        this.phase.set('external_loading');
+        this.statusMessage.set(
+          'No encontramos esta canción disponible en VOXMETRIKS. Buscando en YouTube…',
+        );
+        this.isLoading.set(true);
+        this.search$.next({ q: term, allowExternal: true });
       }
     });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((pm) => {
       const q = pm.get('q') ?? '';
       this.query.set(q);
-      if (q.trim()) this.search$.next(q);
+      if (q.trim()) this.search$.next({ q, allowExternal: false });
     });
+  }
+
+  private _resetResults(): void {
+    this.trackResults.set([]);
+    this.trackTotal.set(0);
+    this.trackPage.set(1);
+    this.artistResults.set([]);
+    this.externalResults.set([]);
+    this.missingLocal.set([]);
+    this.searched.set(false);
+    this.hasError.set(false);
+    this.errorMessage.set('');
+    this.nlIntent.set(null);
+    this.statusMessage.set('');
+    this.phase.set('idle');
+    this.isLoading.set(false);
+    this.adoptingVideoId.set(null);
   }
 
   private _looksNatural(term: string): boolean {
@@ -183,7 +256,7 @@ export class SearchComponent implements OnInit {
 
   toggleAiMode(): void {
     this.aiMode.update((v) => !v);
-    if (this.query().trim()) this.search$.next(this.query());
+    if (this.query().trim()) this.search$.next({ q: this.query(), allowExternal: false });
   }
 
   openAiPlaylist(): void {
@@ -192,22 +265,29 @@ export class SearchComponent implements OnInit {
 
   onInput(val: string) {
     this.query.set(val);
-    this.search$.next(val);
+    this.search$.next({ q: val, allowExternal: false });
   }
 
-  runSearch(q: string) {
+  onSearchKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.runSearch(this.query(), true);
+    }
+  }
+
+  runSearch(q: string, allowExternal = true) {
     this.query.set(q);
-    this.search$.next(q);
+    this.search$.next({ q, allowExternal });
   }
 
   loadTrackPage(page: number) {
     const term = this.query().trim();
     if (!term || page < 1 || page > this.trackTotalPages()) return;
     this.isLoading.set(true);
-    this.tracksSvc.searchTracks(term, page, TRACK_PAGE_SIZE).subscribe({
+    this.tracksSvc.musicSearch(term, page, TRACK_PAGE_SIZE, false).subscribe({
       next: (res) => {
-        this.trackResults.set(res.items ?? []);
-        this.trackTotal.set(res.total ?? 0);
+        this.trackResults.set(res.local?.items ?? []);
+        this.trackTotal.set(res.local?.total ?? 0);
         this.trackPage.set(page);
         this.isLoading.set(false);
       },
@@ -216,11 +296,15 @@ export class SearchComponent implements OnInit {
   }
 
   retrySearch() {
-    this.runSearch(this.query());
+    this.runSearch(this.query(), true);
   }
 
   hasResults(): boolean {
-    return this.trackResults().length > 0 || this.artistResults().length > 0;
+    return (
+      this.trackResults().length > 0 ||
+      this.artistResults().length > 0 ||
+      this.externalResults().length > 0
+    );
   }
 
   cover(trackId: number): string {
@@ -239,6 +323,13 @@ export class SearchComponent implements OnInit {
     return displayTrackTitle(name);
   }
 
+  formatDuration(sec?: number): string {
+    if (sec == null || !Number.isFinite(sec) || sec <= 0) return '—';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
   trackId = (_: number, r: TrackSearchResult) => r.id_track;
 
   playable(r: TrackSearchResult) {
@@ -250,5 +341,74 @@ export class SearchComponent implements OnInit {
     e?.stopPropagation();
     const track = this.playable(r);
     this.controller.playTrack(track, this.trackQueue());
+  }
+
+  preferredTrackIdForAdopt(): number | undefined {
+    const missing = this.missingLocal();
+    return missing.length === 1 ? missing[0].id_track : undefined;
+  }
+
+  playExternal(item: MusicSearchExternalItem, e?: Event) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    this._adoptAndPlay(item);
+  }
+
+  addExternal(item: MusicSearchExternalItem, e?: Event) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    this._adoptAndPlay(item, false);
+  }
+
+  private _adoptAndPlay(item: MusicSearchExternalItem, play = true) {
+    if (this.adoptingVideoId()) return;
+    this.adoptingVideoId.set(item.video_id);
+    this.phase.set('adopting');
+    this.statusMessage.set('Preparando la canción…');
+    const preferred = this.preferredTrackIdForAdopt();
+    // Exactly one local track without source → first adopt requires preferred binding.
+    this.tracksSvc.adoptYoutubeResult(
+      item.video_id,
+      preferred,
+      preferred != null ? { requirePreferred: true } : undefined,
+    ).pipe(
+      catchError((err) => {
+        // Backend rejected preferred Track → retry once without track_id.
+        const code = err?.error?.detail?.code || err?.error?.code;
+        if (preferred != null && (err?.status === 409 || code === 'TRACK_SOURCE_MISMATCH')) {
+          return this.tracksSvc.adoptYoutubeResult(item.video_id);
+        }
+        throw err;
+      }),
+    ).subscribe({
+      next: (adopted) => {
+        const synthetic: TrackSearchResult = {
+          id_track: adopted.track_id,
+          nombre_track: adopted.title || item.title,
+          nombre_artista: adopted.channel_title || item.channel_title,
+          popularity: undefined,
+        };
+        const existed = this.trackResults().some((r) => r.id_track === adopted.track_id);
+        this.trackResults.update((rows) => {
+          if (rows.some((r) => r.id_track === adopted.track_id)) return rows;
+          return [synthetic, ...rows];
+        });
+        if (!existed) this.trackTotal.update((n) => n + 1);
+        this.externalResults.update((rows) => rows.filter((r) => r.video_id !== item.video_id));
+        this.adoptingVideoId.set(null);
+        this.phase.set('local');
+        this.statusMessage.set('');
+        if (play) {
+          this.controller.playTrack(this.playable(synthetic), this.trackQueue());
+        }
+      },
+      error: () => {
+        this.adoptingVideoId.set(null);
+        this.phase.set('external_error');
+        this.statusMessage.set('No fue posible preparar la canción.');
+        this.hasError.set(true);
+        this.errorMessage.set('No fue posible preparar la canción.');
+      },
+    });
   }
 }

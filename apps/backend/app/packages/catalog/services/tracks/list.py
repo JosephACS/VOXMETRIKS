@@ -19,6 +19,8 @@ from .queries import (
     track_list_count_sql,
     where_clause,
 )
+from .visibility import public_track_visibility_sql
+from .playback_availability import playable_track_sql
 
 
 def get_tracks(
@@ -28,12 +30,17 @@ def get_tracks(
     search: Optional[str] = None,
     genre_id: Optional[int] = None,
     artist_id: Optional[int] = None,
+    *,
+    playable_only: bool = True,
 ) -> Tuple[List[Dict[str, Any]], int]:
     """List tracks with artist/genre names joined (same shape as search/detail)."""
     offset = (page - 1) * limit
     conditions, params = build_list_conditions(
         conn, search=search, genre_id=genre_id, artist_id=artist_id,
     )
+    conditions.append(public_track_visibility_sql(conn))
+    if playable_only:
+        conditions.append(playable_track_sql(conn))
     where = where_clause(conditions)
     total = int(conn.execute(track_list_count_sql(where), params).fetchone()[0])
 
@@ -51,12 +58,16 @@ def get_tracks_cursor(
     genre_id: Optional[int] = None,
     artist_id: Optional[int] = None,
     include_total: bool = False,
+    playable_only: bool = True,
 ) -> Dict[str, Any]:
     """Keyset-paginated track list (popularity DESC, id_track ASC)."""
     lim = max(1, min(int(limit), 500))
     conditions, params = build_list_conditions(
         conn, search=search, genre_id=genre_id, artist_id=artist_id,
     )
+    conditions.append(public_track_visibility_sql(conn))
+    if playable_only:
+        conditions.append(playable_track_sql(conn))
 
     if cursor:
         try:

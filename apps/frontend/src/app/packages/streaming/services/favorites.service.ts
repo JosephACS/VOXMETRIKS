@@ -57,7 +57,9 @@ export class FavoritesService {
 
   refreshIds(): void {
     this.loadFavorites().subscribe({
-      error: (err) => console.error('[FavoritesService] loadFavorites failed', err),
+      error: () => {
+        // Keep last known ids; Discover must not break if favorites API is temporarily unavailable.
+      },
     });
   }
 }

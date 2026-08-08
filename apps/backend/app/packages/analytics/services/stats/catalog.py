@@ -9,6 +9,7 @@ import duckdb
 
 from app.core.database import get_table_columns, table_exists
 from app.core.query_helpers import count_rows, fetch_rows
+from app.packages.catalog.services.tracks.playback_availability import playable_track_sql
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,14 @@ def get_top_tracks_by_popularity(
 ) -> List[Dict[str, Any]]:
     """Top tracks — prefer pre-aggregated ``agg_tracks_populares`` when populated."""
     lim = int(limit)
+    playable = playable_track_sql(conn)
     if table_exists(conn, "agg_tracks_populares"):
         agg_count = conn.execute(
             "SELECT COUNT(*) FROM agg_tracks_populares WHERE popularity IS NOT NULL"
         ).fetchone()[0]
         if agg_count:
             rows = conn.execute(
-                """
+                f"""
                 SELECT
                     a.id_track,
                     a.nombre_track,
@@ -50,6 +52,7 @@ def get_top_tracks_by_popularity(
                 FROM agg_tracks_populares a
                 JOIN dim_track dt ON dt.id_track = a.id_track
                 WHERE a.popularity IS NOT NULL
+                  AND ({playable})
                 ORDER BY a.popularity DESC
                 LIMIT ?
                 """,
@@ -76,6 +79,7 @@ def get_top_tracks_by_popularity(
         FROM dim_track dt
         LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
         WHERE dt.popularity IS NOT NULL
+          AND ({playable})
         ORDER BY dt.popularity DESC
         LIMIT ?
         """,

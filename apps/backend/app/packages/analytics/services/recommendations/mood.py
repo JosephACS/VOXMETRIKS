@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 
+from app.packages.catalog.services.tracks.playback_availability import playable_track_sql
+
 MOOD_ENERGY_RANGES: Dict[str, Tuple[float, float]] = {
     "1_muy_baja": (0.0, 0.2),
     "2_baja": (0.2, 0.4),
@@ -46,8 +48,9 @@ def get_mood_tracks(
     if not parsed:
         return []
     low, high = parsed
+    playable = playable_track_sql(conn)
     rows = conn.execute(
-        """
+        f"""
         SELECT
             dt.id_track,
             dt.nombre_track,
@@ -60,6 +63,7 @@ def get_mood_tracks(
         LEFT JOIN dim_artista da ON da.id_artista = dt.id_artista
         LEFT JOIN dim_genero dg ON dg.id_genero = dt.id_genero
         WHERE dt.energy >= ? AND dt.energy < ?
+          AND ({playable})
         ORDER BY dt.popularity DESC NULLS LAST
         LIMIT ?
         """,

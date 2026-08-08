@@ -49,34 +49,53 @@
       <div class="section-head">
         <div>
           <h2>{{ 'history.musicTitle' | t:lang() }}</h2>
-          <p class="section-desc">{{ 'history.musicDesc' | t:lang() }}</p>
+          <p class="section-desc">{{ 'history.musicDescAccount' | t:lang() }}</p>
         </div>
-        <app-data-source-badge kind="local" />
+        <app-data-source-badge kind="live" />
         @if (localMusicEntries().length) {
           <button type="button" class="ghost-btn ghost-btn--warn" (click)="clearLocalMusic()" [title]="'history.clearWarn' | t">{{ 'history.clear' | t:lang() }}</button>
         }
       </div>
 
-      @if (!localMusicEntries().length) {
+      @if (musicError()) {
+        <div class="empty-state">
+          <p>{{ 'history.error' | t:lang() }}</p>
+          <button type="button" class="ghost-btn" (click)="localMusic.reload()">{{ 'history.retry' | t:lang() }}</button>
+        </div>
+      } @else if (musicLoading() && !localMusicEntries().length) {
+        <p class="loading-msg">{{ 'common.loading' | t:lang() }}</p>
+      } @else if (!localMusicEntries().length) {
         <div class="empty-state">
           <span class="empty-icon" [innerHTML]="icon('music', 28)"></span>
-          <p>{{ 'history.emptyMusic' | t:lang() }}</p>
-          <p class="empty-hint">{{ 'history.emptyMusicHint' | t:lang() }}</p>
+          <p>{{ 'history.emptyMusicAccount' | t:lang() }}</p>
           <a routerLink="/tracks" class="cta-link">{{ 'history.exploreTracks' | t:lang() }}</a>
         </div>
       } @else {
         <div class="timeline-list">
-          @for (item of localMusicEntries(); track item.id_track; let i = $index) {
+          @for (item of localMusicEntries(); track item.id ?? (item.event_key || item.id_track + '-' + item.viewed_at); let i = $index) {
             <div class="timeline-row interactive">
               <button type="button" class="row-play-btn" (click)="playFromHistory(item, $event)" [attr.aria-label]="trackTitle(item.nombre_track)">
                 <span [innerHTML]="icon('play', 14)"></span>
               </button>
+              <span class="row-cover" [style.background]="coverGradient(item.id_track)">
+                @if (coverUrl(item.id_track); as img) {
+                  <img [src]="img" [alt]="trackTitle(item.nombre_track)" />
+                }
+              </span>
               <span class="row-rank">{{ i + 1 }}</span>
               <div class="row-main">
                 <a class="row-title link" [routerLink]="['/tracks', item.id_track]">{{ trackTitle(item.nombre_track) }}</a>
                 <span class="row-sub">{{ artistName(item.nombre_artista) }}</span>
+                @if (item.completed) {
+                  <span class="row-sub">{{ 'history.status.completed' | t:lang() }}</span>
+                } @else if (item.progress_ms) {
+                  <span class="row-sub">{{ 'history.status.partial' | t:lang() }}</span>
+                }
               </div>
-              <span class="row-time mono">{{ formatRelative(item.viewed_at) }}</span>
+              <span class="row-time mono">{{ formatRelative(item.viewed_at || item.played_at) }}</span>
+              <button type="button" class="ghost-btn" (click)="removeMusicEntry(item, $event)">
+                {{ 'history.remove' | t:lang() }}
+              </button>
               <app-track-actions
                 [track]="historyPlayable(item)"
                 [queue]="historyQueue()"
@@ -85,6 +104,13 @@
             </div>
           }
         </div>
+        @if (canLoadMoreMusic()) {
+          <div style="margin-top: 1rem; text-align: center">
+            <button type="button" class="ghost-btn" [disabled]="musicLoading()" (click)="loadMoreMusic()">
+              {{ 'history.loadMore' | t:lang() }}
+            </button>
+          </div>
+        }
       }
     </section>
   }

@@ -1,7 +1,14 @@
 import { AudioSource } from '../../shared/models/api.models';
 
 /** Provider identifiers returned by the backend Audio Resolver. */
-export type AudioProviderId = 'youtube' | 'audius' | 'demo' | 'preview' | 'pending' | 'none';
+export type AudioProviderId =
+  | 'youtube'
+  | 'audius'
+  | 'demo'
+  | 'preview'
+  | 'pending'
+  | 'local_published'
+  | 'none';
 
 /** Normalized playback source — engine-agnostic. */
 export interface ResolvedPlaybackSource {
@@ -35,10 +42,14 @@ export function mapAudioSourceResponse(src: AudioSource): ResolvedPlaybackSource
   const provider = normalizeProvider(src.provider);
   const youtubeVideoId =
     src.youtube_video_id ?? (provider === 'youtube' ? src.source_ref ?? undefined : undefined);
+  const streamProviders: AudioProviderId[] = [
+    'audius',
+    'demo',
+    'preview',
+    'local_published',
+  ];
   const streamUrl =
-    (provider === 'audius' || provider === 'demo' || provider === 'preview') && src.playable_url
-      ? src.playable_url
-      : undefined;
+    streamProviders.includes(provider) && src.playable_url ? src.playable_url : undefined;
 
   return {
     trackId: src.track_id,
@@ -56,7 +67,8 @@ function normalizeProvider(raw: string): AudioProviderId {
     raw === 'audius' ||
     raw === 'demo' ||
     raw === 'preview' ||
-    raw === 'pending'
+    raw === 'pending' ||
+    raw === 'local_published'
   ) {
     return raw;
   }
@@ -66,6 +78,11 @@ function normalizeProvider(raw: string): AudioProviderId {
 export function isPlayableSource(src: ResolvedPlaybackSource): boolean {
   if (src.status !== 'ok') return false;
   if (src.provider === 'youtube') return !!src.youtubeVideoId;
-  if (src.provider === 'audius') return !!src.streamUrl;
+  if (src.provider === 'audius' || src.provider === 'local_published') {
+    return !!src.streamUrl;
+  }
+  if (src.provider === 'preview' || src.provider === 'demo') {
+    return !!src.streamUrl;
+  }
   return false;
 }

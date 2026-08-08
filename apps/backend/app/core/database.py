@@ -219,6 +219,32 @@ def get_connection() -> duckdb.DuckDBPyConnection:
     return _borrow_conn()  # type: ignore[return-value]
 
 
+@contextmanager
+def transactional(
+    conn: duckdb.DuckDBPyConnection,
+) -> Generator[duckdb.DuckDBPyConnection, None, None]:
+    """Serialize BEGIN→ops→COMMIT/ROLLBACK under ``_db_lock`` for the whole span.
+
+    Holds the process lock for the entire transaction so concurrent threads cannot
+    interleave statements (``_LockedConn.execute`` releases per call; the outer
+    hold keeps them out via re-entrant ``RLock``). Works with ``_LockedConn`` and
+    raw DuckDB connections used in tests.
+
+    Callers must not perform network I/O inside this context manager.
+    """
+    with _db_lock:
+        conn.execute("BEGIN TRANSACTION")
+        try:
+            yield conn
+            conn.execute("COMMIT")
+        except Exception:
+            try:
+                conn.execute("ROLLBACK")
+            except Exception:
+                pass
+            raise
+
+
 def fetch_all_rows(conn: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -> list[dict]:
     rows = conn.execute(sql, params or []).fetchall()
     cols = [d[0] for d in conn.description]

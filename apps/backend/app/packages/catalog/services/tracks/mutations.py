@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 import duckdb
 
-from .detail import get_track_by_id
+from .detail import get_track_by_id_raw
 
 
 def create_track(
@@ -77,7 +77,7 @@ def update_track(
     explicit: Optional[bool] = None,
     duration_ms: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
-    existing = get_track_by_id(conn, track_id)
+    existing = get_track_by_id_raw(conn, track_id)
     if not existing:
         return None
 
@@ -138,13 +138,13 @@ def update_track(
         f"UPDATE dim_track SET {', '.join(updates)} WHERE id_track = ?",
         params
     )
-    return get_track_by_id(conn, track_id)
+    return get_track_by_id_raw(conn, track_id)
 
 
 def delete_track(
     conn: duckdb.DuckDBPyConnection, track_id: int
 ) -> bool:
-    existing = get_track_by_id(conn, track_id)
+    existing = get_track_by_id_raw(conn, track_id)
     if not existing:
         return False
     conn.execute("DELETE FROM dim_track WHERE id_track = ?", [track_id])

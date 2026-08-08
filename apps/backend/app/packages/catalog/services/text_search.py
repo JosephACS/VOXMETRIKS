@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from typing import List, Sequence, Tuple
 
@@ -9,6 +10,7 @@ from typing import List, Sequence, Tuple
 _STOPWORDS = frozenset({
     "a", "al", "de", "del", "el", "en", "la", "las", "lo", "los", "un", "una", "y",
     "the", "to", "of", "in", "on", "for", "and", "or",
+    "feat", "ft", "featuring", "vol", "volume",
 })
 
 _ACCENT_PAIRS: Sequence[Tuple[str, str]] = (
@@ -35,10 +37,12 @@ def search_tokens(query: str) -> List[str]:
     folded = fold_text(query)
     if not folded:
         return []
-    tokens = [t for t in folded.split() if t and t not in _STOPWORDS and len(t) >= 2]
+    # Collapse punctuation so "(feat." / "Vol." do not become broken tokens.
+    cleaned = re.sub(r"[^a-z0-9À-ÿ]+", " ", folded, flags=re.IGNORECASE)
+    tokens = [t for t in cleaned.split() if t and t not in _STOPWORDS and len(t) >= 2]
     if tokens:
         return tokens
-    single = folded.replace(" ", "")
+    single = cleaned.replace(" ", "")
     return [single] if single else []
 
 

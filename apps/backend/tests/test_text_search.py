@@ -16,6 +16,11 @@ def test_search_tokens_drop_stopwords() -> None:
     assert search_tokens("  GOLDEN   dreams  ") == ["golden", "dreams"]
 
 
+def test_search_tokens_strip_feat_and_punctuation() -> None:
+    assert search_tokens("Unholy (feat. Kim Petras)") == ["unholy", "kim", "petras"]
+    assert "feat" not in search_tokens("Song ft. Artist")
+
+
 def test_track_search_uses_word_prefix_not_midword() -> None:
     """``meda`` must match Medallita, not accidental mid-word Someday."""
     sql, params = build_track_search_filter("meda", search_fold_col="sf")

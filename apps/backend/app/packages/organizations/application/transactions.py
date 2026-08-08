@@ -7,17 +7,11 @@ from typing import Generator
 
 import duckdb
 
+from app.core.database import transactional
+
 
 @contextmanager
 def transaction(conn: duckdb.DuckDBPyConnection) -> Generator[duckdb.DuckDBPyConnection, None, None]:
-    """Begin/commit/rollback on the shared connection (no nested connections)."""
-    conn.execute("BEGIN TRANSACTION")
-    try:
-        yield conn
-        conn.execute("COMMIT")
-    except Exception:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
-        raise
+    """Begin/commit/rollback via the shared serialized transactional helper."""
+    with transactional(conn) as locked:
+        yield locked

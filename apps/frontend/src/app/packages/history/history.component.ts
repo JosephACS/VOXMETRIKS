@@ -12,6 +12,7 @@ import { TrackActionsComponent } from '../../shared/components/track-actions/tra
 import { PlayerController } from '../../playback-core/player.controller';
 import { toPlayableFromHistory } from '../../playback-core/adapters/track.adapter';
 import { CoverArtService } from '../../shared/services/cover-art.service';
+import { TrackCoverService } from '../../shared/services/track-cover.service';
 import { HistoryHub, HistoryEntry, SearchHistoryEntry } from '../../shared/models/api.models';
 import { primaryArtistName } from '../../shared/utils/artist.util';
 import { displayTrackTitle } from '../../shared/utils/track-display.util';
@@ -29,19 +30,27 @@ type HistoryTab = 'music' | 'user' | 'search';
 })
 export class HistoryComponent implements OnInit, OnDestroy {
   readonly lang = inject(I18nService).lang;
+  private i18n = inject(I18nService);
   private iconRender = inject(IconRenderService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tabSub?: Subscription;
+  private musicSub?: Subscription;
+  private musicLoadSub?: Subscription;
+  private musicErrSub?: Subscription;
   private stats = inject(StatsService);
-  private localMusic = inject(HistoryService);
+  readonly localMusic = inject(HistoryService);
   private localSearch = inject(SearchHistoryService);
   private readonly controller = inject(PlayerController);
   private covers = inject(CoverArtService);
+  private trackCover = inject(TrackCoverService);
+  private coverUrls = signal<Record<number, string>>({});
 
   activeTab = signal<HistoryTab>('music');
   isLoading = signal(true);
+  musicLoading = signal(false);
   hasError = signal(false);
+  musicError = signal(false);
   hub = signal<HistoryHub | null>(null);
   localMusicEntries = signal<HistoryEntry[]>([]);
   localSearchEntries = signal<SearchHistoryEntry[]>([]);
@@ -50,7 +59,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
   userTimeline = computed(() => this.hub()?.user?.timeline ?? []);
   userFavorites = computed(() => this.hub()?.user?.favorites ?? []);
 
-  musicCount = computed(() => this.localMusicEntries().length);
+  musicCount = computed(() => this.localMusic.getTotal() || this.localMusicEntries().length);
   userCount = computed(() => this.userTimeline().length);
   searchCount = computed(() => this.localSearchEntries().length + this.warehouseSearches().length);
 
@@ -61,11 +70,31 @@ export class HistoryComponent implements OnInit, OnDestroy {
         this.activeTab.set(tab);
       }
     });
-    this.localMusic.history$.subscribe((h) => this.localMusicEntries.set(h));
+    this.musicSub = this.localMusic.history$.subscribe((h) => {
+      this.localMusicEntries.set(h);
+      for (const item of h) this.resolveCover(item.id_track);
+    });
+    this.musicLoadSub = this.localMusic.loading$.subscribe((v) => this.musicLoading.set(v));
+    this.musicErrSub = this.localMusic.error$.subscribe((v) => this.musicError.set(v));
     this.localMusic.reload();
     this.localSearch.history$.subscribe((h) => this.localSearchEntries.set(h));
     this.localSearch.reload();
     this.loadHub();
+  }
+
+  coverGradient(id: number): string {
+    return this.covers.gradientFor(id);
+  }
+
+  coverUrl(id: number): string | null {
+    return this.coverUrls()[id] ?? null;
+  }
+
+  private resolveCover(id: number): void {
+    if (!id || id < 0 || this.coverUrls()[id] !== undefined) return;
+    this.trackCover.bestCover$(id).subscribe((url) => {
+      if (url) this.coverUrls.update((m) => ({ ...m, [id]: url }));
+    });
   }
 
   selectTab(tab: HistoryTab) {
@@ -80,11 +109,15 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.tabSub?.unsubscribe();
+    this.musicSub?.unsubscribe();
+    this.musicLoadSub?.unsubscribe();
+    this.musicErrSub?.unsubscribe();
   }
 
   loadHub() {
     this.isLoading.set(true);
     this.hasError.set(false);
+    this.localMusic.reload();
     this.stats.getHistoryHub(30).subscribe({
       next: (d) => {
         this.hub.set(d);
@@ -99,7 +132,31 @@ export class HistoryComponent implements OnInit, OnDestroy {
   }
 
   clearLocalMusic() {
-    this.localMusic.clear();
+    if (!confirm(this.i18n.t('history.clearConfirm'))) return;
+    this.localMusic.clearAccountHistory().subscribe({
+      error: () => {
+        // Remote clear failed — HistoryService already reloads; surface error state.
+        this.musicError.set(true);
+      },
+    });
+  }
+
+  removeMusicEntry(item: HistoryEntry, e?: Event) {
+    e?.stopPropagation();
+    e?.preventDefault();
+    if (item.id != null) {
+      this.localMusic.removeEntry(item.id).subscribe();
+    } else {
+      this.localMusic.remove(item.id_track);
+    }
+  }
+
+  loadMoreMusic() {
+    this.localMusic.loadMore();
+  }
+
+  canLoadMoreMusic(): boolean {
+    return this.localMusic.canLoadMore();
   }
 
   clearLocalSearch() {
@@ -134,9 +191,12 @@ export class HistoryComponent implements OnInit, OnDestroy {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString('es', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+    return d.toLocaleString(this.lang() === 'en' ? 'en' : 'es', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 
@@ -144,12 +204,12 @@ export class HistoryComponent implements OnInit, OnDestroy {
     if (!iso) return '—';
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Ahora';
-    if (mins < 60) return `Hace ${mins} min`;
+    if (mins < 1) return this.i18n.t('history.relative.now');
+    if (mins < 60) return this.i18n.t('history.relative.mins', { n: mins });
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `Hace ${hrs} h`;
+    if (hrs < 24) return this.i18n.t('history.relative.hours', { n: hrs });
     const days = Math.floor(hrs / 24);
-    if (days < 7) return `Hace ${days} d`;
+    if (days < 7) return this.i18n.t('history.relative.days', { n: days });
     return this.formatDate(iso);
   }
 

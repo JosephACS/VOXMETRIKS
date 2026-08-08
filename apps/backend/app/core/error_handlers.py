@@ -7,6 +7,7 @@ from typing import Any
 
 import duckdb
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -65,7 +66,8 @@ async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONR
 
 
 async def validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
-    errors = exc.errors()
+    # Pydantic may put exception objects in error ``ctx``; encode for JSON.
+    errors = jsonable_encoder(exc.errors(), custom_encoder={Exception: str})
     logger.warning("validation_error count=%s", len(errors))
     return JSONResponse(
         status_code=422,
