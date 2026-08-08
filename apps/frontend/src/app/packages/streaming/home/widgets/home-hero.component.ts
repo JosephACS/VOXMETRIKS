@@ -6,8 +6,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { EventsBreakdown, StatsSummary } from '../../../../shared/models/api.models';
 import { StatsService } from '../../../analytics/services/stats.service';
 import { fmtNumber } from '../home-format.util';
-
-export type EventsCopyMode = 'synthetic' | 'mixed' | 'unknown';
+import { classifyEventsCopyMode, EventsCopyMode } from '../home-metrics.util';
 
 @Component({
   selector: 'app-home-hero',
@@ -23,14 +22,12 @@ export class HomeHeroComponent {
   readonly greetingKey = input.required<string>();
   readonly userName = input.required<string>();
   readonly userPlan = input.required<string>();
-  readonly summary = input<StatsSummary | null>(null);
-  readonly summaryLoading = input(false);
-  readonly playlistCount = input(0);
   readonly listenStreak = input(0);
   readonly listenMinutesToday = input(0);
   readonly weeklyGoalPct = input(0);
   readonly explorerLevel = input(1);
-  readonly heroStatSkels = input<number[]>([1, 2, 3, 4, 5]);
+  /** Kept for events classification fallback while the breakdown modal loads. */
+  readonly summary = input<StatsSummary | null>(null);
 
   readonly eventsOpen = signal(false);
   readonly eventsLoading = signal(false);
@@ -44,13 +41,6 @@ export class HomeHeroComponent {
       ?? this.summary()?.events_classification_totals
       ?? null;
     return classifyEventsCopyMode(totals);
-  });
-
-  readonly eventsSubKey = computed(() => {
-    const mode = this.eventsCopyMode();
-    if (mode === 'synthetic') return 'home.stat.eventsSubSynthetic';
-    if (mode === 'unknown') return 'home.stat.eventsSubUnknown';
-    return 'home.stat.eventsSubMixed';
   });
 
   readonly eventsTipKey = computed(() =>
@@ -90,26 +80,4 @@ export class HomeHeroComponent {
   explorerQuery(table: string): Record<string, string> {
     return { table };
   }
-}
-
-/** Does not invent classifications — only mirrors reported totals. */
-export function classifyEventsCopyMode(
-  totals: Record<string, number> | null | undefined,
-): EventsCopyMode {
-  if (!totals) return 'unknown';
-  const synthetic = Number(totals['synthetic'] ?? 0);
-  const unknown = Number(totals['unknown'] ?? 0);
-  const real = Number(totals['real'] ?? 0);
-  const imported = Number(totals['imported'] ?? 0);
-  const demo = Number(totals['demo'] ?? 0);
-  const knownOther = real + imported + demo;
-  const total = synthetic + unknown + knownOther;
-  if (total <= 0) return 'unknown';
-  if (unknown > 0 && knownOther === 0 && synthetic === 0) return 'unknown';
-  if (synthetic === total) return 'synthetic';
-  if (unknown === total) return 'unknown';
-  if (unknown > 0) return 'unknown';
-  if (synthetic > 0 && knownOther > 0) return 'mixed';
-  if (knownOther === total) return 'mixed';
-  return 'mixed';
 }

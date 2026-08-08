@@ -1,34 +1,77 @@
 <section class="analytics-band">
+  <!-- Global warehouse KPIs once, outside the personal hero. -->
+  <section
+    class="catalog-demo"
+    data-testid="home-catalog-demo"
+    [attr.aria-label]="'home.catalogDemo.title' | t:lang()"
+  >
+    <div class="sec-head catalog-demo__head">
+      <h2>{{ 'home.catalogDemo.title' | t:lang() }}</h2>
+      <p class="catalog-demo__sub">{{ 'home.catalogDemo.subtitle' | t:lang() }}</p>
+    </div>
+
+    @if (summary(); as s) {
+      <div class="catalog-demo__stats">
+        <button
+          type="button"
+          class="catalog-demo__stat catalog-demo__stat--accent"
+          (click)="openCatalogEvents.emit()"
+          [attr.title]="eventsTipKey() | t:lang()"
+          [attr.aria-label]="('home.stat.events' | t:lang()) + ': ' + exact(s.total_events ?? s.total_streams)"
+        >
+          <strong class="tabular-nums" [attr.title]="exact(s.total_events ?? s.total_streams)">{{ fmt(s.total_events ?? s.total_streams ?? 0) }}</strong>
+          <span>{{ 'home.stat.events' | t:lang() }}</span>
+          <em>{{ eventsSubKey() | t:lang() }}</em>
+        </button>
+        <div class="catalog-demo__stat" [attr.title]="'home.stat.tracksTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_tracks)">{{ fmt(s.total_tracks) }}</strong>
+          <span>{{ 'home.stat.tracks' | t:lang() }}</span>
+          <em>{{ 'home.stat.tracksSub' | t:lang() }}</em>
+        </div>
+        <div class="catalog-demo__stat" [attr.title]="'home.stat.artistsTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_artistas)">{{ fmt(s.total_artistas) }}</strong>
+          <span>{{ 'home.stat.artists' | t:lang() }}</span>
+          <em>{{ 'home.stat.artistsSub' | t:lang() }}</em>
+        </div>
+        <div class="catalog-demo__stat" [attr.title]="'home.stat.albumsTip' | t:lang()">
+          <strong class="tabular-nums" [attr.title]="exact(s.total_albumes)">{{ fmt(s.total_albumes) }}</strong>
+          <span>{{ 'home.stat.albums' | t:lang() }}</span>
+          <em>{{ 'home.stat.albumsSub' | t:lang() }}</em>
+        </div>
+        <a
+          class="catalog-demo__stat catalog-demo__stat--link"
+          routerLink="/playlists"
+          [queryParams]="{ tab: 'catalog' }"
+          [attr.title]="'home.stat.playlistsTip' | t:lang()"
+        >
+          <strong class="tabular-nums" [attr.title]="exact(s.total_playlists)">{{ fmt(s.total_playlists ?? 0) }}</strong>
+          <span>{{ 'home.stat.playlists' | t:lang() }}</span>
+          <em>{{ 'home.stat.playlistsSub' | t:lang() }}</em>
+        </a>
+      </div>
+    } @else if (summaryLoading()) {
+      <div class="catalog-demo__stats catalog-demo__stats--loading" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="skel home-skel--stat"></div>
+        }
+      </div>
+    }
+  </section>
+
   <div class="sec-head">
     <h2>{{ 'home.rail.title' | t:lang() }}</h2>
     <a routerLink="/dashboard">{{ 'home.rail.viewMore' | t:lang() }}</a>
   </div>
 
-  @if (summary(); as s) {
-    <div class="kpi-strip">
-      <app-kpi-card [label]="'home.kpi.tracks' | t" [value]="s.total_tracks" iconKey="music" color="primary"
-        [subtitle]="'home.kpi.tracksSub' | t" [tooltip]="'home.kpi.tracksTip' | t"
-        [trend]="kpiTrend('tracks')?.text ?? null" [trendLabel]="'home.kpi.vsMonth' | t"
-        [trendPositive]="kpiTrend('tracks')?.positive ?? true" />
-      <app-kpi-card [label]="'home.kpi.artists' | t" [value]="s.total_artistas" iconKey="users" color="info"
-        [subtitle]="'home.kpi.artistsSub' | t" [tooltip]="'home.kpi.artistsTip' | t" />
-      <app-kpi-card [label]="'home.kpi.albums' | t" [value]="s.total_albumes" iconKey="album" color="secondary"
-        [subtitle]="'home.kpi.albumsSub' | t" [tooltip]="'home.kpi.albumsTip' | t" />
-      <app-kpi-card [label]="'home.kpi.playlists' | t" [value]="playlistCount()" iconKey="playlist" color="primary"
-        [subtitle]="'home.kpi.playlistsSub' | t" [tooltip]="'home.kpi.playlistsTip' | t" />
-      <app-kpi-card [label]="'home.kpi.streams' | t" [value]="s.total_streams ?? null" iconKey="play" color="info"
-        [subtitle]="'home.kpi.streamsSub' | t" [tooltip]="'home.kpi.streamsTip' | t" />
+  @if (summary()) {
+    <div class="kpi-strip" data-testid="home-personal-kpi-strip">
+      <!-- Personal-only KPIs (not duplicated from global catalog strip or hero chips). -->
       <app-kpi-card [label]="'home.kpi.favorites' | t" [value]="favoritesCount()" iconKey="heart" color="warning"
         [subtitle]="'home.kpi.favoritesSub' | t" [tooltip]="'home.kpi.favoritesTip' | t" />
-      <app-kpi-card [label]="'home.kpi.minutesToday' | t" [value]="listenMinutesToday()" iconKey="clock" color="secondary"
-        [subtitle]="'home.kpi.todaySub' | t" [tooltip]="'home.kpi.todayTip' | t"
-        [note]="'home.badge.activity' | t" [noteTip]="'home.kpi.todayActivityTip' | t" />
     </div>
   } @else if (summaryLoading()) {
     <div class="kpi-strip kpi-strip--loading" aria-hidden="true">
-      @for (i of kpiSkels(); track i) {
-        <div class="skel home-skel--kpi"></div>
-      }
+      <div class="skel home-skel--kpi"></div>
     </div>
   }
 

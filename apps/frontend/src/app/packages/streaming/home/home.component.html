@@ -1,17 +1,15 @@
 <div class="home-layout">
   <div class="home-main">
     <app-home-hero
+      #homeHero
       [greetingKey]="greetingKey()"
       [userName]="userName()"
       [userPlan]="userPlan()"
       [summary]="summary()"
-      [summaryLoading]="summaryLoading()"
-      [playlistCount]="myPlaylistCount()"
       [listenStreak]="listenStreak()"
       [listenMinutesToday]="listenMinutesToday()"
       [weeklyGoalPct]="weeklyGoalPct()"
       [explorerLevel]="explorerLevel()"
-      [heroStatSkels]="heroStatSkels"
     />
 
     @if (hasError()) {
@@ -26,9 +24,7 @@
       <app-home-analytics-band
         [summary]="summary()"
         [summaryLoading]="summaryLoading()"
-        [playlistCount]="myPlaylistCount()"
         [favoritesCount]="favoritesCount()"
-        [listenMinutesToday]="listenMinutesToday()"
         [growthValues]="growthValues()"
         [sparkLine]="sparkLine()"
         [sparkArea]="sparkArea()"
@@ -45,7 +41,7 @@
         [weeklyDiscoverCount]="weeklyDiscoverCount()"
         [topGenre]="topGenre()"
         [topArtist]="topArtist()"
-        [kpiSkels]="kpiSkels"
+        (openCatalogEvents)="homeHero.openEventsBreakdown()"
       />
 
       @defer (on viewport) {
@@ -176,24 +172,6 @@
           <span class="insight-body">
             <span class="insight-label">{{ 'home.insight.artistOfDay' | t:lang() }}</span>
             <span class="insight-value">{{ artistOfDay() }}</span>
-          </span>
-        </div>
-        <div class="insight-card" [attr.title]="'home.tip.localActivity' | t">
-          <span class="insight-ic" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
-          </span>
-          <span class="insight-body">
-            <span class="insight-label">{{ 'home.insight.streak' | t:lang() }}</span>
-            <span class="insight-value">{{ (listenStreak() === 1 ? 'home.insight.streakValOne' : 'home.insight.streakVal') | t: { count: listenStreak() }:lang() }}</span>
-          </span>
-        </div>
-        <div class="insight-card" [attr.title]="'home.tip.estimated' | t">
-          <span class="insight-ic" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          </span>
-          <span class="insight-body">
-            <span class="insight-label">{{ 'home.insight.today' | t:lang() }}</span>
-            <span class="insight-value">{{ formatDurationMin(listenMinutesToday()) }}</span>
           </span>
         </div>
         <div class="insight-card">

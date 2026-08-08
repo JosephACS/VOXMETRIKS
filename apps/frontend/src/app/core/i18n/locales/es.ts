@@ -135,6 +135,11 @@ export const LOCALE_ES = {
       'Incluye datos sintéticos del warehouse (pruebas analíticas).',
     'workpanel.notice.simulatedAmounts':
       'Importes académicos/simulados — no representan cobros reales.',
+    'workpanel.notice.combinedCompact':
+      'Datos sintéticos de demostración; importes académicos/simulados (no cobros reales).',
+    'home.catalogDemo.title': 'Catálogo global de demostración',
+    'home.catalogDemo.subtitle':
+      'Indicadores del warehouse importado (una sola vez; no son tu biblioteca personal).',
     'nav.analyticsHub': 'Centro analítico',
     'nav.streamsAnalytics': 'Analítica de streaming',
     'nav.topTracks': 'Canciones destacadas',

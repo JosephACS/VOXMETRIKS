@@ -99,6 +99,30 @@ export function catalogGrowthTrend(growthValues: number[]): number | null {
   return Math.round(((cur - prev) / prev) * 100);
 }
 
+export type EventsCopyMode = 'synthetic' | 'mixed' | 'unknown';
+
+/** Does not invent classifications — only mirrors reported totals. */
+export function classifyEventsCopyMode(
+  totals: Record<string, number> | null | undefined,
+): EventsCopyMode {
+  if (!totals) return 'unknown';
+  const synthetic = Number(totals['synthetic'] ?? 0);
+  const unknown = Number(totals['unknown'] ?? 0);
+  const real = Number(totals['real'] ?? 0);
+  const imported = Number(totals['imported'] ?? 0);
+  const demo = Number(totals['demo'] ?? 0);
+  const knownOther = real + imported + demo;
+  const total = synthetic + unknown + knownOther;
+  if (total <= 0) return 'unknown';
+  if (unknown > 0 && knownOther === 0 && synthetic === 0) return 'unknown';
+  if (synthetic === total) return 'synthetic';
+  if (unknown === total) return 'unknown';
+  if (unknown > 0) return 'unknown';
+  if (synthetic > 0 && knownOther > 0) return 'mixed';
+  if (knownOther === total) return 'mixed';
+  return 'mixed';
+}
+
 export function historyArtists(rawHistory: HistoryEntry[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];

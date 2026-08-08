@@ -1,9 +1,18 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { WorkpanelPage } from './workpanel.page';
 import { WorkpanelApiService, WorkpanelResponse } from '../services/workpanel-api.service';
 import { I18nService } from '../../../core/services/i18n.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
+import { SimpleReportsApiService } from '../../simple-reports/services/simple-reports-api.service';
+
+const SYNTHETIC_FALLBACK =
+  'Incluye datos sintéticos del warehouse (pruebas analíticas).';
+const SIMULATED_AMOUNTS =
+  'Importes académicos/simulados — no representan cobros reales.';
+const COMBINED_COMPACT =
+  'Datos sintéticos de demostración; importes académicos/simulados (no cobros reales).';
 
 function baseResponse(overrides: Partial<WorkpanelResponse> = {}): WorkpanelResponse {
   return {
@@ -37,6 +46,7 @@ describe('WorkpanelPage data notice', () => {
     TestBed.configureTestingModule({
       imports: [WorkpanelPage],
       providers: [
+        provideRouter([]),
         {
           provide: OrganizationContextService,
           useValue: { organizationId: () => 1 },
@@ -47,10 +57,9 @@ describe('WorkpanelPage data notice', () => {
             lang: () => 'es' as const,
             t: (k: string) => {
               const map: Record<string, string> = {
-                'workpanel.notice.syntheticFallback':
-                  'Incluye datos sintéticos del warehouse (pruebas analíticas).',
-                'workpanel.notice.simulatedAmounts':
-                  'Importes académicos/simulados — no representan cobros reales.',
+                'workpanel.notice.syntheticFallback': SYNTHETIC_FALLBACK,
+                'workpanel.notice.simulatedAmounts': SIMULATED_AMOUNTS,
+                'workpanel.notice.combinedCompact': COMBINED_COMPACT,
               };
               return map[k] ?? k;
             },
@@ -62,6 +71,22 @@ describe('WorkpanelPage data notice', () => {
             get: () => of(baseResponse()),
           },
         },
+        {
+          provide: SimpleReportsApiService,
+          useValue: {
+            catalog: () =>
+              of({
+                items: [
+                  {
+                    id: 'r1',
+                    title: 'Reporte demo',
+                    category: 'ops',
+                    module: 'control_decision',
+                  },
+                ],
+              }),
+          },
+        },
       ],
     });
     fixture = TestBed.createComponent(WorkpanelPage);
@@ -69,36 +94,150 @@ describe('WorkpanelPage data notice', () => {
     fixture.detectChanges();
   });
 
-  it('shows exactly one role=status when synthetic + simulated', () => {
-    page.data = baseResponse({
+  function applyData(overrides: Partial<WorkpanelResponse>): void {
+    page.data = baseResponse(overrides);
+    page.loading = false;
+    page.error = '';
+    fixture.detectChanges();
+  }
+
+  function expectSingleStatus(contains: string | RegExp): void {
+    const statuses = fixture.nativeElement.querySelectorAll('[role="status"]');
+    expect(statuses.length).toBe(1);
+    const text = statuses[0].textContent || '';
+    if (typeof contains === 'string') {
+      expect(text).toContain(contains);
+    } else {
+      expect(text).toMatch(contains);
+    }
+  }
+
+  it('appends simulatedAmounts when note only mentions synthetic', () => {
+    applyData({
       includes_synthetic_events: true,
       data_classification: 'synthetic',
       monetary_classification: 'simulated',
-      classification_note: 'Nota sintética de prueba.',
+      classification_note: 'Incluye datos sintéticos del warehouse.',
     });
-    fixture.detectChanges();
 
-    const notice = page.dataNotice;
-    expect(notice).toBeTruthy();
-    expect(notice).toContain('Nota sintética de prueba.');
-    expect(notice).toContain('Importes académicos/simulados');
-    expect(notice).toContain('simulados');
+    const notice = page.dataNotice!;
+    expect(notice).toContain('sintéticos');
+    expect(notice).toContain(SIMULATED_AMOUNTS);
+    expect((notice.match(/académicos\/simulados/gi) || []).length).toBe(1);
+    expectSingleStatus('sintéticos');
+  });
 
-    const statuses = fixture.nativeElement.querySelectorAll('.wp-chip[role="status"]');
-    expect(statuses.length).toBe(1);
-    expect(statuses[0].textContent).toContain('Nota sintética de prueba.');
-    expect(statuses[0].textContent).toContain('Importes académicos/simulados');
+  it('appends syntheticFallback when note only mentions simulated amounts', () => {
+    applyData({
+      includes_synthetic_events: true,
+      data_classification: 'synthetic',
+      monetary_classification: 'simulated',
+      classification_note: 'Importes académicos/simulados en este periodo.',
+    });
+
+    const notice = page.dataNotice!;
+    expect(notice).toContain('académicos/simulados');
+    expect(notice).toContain(SYNTHETIC_FALLBACK);
+    expect((notice.match(/académicos\/simulados/gi) || []).length).toBe(1);
+    expect((notice.match(/sintéticos/gi) || []).length).toBe(1);
+    expectSingleStatus('sintéticos');
+  });
+
+  it('returns the note once when it already mentions both classifications', () => {
+    const both =
+      'Nota sintética de prueba con importes académicos/simulados.';
+    applyData({
+      includes_synthetic_events: true,
+      data_classification: 'synthetic',
+      monetary_classification: 'simulated',
+      classification_note: both,
+    });
+
+    expect(page.dataNotice).toBe(both);
+    expectSingleStatus(both);
+  });
+
+  it('uses combinedCompact when both classifications and note is absent', () => {
+    applyData({
+      includes_synthetic_events: true,
+      data_classification: 'synthetic',
+      monetary_classification: 'simulated',
+      classification_note: null,
+    });
+
+    expect(page.dataNotice).toBe(COMBINED_COMPACT);
+    expectSingleStatus('académicos/simulados');
+  });
+
+  it('shows syntheticFallback (or note) for synthetic only', () => {
+    applyData({
+      includes_synthetic_events: true,
+      data_classification: 'synthetic',
+      monetary_classification: 'real',
+      classification_note: null,
+    });
+
+    expect(page.dataNotice).toBe(SYNTHETIC_FALLBACK);
+    expect(page.dataNotice).not.toContain('académicos');
+    expectSingleStatus('sintéticos');
+  });
+
+  it('shows simulatedAmounts for simulated only', () => {
+    applyData({
+      includes_synthetic_events: false,
+      data_classification: 'real',
+      monetary_classification: 'simulated',
+      classification_note: null,
+    });
+
+    expect(page.dataNotice).toBe(SIMULATED_AMOUNTS);
+    expect(page.dataNotice).not.toContain('sintéticos');
+    expectSingleStatus('académicos/simulados');
+  });
+
+  it('keeps a single role=status when pendings are empty', () => {
+    applyData({
+      includes_synthetic_events: true,
+      data_classification: 'synthetic',
+      monetary_classification: 'simulated',
+      classification_note: null,
+      pendings: [],
+    });
+
+    expect(fixture.nativeElement.querySelectorAll('[role="status"]').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.wp-empty')?.textContent).toContain(
+      'Sin pendientes críticos',
+    );
+  });
+
+  it('exposes Reportes relacionados only via related-reports-panel', () => {
+    applyData({
+      includes_synthetic_events: false,
+      data_classification: 'real',
+      monetary_classification: 'real',
+      pendings: [],
+    });
+
+    const regions = Array.from(
+      fixture.nativeElement.querySelectorAll('[aria-label="Reportes relacionados"]'),
+    ) as HTMLElement[];
+    expect(regions.length).toBe(1);
+    expect(regions[0].classList.contains('related')).toBe(true);
+
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('h2') as NodeListOf<HTMLElement>,
+    ).filter((h) => (h.textContent || '').trim().includes('Reportes relacionados'));
+    expect(headings.length).toBe(1);
   });
 
   it('hides the notice when classifications are absent', () => {
-    page.data = baseResponse({
+    applyData({
       includes_synthetic_events: false,
       data_classification: 'real',
       monetary_classification: 'real',
     });
-    fixture.detectChanges();
 
     expect(page.dataNotice).toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.wp-chip[role="status"]').length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('[role="status"]').length).toBe(0);
   });
 });

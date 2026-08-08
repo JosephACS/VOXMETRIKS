@@ -6,59 +6,9 @@
       <h1>{{ 'home.title' | t:lang() }}</h1>
       <p class="hero-sub">{{ 'home.subtitle' | t:lang() }}</p>
     </div>
-    @if (summary(); as s) {
-      <div class="hero-stats">
-        <button
-          type="button"
-          class="hero-stat hero-stat--accent hero-stat--btn"
-          (click)="openEventsBreakdown()"
-          [attr.title]="eventsTipKey() | t:lang()"
-          [attr.aria-label]="('home.stat.events' | t:lang()) + ': ' + exact(s.total_events ?? s.total_streams)"
-        >
-          <strong
-            class="tabular-nums"
-            [attr.title]="exact(s.total_events ?? s.total_streams)"
-          >{{ fmt(s.total_events ?? s.total_streams ?? 0) }}</strong>
-          <span>{{ 'home.stat.events' | t:lang() }}</span>
-          <em class="hero-stat__sub">{{ eventsSubKey() | t:lang() }}</em>
-        </button>
-        <div class="hero-stat" [attr.title]="'home.stat.tracksTip' | t:lang()">
-          <strong class="tabular-nums" [attr.title]="exact(s.total_tracks)">{{ fmt(s.total_tracks) }}</strong>
-          <span>{{ 'home.stat.tracks' | t:lang() }}</span>
-          <em class="hero-stat__sub">{{ 'home.stat.tracksSub' | t:lang() }}</em>
-        </div>
-        <div class="hero-stat" [attr.title]="'home.stat.artistsTip' | t:lang()">
-          <strong class="tabular-nums" [attr.title]="exact(s.total_artistas)">{{ fmt(s.total_artistas) }}</strong>
-          <span>{{ 'home.stat.artists' | t:lang() }}</span>
-          <em class="hero-stat__sub">{{ 'home.stat.artistsSub' | t:lang() }}</em>
-        </div>
-        <div class="hero-stat" [attr.title]="'home.stat.albumsTip' | t:lang()">
-          <strong class="tabular-nums" [attr.title]="exact(s.total_albumes)">{{ fmt(s.total_albumes) }}</strong>
-          <span>{{ 'home.stat.albums' | t:lang() }}</span>
-          <em class="hero-stat__sub">{{ 'home.stat.albumsSub' | t:lang() }}</em>
-        </div>
-        <a
-          class="hero-stat hero-stat--link"
-          routerLink="/playlists"
-          [queryParams]="{ tab: 'catalog' }"
-          [attr.title]="'home.stat.playlistsTip' | t:lang()"
-          [attr.aria-label]="('home.stat.playlists' | t:lang()) + ': ' + exact(s.total_playlists ?? playlistCount())"
-        >
-          <strong class="tabular-nums" [attr.title]="exact(s.total_playlists ?? playlistCount())">{{ fmt(s.total_playlists ?? playlistCount()) }}</strong>
-          <span>{{ 'home.stat.playlists' | t:lang() }}</span>
-          <em class="hero-stat__sub">{{ 'home.stat.playlistsSub' | t:lang() }}</em>
-        </a>
-      </div>
-    } @else if (summaryLoading()) {
-      <div class="hero-stats hero-stats--loading" aria-hidden="true">
-        @for (i of heroStatSkels(); track i) {
-          <div class="skel home-skel--stat"></div>
-        }
-      </div>
-    }
   </div>
 
-  <div class="hero-chips">
+  <div class="hero-chips" data-testid="home-hero-user-focus">
     <span class="hero-chip hero-chip--accent">{{ userPlan() }}</span>
     @if (listenStreak() > 0) {
       <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ (listenStreak() === 1 ? 'home.chip.streakOne' : 'home.chip.streak') | t: { count: listenStreak() }:lang() }}</span>

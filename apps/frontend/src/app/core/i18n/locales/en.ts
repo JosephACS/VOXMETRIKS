@@ -133,6 +133,11 @@ export const LOCALE_EN = {
       'Includes synthetic warehouse data (analytical tests).',
     'workpanel.notice.simulatedAmounts':
       'Academic/simulated amounts — not real charges.',
+    'workpanel.notice.combinedCompact':
+      'Demo synthetic data; academic/simulated amounts (not real charges).',
+    'home.catalogDemo.title': 'Global demonstration catalog',
+    'home.catalogDemo.subtitle':
+      'Imported warehouse indicators (shown once; not your personal library).',
     'nav.analyticsHub': 'Analytics Hub',
     'nav.streamsAnalytics': 'Stream analytics',
     'nav.topTracks': 'Top tracks',

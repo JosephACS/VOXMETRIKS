@@ -104,8 +104,6 @@ export class HomeComponent implements OnInit {
   smartLoading = signal(true);
   growthLabels = signal<string[]>([]);
   growthValues = signal<number[]>([]);
-  readonly heroStatSkels = [1, 2, 3, 4, 5];
-  readonly kpiSkels = [1, 2, 3, 4, 5, 6, 7, 8];
   userName = computed(() => this.auth.getUser()?.username ?? 'demo');
   userPlan = computed(() => this.auth.getUser()?.plan ?? 'Free');
   listenStreak = computed(() => listenStreak(this.rawHistory()));

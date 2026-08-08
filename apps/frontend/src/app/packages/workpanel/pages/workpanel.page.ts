@@ -95,7 +95,7 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
           <section class="wp-panel" aria-label="Pendientes">
             <h2 class="wp-panel__title">Pendientes</h2>
             @if (!data.pendings.length) {
-              <app-enterprise-empty-state title="Sin pendientes críticos en este periodo." />
+              <p class="wp-empty">Sin pendientes críticos en este periodo.</p>
             } @else {
               <ul class="wp-pending">
                 @for (p of data.pendings; track p.id) {
@@ -116,14 +116,13 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
             }
           </section>
 
-          <section class="wp-panel" aria-label="Reportes relacionados">
-            <h2 class="wp-panel__title">Reportes relacionados</h2>
+          <div class="wp-panel wp-panel--related">
             <app-related-reports-panel
               moduleId="control_decision"
               moduleLabel="Control y decisión"
               [limit]="5"
             />
-          </section>
+          </div>
         </div>
 
         @if (data.links.length) {
@@ -289,6 +288,18 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
         border-radius: 12px;
         background: var(--color-surface, rgba(24, 24, 24, 0.92));
       }
+      .wp-panel--related {
+        padding: 0;
+        background: transparent;
+      }
+      .wp-panel--related ::ng-deep .related {
+        margin: 0;
+      }
+      .wp-empty {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--color-text-muted, rgba(255, 255, 255, 0.55));
+      }
       .wp-panel__title {
         margin: 0 0 0.75rem;
         font-size: 0.8125rem;
@@ -435,17 +446,52 @@ export class WorkpanelPage implements OnInit {
     const simulated = this.data.monetary_classification === 'simulated';
     if (!synthetic && !simulated) return null;
 
-    const parts: string[] = [];
+    const note = (this.data.classification_note || '').trim();
+    const syntheticFallback = this.i18n.t('workpanel.notice.syntheticFallback');
+    const simulatedAmounts = this.i18n.t('workpanel.notice.simulatedAmounts');
+
+    if (synthetic && simulated) {
+      if (!note) {
+        return this.i18n.t('workpanel.notice.combinedCompact');
+      }
+      const hasSynthetic = WorkpanelPage.mentionsSynthetic(note);
+      const hasSimulated = WorkpanelPage.mentionsSimulated(note);
+      if (hasSynthetic && hasSimulated) {
+        return note;
+      }
+      let text = note;
+      if (!hasSynthetic) {
+        text = WorkpanelPage.appendUniqueNotice(text, syntheticFallback);
+      }
+      if (!hasSimulated) {
+        text = WorkpanelPage.appendUniqueNotice(text, simulatedAmounts);
+      }
+      return text;
+    }
+
     if (synthetic) {
-      parts.push(
-        this.data.classification_note ||
-          this.i18n.t('workpanel.notice.syntheticFallback'),
-      );
+      return note || syntheticFallback;
     }
-    if (simulated) {
-      parts.push(this.i18n.t('workpanel.notice.simulatedAmounts'));
-    }
-    return parts.join(' ');
+    return simulatedAmounts;
+  }
+
+  /** Detects synthetic / warehouse disclosure already present in a note. */
+  private static mentionsSynthetic(text: string): boolean {
+    return /sintét|synthetic/i.test(text);
+  }
+
+  /** Detects academic / simulated monetary disclosure already present in a note. */
+  private static mentionsSimulated(text: string): boolean {
+    return /simulad|académic|academic/i.test(text);
+  }
+
+  private static appendUniqueNotice(base: string, extra: string): string {
+    const b = base.trim();
+    const e = extra.trim();
+    if (!e) return b;
+    if (!b) return e;
+    if (b.toLowerCase().includes(e.toLowerCase())) return b;
+    return `${b} ${e}`;
   }
 
   get displaySections(): WorkpanelSection[] {

@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { I18nService } from '../../../../core/services/i18n.service';
@@ -6,7 +6,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { KpiCardComponent } from '../../../../shared/components/kpi-card/kpi-card.component';
 import { GeneroPopularidad, StatsSummary } from '../../../../shared/models/api.models';
 import { artistAffinityPct, barHeightPct, fmtNumber } from '../home-format.util';
-import { catalogGrowthTrend } from '../home-metrics.util';
+import { classifyEventsCopyMode, EventsCopyMode } from '../home-metrics.util';
 
 export interface HomeActivityItem {
   id_track: number;
@@ -27,9 +27,7 @@ export class HomeAnalyticsBandComponent {
 
   readonly summary = input<StatsSummary | null>(null);
   readonly summaryLoading = input(false);
-  readonly playlistCount = input(0);
   readonly favoritesCount = input(0);
-  readonly listenMinutesToday = input(0);
   readonly growthValues = input<number[]>([]);
   readonly sparkLine = input('');
   readonly sparkArea = input('');
@@ -46,19 +44,31 @@ export class HomeAnalyticsBandComponent {
   readonly weeklyDiscoverCount = input(0);
   readonly topGenre = input<string | null>(null);
   readonly topArtist = input<string | null>(null);
-  readonly kpiSkels = input<number[]>([1, 2, 3, 4, 5, 6, 7, 8]);
+
+  /** Opens the warehouse events breakdown dialog hosted by the hero shell. */
+  readonly openCatalogEvents = output<void>();
 
   fmt = fmtNumber;
   barHeight = barHeightPct;
   artistAffinity = artistAffinityPct;
 
-  kpiTrend(key: string): { text: string; positive: boolean } | null {
-    if (key === 'tracks') {
-      const pct = catalogGrowthTrend(this.growthValues());
-      if (pct !== null) {
-        return { text: `${pct >= 0 ? '+' : ''}${pct}%`, positive: pct >= 0 };
-      }
-    }
-    return null;
+  readonly eventsCopyMode = computed<EventsCopyMode>(() =>
+    classifyEventsCopyMode(this.summary()?.events_classification_totals ?? null),
+  );
+
+  readonly eventsSubKey = computed(() => {
+    const mode = this.eventsCopyMode();
+    if (mode === 'synthetic') return 'home.stat.eventsSubSynthetic';
+    if (mode === 'unknown') return 'home.stat.eventsSubUnknown';
+    return 'home.stat.eventsSubMixed';
+  });
+
+  readonly eventsTipKey = computed(() =>
+    this.eventsCopyMode() === 'unknown' ? 'home.stat.eventsTipUnknown' : 'home.stat.eventsTip',
+  );
+
+  exact(n: number | null | undefined): string {
+    if (n == null) return '—';
+    return n.toLocaleString(this.lang() === 'en' ? 'en-US' : 'es-ES');
   }
 }
