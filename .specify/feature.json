@@ -1,6 +1,6 @@
 {
-  "feature_directory": ".specify/features/047-repository-recovery-hardening",
-  "previous_feature_directory": ".specify/features/046-artist-identity-access",
-  "status": "closed",
-  "note": "No active implementation feature. Directory 047 retained for Spec Kit tool compatibility. Product truth: docs/STATUS.md. Historical specs: .specify/history/."
+  "feature_directory": ".specify/history/047-repository-recovery-hardening",
+  "previous_feature_directory": ".specify/history/046-artist-identity-access",
+  "status": "closed/idle",
+  "note": "No active Spec Kit implementation feature. feature_directory points at history/047 only for tool compatibility. previous_feature_directory → history/046. Next available ID: 048 under .specify/features/. Product truth: docs/STATUS.md. Historical specs: .specify/history/ (001–047)."
 }

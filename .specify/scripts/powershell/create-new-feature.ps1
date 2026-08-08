@@ -151,9 +151,14 @@ if ($Timestamp) {
     $featureNum = Get-Date -Format 'yyyyMMdd-HHmmss'
     $branchName = "$featureNum-$branchSuffix"
 } else {
-    # Determine branch number from existing feature directories
+    # Determine branch number from active features AND historical IDs
+    # (closed specs live under .specify/history/; ignoring them would restart at 001).
     if ($Number -eq 0) {
-        $Number = (Get-HighestNumberFromSpecs -SpecsDir $specsDir) + 1
+        $historyDir = Join-Path (Join-Path $repoRoot '.specify') 'history'
+        $highestFeatures = Get-HighestNumberFromSpecs -SpecsDir $specsDir
+        $highestHistory = Get-HighestNumberFromSpecs -SpecsDir $historyDir
+        $highest = [Math]::Max($highestFeatures, $highestHistory)
+        $Number = $highest + 1
     }
 
     $featureNum = ('{0:000}' -f $Number)
