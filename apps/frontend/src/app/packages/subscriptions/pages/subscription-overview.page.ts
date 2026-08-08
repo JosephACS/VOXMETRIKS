@@ -89,7 +89,7 @@ type OverviewTab = 'usage' | 'addons' | 'invoices';
           <dl class="sub-summary">
             <div>
               <dt>{{ 'subscriptions.overview.field.plan' | t:lang() }}</dt>
-              <dd>{{ planName || ('subscriptions.overview.priceUnavailable' | t:lang()) }}</dd>
+              <dd>{{ planName || ('subscriptions.overview.planUnset' | t:lang()) }}</dd>
             </div>
             <div>
               <dt>{{ 'subscriptions.overview.field.price' | t:lang() }}</dt>

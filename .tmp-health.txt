@@ -1,7 +1,0 @@
-﻿http://localhost:8000/health => FAIL: Unable to connect to the remote server
-http://localhost:4200 => FAIL: Unable to connect to the remote server
-
---- recheck 2026-07-13T22:36:51.8387844-05:00 ---
-http://localhost:8000/health => 200
-http://localhost:4200 => 200
-backendOk=True frontendOk=True

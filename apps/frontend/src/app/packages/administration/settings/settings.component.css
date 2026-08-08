@@ -640,3 +640,114 @@ code.info-value {
   min-width: 220px;
   padding: 0.5rem 0.75rem;
 }
+
+/* ── Technical tools nav ── */
+.tech-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tech-tools-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tech-tools-toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tech-tools-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.tech-tools-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.tech-tools-hint {
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 400;
+}
+
+.tech-tools-chevron {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  opacity: 0.55;
+  transition: transform 0.15s ease;
+}
+
+.tech-tools-chevron.open {
+  transform: rotate(90deg);
+}
+
+.tech-tools-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.35rem;
+}
+
+.nav-tab.nested {
+  padding-left: 1.35rem;
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 720px) {
+  .tech-tools {
+    width: 100%;
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .tech-tools-children {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-left: 0;
+  }
+
+  .nav-tab.nested {
+    padding-left: 1rem;
+  }
+}
+
+:host-context(html[data-theme='light']) .tech-tools {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+:host-context(html[data-theme='light']) .tech-tools-toggle {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+:host-context(html[data-theme='light']) .tech-tools-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.85);
+}
+
+:host-context(html[data-theme='light']) .tech-tools-hint {
+  color: rgba(0, 0, 0, 0.42);
+}

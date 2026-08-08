@@ -23,7 +23,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           }
           @if (plan.trial_days_default > 0) {
             <p>
-              Trial: {{ plan.trial_days_default }} días
+              {{ 'subscriptions.trial.label' | t:lang() }}: {{ plan.trial_days_default }}
+              {{ 'subscriptions.trial.days' | t:lang() }}
             </p>
           }
         </div>
@@ -57,23 +58,23 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </section>
 
         <section class="plan-features">
-          <h2>Características</h2>
+          <h2>{{ 'subscriptions.planDetail.features' | t:lang() }}</h2>
           @if (features.length > 0) {
             <ul>
               @for (f of features; track f.feature_code) {
                 <li>
-                  <strong>{{ f.feature_code }}</strong>
+                  <strong>{{ featureName(f.feature_code) }}</strong>
                   @if (f.limit_value !== null) {
-                    <span> — límite: {{ f.limit_value }}</span>
+                    <span> — {{ f.limit_value }}</span>
                   }
                   @if (!f.enabled) {
-                    <span class="badge badge--archived"> deshabilitado</span>
+                    <span class="badge badge--archived">{{ 'common.disabled' | t:lang() }}</span>
                   }
                 </li>
               }
             </ul>
           } @else {
-            <p>Sin características configuradas.</p>
+            <p>{{ 'subscriptions.planDetail.noFeatures' | t:lang() }}</p>
           }
         </section>
       </div>
@@ -132,5 +133,13 @@ export class PlanDetailPageComponent implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  featureName(code: string): string {
+    const key = `subscriptions.feature.${code}`;
+    const t = this.i18n.t(key);
+    const missing = this.i18n.t('common.missingTranslation');
+    if (t && t !== key && t !== missing) return t;
+    return code.replace(/[_.]/g, ' ');
   }
 }

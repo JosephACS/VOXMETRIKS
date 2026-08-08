@@ -39,6 +39,10 @@ describe('RefundsPage idempotency', () => {
     fixture.detectChanges();
     const refundsReq = http.expectOne(`${environment.apiUrl}/billing/refunds`);
     refundsReq.flush({ items: [], total: 0, page: 1, page_size: 25 });
+    const paymentsReq = http.expectOne(
+      (r) => r.url.startsWith(`${environment.apiUrl}/billing/payments`),
+    );
+    paymentsReq.flush({ items: [], total: 0, page: 1, page_size: 100 });
   });
 
   afterEach(() => http.verify());
@@ -88,6 +92,9 @@ describe('RefundsPage idempotency', () => {
     http.expectOne(`${environment.apiUrl}/billing/refunds`).flush({ items: [], total: 0, page: 1, page_size: 25 });
 
     page.toggleForm(true);
+    http
+      .expectOne((r) => r.url.startsWith(`${environment.apiUrl}/billing/payments`))
+      .flush({ items: [], total: 0, page: 1, page_size: 100 });
     const k2 = page.ensureIdempotencyKey();
     expect(k2).not.toBe(k1);
   });

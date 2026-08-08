@@ -85,6 +85,13 @@ export class FavoriteBtnComponent implements OnInit, OnChanges {
           this.notify.success('Agregado a favoritos');
         }
       },
+      error: () => {
+        this.notify.error(
+          wasActive
+            ? 'No se pudo quitar de favoritos. Intenta de nuevo.'
+            : 'No se pudo agregar a favoritos. Intenta de nuevo.',
+        );
+      },
     });
   }
 }

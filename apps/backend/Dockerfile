@@ -1,5 +1,8 @@
-# VOXMETRIK_V2 — Backend Dockerfile
-# Builds API-only image; full stack uses root Dockerfile + docker-compose.yml
+# VOXMETRIK_V2 — Backend Dockerfile (API-only alternative)
+# Prefer the canonical stack: root `compose.yml` + `infrastructure/docker/Dockerfile`
+# (backend + ELT). Use this file only for a standalone API image build:
+#   docker build -f apps/backend/Dockerfile -t voxmetriks-api:local apps/backend
+# Do not treat this as the official Compose image.
 
 FROM python:3.12-slim AS runtime
 

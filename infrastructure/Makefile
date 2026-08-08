@@ -1,15 +1,16 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 export PYTHONPATH := $(ROOT)/apps/backend:$(ROOT):$(ROOT)/analytics
 
-# VOXMETRIK_V2 — Root Makefile
+# Voxmetriks — infrastructure Makefile
+# Canonical Docker entrypoint: root compose.yml → `docker compose up --build`
 
 .PHONY: help install dev api test up down logs etl lint docker-up docker-down pipeline
 
 help:
-	@echo "VOXMETRIK_V2 targets:"
-	@echo "  make up          Docker compose up --build (backend + boot)"
-	@echo "  make down        Docker compose down"
-	@echo "  make logs        Docker compose logs -f"
+	@echo "Voxmetriks targets:"
+	@echo "  make up          docker compose up --build (canonical root compose.yml)"
+	@echo "  make down        docker compose down"
+	@echo "  make logs        docker compose logs -f"
 	@echo "  make pipeline    Canonical ELT (analytics/elt → DuckDB warehouse)"
 	@echo "  make etl         Backend runtime Gold refresh (app.etl; needs raw_spotify)"
 	@echo "  make gold        Backend gold builders only"
@@ -18,13 +19,13 @@ help:
 	@echo "  make install     Install backend dependencies"
 
 up:
-	docker compose -f $(ROOT)/infrastructure/docker/docker-compose.yml --project-directory $(ROOT) up --build
+	cd $(ROOT) && docker compose up --build
 
 down:
-	docker compose -f $(ROOT)/infrastructure/docker/docker-compose.yml --project-directory $(ROOT) down
+	cd $(ROOT) && docker compose down
 
 logs:
-	docker compose -f $(ROOT)/infrastructure/docker/docker-compose.yml --project-directory $(ROOT) logs -f
+	cd $(ROOT) && docker compose logs -f
 
 etl:
 	cd $(ROOT)/apps/backend && python -m app.etl.pipelines

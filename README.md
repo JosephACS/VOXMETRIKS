@@ -57,13 +57,23 @@ cd apps/frontend && npm install && cd ../..
 make pipeline
 # o: python analytics/elt/pipelines/elt_pipeline.py
 
-# API
+# API local
 make dev
 # o: cd apps/backend && uvicorn app.main:app --reload --port 8000
 
-# SPA
+# SPA local
 cd apps/frontend && npm start
 ```
+
+### Docker (comando oficial)
+
+Stack canónico en la raíz (`compose.yml` + `infrastructure/docker/Dockerfile` para backend/ELT + `apps/frontend/Dockerfile`):
+
+```bash
+docker compose up --build
+```
+
+Equivalente: `make up`. Frontend en `:8080`, API en `:8000` (diagnóstico; el navegador usa Nginx `/api/`).
 
 Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 

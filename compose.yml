@@ -66,7 +66,7 @@ services:
     image: voxmetriks-frontend:local
     restart: unless-stopped
     ports:
-      - "${VOXMETRIKS_FRONTEND_PORT:-8080}:8080"
+      - "${VOXMETRIKS_FRONTEND_PORT:-8080}:80"
     networks:
       - voxmetriks
     depends_on:
@@ -80,7 +80,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://127.0.0.1:8080/",
+          "http://127.0.0.1:80/",
         ]
       interval: 30s
       timeout: 5s

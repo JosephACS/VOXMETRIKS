@@ -16,28 +16,56 @@
 
   <div class="settings-layout">
 
-    <nav class="settings-nav">
+        <nav class="settings-nav" aria-label="Settings">
 
-      @for (tab of tabs(); track tab.id) {
-
+      @for (tab of userTabs(); track tab.id) {
         <button
-
           type="button"
-
           class="nav-tab"
-
           [class.active]="activeTab() === tab.id"
-
           (click)="selectTab(tab.id)"
-
         >
-
           <span class="tab-icon" [innerHTML]="icon(tab.iconKey, 16)"></span>
-
           <span class="tab-label">{{ tab.label }}</span>
-
         </button>
+      }
 
+      @if (hasTechnicalAccess()) {
+        <div class="tech-tools">
+          <button
+            type="button"
+            class="tech-tools-toggle"
+            [attr.aria-expanded]="technicalToolsExpanded()"
+            (click)="toggleTechnicalTools()"
+          >
+            <span class="tab-icon" [innerHTML]="icon('layers', 16)"></span>
+            <span class="tech-tools-copy">
+              <span class="tech-tools-title">{{ 'settings.techTools.title' | t:lang() }}</span>
+              <span class="tech-tools-hint">{{ 'settings.techTools.hint' | t:lang() }}</span>
+            </span>
+            <span
+              class="tech-tools-chevron"
+              [class.open]="technicalToolsExpanded()"
+              aria-hidden="true"
+            >▸</span>
+          </button>
+
+          @if (technicalToolsExpanded()) {
+            <div class="tech-tools-children" role="group" [attr.aria-label]="'settings.techTools.title' | t">
+              @for (tab of technicalTabs(); track tab.id) {
+                <button
+                  type="button"
+                  class="nav-tab nested"
+                  [class.active]="activeTab() === tab.id"
+                  (click)="selectTab(tab.id)"
+                >
+                  <span class="tab-icon" [innerHTML]="icon(tab.iconKey, 16)"></span>
+                  <span class="tab-label">{{ tab.label }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
       }
 
     </nav>

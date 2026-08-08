@@ -1,0 +1,90 @@
+# ── Voxmetriks — root Docker build context exclusions ─────────────────────────
+# Keep images free of Git metadata, secrets, local data, caches, and evidence.
+
+# VCS / IDE
+.git/
+.gitignore
+.gitattributes
+.github/
+.vscode/
+.idea/
+*.swp
+
+# Secrets / env (never bake into images)
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local data / warehouses / media
+data/
+apps/backend/data/
+*.duckdb
+*.duckdb.wal
+*.duckdb.bak
+*.db
+*.sqlite
+*.sqlite3
+*.parquet
+*.csv
+*.zip
+
+# Dependencies (reinstalled in image layers)
+node_modules/
+**/node_modules/
+.venv/
+venv/
+env/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Caches / build outputs
+**/.angular/
+dist/
+build/
+coverage/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+apps/frontend/dist/
+
+# Tests / e2e / reports / evidence
+**/tests/
+**/test-results/
+**/playwright-report/
+automation/
+pytest-*.txt
+*.log
+logs/
+
+# Specs / generated docs / academic artifacts
+.specify/
+docs/
+*.md
+!apps/backend/README.md
+
+# Temp / agent captures
+.tmp-*
+.tmp_*
+**/_*.txt
+**/_*.json
+
+# Alternate / non-canonical runtime trees
+runtime/
+VOXMETRIKS-DEMO-RUNTIME/
+VOXMETRIKS-CLEAN-TEST/
+VOXMETRIKS-DEMO-BACKUP/
+pocketbase/
+infrastructure/pocketbase/
+
+# Frontend has its own Dockerfile context (apps/frontend)
+# Still exclude heavy frontend caches when building backend from repo root.
+apps/frontend/node_modules/
+apps/frontend/.angular/
+apps/frontend/dist/

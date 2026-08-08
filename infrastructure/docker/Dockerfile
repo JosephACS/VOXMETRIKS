@@ -1,8 +1,10 @@
-# ── Voxmetriks — Backend + ELT (Dockerfile) ──────────────────────────────────
+# ── Voxmetriks — Backend + ELT (Dockerfile canónico) ─────────────────────────
 # Multi-stage, Python 3.12 slim. Sirve la API FastAPI y ejecuta el pipeline ELT.
+# Usado por el Compose canónico de la raíz:
 #
-#   docker build -t voxmetrik .
 #   docker compose up --build
+#
+# Alternativa API-only: apps/backend/Dockerfile (no es el flujo oficial).
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 1 — Dependencias

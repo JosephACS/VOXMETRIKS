@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-import { Refund } from '../models/billing.models';
+import { Payment, Refund } from '../models/billing.models';
+import { isRefundablePayment } from '../billing-option-filters';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
@@ -31,11 +32,20 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           </button>
         </app-enterprise-page-header>
 
+        <p class="muted page-hint">{{ 'billing.refunds.hint' | t:lang() }}</p>
+
         @if (showForm) {
           <app-enterprise-section-card [title]="'billing.refunds.new' | t:lang()">
             <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
-              <app-enterprise-form-field [label]="'billing.refunds.paymentId' | t:lang()" [required]="true">
-                <input type="number" formControlName="payment_id" class="input" />
+              <app-enterprise-form-field [label]="'billing.refunds.payment' | t:lang()" [required]="true">
+                <select formControlName="payment_id" class="select" (change)="onPaymentPicked()">
+                  <option [ngValue]="null">{{ 'billing.refunds.selectPayment' | t:lang() }}</option>
+                  @for (p of payments; track p.id) {
+                    <option [ngValue]="p.id">
+                      {{ paymentLabel(p) }}
+                    </option>
+                  }
+                </select>
               </app-enterprise-form-field>
               <app-enterprise-form-field [label]="'billing.refunds.amount' | t:lang()" [required]="true">
                 <input type="number" formControlName="amount" step="0.01" class="input" />
@@ -48,7 +58,11 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 />
               </app-enterprise-form-field>
               <div class="form-grid__actions">
-                <button type="submit" class="btn btn--primary" [disabled]="form.invalid || submitting">
+                <button
+                  type="submit"
+                  class="btn btn--primary"
+                  [disabled]="form.invalid || submitting"
+                >
                   {{ 'billing.refunds.issue' | t:lang() }}
                 </button>
               </div>
@@ -72,7 +86,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>{{ 'common.id' | t:lang() }}</th>
                   <th>{{ 'billing.refunds.payment' | t:lang() }}</th>
                   <th>{{ 'common.amount' | t:lang() }}</th>
                   <th>{{ 'common.status' | t:lang() }}</th>
@@ -82,8 +95,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               <tbody>
                 @for (r of refunds; track r.id) {
                   <tr>
-                    <td>{{ r.id }}</td>
-                    <td>{{ r.payment_id }}</td>
+                    <td>{{ paymentLabelById(r.payment_id) }}</td>
                     <td>{{ r.amount | localeMoney:r.currency }}</td>
                     <td><app-enterprise-status-badge [status]="r.status" /></td>
                     <td>{{ r.processed_at | localeDate:true }}</td>
@@ -106,10 +118,14 @@ export class RefundsPage implements OnInit {
   private fb = inject(FormBuilder);
 
   refunds: Refund[] = [];
+  payments: Payment[] = [];
+  paymentById = new Map<number, Payment>();
   error: string | null = null;
   showForm = false;
   submitting = false;
   orgId: number | null = null;
+
+  /** Stable key for the in-flight refund operation; reused on retry. */
   private pendingIdempotencyKey: string | null = null;
 
   form = this.fb.group({
@@ -122,6 +138,31 @@ export class RefundsPage implements OnInit {
     this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadRefunds();
+    this.loadPayments();
+  }
+
+  toggleForm(force?: boolean): void {
+    if (this.submitting) return;
+    this.showForm = force ?? !this.showForm;
+    if (!this.showForm) {
+      this.pendingIdempotencyKey = null;
+      this.form.reset({ payment_id: null, amount: null, reason: '' });
+    } else if (!this.payments.length) {
+      this.loadPayments();
+    }
+  }
+
+  loadPayments(): void {
+    this.api.listPayments(this.orgId!, { page_size: 100 }).subscribe({
+      next: (res) => {
+        const items = res.items || [];
+        this.payments = items.filter(isRefundablePayment);
+        this.paymentById = new Map(items.map((p) => [p.id, p]));
+      },
+      error: () => {
+        this.payments = [];
+      },
+    });
   }
 
   loadRefunds(): void {
@@ -131,16 +172,27 @@ export class RefundsPage implements OnInit {
     });
   }
 
-  toggleForm(force?: boolean): void {
-    if (this.submitting) return;
-    this.showForm = force ?? !this.showForm;
-    if (!this.showForm) {
-      this.pendingIdempotencyKey = null;
-      this.form.reset({ payment_id: null, amount: null, reason: '' });
+  paymentLabel(p: Payment): string {
+    const amt = `${p.amount} ${p.currency}`;
+    const ref = p.provider_payment_id || `#${p.id}`;
+    return `${ref} — ${amt} (${p.status})`;
+  }
+
+  paymentLabelById(id: number): string {
+    const p = this.paymentById.get(id);
+    return p ? this.paymentLabel(p) : String(id);
+  }
+
+  onPaymentPicked(): void {
+    const id = this.form.value.payment_id;
+    if (id == null) return;
+    const p = this.paymentById.get(id);
+    if (p && this.form.value.amount == null) {
+      this.form.patchValue({ amount: Number(p.amount) });
     }
   }
 
-  /** Reuse a failed operation's key until it succeeds or is cancelled. */
+  /** Exposed for unit tests — same key until success or cancel. */
   ensureIdempotencyKey(): string {
     if (!this.pendingIdempotencyKey) {
       this.pendingIdempotencyKey =
@@ -156,12 +208,13 @@ export class RefundsPage implements OnInit {
     this.submitting = true;
     this.error = null;
     const key = this.ensureIdempotencyKey();
-    this.api.createRefund(this.orgId, {
+    const body = {
       payment_id: this.form.value.payment_id ?? null,
       amount: this.form.value.amount ?? null,
       reason: this.form.value.reason || null,
       idempotency_key: key,
-    }).subscribe({
+    };
+    this.api.createRefund(this.orgId, body).subscribe({
       next: () => {
         this.submitting = false;
         this.pendingIdempotencyKey = null;
@@ -171,6 +224,7 @@ export class RefundsPage implements OnInit {
       },
       error: (e) => {
         this.submitting = false;
+        // Keep pendingIdempotencyKey so retries reuse the same operation key.
         this.error = e.error?.detail?.message ?? e.error?.message ?? this.i18n.t('common.createFailed');
       },
     });

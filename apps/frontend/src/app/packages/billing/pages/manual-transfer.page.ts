@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-import { Payment } from '../models/billing.models';
+import { Invoice, Payment } from '../models/billing.models';
+import { isManualTransferInvoice } from '../billing-option-filters';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
 @Component({
@@ -15,6 +17,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
     CommonModule,
     ReactiveFormsModule,
     TranslatePipe,
+    LocaleMoneyPipe,
     ...ENTERPRISE_UI_IMPORTS,
   ],
   template: `
@@ -30,16 +33,23 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         <app-enterprise-section-card>
           <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
             <app-enterprise-form-field
-              [label]="'billing.manualTransfer.invoiceId' | t:lang()"
+              [label]="'billing.manualTransfer.invoice' | t:lang()"
               [required]="true"
             >
-              <input type="number" formControlName="invoice_id" class="input" />
+              <select formControlName="invoice_id" class="select" (change)="onInvoicePicked()">
+                <option [ngValue]="null">{{ 'billing.manualTransfer.selectInvoice' | t:lang() }}</option>
+                @for (inv of invoices; track inv.id) {
+                  <option [ngValue]="inv.id">
+                    {{ inv.invoice_number }} — {{ inv.amount_due | localeMoney:inv.currency }} ({{ inv.status }})
+                  </option>
+                }
+              </select>
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'common.amount' | t:lang()" [required]="true">
               <input type="number" formControlName="amount" class="input" step="0.01" />
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'common.currency' | t:lang()" [required]="true">
-              <input formControlName="currency" class="input" maxlength="3" />
+              <input formControlName="currency" class="input" maxlength="3" readonly />
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'billing.manualTransfer.notes' | t:lang()">
               <input
@@ -82,6 +92,7 @@ export class ManualTransferPage implements OnInit {
   private fb = inject(FormBuilder);
 
   orgId: number | null = null;
+  invoices: Invoice[] = [];
   loading = false;
   result: Payment | null = null;
   error: string | null = null;
@@ -95,6 +106,23 @@ export class ManualTransferPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
+    if (!this.orgId) return;
+    this.api.listInvoices(this.orgId, { page_size: 100 }).subscribe({
+      next: (res) => {
+        this.invoices = (res.items || []).filter(isManualTransferInvoice);
+      },
+      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.loadFailed')),
+    });
+  }
+
+  onInvoicePicked(): void {
+    const id = this.form.value.invoice_id;
+    const inv = this.invoices.find((i) => i.id === id);
+    if (!inv) return;
+    this.form.patchValue({
+      amount: Number(inv.amount_due || inv.total || 0) || null,
+      currency: inv.currency || 'USD',
+    });
   }
 
   submit(): void {
@@ -107,7 +135,7 @@ export class ManualTransferPage implements OnInit {
         this.loading = false;
       },
       error: (e) => {
-        this.error = e.error?.detail?.message ?? e.error?.message ?? 'Transfer failed';
+        this.error = e.error?.detail?.message ?? e.error?.message ?? this.i18n.t('common.actionFailed');
         this.loading = false;
       },
     });

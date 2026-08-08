@@ -6,6 +6,38 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  /* Voxmetriks design tokens (professional shell) */
+  --vx-bg: #0a0a0a;
+  --vx-surface: #121212;
+  --vx-surface-elevated: #181818;
+  --vx-border-subtle: rgba(255, 255, 255, 0.06);
+  --vx-text: #ffffff;
+  --vx-text-secondary: rgba(255, 255, 255, 0.62);
+  --vx-text-disabled: rgba(255, 255, 255, 0.34);
+  --vx-accent: #1ed896;
+  --vx-success: #1ed896;
+  --vx-warning: #fbbf24;
+  --vx-error: #ef4444;
+  --vx-info: #38bdf8;
+  --vx-space-1: 4px;
+  --vx-space-2: 8px;
+  --vx-space-3: 12px;
+  --vx-space-4: 16px;
+  --vx-space-5: 20px;
+  --vx-space-6: 24px;
+  --vx-space-7: 32px;
+  --vx-space-8: 40px;
+  --vx-radius-sm: 6px;
+  --vx-radius-md: 10px;
+  --vx-radius-lg: 14px;
+  --vx-font-page: 1.5rem;
+  --vx-font-section: 0.8125rem;
+  --vx-font-card: 0.9375rem;
+  --vx-font-body: 0.875rem;
+  --vx-font-aux: 0.75rem;
+  --vx-font-label: 0.7rem;
+  --vx-font-table: 0.8125rem;
+
   --bg-base:       #0a0a0a;
   --bg-surface:    #121212;
   --bg-card:       rgba(24, 24, 24, 0.92);
@@ -21,6 +53,8 @@
   --red:           #ef4444;
   --radius:        0.375rem;
   --radius-lg:     0.5rem;
+  /* Global fixed player bar — keep in sync with app-player-bar height */
+  --player-height: 88px;
 
   --color-surface:    rgba(24, 24, 24, 0.95);
   --color-surface-2:  rgba(32, 32, 32, 0.98);
@@ -840,4 +874,10 @@ input, select, textarea { font-family: inherit; }
 
 .page-subtitle {
   color: var(--spotify-muted) !important;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --player-height: 72px;
+  }
 }

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BillingApiService } from '../services/billing-api.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-import { CreditNote } from '../models/billing.models';
+import { CreditNote, Invoice } from '../models/billing.models';
+import { isCreditNoteInvoice } from '../billing-option-filters';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
@@ -25,16 +26,25 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         <app-enterprise-org-required />
       } @else {
         <app-enterprise-page-header [title]="'billing.creditNotes.title' | t:lang()">
-          <button type="button" class="btn btn--secondary" (click)="showForm = !showForm">
+          <button type="button" class="btn btn--secondary" (click)="toggleForm()">
             {{ (showForm ? 'billing.creditNotes.cancel' : 'billing.creditNotes.new') | t:lang() }}
           </button>
         </app-enterprise-page-header>
 
+        <p class="muted page-hint">{{ 'billing.creditNotes.hint' | t:lang() }}</p>
+
         @if (showForm) {
           <app-enterprise-section-card [title]="'billing.creditNotes.new' | t:lang()">
             <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
-              <app-enterprise-form-field [label]="'billing.creditNotes.invoiceId' | t:lang()" [required]="true">
-                <input type="number" formControlName="invoice_id" class="input" />
+              <app-enterprise-form-field [label]="'billing.creditNotes.invoice' | t:lang()" [required]="true">
+                <select formControlName="invoice_id" class="select">
+                  <option [ngValue]="null">{{ 'billing.creditNotes.selectInvoice' | t:lang() }}</option>
+                  @for (inv of invoices; track inv.id) {
+                    <option [ngValue]="inv.id">
+                      {{ inv.invoice_number }} — {{ inv.total | localeMoney:inv.currency }} ({{ inv.status }})
+                    </option>
+                  }
+                </select>
               </app-enterprise-form-field>
               <app-enterprise-form-field [label]="'common.amount' | t:lang()" [required]="true">
                 <input type="number" formControlName="amount" step="0.01" class="input" />
@@ -60,7 +70,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [title]="'billing.creditNotes.emptyTitle' | t:lang()"
             [description]="'billing.creditNotes.emptyBody' | t:lang()"
             [ctaLabel]="'billing.creditNotes.new' | t:lang()"
-            (ctaClick)="showForm = true"
+            (ctaClick)="toggleForm(true)"
           />
         } @else if (creditNotes.length) {
           <app-enterprise-data-table>
@@ -78,7 +88,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 @for (cn of creditNotes; track cn.id) {
                   <tr>
                     <td>{{ cn.credit_note_number }}</td>
-                    <td>{{ cn.invoice_id }}</td>
+                    <td>{{ invoiceLabel(cn.invoice_id) }}</td>
                     <td>{{ cn.amount | localeMoney:cn.currency }}</td>
                     <td><app-enterprise-status-badge [status]="cn.status" /></td>
                     <td>
@@ -107,13 +117,15 @@ export class CreditNotesPage implements OnInit {
   private fb = inject(FormBuilder);
 
   creditNotes: CreditNote[] = [];
+  invoices: Invoice[] = [];
+  invoiceById = new Map<number, Invoice>();
   error: string | null = null;
   showForm = false;
   orgId: number | null = null;
 
   form = this.fb.group({
-    invoice_id: [null, Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
+    invoice_id: [null as number | null, Validators.required],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     reason: [''],
   });
 
@@ -121,6 +133,25 @@ export class CreditNotesPage implements OnInit {
     this.orgId = this.orgCtx.organizationId();
     if (!this.orgId) return;
     this.loadCreditNotes();
+    this.loadInvoices();
+  }
+
+  toggleForm(force?: boolean): void {
+    this.showForm = force ?? !this.showForm;
+    if (this.showForm && !this.invoices.length) this.loadInvoices();
+  }
+
+  loadInvoices(): void {
+    this.api.listInvoices(this.orgId!, { page_size: 100 }).subscribe({
+      next: (res) => {
+        const items = res.items || [];
+        this.invoices = items.filter(isCreditNoteInvoice);
+        this.invoiceById = new Map(items.map((i) => [i.id, i]));
+      },
+      error: () => {
+        this.invoices = [];
+      },
+    });
   }
 
   loadCreditNotes(): void {
@@ -130,11 +161,17 @@ export class CreditNotesPage implements OnInit {
     });
   }
 
+  invoiceLabel(invoiceId: number): string {
+    const inv = this.invoiceById.get(invoiceId);
+    return inv?.invoice_number || String(invoiceId);
+  }
+
   submit(): void {
     if (this.form.invalid) return;
     this.api.createCreditNote(this.orgId!, this.form.value).subscribe({
       next: () => {
         this.showForm = false;
+        this.form.reset({ invoice_id: null, amount: null, reason: '' });
         this.loadCreditNotes();
       },
       error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),

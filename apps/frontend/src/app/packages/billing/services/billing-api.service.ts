@@ -194,7 +194,8 @@ export class BillingApiService {
     params?: { page?: number; page_size?: number },
   ): Observable<PaginatedResponse<Payment>> {
     let p = new HttpParams();
-    if (params?.page) p = p.set('page', String(params.page));
+    if (params?.page != null) p = p.set('page', String(params.page));
+    if (params?.page_size != null) p = p.set('page_size', String(params.page_size));
     return this.http.get<PaginatedResponse<Payment>>(`${BASE}/billing/payments`, {
       headers: this.orgHeaders(orgId),
       params: p,

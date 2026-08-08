@@ -140,6 +140,9 @@ export class SettingsComponent implements OnInit {
   });
 
   private readonly engineerTabs: SettingsTab[] = ['warehouse', 'pipeline'];
+  /** Nested under Technical tools; API stays in the main user nav. */
+  private readonly technicalTabIds: SettingsTab[] = ['warehouse', 'pipeline'];
+  technicalToolsExpanded = signal(false);
 
   private readonly allTabs: { id: SettingsTab; labelKey: TranslationKey; iconKey: string }[] = [
     { id: 'general', labelKey: 'settings.tab.general', iconKey: 'settings' },
@@ -148,13 +151,29 @@ export class SettingsComponent implements OnInit {
     { id: 'pipeline', labelKey: 'settings.tab.pipeline', iconKey: 'zap' },
   ];
 
-  tabs = computed(() => {
+  hasTechnicalAccess = computed(() => this.auth.hasEngineerAccess());
+
+  userTabs = computed(() => {
     this.i18n.tick();
-    const list = this.auth.hasEngineerAccess()
-      ? this.allTabs
-      : this.allTabs.filter((t) => !this.engineerTabs.includes(t.id));
-    return list.map((t) => ({ ...t, label: this.i18n.t(t.labelKey) }));
+    return this.allTabs
+      .filter((t) => !this.technicalTabIds.includes(t.id))
+      .map((t) => ({ ...t, label: this.i18n.t(t.labelKey) }));
   });
+
+  technicalTabs = computed(() => {
+    this.i18n.tick();
+    if (!this.auth.hasEngineerAccess()) return [];
+    return this.allTabs
+      .filter((t) => this.technicalTabIds.includes(t.id))
+      .map((t) => ({ ...t, label: this.i18n.t(t.labelKey) }));
+  });
+
+  /** @deprecated kept for any residual references */
+  tabs = computed(() => [...this.userTabs(), ...this.technicalTabs()]);
+
+  toggleTechnicalTools(): void {
+    this.technicalToolsExpanded.update((v) => !v);
+  }
 
   ngOnInit() {
     this.refreshHealth();
@@ -163,6 +182,7 @@ export class SettingsComponent implements OnInit {
 
   selectTab(tab: SettingsTab) {
     this.activeTab.set(tab);
+    if (this.technicalTabIds.includes(tab)) this.technicalToolsExpanded.set(true);
     if (tab === 'api') this.refreshHealth();
   }
 

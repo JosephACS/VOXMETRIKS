@@ -3,13 +3,20 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 88px;
+  height: var(--player-height, 88px);
   z-index: 300;
   background: var(--shell-player);
   backdrop-filter: blur(24px) saturate(1.4);
   border-top: 1px solid color-mix(in srgb, var(--shell-border) 60%, transparent);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.22);
   color: var(--shell-fg);
+}
+
+@media (min-width: 1024px) {
+  /* Leave the sidebar column free for scroll/click; width still follows --sidebar-w */
+  .player-bar {
+    left: var(--sidebar-w, 240px);
+  }
 }
 
 .player-progress-wrap {
@@ -327,7 +334,7 @@
 }
 
 @media (max-width: 640px) {
-  .player-bar { height: 72px; }
+  .player-bar { height: var(--player-height, 72px); }
   .cover-btn { width: 44px; height: 44px; }
   .ctrl-btn.sm { display: none; }
 }

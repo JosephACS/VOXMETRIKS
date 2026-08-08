@@ -42,6 +42,7 @@ env/
 node_modules/
 apps/frontend/dist/
 apps/frontend/.angular/
+**/.angular/
 coverage/
 
 # Generic build output
@@ -51,6 +52,7 @@ build/
 # Data (local / generated)
 data/processed/
 data/warehouse/
+apps/backend/data/
 *.parquet
 *.csv
 
@@ -64,6 +66,13 @@ htmlcov/
 automation/e2e/.auth/
 archive/generated/playwright-report/
 archive/generated/test-results/
+**/test-results/
+**/playwright-report/
+pytest-*.txt
+
+# Agent / local temp capture
+.tmp-*
+.tmp_*
 
 # Credentials / keys (never commit)
 *.pem
@@ -84,6 +93,7 @@ VOXMETRIKS.git/
 # Logs
 *.log
 logs/
+apps/backend/logs/
 
 # Review / agent temp artifacts (Spec 014 G)
 automation/specs/**/*.zip
@@ -97,3 +107,4 @@ apps/sub-test-out.txt
 # OS
 Thumbs.db
 Desktop.ini
+.DS_Store

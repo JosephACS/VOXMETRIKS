@@ -131,4 +131,14 @@ describe('BillingApiService (L4)', () => {
     expect(req2.request.method).toBe('POST');
     req2.flush({ id: 1, status: 'applied' });
   });
+
+  it('listPayments transmits page and page_size query params', () => {
+    api.listPayments(orgId, { page: 2, page_size: 100 }).subscribe();
+    const req = http.expectOne((r) => r.url === `${base}/billing/payments`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('page_size')).toBe('100');
+    expect(req.request.headers.get('X-Organization-Id')).toBe('1');
+    req.flush({ items: [], total: 0, page: 2, page_size: 100 });
+  });
 });

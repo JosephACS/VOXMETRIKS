@@ -23,6 +23,15 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
     <div class="vx-enterprise subscription-cancel-page">
       @if (!organizationId) {
         <app-enterprise-org-required />
+      } @else if (!canCancel) {
+        <app-enterprise-page-header
+          [title]="'subscriptions.cancel.title' | t:lang()"
+          [subtitle]="'subscriptions.cancel.noPermission' | t:lang()"
+        >
+          <a routerLink="/subscriptions/overview" class="btn btn--secondary">{{
+            'common.back' | t:lang()
+          }}</a>
+        </app-enterprise-page-header>
       } @else {
         <app-enterprise-page-header
           [title]="'subscriptions.cancel.title' | t:lang()"
@@ -33,7 +42,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           }}</a>
         </app-enterprise-page-header>
 
-        @if (canCancel) {
         <app-enterprise-section-card [title]="'subscriptions.cancel.confirmTitle' | t:lang()">
           <ul class="cancel-points">
             <li>
@@ -71,7 +79,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <app-enterprise-error-state [message]="error" />
           }
         </app-enterprise-section-card>
-        }
       }
     </div>
   `,

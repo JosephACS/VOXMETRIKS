@@ -28,7 +28,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <tbody>
             @for (r of records; track r.id) {
               <tr>
-                <td>{{ r.feature_code }}</td>
+                <td>{{ featureName(r.feature_code) }}</td>
                 <td>{{ r.quantity }}</td>
                 <td>{{ r.period_start }} — {{ r.period_end }}</td>
                 <td>{{ r.recorded_at | date:'short' }}</td>
@@ -87,5 +87,14 @@ export class SubscriptionUsagePageComponent implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  featureName(code: string | null): string {
+    if (!code) return '—';
+    const key = `subscriptions.feature.${code}`;
+    const t = this.i18n.t(key);
+    const missing = this.i18n.t('common.missingTranslation');
+    if (t && t !== key && t !== missing) return t;
+    return code.replace(/[_.]/g, ' ');
   }
 }
