@@ -67,6 +67,10 @@ class RejectBody(BaseModel):
     reason: Optional[str] = None
 
 
+class AcceptInviteBody(BaseModel):
+    token: str
+
+
 # ── Artist Space ──────────────────────────────────────────────────────────────
 
 
@@ -166,6 +170,50 @@ def create_artist_invitation(
             user_id=ctx["user_id"],
             email=body.email,
             role=body.role,
+        )
+    except ArtistIdentityError as e:
+        raise_identity_http(e)
+
+
+@artist_space_router.get("/{artist_profile_id}/invitations")
+def list_artist_invitations(
+    artist_profile_id: int,
+    status: Optional[str] = Query(default=None),
+    ctx: dict = Depends(_ctx),
+) -> list[dict[str, Any]]:
+    try:
+        return ArtistSpaceUseCases(ctx["conn"]).list_invitations(
+            artist_profile_id=artist_profile_id,
+            user_id=ctx["user_id"],
+            status=status,
+        )
+    except ArtistIdentityError as e:
+        raise_identity_http(e)
+
+
+@artist_space_router.post("/{artist_profile_id}/invitations/{invitation_id}/revoke")
+def revoke_artist_invitation(
+    artist_profile_id: int, invitation_id: int, ctx: dict = Depends(_ctx)
+) -> dict[str, Any]:
+    try:
+        return ArtistSpaceUseCases(ctx["conn"]).revoke_invitation(
+            artist_profile_id=artist_profile_id,
+            user_id=ctx["user_id"],
+            invitation_id=invitation_id,
+        )
+    except ArtistIdentityError as e:
+        raise_identity_http(e)
+
+
+@artist_space_router.post("/{artist_profile_id}/invitations/{invitation_id}/resend")
+def resend_artist_invitation(
+    artist_profile_id: int, invitation_id: int, ctx: dict = Depends(_ctx)
+) -> dict[str, Any]:
+    try:
+        return ArtistSpaceUseCases(ctx["conn"]).resend_invitation(
+            artist_profile_id=artist_profile_id,
+            user_id=ctx["user_id"],
+            invitation_id=invitation_id,
         )
     except ArtistIdentityError as e:
         raise_identity_http(e)
@@ -285,11 +333,11 @@ def cancel_access_request(request_id: int, ctx: dict = Depends(_ctx)) -> dict[st
 # ── Accept invitation ─────────────────────────────────────────────────────────
 
 
-@artist_invitations_router.post("/{token}/accept")
-def accept_artist_invitation(token: str, ctx: dict = Depends(_ctx)) -> dict[str, Any]:
+@artist_invitations_router.post("/accept")
+def accept_artist_invitation(body: AcceptInviteBody, ctx: dict = Depends(_ctx)) -> dict[str, Any]:
     try:
         return ArtistSpaceUseCases(ctx["conn"]).accept_invitation(
-            user_id=ctx["user_id"], raw_token=token
+            user_id=ctx["user_id"], raw_token=body.token
         )
     except ArtistIdentityError as e:
         raise_identity_http(e)

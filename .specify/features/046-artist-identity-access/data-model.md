@@ -54,6 +54,13 @@ Espejo de org invitation:
 | revoked_by, revoked_at | NULLABLE |
 | created_at, updated_at | TIMESTAMP |
 
+Lifecycle: `pending` → `accepted` | `revoked` | `expired`.  
+`revoke` / `resend` solo sobre `pending`. Resend reemplaza `token_hash` y extiende `expires_at` (mismo `id`). Listados públicos omiten `token_hash`.
+
 ## Sentinel
 
 `app_artist_profile.organization_id = 0` → artista independiente (sin org context).
+
+### `create_new` debt
+
+Approved `create_new` creates management profile only; `warehouse_artist_id` may remain NULL; does **not** insert `dim_artista`. Music may be empty until future warehouse link.

@@ -25,7 +25,7 @@ Habilitar **Artist Spaces** basados en membresía real: un usuario solo ve y ope
 |------|-----------|-----------|--------|
 | `claim_ownership` | Warehouse artist existe; sin owner activo (o perfil sin owner) | Platform Admin | Crea/linkea perfil + membership owner |
 | `request_access` | Perfil con owner | Owner/admin del artista | Membership con `proposed_role` ≠ owner |
-| `create_new` | Nombre propuesto | Platform Admin | Perfil `org_id=0`, applicant = owner |
+| `create_new` | Nombre propuesto | Platform Admin | Perfil `org_id=0`, applicant = owner; `warehouse_artist_id` may be NULL; **no** auto `dim_artista` (explicit debt) |
 
 ## Capacidades por rol
 

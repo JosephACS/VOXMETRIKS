@@ -29,3 +29,5 @@
 10. **homePathForSpace(artist)** → `/artist-space`.
 
 11. **DuckDB**: natural-key uniqueness en app layer (mismo patrón Spec 020); evitar UNIQUE secundario que rompa UPDATE.
+
+12. **`create_new` debt (approved)**: aprobar `create_new` crea un management profile **independiente** (`organization_id = 0`). `warehouse_artist_id` **puede ser NULL**. **No** auto-crea fila en `dim_artista`. Music/tracks pueden estar vacíos hasta un futuro link a warehouse o publicación de catálogo. Deuda explícita — **no** insertar en `dim_artista` en este hotfix.

@@ -61,7 +61,7 @@ export const ARTIST_SPACE_ROUTES: Routes = [
     title: 'artistSpace.claim.title',
   },
   {
-    path: 'artist-invitations/:token/accept',
+    path: 'artist-invitations/accept',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/artist-invite-accept.page').then((m) => m.ArtistInviteAcceptPage),

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   ArtistAccessRequest,
+  ArtistInvitation,
   ArtistSpaceMineItem,
   ArtistSpaceSummary,
 } from '../models/artist-space.models';
@@ -71,6 +72,42 @@ export class ArtistSpaceApiService {
     }>(`${BASE}/artist-space/${artistProfileId}/invitations`, body);
   }
 
+  listInvitations(
+    artistProfileId: number,
+    status?: string,
+  ): Observable<ArtistInvitation[]> {
+    let params = new HttpParams();
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<ArtistInvitation[]>(
+      `${BASE}/artist-space/${artistProfileId}/invitations`,
+      { params },
+    );
+  }
+
+  revokeInvitation(artistProfileId: number, invitationId: number): Observable<ArtistInvitation> {
+    return this.http.post<ArtistInvitation>(
+      `${BASE}/artist-space/${artistProfileId}/invitations/${invitationId}/revoke`,
+      {},
+    );
+  }
+
+  resendInvitation(
+    artistProfileId: number,
+    invitationId: number,
+  ): Observable<{
+    invite_token: string;
+    email_delivery_status: string;
+    invitation_id: number;
+  }> {
+    return this.http.post<{
+      invite_token: string;
+      email_delivery_status: string;
+      invitation_id: number;
+    }>(`${BASE}/artist-space/${artistProfileId}/invitations/${invitationId}/resend`, {});
+  }
+
   revokeMember(artistProfileId: number, membershipId: number): Observable<unknown> {
     return this.http.post(
       `${BASE}/artist-space/${artistProfileId}/team/${membershipId}/revoke`,
@@ -131,8 +168,9 @@ export class ArtistSpaceApiService {
     return this.http.delete(`${BASE}/artist-access/requests/${id}`);
   }
 
+  /** Accept invitation — token only in JSON body, never in URL path. */
   acceptInvitation(token: string): Observable<unknown> {
-    return this.http.post(`${BASE}/artist-invitations/${encodeURIComponent(token)}/accept`, {});
+    return this.http.post(`${BASE}/artist-invitations/accept`, { token });
   }
 
   listPlatformRequests(status = 'pending'): Observable<ArtistAccessRequest[]> {

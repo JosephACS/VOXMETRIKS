@@ -177,6 +177,34 @@ def _warehouse_name(conn: duckdb.DuckDBPyConnection, warehouse_artist_id: int) -
         return None
 
 
+def _invitation_row(conn: duckdb.DuckDBPyConnection, invitation_id: int) -> tuple:
+    row = conn.execute(
+        """
+        SELECT id, artist_profile_id, email_normalized, token_hash, role, status,
+               expires_at, invited_by, accepted_by, accepted_at, revoked_by, revoked_at,
+               created_at, updated_at
+        FROM app_artist_invitation WHERE id = ?
+        """,
+        [invitation_id],
+    ).fetchone()
+    if not row:
+        raise NotFoundError(f"Invitation {invitation_id} not found")
+    return row
+
+
+def _invitation_public_dict(row: tuple) -> dict[str, Any]:
+    """Safe invitation payload — never includes token_hash or plaintext."""
+    return {
+        "id": int(row[0]),
+        "email_normalized": str(row[2]),
+        "role": str(row[4]),
+        "status": str(row[5]),
+        "expires_at": row[6],
+        "created_at": row[12],
+        "updated_at": row[13],
+    }
+
+
 def _create_membership(
     conn: duckdb.DuckDBPyConnection,
     *,
@@ -642,6 +670,139 @@ class ArtistSpaceUseCases:
             "artist_profile_id": artist_profile_id,
             "email_normalized": email_n,
             "role": role_n,
+            "status": "pending",
+            "expires_at": expires,
+            "invite_token": token.plaintext,
+            "returned_once": True,
+            "email_delivery_status": token.email_delivery_status,
+        }
+
+    def list_invitations(
+        self,
+        *,
+        artist_profile_id: int,
+        user_id: int,
+        status: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
+        _require_membership(
+            self._conn,
+            artist_profile_id=artist_profile_id,
+            user_id=user_id,
+            permission="artist_space.invite",
+        )
+        sql = """
+            SELECT id, artist_profile_id, email_normalized, token_hash, role, status,
+                   expires_at, invited_by, accepted_by, accepted_at, revoked_by, revoked_at,
+                   created_at, updated_at
+            FROM app_artist_invitation
+            WHERE artist_profile_id = ?
+        """
+        params: list[Any] = [artist_profile_id]
+        if status:
+            status_n = status.strip().lower()
+            sql += " AND status = ?"
+            params.append(status_n)
+        sql += " ORDER BY id DESC"
+        rows = self._conn.execute(sql, params).fetchall()
+        return [_invitation_public_dict(r) for r in rows]
+
+    def revoke_invitation(
+        self, *, artist_profile_id: int, user_id: int, invitation_id: int
+    ) -> dict[str, Any]:
+        _require_membership(
+            self._conn,
+            artist_profile_id=artist_profile_id,
+            user_id=user_id,
+            permission="artist_space.invite",
+        )
+        row = _invitation_row(self._conn, invitation_id)
+        if int(row[1]) != artist_profile_id:
+            raise NotFoundError("Invitation not found on this artist")
+        status = str(row[5])
+        if status == "accepted":
+            raise ValidationError(
+                "Accepted invitation cannot be revoked; use team revoke to remove membership"
+            )
+        if status == "revoked":
+            raise ValidationError("Invitation already revoked")
+        if status != "pending":
+            raise ValidationError(f"Only pending invitations can be revoked (status={status})")
+        now = _now()
+        self._conn.execute("DELETE FROM app_artist_invitation WHERE id = ?", [invitation_id])
+        self._conn.execute(
+            """
+            INSERT INTO app_artist_invitation
+                (id, artist_profile_id, email_normalized, token_hash, role, status,
+                 expires_at, invited_by, accepted_by, accepted_at, revoked_by, revoked_at,
+                 created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'revoked', ?, ?, NULL, NULL, ?, ?, ?, ?)
+            """,
+            [
+                int(row[0]),
+                int(row[1]),
+                str(row[2]),
+                str(row[3]),
+                str(row[4]),
+                row[6],
+                int(row[7]) if row[7] is not None else None,
+                user_id,
+                now,
+                row[12],
+                now,
+            ],
+        )
+        return _invitation_public_dict(_invitation_row(self._conn, invitation_id))
+
+    def resend_invitation(
+        self,
+        *,
+        artist_profile_id: int,
+        user_id: int,
+        invitation_id: int,
+        ttl_days: int = DEFAULT_INVITE_TTL_DAYS,
+    ) -> dict[str, Any]:
+        _require_membership(
+            self._conn,
+            artist_profile_id=artist_profile_id,
+            user_id=user_id,
+            permission="artist_space.invite",
+        )
+        if ttl_days < 1 or ttl_days > 30:
+            raise ValidationError("ttl_days must be between 1 and 30")
+        row = _invitation_row(self._conn, invitation_id)
+        if int(row[1]) != artist_profile_id:
+            raise NotFoundError("Invitation not found on this artist")
+        if str(row[5]) != "pending":
+            raise ValidationError("Only pending invitations can be resent")
+        token = generate_invitation_token()
+        now = _now()
+        expires = now + timedelta(days=ttl_days)
+        self._conn.execute("DELETE FROM app_artist_invitation WHERE id = ?", [invitation_id])
+        self._conn.execute(
+            """
+            INSERT INTO app_artist_invitation
+                (id, artist_profile_id, email_normalized, token_hash, role, status,
+                 expires_at, invited_by, accepted_by, accepted_at, revoked_by, revoked_at,
+                 created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, NULL, NULL, NULL, NULL, ?, ?)
+            """,
+            [
+                int(row[0]),
+                int(row[1]),
+                str(row[2]),
+                token.token_hash,
+                str(row[4]),
+                expires,
+                int(row[7]) if row[7] is not None else None,
+                row[12],
+                now,
+            ],
+        )
+        return {
+            "invitation_id": int(row[0]),
+            "artist_profile_id": artist_profile_id,
+            "email_normalized": str(row[2]),
+            "role": str(row[4]),
             "status": "pending",
             "expires_at": expires,
             "invite_token": token.plaintext,

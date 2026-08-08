@@ -45,6 +45,16 @@ export interface ArtistAccessRequest {
   rejection_reason: string | null;
 }
 
+export interface ArtistInvitation {
+  id: number;
+  email_normalized: string;
+  role: string;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export function canAccessArtistPermission(
   permissions: readonly string[] | null | undefined,
   required: ArtistSpacePermission | string,

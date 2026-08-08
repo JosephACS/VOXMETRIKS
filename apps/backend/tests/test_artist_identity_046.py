@@ -12,6 +12,8 @@ from app.core.time_util import utc_now
 from app.packages.artists.identity_access.errors import (
     InvitationAlreadyUsed,
     InvitationExpired,
+    InvitationRevoked,
+    NotFoundError,
     PermissionDenied,
     ValidationError,
 )
@@ -222,15 +224,35 @@ def test_H_reject_no_membership(identity_conn):
     assert ArtistSpaceUseCases(identity_conn).list_mine(demo) == []
 
 
-def test_I_invite_expired_revoked_one_time(identity_conn):
+def test_I_invite_lifecycle_covered_by_invite_suite():
+    """Isolation letter I historically bundled invite checks; see test_invite_A…L."""
+    assert True
+
+
+# ── Invitation lifecycle (A–L) ────────────────────────────────────────────────
+
+
+def test_invite_A_accept_once(identity_conn):
     demo = _uid(identity_conn, "demo")
     other = _uid_email(identity_conn, "other046@example.com")
-    eng = _uid(identity_conn, "engineer")
-    eng_email = identity_conn.execute(
-        "SELECT email FROM app_user WHERE id = ?", [eng]
-    ).fetchone()[0]
     profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    result = ArtistSpaceUseCases(identity_conn).accept_invitation(
+        user_id=other, raw_token=invite["invite_token"]
+    )
+    assert result["role"] == "member"
+    assert len(ArtistSpaceUseCases(identity_conn).list_mine(other)) == 1
 
+
+def test_invite_B_second_accept_already_used(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
     invite = ArtistSpaceUseCases(identity_conn).create_invitation(
         artist_profile_id=profile["id"],
         user_id=demo,
@@ -239,17 +261,24 @@ def test_I_invite_expired_revoked_one_time(identity_conn):
     )
     token = invite["invite_token"]
     ArtistSpaceUseCases(identity_conn).accept_invitation(user_id=other, raw_token=token)
-    assert len(ArtistSpaceUseCases(identity_conn).list_mine(other)) == 1
     with pytest.raises(InvitationAlreadyUsed):
         ArtistSpaceUseCases(identity_conn).accept_invitation(user_id=other, raw_token=token)
 
-    invite2 = ArtistSpaceUseCases(identity_conn).create_invitation(
+
+def test_invite_C_expired(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    eng = _uid(identity_conn, "engineer")
+    eng_email = identity_conn.execute(
+        "SELECT email FROM app_user WHERE id = ?", [eng]
+    ).fetchone()[0]
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
         artist_profile_id=profile["id"],
         user_id=demo,
         email=str(eng_email),
         role="reader",
     )
-    th = hash_invitation_token(invite2["invite_token"])
+    th = hash_invitation_token(invite["invite_token"])
     row = identity_conn.execute(
         "SELECT id, artist_profile_id, email_normalized, token_hash, role, invited_by, created_at "
         "FROM app_artist_invitation WHERE token_hash = ?",
@@ -279,8 +308,248 @@ def test_I_invite_expired_revoked_one_time(identity_conn):
     )
     with pytest.raises(InvitationExpired):
         ArtistSpaceUseCases(identity_conn).accept_invitation(
-            user_id=eng, raw_token=invite2["invite_token"]
+            user_id=eng, raw_token=invite["invite_token"]
         )
+
+
+def test_invite_D_revoke_then_accept_fails(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    ArtistSpaceUseCases(identity_conn).revoke_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        invitation_id=invite["invitation_id"],
+    )
+    with pytest.raises(InvitationRevoked):
+        ArtistSpaceUseCases(identity_conn).accept_invitation(
+            user_id=other, raw_token=invite["invite_token"]
+        )
+
+
+def test_invite_E_resend_invalidates_old_token(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    old_token = invite["invite_token"]
+    ArtistSpaceUseCases(identity_conn).resend_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        invitation_id=invite["invitation_id"],
+    )
+    with pytest.raises(NotFoundError):
+        ArtistSpaceUseCases(identity_conn).accept_invitation(
+            user_id=other, raw_token=old_token
+        )
+
+
+def test_invite_F_resend_new_token_works(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    resent = ArtistSpaceUseCases(identity_conn).resend_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        invitation_id=invite["invitation_id"],
+    )
+    assert resent["invite_token"] != invite["invite_token"]
+    assert resent["email_delivery_status"] == "not_sent"
+    assert resent["invitation_id"] == invite["invitation_id"]
+    ArtistSpaceUseCases(identity_conn).accept_invitation(
+        user_id=other, raw_token=resent["invite_token"]
+    )
+    assert len(ArtistSpaceUseCases(identity_conn).list_mine(other)) == 1
+
+
+def test_invite_G_email_mismatch_leaves_pending(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    eng = _uid(identity_conn, "engineer")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    with pytest.raises(PermissionDenied):
+        ArtistSpaceUseCases(identity_conn).accept_invitation(
+            user_id=eng, raw_token=invite["invite_token"]
+        )
+    assert ArtistSpaceUseCases(identity_conn).list_mine(eng) == []
+    assert ArtistSpaceUseCases(identity_conn).list_mine(other) == []
+    pending = ArtistSpaceUseCases(identity_conn).list_invitations(
+        artist_profile_id=profile["id"], user_id=demo, status="pending"
+    )
+    assert len(pending) == 1
+    assert pending[0]["id"] == invite["invitation_id"]
+    assert pending[0]["status"] == "pending"
+
+
+def test_invite_H_revoke_other_artist_invite(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    p1, _ = _profile_with_owner(identity_conn, owner_id=demo, warehouse_id=101)
+    p2, _ = _profile_with_owner(identity_conn, owner_id=other, warehouse_id=102)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=p2["id"],
+        user_id=other,
+        email="someone@example.com",
+        role="reader",
+    )
+    with pytest.raises((NotFoundError, PermissionDenied)):
+        ArtistSpaceUseCases(identity_conn).revoke_invitation(
+            artist_profile_id=p1["id"],
+            user_id=demo,
+            invitation_id=invite["invitation_id"],
+        )
+
+
+def test_invite_I_member_reader_blocked_from_invite_ops(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    eng = _uid(identity_conn, "engineer")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    _create_membership(
+        identity_conn, artist_profile_id=profile["id"], user_id=other, role="member"
+    )
+    _create_membership(
+        identity_conn, artist_profile_id=profile["id"], user_id=eng, role="reader"
+    )
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="pending046@example.com",
+        role="reader",
+    )
+    for uid in (other, eng):
+        with pytest.raises(PermissionDenied):
+            ArtistSpaceUseCases(identity_conn).list_invitations(
+                artist_profile_id=profile["id"], user_id=uid
+            )
+        with pytest.raises(PermissionDenied):
+            ArtistSpaceUseCases(identity_conn).revoke_invitation(
+                artist_profile_id=profile["id"],
+                user_id=uid,
+                invitation_id=invite["invitation_id"],
+            )
+        with pytest.raises(PermissionDenied):
+            ArtistSpaceUseCases(identity_conn).resend_invitation(
+                artist_profile_id=profile["id"],
+                user_id=uid,
+                invitation_id=invite["invitation_id"],
+            )
+        with pytest.raises(PermissionDenied):
+            ArtistSpaceUseCases(identity_conn).create_invitation(
+                artist_profile_id=profile["id"],
+                user_id=uid,
+                email="blocked046@example.com",
+                role="reader",
+            )
+
+
+def test_invite_J_owner_role_never_via_invite(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    with pytest.raises(ValidationError):
+        ArtistSpaceUseCases(identity_conn).create_invitation(
+            artist_profile_id=profile["id"],
+            user_id=demo,
+            email="x046@example.com",
+            role="owner",
+        )
+
+
+def test_invite_K_list_pending_no_token_hash(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="list046@example.com",
+        role="member",
+    )
+    rows = ArtistSpaceUseCases(identity_conn).list_invitations(
+        artist_profile_id=profile["id"], user_id=demo, status="pending"
+    )
+    assert len(rows) == 1
+    assert "token_hash" not in rows[0]
+    assert "invite_token" not in rows[0]
+    assert set(rows[0].keys()) >= {
+        "id",
+        "email_normalized",
+        "role",
+        "status",
+        "expires_at",
+        "created_at",
+        "updated_at",
+    }
+
+
+def test_invite_L_accepted_cannot_revoke_as_invitation(identity_conn):
+    demo = _uid(identity_conn, "demo")
+    other = _uid_email(identity_conn, "other046@example.com")
+    profile, _ = _profile_with_owner(identity_conn, owner_id=demo)
+    invite = ArtistSpaceUseCases(identity_conn).create_invitation(
+        artist_profile_id=profile["id"],
+        user_id=demo,
+        email="other046@example.com",
+        role="member",
+    )
+    ArtistSpaceUseCases(identity_conn).accept_invitation(
+        user_id=other, raw_token=invite["invite_token"]
+    )
+    with pytest.raises(ValidationError):
+        ArtistSpaceUseCases(identity_conn).revoke_invitation(
+            artist_profile_id=profile["id"],
+            user_id=demo,
+            invitation_id=invite["invitation_id"],
+        )
+    assert len(ArtistSpaceUseCases(identity_conn).list_mine(other)) == 1
+
+
+def test_api_accept_body_route_not_path_token(client: TestClient, auth_headers: dict):
+    """Token must be JSON body; path /{token}/accept must be gone."""
+    body_resp = client.post(
+        "/api/v1/artist-invitations/accept",
+        headers=auth_headers,
+        json={"token": "definitely-not-a-real-token"},
+    )
+    assert body_resp.status_code == 404
+    payload = body_resp.json()
+    # App error envelope: { status, message, details: { message, code } }
+    details = payload.get("details") or payload.get("detail")
+    assert isinstance(details, dict)
+    assert details.get("code") == "not_found"
+
+    old_path = client.post(
+        "/api/v1/artist-invitations/definitely-not-a-real-token/accept",
+        headers=auth_headers,
+        json={},
+    )
+    assert old_path.status_code == 404
+    old_payload = old_path.json()
+    old_details = old_payload.get("details") or old_payload.get("detail")
+    # FastAPI route-miss should NOT be our identity not_found code
+    assert not (isinstance(old_details, dict) and old_details.get("code") == "not_found")
 
 
 def test_J_member_cannot_grant_owner(identity_conn):

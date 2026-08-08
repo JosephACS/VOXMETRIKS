@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ArtistContextService } from '../services/artist-context.service';
 import { ArtistSpaceApiService } from '../services/artist-space-api.service';
-import { ArtistAccessRequest } from '../models/artist-space.models';
+import { ArtistAccessRequest, ArtistInvitation } from '../models/artist-space.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
@@ -19,7 +19,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         [subtitle]="'artistSpace.team.subtitle' | t:lang()"
       />
 
-      @if (canManage()) {
+      @if (canInvite()) {
         <app-enterprise-section-card [title]="'artistSpace.team.invite' | t:lang()">
           <form [formGroup]="inviteForm" (ngSubmit)="invite()" class="form-grid">
             <app-enterprise-form-field [label]="'common.email' | t:lang()" [required]="true">
@@ -38,9 +38,33 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           </form>
           @if (inviteToken()) {
             <p class="token-box">
-              {{ 'artistSpace.team.tokenHint' | t:lang() }}
+              {{ tokenHint() }}
               <code>{{ inviteToken() }}</code>
             </p>
+          }
+        </app-enterprise-section-card>
+
+        <app-enterprise-section-card [title]="'artistSpace.team.pendingInvites' | t:lang()">
+          @if (!pendingInvites().length) {
+            <p>{{ 'artistSpace.team.noPendingInvites' | t:lang() }}</p>
+          } @else {
+            <ul class="invite-list">
+              @for (inv of pendingInvites(); track inv.id) {
+                <li>
+                  <span>
+                    {{ inv.email_normalized }} — {{ inv.role }} —
+                    {{ inv.status }} —
+                    {{ inv.expires_at }}
+                  </span>
+                  <button type="button" class="btn btn--secondary" (click)="resendInvite(inv)">
+                    {{ 'artistSpace.team.resendInvite' | t:lang() }}
+                  </button>
+                  <button type="button" class="btn btn--secondary" (click)="revokeInvite(inv)">
+                    {{ 'artistSpace.team.revokeInvite' | t:lang() }}
+                  </button>
+                </li>
+              }
+            </ul>
           }
         </app-enterprise-section-card>
       }
@@ -86,11 +110,13 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
   styles: [
     `
       .member-list,
+      .invite-list,
       .req-row {
         list-style: none;
         padding: 0;
       }
       .member-list li,
+      .invite-list li,
       .req-row {
         display: flex;
         gap: 0.75rem;
@@ -116,13 +142,18 @@ export class ArtistSpaceTeamPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly members = signal<Record<string, unknown>[]>([]);
   readonly accessRequests = signal<ArtistAccessRequest[]>([]);
+  readonly pendingInvites = signal<ArtistInvitation[]>([]);
   readonly inviteToken = signal<string | null>(null);
+  readonly tokenHint = signal('');
 
   readonly inviteForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     role: ['member', Validators.required],
   });
 
+  canInvite(): boolean {
+    return this.artistCtx.can('artist_space.invite');
+  }
   canManage(): boolean {
     return this.artistCtx.can('artist_space.team.manage');
   }
@@ -158,6 +189,9 @@ export class ArtistSpaceTeamPage implements OnInit {
         this.loading.set(false);
       },
     });
+    if (this.canInvite()) {
+      this.loadPendingInvites(id);
+    }
     if (this.canReview()) {
       this.api.listAccessRequests(id).subscribe({
         next: (rows) => this.accessRequests.set(rows || []),
@@ -166,16 +200,52 @@ export class ArtistSpaceTeamPage implements OnInit {
     }
   }
 
+  private loadPendingInvites(artistProfileId: number): void {
+    this.api.listInvitations(artistProfileId, 'pending').subscribe({
+      next: (rows) => this.pendingInvites.set(rows || []),
+      error: () => undefined,
+    });
+  }
+
   invite(): void {
     const id = this.artistCtx.artistProfileId();
-    if (id == null || !this.canManage()) return;
+    if (id == null || !this.canInvite()) return;
     const v = this.inviteForm.getRawValue();
     this.api.invite(id, v).subscribe({
       next: (r) => {
         this.inviteToken.set(r.invite_token);
+        this.tokenHint.set(this.i18n.t('artistSpace.team.tokenHint'));
         this.inviteForm.reset({ email: '', role: 'member' });
+        this.loadPendingInvites(id);
       },
       error: (e) => this.error.set(e?.error?.detail?.message || e?.message || 'invite_failed'),
+    });
+  }
+
+  revokeInvite(inv: ArtistInvitation): void {
+    const id = this.artistCtx.artistProfileId();
+    if (id == null || !this.canInvite()) return;
+    this.api.revokeInvitation(id, inv.id).subscribe({
+      next: () => {
+        this.inviteToken.set(null);
+        this.loadPendingInvites(id);
+      },
+      error: (e) =>
+        this.error.set(e?.error?.detail?.message || e?.message || 'revoke_invite_failed'),
+    });
+  }
+
+  resendInvite(inv: ArtistInvitation): void {
+    const id = this.artistCtx.artistProfileId();
+    if (id == null || !this.canInvite()) return;
+    this.api.resendInvitation(id, inv.id).subscribe({
+      next: (r) => {
+        this.inviteToken.set(r.invite_token);
+        this.tokenHint.set(this.i18n.t('artistSpace.team.newTokenHint'));
+        this.loadPendingInvites(id);
+      },
+      error: (e) =>
+        this.error.set(e?.error?.detail?.message || e?.message || 'resend_invite_failed'),
     });
   }
 
