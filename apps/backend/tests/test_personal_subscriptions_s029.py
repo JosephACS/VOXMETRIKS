@@ -289,3 +289,84 @@ def test_list_personal_plans_owner_type(personal_conn):
         p["code"].startswith("personal_") or p["code"].startswith("premium_")
         for p in items
     )
+
+
+def test_resend_invitation_rolls_back_when_insert_fails(personal_conn, uids, monkeypatch):
+    from app.packages.personal_subscriptions.application import use_cases as uc
+    from app.packages.personal_subscriptions.application.use_cases import (
+        invite_member,
+        resend_invitation,
+        start_checkout,
+        simulate_payment,
+    )
+
+    conn = personal_conn
+    owner = uids["u_owner"]
+    checkout = start_checkout(
+        conn, owner, plan_code="premium_duo", billing_period="monthly"
+    )
+    simulate_payment(conn, owner, attempt_id=checkout["attempt_id"], scenario="succeeded")
+    inv = invite_member(conn, owner, "newinvite@test.local")
+    inv_id = int(inv["invitation_id"])
+    before = conn.execute(
+        "SELECT email_normalized, token_hash, status FROM household_invitation WHERE id = ?",
+        [inv_id],
+    ).fetchone()
+
+    monkeypatch.setattr(
+        uc,
+        "_hash_token",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("injected insert failure")),
+    )
+    with pytest.raises(RuntimeError, match="injected insert failure"):
+        resend_invitation(conn, owner, inv_id)
+
+    after = conn.execute(
+        "SELECT email_normalized, token_hash, status FROM household_invitation WHERE id = ?",
+        [inv_id],
+    ).fetchone()
+    assert after is not None
+    assert after[0] == before[0]
+    assert after[1] == before[1]
+    assert after[2] == "pending"
+
+
+def test_leave_household_rolls_back_on_event_failure(personal_conn, uids, monkeypatch):
+    from app.packages.personal_subscriptions.application import use_cases as uc
+    from app.packages.personal_subscriptions.application.use_cases import (
+        accept_invitation,
+        invite_member,
+        leave_household,
+        start_checkout,
+        simulate_payment,
+    )
+
+    conn = personal_conn
+    owner = uids["u_prem"]
+    member = uids["u_third"]
+    checkout = start_checkout(
+        conn, owner, plan_code="premium_duo", billing_period="monthly"
+    )
+    simulate_payment(conn, owner, attempt_id=checkout["attempt_id"], scenario="succeeded")
+    inv = invite_member(conn, owner, "u_third@test.local")
+    accept_invitation(conn, member, inv["token"])
+
+    monkeypatch.setattr(
+        uc,
+        "_emit_event",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("injected event failure")),
+    )
+    with pytest.raises(RuntimeError, match="injected event failure"):
+        leave_household(conn, member)
+
+    status = conn.execute(
+        """
+        SELECT hm.status FROM household_member hm
+        JOIN household h ON h.id = hm.household_id
+        WHERE hm.user_id = ? AND h.status = 'active'
+        ORDER BY hm.id DESC LIMIT 1
+        """,
+        [member],
+    ).fetchone()
+    assert status is not None
+    assert status[0] == "active"

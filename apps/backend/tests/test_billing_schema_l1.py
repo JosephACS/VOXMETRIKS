@@ -81,6 +81,27 @@ def test_refund_table_exists(db_conn):
     db_conn.execute("SELECT id FROM app_refund LIMIT 0")
 
 
+def test_refund_idempotency_key_unique(db_conn):
+    """Duplicate idempotency_key on app_refund must raise."""
+    from app.core.time_util import utc_now
+
+    now = utc_now()
+    db_conn.execute("""
+        INSERT INTO app_refund
+            (id, organization_id, payment_id, amount, currency, reason, status,
+             processed_at, created_at, updated_at, idempotency_key)
+        VALUES (9101, 1, 1, 10.0, 'USD', NULL, 'processed', ?, ?, ?, 'refund-ik-l1')
+    """, [now, now, now])
+    with pytest.raises(Exception):
+        db_conn.execute("""
+            INSERT INTO app_refund
+                (id, organization_id, payment_id, amount, currency, reason, status,
+                 processed_at, created_at, updated_at, idempotency_key)
+            VALUES (9102, 1, 1, 5.0, 'USD', NULL, 'processed', ?, ?, ?, 'refund-ik-l1')
+        """, [now, now, now])
+    db_conn.execute("DELETE FROM app_refund WHERE id IN (9101, 9102)")
+
+
 def test_credit_note_table_exists(db_conn):
     db_conn.execute("SELECT id FROM app_credit_note LIMIT 0")
 

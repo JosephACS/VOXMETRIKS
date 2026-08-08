@@ -169,8 +169,9 @@ export class ProfileSwitchService {
   }
 
   async prepareAndSwitch(targetUserId: number): Promise<void> {
-    const res = await firstValueFrom(this.personalApi.prepareProfileSwitch(targetUserId));
-    this.switchToLoginHint(res.login_hint);
+    // Authorize switch intent, then force manual reauth with no preloaded identity.
+    await firstValueFrom(this.personalApi.prepareProfileSwitch(targetUserId));
+    this.switchToLoginHint(null);
   }
 
   /**

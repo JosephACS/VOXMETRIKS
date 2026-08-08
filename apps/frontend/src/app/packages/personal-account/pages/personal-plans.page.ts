@@ -96,7 +96,7 @@ import {
                   <li>{{ f }}</li>
                 }
               </ul>
-              @if (!p.is_free && !isCurrent(p)) {
+              @if (!p.is_free && !isCurrent(p) && canManageBilling()) {
                 <button
                   type="button"
                   class="btn btn--primary"
@@ -105,7 +105,9 @@ import {
                 >
                   {{ 'personal.plans.cta' | t:lang() }}
                 </button>
-              } @else if (isCurrent(p) && !p.is_free) {
+              } @else if (!p.is_free && !isCurrent(p)) {
+                <p class="muted">{{ 'personal.billing.memberNoManage' | t:lang() }}</p>
+              } @else if (isCurrent(p) && !p.is_free && canManageBilling()) {
                 <a routerLink="/account/subscription" class="btn btn--secondary">{{
                   'personal.plans.manage' | t:lang()
                 }}</a>
@@ -165,6 +167,11 @@ export class PersonalPlansPage implements OnInit {
     return this.sub()?.plan_code === p.code && this.sub()?.status === 'active';
   }
 
+  canManageBilling(): boolean {
+    const sub = this.sub();
+    return !sub || (sub.can_manage_billing !== false && sub.household_role !== 'member');
+  }
+
   priceFor(p: PersonalPlan): number {
     const pr = p.prices.find((x) => x.billing_period === this.period());
     return pr?.amount ?? p.prices[0]?.amount ?? 0;
@@ -202,6 +209,7 @@ export class PersonalPlansPage implements OnInit {
   }
 
   checkout(p: PersonalPlan): void {
+    if (!this.canManageBilling()) return;
     this.busy.set(true);
     this.success.set(null);
     const period = p.is_free ? 'monthly' : this.period();

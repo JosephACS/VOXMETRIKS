@@ -222,6 +222,103 @@ def test_manual_transfer(client: TestClient, billing_admin, profile_id):
     assert r4.json()["status"] == "recorded"
 
 
+# ── Refunds (idempotent) ───────────────────────────────────────────────────────
+
+def test_create_refund_idempotent_replay(client: TestClient, billing_admin, profile_id):
+    """First POST → 201; same key → 200 same id; one refund row effect."""
+    r = client.post(
+        "/api/v1/billing/invoices",
+        json={"billing_profile_id": profile_id},
+        headers=billing_admin["org_headers"],
+    )
+    assert r.status_code == 201
+    inv_id = r.json()["id"]
+    assert client.post(
+        f"/api/v1/billing/invoices/{inv_id}/items",
+        json={"description": "Refundable", "quantity": "1", "unit_price": "100.00"},
+        headers=billing_admin["org_headers"],
+    ).status_code == 201
+    assert client.post(
+        f"/api/v1/billing/invoices/{inv_id}/issue",
+        headers=billing_admin["org_headers"],
+    ).status_code == 200
+    pay = client.post(
+        "/api/v1/billing/manual-transfer",
+        json={"invoice_id": inv_id, "amount": "100.00", "currency": "USD"},
+        headers=billing_admin["org_headers"],
+    )
+    assert pay.status_code == 201, pay.text
+    payment_id = pay.json()["id"]
+
+    body = {
+        "payment_id": payment_id,
+        "amount": "25.00",
+        "reason": "idem test",
+        "idempotency_key": "api-refund-idem-001",
+    }
+    r1 = client.post("/api/v1/billing/refunds", json=body, headers=billing_admin["org_headers"])
+    assert r1.status_code == 201, r1.text
+    r2 = client.post("/api/v1/billing/refunds", json=body, headers=billing_admin["org_headers"])
+    assert r2.status_code == 200, r2.text
+    assert r1.json()["id"] == r2.json()["id"]
+    assert r1.json()["idempotency_key"] == "api-refund-idem-001"
+
+    listed = client.get("/api/v1/billing/refunds", headers=billing_admin["org_headers"])
+    assert listed.status_code == 200
+    matches = [x for x in listed.json()["items"] if x["idempotency_key"] == "api-refund-idem-001"]
+    assert len(matches) == 1
+
+
+def test_create_refund_payload_conflict(client: TestClient, billing_admin, profile_id):
+    r = client.post(
+        "/api/v1/billing/invoices",
+        json={"billing_profile_id": profile_id},
+        headers=billing_admin["org_headers"],
+    )
+    inv_id = r.json()["id"]
+    client.post(
+        f"/api/v1/billing/invoices/{inv_id}/items",
+        json={"description": "X", "quantity": "1", "unit_price": "50.00"},
+        headers=billing_admin["org_headers"],
+    )
+    client.post(f"/api/v1/billing/invoices/{inv_id}/issue", headers=billing_admin["org_headers"])
+    pay = client.post(
+        "/api/v1/billing/manual-transfer",
+        json={"invoice_id": inv_id, "amount": "50.00", "currency": "USD"},
+        headers=billing_admin["org_headers"],
+    )
+    payment_id = pay.json()["id"]
+    key = "api-refund-conflict-001"
+    assert client.post(
+        "/api/v1/billing/refunds",
+        json={"payment_id": payment_id, "amount": "10.00", "idempotency_key": key},
+        headers=billing_admin["org_headers"],
+    ).status_code == 201
+    conflict = client.post(
+        "/api/v1/billing/refunds",
+        json={"payment_id": payment_id, "amount": "11.00", "idempotency_key": key},
+        headers=billing_admin["org_headers"],
+    )
+    assert conflict.status_code == 409
+    body = conflict.json()
+    code = (
+        (body.get("detail") or {}).get("code")
+        if isinstance(body.get("detail"), dict)
+        else None
+    ) or (body.get("details") or {}).get("code")
+    assert code == "idempotency_conflict"
+
+
+def test_create_refund_requires_permission(client: TestClient, billing_admin):
+    """Authenticated user without org membership / refund.manage is blocked."""
+    r = client.post(
+        "/api/v1/billing/refunds",
+        json={"payment_id": 1, "amount": "1.00", "idempotency_key": "no-perm"},
+        headers=billing_admin["headers"],
+    )
+    assert r.status_code in (400, 401, 403), r.text
+
+
 # ── Ledger endpoint ────────────────────────────────────────────────────────────
 
 def test_get_ledger(client: TestClient, billing_admin):

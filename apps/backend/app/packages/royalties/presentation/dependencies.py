@@ -62,6 +62,11 @@ def require_org_royalty_permission(permission_code: str):
                 403, f"Missing royalty permission: {permission_code}", code="permission_denied"
             )
 
+        # Royalty operations require a currently operational organization tier.
+        from app.packages.organizations.application.module_access import assert_org_module_access
+
+        assert_org_module_access(conn, org_id, module_kind="operational")
+
         return {
             "user_id": user_id,
             "organization_id": org_id,

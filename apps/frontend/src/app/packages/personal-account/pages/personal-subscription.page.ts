@@ -40,7 +40,7 @@ import {
             <dt>{{ 'personal.subscription.ownerType' | t:lang() }}</dt>
             <dd>{{ sub()!.owner_type }}</dd>
           </dl>
-          @if (!sub()!.is_free) {
+          @if (!sub()!.is_free && canManageBilling()) {
             <app-enterprise-action-bar>
               <button type="button" class="btn btn--secondary" [disabled]="busy()" (click)="cancel(true)">
                 {{ 'personal.subscription.cancelPeriodEnd' | t:lang() }}
@@ -88,6 +88,7 @@ export class PersonalSubscriptionPage implements OnInit {
   }
 
   cancel(atPeriodEnd: boolean): void {
+    if (!this.canManageBilling()) return;
     this.busy.set(true);
     this.api.cancel(atPeriodEnd).subscribe({
       next: (s) => {
@@ -100,5 +101,10 @@ export class PersonalSubscriptionPage implements OnInit {
         this.busy.set(false);
       },
     });
+  }
+
+  canManageBilling(): boolean {
+    const sub = this.sub();
+    return !!sub && sub.can_manage_billing !== false && sub.household_role !== 'member';
   }
 }

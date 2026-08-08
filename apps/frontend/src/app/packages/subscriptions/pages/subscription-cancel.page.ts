@@ -33,6 +33,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           }}</a>
         </app-enterprise-page-header>
 
+        @if (canCancel) {
         <app-enterprise-section-card [title]="'subscriptions.cancel.confirmTitle' | t:lang()">
           <ul class="cancel-points">
             <li>
@@ -70,6 +71,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <app-enterprise-error-state [message]="error" />
           }
         </app-enterprise-section-card>
+        }
       }
     </div>
   `,
@@ -103,6 +105,10 @@ export class SubscriptionCancelPageComponent implements OnInit {
   saving = false;
   error: string | null = null;
 
+  get canCancel(): boolean {
+    return this.orgCtx.hasPermission('subscription.cancel');
+  }
+
   form = this.fb.group({
     mode: ['period_end', Validators.required],
     reason: [''],
@@ -110,7 +116,7 @@ export class SubscriptionCancelPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
-    if (!this.organizationId) return;
+    if (!this.organizationId || !this.canCancel) return;
     this.subscriptionId = Number(this.route.snapshot.paramMap.get('id'));
     this.api.getSubscription(this.organizationId, this.subscriptionId).subscribe({
       next: (s) => (this.subscription = s),
@@ -131,7 +137,7 @@ export class SubscriptionCancelPageComponent implements OnInit {
 
   onSubmit(): void {
     const orgId = this.organizationId;
-    if (this.form.invalid || orgId == null) return;
+    if (this.form.invalid || orgId == null || !this.canCancel) return;
     this.saving = true;
     this.error = null;
     const v = this.form.getRawValue();

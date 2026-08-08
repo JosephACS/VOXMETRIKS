@@ -15,7 +15,11 @@ const MONTHS_ES = [
   'diciembre',
 ];
 
-export type Ymd = { y: number; m: number; d: number };
+export interface Ymd {
+  y: number;
+  m: number;
+  d: number;
+}
 
 /** Parse YYYY-MM-DD without Date/UTC shifts. */
 export function parseYmd(value: string | null | undefined): Ymd | null {

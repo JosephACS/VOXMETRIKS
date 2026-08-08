@@ -77,6 +77,12 @@ def require_org_permission(permission_code: str):
         if not perm_row:
             raise http_error(403, f"Missing org permission: {permission_code}", code="permission_denied")
 
+        # Subscription catalog and management remain available to organizations
+        # that are onboarding or recovering their subscription.
+        from app.packages.organizations.application.module_access import assert_org_module_access
+
+        assert_org_module_access(conn, org_id, module_kind="onboarding")
+
         return {
             "user_id": user_id,
             "organization_id": org_id,

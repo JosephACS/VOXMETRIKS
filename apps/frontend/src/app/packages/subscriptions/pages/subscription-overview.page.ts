@@ -162,13 +162,15 @@ type OverviewTab = 'usage' | 'addons' | 'invoices';
             <button type="button" class="btn btn--secondary" (click)="setTab('invoices')">
               {{ 'subscriptions.overview.invoices' | t:lang() }}
             </button>
-            <a
-              [routerLink]="['/subscriptions', subscription.id, 'cancel']"
-              class="btn btn--danger"
-              style="margin-left: auto"
-            >
-              {{ 'subscriptions.cancel.title' | t:lang() }}
-            </a>
+            @if (canCancel) {
+              <a
+                [routerLink]="['/subscriptions', subscription.id, 'cancel']"
+                class="btn btn--danger"
+                style="margin-left: auto"
+              >
+                {{ 'subscriptions.cancel.title' | t:lang() }}
+              </a>
+            }
           </div>
         </app-enterprise-section-card>
 
@@ -483,6 +485,10 @@ export class SubscriptionOverviewPageComponent implements OnInit {
   activeAddons: SubscriptionAddon[] = [];
   availableAddons: Addon[] = [];
   invoices: Invoice[] = [];
+
+  get canCancel(): boolean {
+    return this.orgCtx.hasPermission('subscription.cancel');
+  }
 
   ngOnInit(): void {
     this.reload();

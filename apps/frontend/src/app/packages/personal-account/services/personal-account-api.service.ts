@@ -153,8 +153,11 @@ export class PersonalAccountApiService {
     return this.http.get<ProfileSelectorResponse>(`${this.base}/household/profiles`);
   }
 
-  prepareProfileSwitch(targetUserId: number): Observable<{ login_hint: string; display_name?: string }> {
-    return this.http.post<{ login_hint: string; display_name?: string }>(
+  prepareProfileSwitch(targetUserId: number): Observable<{
+    display_name?: string;
+    requires_manual_reauth?: boolean;
+  }> {
+    return this.http.post<{ display_name?: string; requires_manual_reauth?: boolean }>(
       `${this.base}/household/profiles/${targetUserId}/prepare-switch`,
       {},
     );

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import duckdb
 
+from app.core.database import transactional
 from app.core.time_util import utc_now
 from app.packages.personal_subscriptions.application.catalog import (
     OWNER_TYPE_USER,
@@ -762,6 +763,19 @@ def cancel_subscription(
     conn: duckdb.DuckDBPyConnection, user_id: int, *, at_period_end: bool = True
 ) -> Dict[str, Any]:
     ensure_personal_subscription_tables(conn)
+    member = conn.execute(
+        """
+        SELECT hm.role FROM household_member hm
+        JOIN household h ON h.id = hm.household_id
+        WHERE hm.user_id = ? AND hm.status = 'active' AND h.status = 'active'
+        LIMIT 1
+        """,
+        [user_id],
+    ).fetchone()
+    if member and str(member[0]) == "member":
+        raise PersonalForbiddenError(
+            "Only the household owner can manage subscription billing"
+        )
     sub = conn.execute(
         """
         SELECT s.id, s.household_id, s.current_period_end FROM personal_subscription s
@@ -957,6 +971,7 @@ def get_household(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dic
     ).fetchone()
     if not row:
         return None
+    is_owner = str(row[5]) == "owner"
     members = conn.execute(
         """
         SELECT hm.user_id, hm.role, hm.status, hm.joined_at, u.username, u.email
@@ -967,15 +982,17 @@ def get_household(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dic
         """,
         [int(row[0])],
     ).fetchall()
-    invites = conn.execute(
-        """
-        SELECT id, email_normalized, status, expires_at, created_at
-        FROM household_invitation
-        WHERE household_id = ? AND status = 'pending'
-        ORDER BY id DESC
-        """,
-        [int(row[0])],
-    ).fetchall()
+    invites = []
+    if is_owner:
+        invites = conn.execute(
+            """
+            SELECT id, email_normalized, status, expires_at, created_at
+            FROM household_invitation
+            WHERE household_id = ? AND status = 'pending'
+            ORDER BY id DESC
+            """,
+            [int(row[0])],
+        ).fetchall()
     active_count = len(members)
     return {
         "id": int(row[0]),
@@ -992,8 +1009,8 @@ def get_household(conn: duckdb.DuckDBPyConnection, user_id: int) -> Optional[Dic
                 "role": m[1],
                 "status": m[2],
                 "joined_at": str(m[3]) if m[3] else None,
-                "username": m[4],
-                "email": m[5],
+                "username": m[4] if is_owner or int(m[0]) == user_id else None,
+                "email": m[5] if is_owner or int(m[0]) == user_id else None,
             }
             for m in members
         ],
@@ -1104,9 +1121,10 @@ def list_household_profiles(
 def prepare_profile_switch(
     conn: duckdb.DuckDBPyConnection, actor_user_id: int, target_user_id: int
 ) -> Dict[str, Any]:
-    """Return a login hint only after an explicit, authorized switch intent.
+    """Authorize a switch intent and return only public presentation metadata.
 
-    Never impersonates. Caller must still authenticate with their own password.
+    Never returns email, username, or login_hint for another member. The caller
+    must re-authenticate manually with no preloaded identity.
     """
     hh = get_household(conn, actor_user_id)
     if not hh:
@@ -1120,20 +1138,13 @@ def prepare_profile_switch(
     if int(target_user_id) == int(actor_user_id):
         raise PersonalForbiddenError("Ya estás en ese perfil")
 
-    row = conn.execute(
-        "SELECT username, email FROM app_user WHERE id = ?", [int(target_user_id)]
-    ).fetchone()
-    if not row:
-        raise PersonalForbiddenError("Usuario no encontrado")
-    username = str(row[0] or "").strip()
-    email = str(row[1] or "").strip()
-    hint = username or email
-    if not hint:
-        raise PersonalForbiddenError("No hay identificador de acceso para ese perfil")
-    display = str(target.get("username") or "").strip() or (
-        email.split("@")[0] if email else hint
-    )
-    return {"login_hint": hint, "display_name": display}
+    display = str(target.get("display_name") or target.get("username") or "").strip()
+    if not display:
+        display = f"Perfil {int(target_user_id)}"
+    return {
+        "display_name": display,
+        "requires_manual_reauth": True,
+    }
 
 
 def invite_member(
@@ -1149,6 +1160,18 @@ def invite_member(
         )
 
     email_n = email.strip().lower()
+    if not email_n or "@" not in email_n:
+        raise InvitationError("Correo inválido")
+    duplicate = conn.execute(
+        """
+        SELECT 1 FROM household_invitation
+        WHERE household_id = ? AND email_normalized = ? AND status = 'pending'
+        LIMIT 1
+        """,
+        [hh["id"], email_n],
+    ).fetchone()
+    if duplicate:
+        raise InvitationError("Esta persona ya tiene una invitación pendiente")
     recent = conn.execute(
         """
         SELECT COUNT(*) FROM household_invitation
@@ -1340,6 +1363,144 @@ def remove_member(
         actor_user_id=owner_user_id,
     )
     return get_household(conn, owner_user_id) or {}
+
+
+def leave_household(
+    conn: duckdb.DuckDBPyConnection, user_id: int
+) -> Dict[str, Any]:
+    """Allow members to leave; the billing owner must manage the household."""
+    with transactional(conn):
+        hh = get_household(conn, user_id)
+        if not hh:
+            raise HouseholdMembershipError("No perteneces a un household activo")
+        if hh["my_role"] == "owner":
+            raise PersonalForbiddenError(
+                "Only the household owner can manage the subscription"
+            )
+        now = utc_now()
+        conn.execute(
+            """
+            UPDATE household_member
+            SET status = 'left', left_at = ?, updated_at = ?
+            WHERE household_id = ? AND user_id = ? AND status = 'active'
+            """,
+            [now, now, hh["id"], user_id],
+        )
+        left = conn.execute(
+            """
+            SELECT status FROM household_member
+            WHERE household_id = ? AND user_id = ?
+            """,
+            [hh["id"], user_id],
+        ).fetchone()
+        if not left or str(left[0]) != "left":
+            raise HouseholdMembershipError("No se pudo abandonar el household")
+        ensure_free_subscription(conn, user_id)
+        _emit_event(
+            conn,
+            user_id=user_id,
+            event_type="household_member_left",
+            payload={"household_id": hh["id"]},
+        )
+        return {"ok": True}
+
+
+def resend_invitation(
+    conn: duckdb.DuckDBPyConnection, owner_user_id: int, invitation_id: int
+) -> Dict[str, Any]:
+    """Rotate a pending invitation token without exposing it in storage."""
+    with transactional(conn):
+        hh = get_household(conn, owner_user_id)
+        if not hh or hh["my_role"] != "owner":
+            raise PersonalForbiddenError("Solo el titular gestiona invitaciones")
+        inv = conn.execute(
+            """
+            SELECT email_normalized, status FROM household_invitation
+            WHERE id = ? AND household_id = ?
+            """,
+            [invitation_id, hh["id"]],
+        ).fetchone()
+        if not inv:
+            raise InvitationError("Invitación no encontrada")
+        if str(inv[1]) != "pending":
+            raise InvitationError("Solo se pueden reenviar invitaciones pendientes")
+        now = utc_now()
+        raw = secrets.token_urlsafe(32)
+        # Delete/reinsert in one transaction: INSERT failure restores prior row.
+        conn.execute("DELETE FROM household_invitation WHERE id = ?", [invitation_id])
+        conn.execute(
+            """
+            INSERT INTO household_invitation (
+                id, household_id, email_normalized, invited_by_user_id, token_hash,
+                status, expires_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+            """,
+            [
+                invitation_id,
+                hh["id"],
+                inv[0],
+                owner_user_id,
+                _hash_token(raw),
+                now + timedelta(hours=INVITE_TTL_HOURS),
+                now,
+                now,
+            ],
+        )
+        _emit_event(
+            conn,
+            user_id=owner_user_id,
+            event_type="household_invite_resent",
+            payload={"invitation_id": invitation_id},
+        )
+        return {
+            "invitation_id": invitation_id,
+            "email": inv[0],
+            "expires_at": (now + timedelta(hours=INVITE_TTL_HOURS)).isoformat(),
+            "token": raw,
+            "status": "pending",
+        }
+
+
+def reject_invitation(
+    conn: duckdb.DuckDBPyConnection, user_id: int, token: str
+) -> Dict[str, Any]:
+    """The invitee may reject only an outstanding invitation for their email."""
+    with transactional(conn):
+        inv = conn.execute(
+            """
+            SELECT id, email_normalized, status FROM household_invitation
+            WHERE token_hash = ?
+            """,
+            [_hash_token(token)],
+        ).fetchone()
+        if not inv or str(inv[2]) != "pending":
+            raise InvitationError("Invitación no disponible")
+        user = conn.execute(
+            "SELECT email FROM app_user WHERE id = ?", [user_id]
+        ).fetchone()
+        if not user or str(user[0]).strip().lower() != str(inv[1]):
+            raise PersonalForbiddenError("La invitación no corresponde a tu correo")
+        conn.execute(
+            """
+            UPDATE household_invitation
+            SET status = 'revoked', updated_at = ?
+            WHERE id = ? AND status = 'pending'
+            """,
+            [utc_now(), int(inv[0])],
+        )
+        status = conn.execute(
+            "SELECT status FROM household_invitation WHERE id = ?",
+            [int(inv[0])],
+        ).fetchone()
+        if not status or str(status[0]) != "revoked":
+            raise InvitationError("Invitación no disponible")
+        _emit_event(
+            conn,
+            user_id=user_id,
+            event_type="household_invite_rejected",
+            payload={"invitation_id": int(inv[0])},
+        )
+        return {"ok": True, "status": "rejected"}
 
 
 def list_invoices(conn: duckdb.DuckDBPyConnection, user_id: int) -> List[Dict[str, Any]]:

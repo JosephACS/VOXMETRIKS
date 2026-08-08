@@ -8,7 +8,7 @@ import duckdb
 import pytest
 from fastapi.testclient import TestClient
 
-from app.packages.identity.services.password_security import verify_password
+from app.packages.identity.services.password_security import hash_password, verify_password
 from app.packages.identity.services.profile_security import (
     WEAK_PINS,
     ProfilePinError,
@@ -20,8 +20,13 @@ from app.packages.identity.services.profile_security import (
     unlock_with_pin_on_device,
     verify_pin,
 )
-from app.packages.identity.services.user_service import register
-from app.packages.identity.services.user_storage import create_session, ensure_user_tables
+from app.packages.identity.services.user_service import register, reset_password
+from app.packages.identity.services.user_storage import (
+    create_session,
+    ensure_user_tables,
+    get_email_code,
+    upsert_email_code,
+)
 
 
 @pytest.fixture()
@@ -128,6 +133,223 @@ class TestTrustedDevicePin:
 
 
 class TestPasswordChange:
+    def test_password_reset_revokes_sessions_and_trusted_devices(
+        self, conn: duckdb.DuckDBPyConnection
+    ) -> None:
+        uid = _register_verified(conn, "pwdreset", "pwdreset@test.local", "oldpass1")
+        create_session(conn, uid)
+        create_session(conn, uid)
+        authorize_device(conn, uid, password="oldpass1", device_label="Reset test device")
+        upsert_email_code(
+            conn,
+            "pwdreset@test.local",
+            hash_password("reset123"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+
+        result = reset_password(conn, "pwdreset@test.local", "reset123", "newpass9")
+
+        assert result["ok"] is True
+        assert conn.execute("SELECT COUNT(*) FROM app_session WHERE user_id = ?", [uid]).fetchone()[0] == 0
+        assert conn.execute(
+            "SELECT status FROM trusted_device WHERE user_id = ?", [uid]
+        ).fetchone()[0] == "revoked"
+        assert verify_password(
+            "newpass9",
+            conn.execute("SELECT password_hash FROM app_user WHERE id = ?", [uid]).fetchone()[0],
+        )
+
+    def test_password_reset_rollback_on_device_revoke_failure(
+        self, conn: duckdb.DuckDBPyConnection, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        uid = _register_verified(conn, "pwdroll", "pwdroll@test.local", "oldpass1")
+        create_session(conn, uid)
+        authorize_device(conn, uid, password="oldpass1", device_label="Keep device")
+        upsert_email_code(
+            conn,
+            "pwdroll@test.local",
+            hash_password("reset456"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        old_hash = conn.execute(
+            "SELECT password_hash FROM app_user WHERE id = ?", [uid]
+        ).fetchone()[0]
+
+        import app.packages.identity.services.profile_security as ps
+
+        def boom(_conn):
+            raise RuntimeError("injected device revoke failure")
+
+        monkeypatch.setattr(ps, "ensure_profile_security_tables", boom)
+        with pytest.raises(RuntimeError, match="injected device revoke failure"):
+            reset_password(conn, "pwdroll@test.local", "reset456", "shouldNotApply")
+
+        assert (
+            conn.execute("SELECT password_hash FROM app_user WHERE id = ?", [uid]).fetchone()[0]
+            == old_hash
+        )
+        assert (
+            int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM app_session WHERE user_id = ?", [uid]
+                ).fetchone()[0]
+            )
+            >= 1
+        )
+        assert get_email_code(conn, "pwdroll@test.local", purpose="password_reset") is not None
+        assert (
+            conn.execute(
+                "SELECT status FROM trusted_device WHERE user_id = ?", [uid]
+            ).fetchone()[0]
+            == "active"
+        )
+
+    def test_password_reset_wrong_code_increments_attempts(
+        self, conn: duckdb.DuckDBPyConnection
+    ) -> None:
+        _register_verified(conn, "pwdatt", "pwdatt@test.local", "oldpass1")
+        upsert_email_code(
+            conn,
+            "pwdatt@test.local",
+            hash_password("goodcode1"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        with pytest.raises(ValueError, match="invalid or expired"):
+            reset_password(conn, "pwdatt@test.local", "wrongcode", "newpass9")
+        record = get_email_code(conn, "pwdatt@test.local", purpose="password_reset")
+        assert record is not None
+        assert record["attempts"] == 1
+
+    def test_password_reset_attempts_reach_limit(
+        self, conn: duckdb.DuckDBPyConnection, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.core.config import get_settings
+
+        monkeypatch.setattr(get_settings(), "email_code_max_attempts", 3)
+        _register_verified(conn, "pwdlim", "pwdlim@test.local", "oldpass1")
+        upsert_email_code(
+            conn,
+            "pwdlim@test.local",
+            hash_password("goodcode1"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        for _ in range(3):
+            with pytest.raises(ValueError, match="invalid or expired"):
+                reset_password(conn, "pwdlim@test.local", "wrongcode", "newpass9")
+        record = get_email_code(conn, "pwdlim@test.local", purpose="password_reset")
+        assert record is not None
+        assert record["attempts"] == 3
+        with pytest.raises(ValueError, match="too many attempts"):
+            reset_password(conn, "pwdlim@test.local", "goodcode1", "newpass9")
+        assert get_email_code(conn, "pwdlim@test.local", purpose="password_reset") is None
+
+    def test_password_reset_expired_code_is_deleted(
+        self, conn: duckdb.DuckDBPyConnection
+    ) -> None:
+        from datetime import timedelta
+
+        from app.core.time_util import utc_now
+
+        _register_verified(conn, "pwdexp", "pwdexp@test.local", "oldpass1")
+        upsert_email_code(
+            conn,
+            "pwdexp@test.local",
+            hash_password("goodcode1"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        past = utc_now() - timedelta(minutes=30)
+        conn.execute(
+            "UPDATE app_email_code SET expires_at = ? WHERE LOWER(email) = ?",
+            [past, "pwdexp@test.local"],
+        )
+        with pytest.raises(ValueError, match="invalid or expired"):
+            reset_password(conn, "pwdexp@test.local", "goodcode1", "newpass9")
+        assert get_email_code(conn, "pwdexp@test.local", purpose="password_reset") is None
+
+    def test_password_reset_consumed_code_cannot_be_reused(
+        self, conn: duckdb.DuckDBPyConnection
+    ) -> None:
+        _register_verified(conn, "pwdreuse", "pwdreuse@test.local", "oldpass1")
+        upsert_email_code(
+            conn,
+            "pwdreuse@test.local",
+            hash_password("onecode99"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        assert reset_password(conn, "pwdreuse@test.local", "onecode99", "newpass9")["ok"]
+        with pytest.raises(ValueError, match="invalid or expired"):
+            reset_password(conn, "pwdreuse@test.local", "onecode99", "another99")
+        assert get_email_code(conn, "pwdreuse@test.local", purpose="password_reset") is None
+
+    def test_password_reset_concurrent_same_code_only_one_succeeds(
+        self, tmp_path
+    ) -> None:
+        import threading
+
+        from app.core import schema_bootstrap
+        from app.packages.identity.services.user_storage import ensure_user_tables
+
+        previous = schema_bootstrap._schema_ready
+        schema_bootstrap._schema_ready = False
+        db_path = tmp_path / "pwd_conc.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_user_tables(conn)
+        uid = _register_verified(conn, "pwdconc", "pwdconc@test.local", "oldpass1")
+        create_session(conn, uid)
+        authorize_device(conn, uid, password="oldpass1", device_label="Conc")
+        upsert_email_code(
+            conn,
+            "pwdconc@test.local",
+            hash_password("samecode1"),
+            purpose="password_reset",
+            ttl_minutes=10,
+        )
+        conn.execute("CHECKPOINT")
+        conn.close()
+
+        results: list[str] = []
+        barrier = threading.Barrier(2)
+
+        def worker() -> None:
+            c = duckdb.connect(str(db_path))
+            try:
+                barrier.wait(timeout=5)
+                reset_password(c, "pwdconc@test.local", "samecode1", "brandnew9")
+                results.append("ok")
+            except Exception as exc:  # noqa: BLE001
+                results.append(f"err:{type(exc).__name__}")
+            finally:
+                c.close()
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert results.count("ok") == 1
+        assert sum(1 for r in results if r.startswith("err:")) == 1
+
+        verify = duckdb.connect(str(db_path))
+        try:
+            assert (
+                int(
+                    verify.execute(
+                        "SELECT COUNT(*) FROM app_session WHERE user_id = ?", [uid]
+                    ).fetchone()[0]
+                )
+                == 0
+            )
+            assert get_email_code(verify, "pwdconc@test.local", purpose="password_reset") is None
+        finally:
+            verify.close()
+            schema_bootstrap._schema_ready = previous
+
     def test_change_password_revokes_other_sessions(self, conn: duckdb.DuckDBPyConnection) -> None:
         uid = _register_verified(conn, "pwdchg", "pwdchg@test.local", "oldpass1")
         keep = create_session(conn, uid)

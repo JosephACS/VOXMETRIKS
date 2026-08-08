@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Optional
 
 import duckdb
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 
 from app.packages.billing.application.use_cases import (
     BillingProfileUseCases,
@@ -737,23 +737,28 @@ def list_refunds(
     )
 
 
-@billing_router.post("/refunds", response_model=RefundOut, status_code=201)
+@billing_router.post("/refunds", response_model=RefundOut)
 def create_refund(
     body: RefundCreateRequest,
+    response: Response,
     ctx: dict = Depends(require_org_billing_permission("refund.manage")),
+    idempotency_key_header: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ) -> RefundOut:
+    key = (body.idempotency_key or idempotency_key_header or "").strip()
     try:
-        refund = RefundUseCases(ctx["conn"]).create(
+        result = RefundUseCases(ctx["conn"]).create(
             actor_user_id=ctx["user_id"],
             organization_id=ctx["organization_id"],
             payment_id=body.payment_id,
             amount=body.amount,
             reason=body.reason,
+            idempotency_key=key,
             request_id=ctx["request_id"],
         )
     except BillingError as e:
         raise_billing_http(e)
-    return RefundOut(**refund.__dict__)
+    response.status_code = 201 if result.created else 200
+    return RefundOut(**result.refund.__dict__)
 
 
 # ── Credit Notes ───────────────────────────────────────────────────────────────

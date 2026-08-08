@@ -217,6 +217,7 @@ class RefundCreateRequest(BaseModel):
     payment_id: int
     amount: Decimal
     reason: Optional[str] = None
+    idempotency_key: Optional[str] = None
 
 
 class RefundOut(BaseModel):
@@ -230,6 +231,7 @@ class RefundOut(BaseModel):
     processed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    idempotency_key: str
 
 
 class PaginatedRefunds(BaseModel):

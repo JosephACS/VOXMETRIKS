@@ -160,7 +160,7 @@ def test_prepare_switch_self_rejected(personal_conn, uids):
         prepare_profile_switch(personal_conn, owner, owner)
 
 
-def test_prepare_switch_authorized_returns_hint_only(personal_conn, uids):
+def test_prepare_switch_authorized_returns_public_presentation_only(personal_conn, uids):
     from app.packages.personal_subscriptions.application.use_cases import prepare_profile_switch
 
     owner = uids["u_owner"]
@@ -168,8 +168,12 @@ def test_prepare_switch_authorized_returns_hint_only(personal_conn, uids):
     _activate_duo(personal_conn, owner, member, "u_member@test.local")
 
     out = prepare_profile_switch(personal_conn, owner, member)
-    assert set(out.keys()) == {"login_hint", "display_name"}
-    assert out["login_hint"]
+    assert set(out.keys()) == {"display_name", "requires_manual_reauth"}
+    assert out["display_name"]
+    assert out["requires_manual_reauth"] is True
+    assert "login_hint" not in out
+    assert "email" not in out
+    assert "username" not in out
     assert "token" not in out
     assert "session" not in out
     assert "password" not in out

@@ -27,6 +27,11 @@ import { PersonalAccountApiService } from '../services/personal-account-api.serv
         <app-enterprise-loading-skeleton [rows]="3" />
       } @else if (error()) {
         <app-enterprise-error-state [message]="error()!" (retry)="load()" />
+      } @else if (isHouseholdMember()) {
+        <app-enterprise-empty-state
+          [title]="'personal.billing.emptyTitle' | t:lang()"
+          [description]="'personal.billing.memberNoManage' | t:lang()"
+        />
       } @else if (!items().length) {
         <app-enterprise-empty-state
           [title]="'personal.billing.emptyTitle' | t:lang()"
@@ -66,6 +71,7 @@ export class PersonalBillingPage implements OnInit {
   items = signal<unknown[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
+  isHouseholdMember = signal(false);
 
   ngOnInit(): void {
     this.load();
@@ -73,10 +79,26 @@ export class PersonalBillingPage implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.listInvoices().subscribe({
-      next: (res) => {
-        this.items.set(res.items || []);
-        this.loading.set(false);
+    this.error.set(null);
+    this.api.getSubscription().subscribe({
+      next: (sub) => {
+        const member = sub.can_manage_billing === false || sub.household_role === 'member';
+        this.isHouseholdMember.set(member);
+        if (member) {
+          this.items.set([]);
+          this.loading.set(false);
+          return;
+        }
+        this.api.listInvoices().subscribe({
+          next: (res) => {
+            this.items.set(res.items || []);
+            this.loading.set(false);
+          },
+          error: () => {
+            this.error.set(this.i18n.t('common.loadFailed'));
+            this.loading.set(false);
+          },
+        });
       },
       error: () => {
         this.error.set(this.i18n.t('common.loadFailed'));

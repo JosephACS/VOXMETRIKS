@@ -128,6 +128,7 @@ class Refund:
     processed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    idempotency_key: str
 
 
 @dataclass

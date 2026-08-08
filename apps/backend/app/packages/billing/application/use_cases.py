@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 import duckdb
 
+from app.core.database import transactional
 from app.core.time_util import utc_now
 from app.packages.billing.domain.entities import (
     BillingLedgerEntry,
@@ -132,7 +133,7 @@ _ALLOC_COLS = (
 
 _REFUND_COLS = (
     "id, organization_id, payment_id, amount, currency, reason, "
-    "status, processed_at, created_at, updated_at"
+    "status, processed_at, created_at, updated_at, idempotency_key"
 )
 
 _CN_COLS = (
@@ -224,6 +225,7 @@ def _map_refund(r: tuple) -> Refund:
         id=int(r[0]), organization_id=int(r[1]), payment_id=int(r[2]),
         amount=Decimal(str(r[3])), currency=str(r[4]), reason=r[5],
         status=str(r[6]), processed_at=r[7], created_at=r[8], updated_at=r[9],
+        idempotency_key=str(r[10]),
     )
 
 
@@ -1579,8 +1581,35 @@ class PaymentUseCases:
 # ── Refund Use Cases ───────────────────────────────────────────────────────────
 
 
+@dataclass(frozen=True)
+class RefundCreateResult:
+    refund: Refund
+    created: bool
+
+
+def _normalize_refund_reason(reason: Optional[str]) -> Optional[str]:
+    if reason is None:
+        return None
+    cleaned = str(reason).strip()
+    return cleaned or None
+
+
+def _refund_payload_matches(
+    existing: Refund,
+    *,
+    payment_id: int,
+    amount: Decimal,
+    reason: Optional[str],
+) -> bool:
+    return (
+        existing.payment_id == payment_id
+        and existing.amount == amount
+        and _normalize_refund_reason(existing.reason) == _normalize_refund_reason(reason)
+    )
+
+
 class RefundUseCases:
-    """RefundPayment."""
+    """RefundPayment — idempotent by (organization_id, idempotency_key)."""
 
     def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
         self._conn = conn
@@ -1592,9 +1621,60 @@ class RefundUseCases:
         organization_id: int,
         payment_id: int,
         amount: Decimal,
+        idempotency_key: str,
         reason: Optional[str] = None,
         request_id: Optional[str] = None,
-    ) -> Refund:
+    ) -> RefundCreateResult:
+        key = (idempotency_key or "").strip()
+        if not key:
+            raise ValidationError("idempotency_key is required")
+        if len(key) > 128:
+            raise ValidationError("idempotency_key must be at most 128 characters")
+
+        amount = Decimal(str(amount))
+        reason = _normalize_refund_reason(reason)
+
+        with transactional(self._conn):
+            return self._create_in_transaction(
+                actor_user_id=actor_user_id,
+                organization_id=organization_id,
+                payment_id=payment_id,
+                amount=amount,
+                key=key,
+                reason=reason,
+                request_id=request_id,
+            )
+
+    def _create_in_transaction(
+        self,
+        *,
+        actor_user_id: int,
+        organization_id: int,
+        payment_id: int,
+        amount: Decimal,
+        key: str,
+        reason: Optional[str],
+        request_id: Optional[str],
+    ) -> RefundCreateResult:
+        existing_row = self._conn.execute(
+            f"SELECT {_REFUND_COLS} FROM app_refund "
+            "WHERE organization_id = ? AND idempotency_key = ?",
+            [organization_id, key],
+        ).fetchone()
+        if existing_row:
+            existing = _map_refund(existing_row)
+            if existing.status != "processed":
+                raise ConflictError(
+                    "idempotency_key already reserved for an incomplete refund"
+                )
+            if not _refund_payload_matches(
+                existing, payment_id=payment_id, amount=amount, reason=reason
+            ):
+                raise IdempotencyConflictError(
+                    "idempotency_key already used with a different refund payload"
+                )
+            return RefundCreateResult(refund=existing, created=False)
+
         payment = self._conn.execute(
             f"SELECT {_PAYMENT_COLS} FROM app_payment WHERE id = ? AND organization_id = ?",
             [payment_id, organization_id],
@@ -1606,22 +1686,72 @@ class RefundUseCases:
             raise InvalidTransitionError("Cannot refund a reversed payment")
         if amount <= 0:
             raise ValidationError("amount must be > 0")
-        if amount > payment.amount:
+
+        refunded_total = Decimal(
+            str(
+                self._conn.execute(
+                    """
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM app_refund
+                    WHERE payment_id = ? AND organization_id = ? AND status = 'processed'
+                    """,
+                    [payment_id, organization_id],
+                ).fetchone()[0]
+            )
+        )
+        available = payment.amount - refunded_total
+        if amount > available:
             raise InsufficientFundsError(
-                f"Refund amount {amount} exceeds payment amount {payment.amount}"
+                f"Refund amount {amount} exceeds available refundable balance {available}"
             )
 
         now = _now()
         rid = _next_id(self._conn, "app_refund")
-        self._conn.execute(
-            f"INSERT INTO app_refund ({_REFUND_COLS}) VALUES (?,?,?,?,?,?,'pending',NULL,?,?)",
-            [rid, organization_id, payment_id, str(amount), payment.currency, reason, now, now],
-        )
+        try:
+            self._conn.execute(
+                f"INSERT INTO app_refund ({_REFUND_COLS}) "
+                "VALUES (?,?,?,?,?,?, 'pending', NULL, ?, ?, ?)",
+                [
+                    rid,
+                    organization_id,
+                    payment_id,
+                    str(amount),
+                    payment.currency,
+                    reason,
+                    now,
+                    now,
+                    key,
+                ],
+            )
+        except Exception as exc:
+            msg = str(exc).lower()
+            if "unique" in msg or "constraint" in msg or "duplicate" in msg:
+                raced = self._conn.execute(
+                    f"SELECT {_REFUND_COLS} FROM app_refund "
+                    "WHERE organization_id = ? AND idempotency_key = ?",
+                    [organization_id, key],
+                ).fetchone()
+                if raced:
+                    existing = _map_refund(raced)
+                    if existing.status != "processed":
+                        raise ConflictError(
+                            "idempotency_key already reserved for an incomplete refund"
+                        ) from exc
+                    if not _refund_payload_matches(
+                        existing, payment_id=payment_id, amount=amount, reason=reason
+                    ):
+                        raise IdempotencyConflictError(
+                            "idempotency_key already used with a different refund payload"
+                        ) from exc
+                    return RefundCreateResult(refund=existing, created=False)
+            raise
+
         self._conn.execute(
             "UPDATE app_refund SET status='processed', processed_at=?, updated_at=? WHERE id=?",
             [now, now, rid],
         )
-        new_pay_status = "refunded" if amount >= payment.amount else "partially_refunded"
+        new_total = refunded_total + amount
+        new_pay_status = "refunded" if new_total >= payment.amount else "partially_refunded"
         self._conn.execute(
             "UPDATE app_payment SET status=?, updated_at=? WHERE id=?",
             [new_pay_status, now, payment_id],
@@ -1640,14 +1770,19 @@ class RefundUseCases:
             self._conn, action="refund.processed",
             target_type="refund", target_id=str(rid),
             actor_user_id=actor_user_id, organization_id=organization_id,
-            new_values={"amount": str(amount), "payment_id": payment_id},
+            new_values={
+                "amount": str(amount),
+                "payment_id": payment_id,
+                "idempotency_key": key,
+            },
             reason=reason,
             request_id=request_id,
         )
         row = self._conn.execute(
-            f"SELECT {_REFUND_COLS} FROM app_refund WHERE id = ?", [rid]
+            f"SELECT {_REFUND_COLS} FROM app_refund WHERE id = ? AND organization_id = ?",
+            [rid, organization_id],
         ).fetchone()
-        return _map_refund(row)
+        return RefundCreateResult(refund=_map_refund(row), created=True)
 
     def list(
         self,

@@ -375,30 +375,115 @@ def reset_password(
     code: str,
     new_password: str,
 ) -> Dict[str, Any]:
-    """Consume a one-time reset code and set a new password."""
+    """Consume a one-time reset code and set a new password atomically.
+
+    Defensive validation mutations (attempt increments, expired/max-attempt
+    deletions) commit before the client-facing error is raised. The successful
+    password change + session/device revocation remains a single transaction.
+    """
+    from app.core.database import transactional
+    from app.packages.identity.services.profile_security import (
+        _record_event,
+        ensure_profile_security_tables,
+    )
+
     ensure_user_tables(conn)
     email = email.strip().lower()
     code = (code or "").strip()
     if len(new_password or "") < 4:
         raise ValueError("password must be at least 4 characters")
-    record = get_email_code(conn, email, purpose="password_reset")
-    if not record:
-        raise ValueError("invalid or expired reset code")
-    if record["expires_at"] and record["expires_at"] < utc_now():
-        delete_email_code(conn, email)
-        raise ValueError("invalid or expired reset code")
-    if record["attempts"] >= get_settings().email_code_max_attempts:
-        delete_email_code(conn, email)
-        raise ValueError("too many attempts, request a new code")
-    if not verify_password(code, record["code_hash"]):
-        increment_email_code_attempts(conn, email)
-        raise ValueError("invalid or expired reset code")
 
-    conn.execute(
-        "UPDATE app_user SET password_hash = ? WHERE LOWER(email) = ?",
-        [hash_password(new_password), email],
-    )
-    delete_email_code(conn, email)
+    # Phase 1: commit defensive validation side-effects, then raise outside.
+    client_error: Optional[str] = None
+    with transactional(conn):
+        record = get_email_code(conn, email, purpose="password_reset")
+        if not record:
+            client_error = "invalid or expired reset code"
+        elif record["expires_at"] and record["expires_at"] < utc_now():
+            delete_email_code(conn, email)
+            client_error = "invalid or expired reset code"
+        elif record["attempts"] >= get_settings().email_code_max_attempts:
+            delete_email_code(conn, email)
+            client_error = "too many attempts, request a new code"
+        elif not verify_password(code, record["code_hash"]):
+            increment_email_code_attempts(conn, email)
+            client_error = "invalid or expired reset code"
+        else:
+            user_row = conn.execute(
+                "SELECT id FROM app_user WHERE LOWER(email) = ?", [email]
+            ).fetchone()
+            if not user_row:
+                delete_email_code(conn, email)
+                client_error = "invalid or expired reset code"
+
+    if client_error:
+        raise ValueError(client_error)
+
+    # Phase 2: atomic success path (re-check under the same transactional lock).
+    # Validation side-effects commit; revoke failures roll the whole success work back.
+    client_error = None
+    with transactional(conn):
+        record = get_email_code(conn, email, purpose="password_reset")
+        if not record:
+            client_error = "invalid or expired reset code"
+        elif record["expires_at"] and record["expires_at"] < utc_now():
+            delete_email_code(conn, email)
+            client_error = "invalid or expired reset code"
+        elif record["attempts"] >= get_settings().email_code_max_attempts:
+            delete_email_code(conn, email)
+            client_error = "too many attempts, request a new code"
+        elif not verify_password(code, record["code_hash"]):
+            increment_email_code_attempts(conn, email)
+            client_error = "invalid or expired reset code"
+        else:
+            user_row = conn.execute(
+                "SELECT id FROM app_user WHERE LOWER(email) = ?", [email]
+            ).fetchone()
+            if not user_row:
+                delete_email_code(conn, email)
+                client_error = "invalid or expired reset code"
+            else:
+                user_id = int(user_row[0])
+                conn.execute(
+                    "UPDATE app_user SET password_hash = ? WHERE id = ?",
+                    [hash_password(new_password), user_id],
+                )
+                delete_email_code(conn, email)
+                # Password recovery invalidates every browser session and trusted device.
+                conn.execute("DELETE FROM app_session WHERE user_id = ?", [user_id])
+                ensure_profile_security_tables(conn)
+                conn.execute(
+                    """
+                    UPDATE trusted_device
+                    SET status = 'revoked', revoked_at = ?
+                    WHERE user_id = ? AND status = 'active'
+                    """,
+                    [utc_now(), user_id],
+                )
+                _record_event(
+                    conn, user_id, "password.reset", "Password reset; sessions revoked"
+                )
+
+                sessions_left = int(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM app_session WHERE user_id = ?", [user_id]
+                    ).fetchone()[0]
+                )
+                devices_active = int(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM trusted_device "
+                        "WHERE user_id = ? AND status = 'active'",
+                        [user_id],
+                    ).fetchone()[0]
+                )
+                if sessions_left or devices_active:
+                    raise RuntimeError(
+                        "password reset failed to revoke all sessions/devices"
+                    )
+
+    if client_error:
+        raise ValueError(client_error)
+
     return {"ok": True, "message": "Password updated"}
 
 

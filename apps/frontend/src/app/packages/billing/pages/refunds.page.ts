@@ -26,7 +26,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         <app-enterprise-org-required />
       } @else {
         <app-enterprise-page-header [title]="'billing.refunds.title' | t:lang()">
-          <button type="button" class="btn btn--secondary" (click)="showForm = !showForm">
+          <button type="button" class="btn btn--secondary" (click)="toggleForm()" [disabled]="submitting">
             {{ (showForm ? 'billing.refunds.cancel' : 'billing.refunds.new') | t:lang() }}
           </button>
         </app-enterprise-page-header>
@@ -48,7 +48,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 />
               </app-enterprise-form-field>
               <div class="form-grid__actions">
-                <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+                <button type="submit" class="btn btn--primary" [disabled]="form.invalid || submitting">
                   {{ 'billing.refunds.issue' | t:lang() }}
                 </button>
               </div>
@@ -65,7 +65,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [title]="'billing.refunds.emptyTitle' | t:lang()"
             [description]="'billing.refunds.emptyBody' | t:lang()"
             [ctaLabel]="'billing.refunds.new' | t:lang()"
-            (ctaClick)="showForm = true"
+            (ctaClick)="toggleForm(true)"
           />
         } @else if (refunds.length) {
           <app-enterprise-data-table>
@@ -108,11 +108,13 @@ export class RefundsPage implements OnInit {
   refunds: Refund[] = [];
   error: string | null = null;
   showForm = false;
+  submitting = false;
   orgId: number | null = null;
+  private pendingIdempotencyKey: string | null = null;
 
   form = this.fb.group({
-    payment_id: [null, Validators.required],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
+    payment_id: [null as number | null, Validators.required],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     reason: [''],
   });
 
@@ -129,14 +131,48 @@ export class RefundsPage implements OnInit {
     });
   }
 
+  toggleForm(force?: boolean): void {
+    if (this.submitting) return;
+    this.showForm = force ?? !this.showForm;
+    if (!this.showForm) {
+      this.pendingIdempotencyKey = null;
+      this.form.reset({ payment_id: null, amount: null, reason: '' });
+    }
+  }
+
+  /** Reuse a failed operation's key until it succeeds or is cancelled. */
+  ensureIdempotencyKey(): string {
+    if (!this.pendingIdempotencyKey) {
+      this.pendingIdempotencyKey =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `refund-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return this.pendingIdempotencyKey;
+  }
+
   submit(): void {
-    if (this.form.invalid) return;
-    this.api.createRefund(this.orgId!, this.form.value).subscribe({
+    if (this.form.invalid || this.submitting || !this.orgId) return;
+    this.submitting = true;
+    this.error = null;
+    const key = this.ensureIdempotencyKey();
+    this.api.createRefund(this.orgId, {
+      payment_id: this.form.value.payment_id ?? null,
+      amount: this.form.value.amount ?? null,
+      reason: this.form.value.reason || null,
+      idempotency_key: key,
+    }).subscribe({
       next: () => {
+        this.submitting = false;
+        this.pendingIdempotencyKey = null;
         this.showForm = false;
+        this.form.reset({ payment_id: null, amount: null, reason: '' });
         this.loadRefunds();
       },
-      error: (e) => (this.error = e.error?.message ?? this.i18n.t('common.createFailed')),
+      error: (e) => {
+        this.submitting = false;
+        this.error = e.error?.detail?.message ?? e.error?.message ?? this.i18n.t('common.createFailed');
+      },
     });
   }
 }

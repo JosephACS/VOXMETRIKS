@@ -146,7 +146,9 @@ class TestGenerateSyntheticActivity:
 # --------------------------------------------------------------------------- #
 class TestGetTracksCursor:
     def test_orders_by_popularity_desc(self, catalog_conn: duckdb.DuckDBPyConnection) -> None:
-        result = get_tracks_cursor(catalog_conn, limit=10, include_total=True)
+        result = get_tracks_cursor(
+            catalog_conn, limit=10, include_total=True, playable_only=False
+        )
         names = [t["nombre_track"] for t in result["items"]]
         assert names == ["Alpha", "Bravo", "Charlie"]
         assert result["total"] == 3
@@ -156,13 +158,17 @@ class TestGetTracksCursor:
     def test_keyset_pagination_walks_all_rows(
         self, catalog_conn: duckdb.DuckDBPyConnection
     ) -> None:
-        page1 = get_tracks_cursor(catalog_conn, limit=2, include_total=True)
+        page1 = get_tracks_cursor(
+            catalog_conn, limit=2, include_total=True, playable_only=False
+        )
         assert [t["nombre_track"] for t in page1["items"]] == ["Alpha", "Bravo"]
         assert page1["has_more"] is True
         assert page1["next_cursor"] is not None
         assert page1["total"] == 3
 
-        page2 = get_tracks_cursor(catalog_conn, limit=2, cursor=page1["next_cursor"])
+        page2 = get_tracks_cursor(
+            catalog_conn, limit=2, cursor=page1["next_cursor"], playable_only=False
+        )
         assert [t["nombre_track"] for t in page2["items"]] == ["Charlie"]
         assert page2["has_more"] is False
         assert page2["next_cursor"] is None
@@ -170,15 +176,17 @@ class TestGetTracksCursor:
         assert page2["total"] is None
 
     def test_limit_is_clamped(self, catalog_conn: duckdb.DuckDBPyConnection) -> None:
-        assert get_tracks_cursor(catalog_conn, limit=0)["limit"] == 1
-        assert get_tracks_cursor(catalog_conn, limit=9999)["limit"] == 500
+        assert get_tracks_cursor(catalog_conn, limit=0, playable_only=False)["limit"] == 1
+        assert get_tracks_cursor(catalog_conn, limit=9999, playable_only=False)["limit"] == 500
 
     def test_invalid_cursor_raises(self, catalog_conn: duckdb.DuckDBPyConnection) -> None:
         with pytest.raises(ValueError, match="Invalid cursor"):
-            get_tracks_cursor(catalog_conn, cursor="not-a-cursor")
+            get_tracks_cursor(catalog_conn, cursor="not-a-cursor", playable_only=False)
 
     def test_search_filter(self, catalog_conn: duckdb.DuckDBPyConnection) -> None:
-        result = get_tracks_cursor(catalog_conn, limit=10, search="alpha")
+        result = get_tracks_cursor(
+            catalog_conn, limit=10, search="alpha", playable_only=False
+        )
         assert [t["nombre_track"] for t in result["items"]] == ["Alpha"]
 
 
@@ -230,6 +238,30 @@ class TestGetRecommendations:
     def test_popularity_fallback_when_aggregate_missing(
         self, catalog_conn: duckdb.DuckDBPyConnection
     ) -> None:
+        # Consumer recommendations require playable sources under the public contract.
+        catalog_conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_track_audio_source (
+                track_id INTEGER PRIMARY KEY,
+                provider VARCHAR,
+                youtube_video_id VARCHAR,
+                source_ref VARCHAR,
+                playable_url VARCHAR,
+                status VARCHAR,
+                failure_count INTEGER DEFAULT 0
+            )
+            """
+        )
+        catalog_conn.execute(
+            """
+            INSERT INTO app_track_audio_source
+                (track_id, provider, youtube_video_id, source_ref, playable_url, status, failure_count)
+            VALUES
+                (1, 'youtube', 'vidA', 'vidA', NULL, 'ok', 0),
+                (2, 'youtube', 'vidB', 'vidB', NULL, 'ok', 0),
+                (3, 'youtube', 'vidC', 'vidC', NULL, 'ok', 0)
+            """
+        )
         # No agg_recommendation_scores table -> fallback to popularity ranking.
         rec = get_recommendations(catalog_conn, limit=12)
         names = [t["nombre_track"] for t in rec["for_you"]]

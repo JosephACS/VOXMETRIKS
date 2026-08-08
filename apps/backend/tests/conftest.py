@@ -192,6 +192,19 @@ def _init_test_database(db_path: Path) -> None:
     ensure_platform_ops_tables(conn)
     ensure_reporting_tables(conn)
     ensure_customer_success_tables(conn)
+    # Consumer catalog endpoints default to playable_only=True.  Give the
+    # shared API fixture real playable sources rather than weakening that
+    # public contract for search and playlist tests.
+    conn.execute(
+        """
+        INSERT INTO app_track_audio_source
+            (track_id, provider, youtube_video_id, status)
+        VALUES
+            (1, 'youtube', 'dQw4w9WgXcQ', 'ok'),
+            (2, 'youtube', '9bZkp7q19f0', 'ok'),
+            (3, 'youtube', 'kJQP7kiw5Fk', 'ok')
+        """
+    )
     conn.close()
 
 
@@ -241,9 +254,27 @@ def _configure_test_database() -> None:
 
 @pytest.fixture(autouse=True)
 def _restore_session_settings_after_test() -> None:
-    """After each test, restore session Settings so the shared TestClient keeps working."""
+    """Restore shared settings and keep the demo user free of platform roles."""
     yield
     restore_session_db()
+    # Some authorization suites temporarily grant ``demo`` a platform role.
+    # The shared session database means that grant would otherwise leak into
+    # later negative-access tests (including CRM/subscription 403 checks).
+    from app.core.database import using_write_conn
+
+    with using_write_conn() as conn:
+        conn.execute(
+            """
+            UPDATE app_user_platform_role
+            SET status = 'revoked'
+            WHERE user_id = (
+                SELECT id FROM app_user
+                WHERE username = 'demo' OR email = 'demo@voxmetrik.io'
+                LIMIT 1
+            )
+              AND status = 'active'
+            """
+        )
 
 
 @pytest.fixture(scope="session")

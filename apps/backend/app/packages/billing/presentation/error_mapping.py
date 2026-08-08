@@ -41,6 +41,8 @@ def raise_billing_http(exc: BillingError) -> None:
         raise http_error(422, str(exc), "currency_mismatch")
     if isinstance(exc, InsufficientFundsError):
         raise http_error(422, str(exc), "insufficient_funds")
+    if isinstance(exc, IdempotencyConflictError):
+        raise http_error(409, str(exc), "idempotency_conflict")
     if isinstance(exc, ValidationError):
         raise http_error(422, str(exc), "validation_error")
     if isinstance(exc, ConflictError):

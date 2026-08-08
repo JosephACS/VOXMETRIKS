@@ -90,6 +90,14 @@ export interface Refund {
   processed_at: string | null;
   created_at: string;
   updated_at: string;
+  idempotency_key: string;
+}
+
+export interface CreateRefundRequest {
+  payment_id: number | null;
+  amount: number | null;
+  reason: string | null;
+  idempotency_key: string;
 }
 
 export interface CreditNote {

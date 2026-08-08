@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import {
   BillingProfile,
   CreditNote,
+  CreateRefundRequest,
   Invoice,
   InvoiceItem,
   LedgerEntry,
@@ -226,9 +227,9 @@ export class BillingApiService {
     });
   }
 
-  createRefund(orgId: number, body: object): Observable<Refund> {
+  createRefund(orgId: number, body: CreateRefundRequest): Observable<Refund> {
     return this.http.post<Refund>(`${BASE}/billing/refunds`, body, {
-      headers: this.orgHeaders(orgId),
+      headers: this.orgHeaders(orgId).set('Idempotency-Key', body.idempotency_key),
     });
   }
 

@@ -108,10 +108,16 @@ describe('BillingApiService (L4)', () => {
   });
 
   it('createRefund hits POST /billing/refunds', () => {
-    const body = { payment_id: 5, amount: 50, reason: 'Customer request' };
+    const body = {
+      payment_id: 5,
+      amount: 50,
+      reason: 'Customer request',
+      idempotency_key: 'refund-key-1',
+    };
     api.createRefund(orgId, body).subscribe();
     const req = http.expectOne(`${base}/billing/refunds`);
     expect(req.request.method).toBe('POST');
+    expect(req.request.headers.get('Idempotency-Key')).toBe('refund-key-1');
     req.flush({ id: 1, status: 'processed' });
   });
 

@@ -36,6 +36,10 @@ class AcceptInviteRequest(BaseModel):
     token: str
 
 
+class RejectInviteRequest(BaseModel):
+    token: str
+
+
 class CancelRequest(BaseModel):
     at_period_end: bool = True
 
@@ -218,6 +222,18 @@ def cancel_invite(
         _raise(e)
 
 
+@personal_router.post("/household/invitations/{invitation_id}/resend")
+def resend_invite(
+    invitation_id: int,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return uc.resend_invitation(conn, int(user["user_id"]), invitation_id)
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
 @personal_router.post("/household/accept")
 def accept_invite(
     body: AcceptInviteRequest,
@@ -226,6 +242,29 @@ def accept_invite(
 ):
     try:
         return uc.accept_invitation(conn, int(user["user_id"]), body.token)
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/household/reject")
+def reject_invite(
+    body: RejectInviteRequest,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return uc.reject_invitation(conn, int(user["user_id"]), body.token)
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/household/leave")
+def leave_household(
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return uc.leave_household(conn, int(user["user_id"]))
     except PersonalSubscriptionError as e:
         _raise(e)
 

@@ -266,6 +266,8 @@ def _create_refund(conn: duckdb.DuckDBPyConnection) -> None:
             processed_at     TIMESTAMP,
             created_at       TIMESTAMP NOT NULL,
             updated_at       TIMESTAMP NOT NULL,
+            idempotency_key  VARCHAR NOT NULL,
+            UNIQUE (organization_id, idempotency_key),
             CHECK (status IN ('pending', 'processed', 'failed')),
             CHECK (amount > 0)
         )
@@ -274,6 +276,134 @@ def _create_refund(conn: duckdb.DuckDBPyConnection) -> None:
         CREATE INDEX IF NOT EXISTS idx_refund_payment
         ON app_refund(payment_id)
     """)
+    _ensure_refund_idempotency(conn)
+
+
+def _refund_unique_constraints(
+    conn: duckdb.DuckDBPyConnection,
+) -> list[tuple[str, list[str]]]:
+    """Return UNIQUE constraints on app_refund as (constraint_text, columns)."""
+    try:
+        rows = conn.execute(
+            """
+            SELECT constraint_text, constraint_column_names
+            FROM duckdb_constraints()
+            WHERE table_name = 'app_refund' AND constraint_type = 'UNIQUE'
+            """
+        ).fetchall()
+    except Exception:
+        return []
+    out: list[tuple[str, list[str]]] = []
+    for text, cols in rows:
+        names = [str(c) for c in (cols or [])]
+        out.append((str(text or ""), names))
+    return out
+
+
+def _has_global_idempotency_unique(conn: duckdb.DuckDBPyConnection) -> bool:
+    """True when UNIQUE covers only idempotency_key (legacy global key)."""
+    for _text, cols in _refund_unique_constraints(conn):
+        if [c.lower() for c in cols] == ["idempotency_key"]:
+            return True
+    return False
+
+
+def _has_org_scoped_idempotency_unique(conn: duckdb.DuckDBPyConnection) -> bool:
+    """True when UNIQUE covers (organization_id, idempotency_key) in any order."""
+    wanted = {"organization_id", "idempotency_key"}
+    for _text, cols in _refund_unique_constraints(conn):
+        if {c.lower() for c in cols} == wanted and len(cols) == 2:
+            return True
+    return False
+
+
+def _rebuild_refund_org_scoped_unique(conn: duckdb.DuckDBPyConnection) -> None:
+    """Atomically rebuild app_refund with UNIQUE(organization_id, idempotency_key)."""
+    staging = "app_refund__org_scoped_mig"
+    conn.execute(f"DROP TABLE IF EXISTS {staging}")
+    conn.execute(f"""
+        CREATE TABLE {staging} (
+            id               INTEGER PRIMARY KEY,
+            organization_id  INTEGER NOT NULL,
+            payment_id       INTEGER NOT NULL,
+            amount           DECIMAL(18,4) NOT NULL,
+            currency         VARCHAR(3) NOT NULL,
+            reason           VARCHAR,
+            status           VARCHAR NOT NULL DEFAULT 'pending',
+            processed_at     TIMESTAMP,
+            created_at       TIMESTAMP NOT NULL,
+            updated_at       TIMESTAMP NOT NULL,
+            idempotency_key  VARCHAR NOT NULL,
+            UNIQUE (organization_id, idempotency_key),
+            CHECK (status IN ('pending', 'processed', 'failed')),
+            CHECK (amount > 0)
+        )
+    """)
+    conn.execute(f"""
+        INSERT INTO {staging} (
+            id, organization_id, payment_id, amount, currency, reason, status,
+            processed_at, created_at, updated_at, idempotency_key
+        )
+        SELECT
+            id, organization_id, payment_id, amount, currency, reason, status,
+            processed_at, created_at, updated_at, idempotency_key
+        FROM app_refund
+    """)
+    before = int(conn.execute("SELECT COUNT(*) FROM app_refund").fetchone()[0])
+    after = int(conn.execute(f"SELECT COUNT(*) FROM {staging}").fetchone()[0])
+    if before != after:
+        conn.execute(f"DROP TABLE IF EXISTS {staging}")
+        raise RuntimeError(
+            f"refund migration row-count mismatch: source={before} staging={after}"
+        )
+    conn.execute("DROP TABLE app_refund")
+    conn.execute(f"ALTER TABLE {staging} RENAME TO app_refund")
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_refund_payment
+        ON app_refund(payment_id)
+    """)
+
+
+def _ensure_refund_idempotency(conn: duckdb.DuckDBPyConnection) -> None:
+    """Migrate app_refund to org-scoped UNIQUE(organization_id, idempotency_key).
+
+    Legacy tables with ``idempotency_key … UNIQUE`` keep an internal DuckDB
+    UNIQUE(idempotency_key) that cannot be dropped via guessed index names.
+    Those tables are rebuilt atomically with no data loss.
+    """
+    from app.core.database import transactional
+
+    try:
+        cols = {str(row[0]) for row in conn.execute("DESCRIBE app_refund").fetchall()}
+    except Exception:
+        return
+
+    with transactional(conn):
+        if "idempotency_key" not in cols:
+            conn.execute("ALTER TABLE app_refund ADD COLUMN idempotency_key VARCHAR")
+
+        # Backfill NULLs before enforcing NOT NULL / UNIQUE.
+        null_rows = conn.execute(
+            "SELECT id FROM app_refund WHERE idempotency_key IS NULL"
+        ).fetchall()
+        for (rid,) in null_rows:
+            conn.execute(
+                "UPDATE app_refund SET idempotency_key = ? WHERE id = ?",
+                [f"legacy-refund-{int(rid)}", int(rid)],
+            )
+
+        # Rebuild when a legacy global UNIQUE remains, or when the composite
+        # UNIQUE is missing entirely.
+        if _has_global_idempotency_unique(conn) or not _has_org_scoped_idempotency_unique(
+            conn
+        ):
+            _rebuild_refund_org_scoped_unique(conn)
+
+        # Secondary unique index (harmless when the table UNIQUE already exists).
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_refund_org_idempotency_key
+            ON app_refund(organization_id, idempotency_key)
+        """)
 
 
 def _create_credit_note(conn: duckdb.DuckDBPyConnection) -> None:
