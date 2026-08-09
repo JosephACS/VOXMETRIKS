@@ -17,14 +17,27 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
       @if (!orgId) {
         <app-enterprise-org-required />
       } @else {
-        <div class="alert alert--warn" role="status">
-          {{ 'royalties.payout.simulatedBanner' | t:lang() }}
+        <div class="vx-sim-callout" role="status" data-testid="payouts-sim-banner">
+          <span class="vx-sim-badge">{{ 'royalties.payouts.academicBadge' | t:lang() }}</span>
+          <span>{{ 'royalties.payout.simulatedBanner' | t:lang() }}</span>
         </div>
 
         <app-enterprise-page-header
-          [title]="'royalties.payouts.title' | t:lang()"
-          [subtitle]="'royalties.term.simulatedPayout.help' | t:lang()"
-        />
+          [title]="'royalties.payouts.pageTitle' | t:lang()"
+          [subtitle]="'royalties.payouts.pageSubtitle' | t:lang()"
+        >
+          <a
+            routerLink="/royalties/settlements"
+            class="btn btn--secondary"
+            data-testid="payouts-settlements-link"
+          >
+            {{ 'royalties.nav.settlements' | t:lang() }}
+          </a>
+        </app-enterprise-page-header>
+
+        <p class="muted" data-testid="payouts-no-list-help">
+          {{ 'royalties.payouts.noListHelp' | t:lang() }}
+        </p>
 
         <app-enterprise-section-card [title]="'royalties.payouts.openById' | t:lang()">
           <div class="form-grid">
@@ -36,11 +49,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             {{ 'common.view' | t:lang() }}
           </button>
         </app-enterprise-section-card>
-
-        <app-enterprise-empty-state
-          [title]="'royalties.payouts.empty' | t:lang()"
-          [description]="'royalties.payouts.emptyBody' | t:lang()"
-        />
       }
     </div>
   `,

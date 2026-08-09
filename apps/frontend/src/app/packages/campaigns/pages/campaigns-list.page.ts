@@ -27,23 +27,50 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         <app-enterprise-page-header
           [title]="'campaigns.list.title' | t:lang()"
           [subtitle]="'campaigns.list.subtitle' | t:lang()"
-        />
+        >
+          <button
+            type="button"
+            class="btn btn--primary"
+            data-testid="campaigns-new-cta"
+            (click)="showCreateForm = !showCreateForm"
+          >
+            {{ 'campaigns.list.new' | t:lang() }}
+          </button>
+        </app-enterprise-page-header>
 
-        <app-enterprise-section-card [title]="'campaigns.list.create' | t:lang()">
-          <form [formGroup]="createForm" (ngSubmit)="createCampaign()" class="form-grid">
-            <app-enterprise-form-field [label]="'campaigns.list.name' | t:lang()" [required]="true">
-              <input formControlName="name" class="input" />
-            </app-enterprise-form-field>
-            <app-enterprise-form-field [label]="'campaigns.list.market' | t:lang()">
-              <input formControlName="market" class="input" />
-            </app-enterprise-form-field>
-            <div class="form-grid__actions">
-              <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
-                {{ 'campaigns.list.create' | t:lang() }}
-              </button>
-            </div>
-          </form>
-        </app-enterprise-section-card>
+        <div class="vx-kpi-grid" data-testid="campaigns-summary">
+          <div class="kpi-card">
+            <h3>{{ 'campaigns.list.total' | t:lang() }}</h3>
+            <p class="kpi-value">{{ loading ? '—' : total }}</p>
+          </div>
+          <div class="kpi-card">
+            <h3>{{ 'campaigns.list.activeHint' | t:lang() }}</h3>
+            <p class="kpi-value">{{ loading ? '—' : activeCount }}</p>
+          </div>
+        </div>
+
+        @if (showCreateForm) {
+          <div data-testid="campaigns-create-form">
+            <app-enterprise-section-card [title]="'campaigns.list.create' | t:lang()">
+              <form [formGroup]="createForm" (ngSubmit)="createCampaign()" class="form-grid">
+                <app-enterprise-form-field [label]="'campaigns.list.name' | t:lang()" [required]="true">
+                  <input formControlName="name" class="input" />
+                </app-enterprise-form-field>
+                <app-enterprise-form-field [label]="'campaigns.list.market' | t:lang()">
+                  <input formControlName="market" class="input" />
+                </app-enterprise-form-field>
+                <div class="form-grid__actions">
+                  <button type="button" class="btn btn--ghost" (click)="showCreateForm = false">
+                    {{ 'common.cancel' | t:lang() }}
+                  </button>
+                  <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid">
+                    {{ 'campaigns.list.create' | t:lang() }}
+                  </button>
+                </div>
+              </form>
+            </app-enterprise-section-card>
+          </div>
+        }
 
         @if (error) {
           <app-enterprise-error-state [message]="error" (retry)="load()" />
@@ -53,7 +80,8 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           <app-enterprise-empty-state
             [title]="'campaigns.list.emptyTitle' | t:lang()"
             [description]="'campaigns.list.emptyBody' | t:lang()"
-            [ctaLabel]="'campaigns.list.create' | t:lang()"
+            [ctaLabel]="'campaigns.list.new' | t:lang()"
+            (ctaClick)="showCreateForm = true"
           />
         } @else {
           <app-enterprise-data-table>
@@ -82,7 +110,21 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               </tbody>
             </table>
           </app-enterprise-data-table>
-          <p class="muted">{{ 'campaigns.list.total' | t:lang() }}: {{ total }}</p>
+
+          <div class="vx-campaign-cards" data-testid="campaigns-mobile-cards">
+            @for (c of campaigns; track c.id) {
+              <a class="vx-campaign-card" [routerLink]="['/campaigns', c.id]">
+                <div class="vx-campaign-card__row">
+                  <span class="vx-campaign-card__name">{{ c.name }}</span>
+                  <app-enterprise-status-badge [status]="c.status" />
+                </div>
+                <span class="vx-campaign-card__meta">
+                  {{ 'campaigns.list.market' | t:lang() }}:
+                  {{ c.market || ('common.notAvailable' | t:lang()) }}
+                </span>
+              </a>
+            }
+          </div>
         }
       }
     </div>
@@ -101,8 +143,16 @@ export class CampaignsListPage implements OnInit {
   loading = false;
   error: string | null = null;
   orgId: number | null = null;
+  showCreateForm = false;
 
   createForm = this.fb.group({ name: ['', Validators.required], market: [''] });
+
+  get activeCount(): number {
+    return this.campaigns.filter((c) => {
+      const s = (c.status || '').toLowerCase();
+      return s === 'active' || s === 'approved' || s === 'running' || s === 'live';
+    }).length;
+  }
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
@@ -138,6 +188,7 @@ export class CampaignsListPage implements OnInit {
     this.api.create(orgId, { name: v.name!, market: v.market || undefined }).subscribe({
       next: () => {
         this.createForm.reset();
+        this.showCreateForm = false;
         this.load();
       },
       error: (e) => {

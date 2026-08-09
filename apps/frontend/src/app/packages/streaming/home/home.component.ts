@@ -90,6 +90,15 @@ export class HomeComponent implements OnInit {
   summaryLoading = signal(true);
   railsLoading = signal(true);
   hasError = signal(false);
+  /** Progressive disclosure for secondary Discover rails (artists, DNA, etc.). */
+  exploreMoreOpen = signal(false);
+
+  onExploreMoreToggle(ev: Event): void {
+    const el = ev.target as HTMLDetailsElement | null;
+    if (el && 'open' in el) {
+      this.exploreMoreOpen.set(!!el.open);
+    }
+  }
   summary = signal<StatsSummary | null>(null);
   discoverTracks = signal<Track[]>([]);
   genres = signal<GeneroPopularidad[]>([]);

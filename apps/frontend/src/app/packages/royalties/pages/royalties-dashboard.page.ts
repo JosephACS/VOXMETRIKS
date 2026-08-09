@@ -23,14 +23,11 @@ import { royaltiesAccess } from '../royalties-access';
         <app-enterprise-page-header
           [title]="'royalties.dashboard.title' | t:lang()"
           [subtitle]="'royalties.dashboard.subtitle' | t:lang()"
-        >
-          <a routerLink="/royalties/pools" class="btn btn--secondary">
-            {{ 'royalties.nav.pools' | t:lang() }}
-          </a>
-          <a routerLink="/royalties/settlements" class="btn btn--secondary">
-            {{ 'royalties.nav.settlements' | t:lang() }}
-          </a>
-        </app-enterprise-page-header>
+        />
+
+        <div class="vx-sim-callout" role="note" data-testid="royalties-sim-banner">
+          {{ 'royalties.payout.simulatedBanner' | t:lang() }}
+        </div>
 
         @if (readOnly) {
           <div class="alert alert--warn" role="status">
@@ -38,20 +35,49 @@ import { royaltiesAccess } from '../royalties-access';
           </div>
         }
 
-        <app-enterprise-section-card [title]="'royalties.glossary.title' | t:lang()">
-          <dl class="meta">
-            <dt>{{ 'royalties.term.distributableIncome' | t:lang() }}</dt>
-            <dd>{{ 'royalties.term.distributableIncome.help' | t:lang() }}</dd>
-            <dt>{{ 'royalties.term.streamShare' | t:lang() }}</dt>
-            <dd>{{ 'royalties.term.streamShare.help' | t:lang() }}</dd>
-            <dt>{{ 'royalties.term.contractPct' | t:lang() }}</dt>
-            <dd>{{ 'royalties.term.contractPct.help' | t:lang() }}</dd>
-            <dt>{{ 'royalties.term.settlement' | t:lang() }}</dt>
-            <dd>{{ 'royalties.term.settlement.help' | t:lang() }}</dd>
-            <dt>{{ 'royalties.term.simulatedPayout' | t:lang() }}</dt>
-            <dd>{{ 'royalties.term.simulatedPayout.help' | t:lang() }}</dd>
-          </dl>
-        </app-enterprise-section-card>
+        <div class="vx-quick-access" data-testid="royalties-quick-access">
+          <a routerLink="/royalties/pools" class="btn btn--secondary">
+            {{ 'royalties.nav.pools' | t:lang() }}
+          </a>
+          <a routerLink="/royalties/settlements" class="btn btn--secondary">
+            {{ 'royalties.nav.settlements' | t:lang() }}
+          </a>
+          @if (canPayout) {
+            <a
+              routerLink="/payouts"
+              class="btn btn--primary"
+              data-testid="royalties-payouts-link"
+            >
+              {{ 'royalties.nav.payouts' | t:lang() }}
+            </a>
+          } @else if (canView) {
+            <a
+              routerLink="/payouts"
+              class="btn btn--secondary"
+              data-testid="royalties-payouts-link"
+            >
+              {{ 'royalties.nav.payouts' | t:lang() }}
+            </a>
+          }
+        </div>
+
+        <details class="vx-glossary-help" data-testid="royalties-glossary">
+          <summary>{{ 'royalties.glossary.title' | t:lang() }}</summary>
+          <div class="vx-glossary-help__body">
+            <dl class="meta">
+              <dt>{{ 'royalties.term.distributableIncome' | t:lang() }}</dt>
+              <dd>{{ 'royalties.term.distributableIncome.help' | t:lang() }}</dd>
+              <dt>{{ 'royalties.term.streamShare' | t:lang() }}</dt>
+              <dd>{{ 'royalties.term.streamShare.help' | t:lang() }}</dd>
+              <dt>{{ 'royalties.term.contractPct' | t:lang() }}</dt>
+              <dd>{{ 'royalties.term.contractPct.help' | t:lang() }}</dd>
+              <dt>{{ 'royalties.term.settlement' | t:lang() }}</dt>
+              <dd>{{ 'royalties.term.settlement.help' | t:lang() }}</dd>
+              <dt>{{ 'royalties.term.simulatedPayout' | t:lang() }}</dt>
+              <dd>{{ 'royalties.term.simulatedPayout.help' | t:lang() }}</dd>
+            </dl>
+          </div>
+        </details>
 
         @if (loading) {
           <app-enterprise-loading-skeleton [rows]="4" />
@@ -63,30 +89,47 @@ import { royaltiesAccess } from '../royalties-access';
             [description]="'royalties.dashboard.emptyBody' | t:lang()"
           />
         } @else {
-          <app-enterprise-section-card [title]="'royalties.dashboard.metrics' | t:lang()">
+          <div class="vx-kpi-grid" data-testid="royalties-metrics">
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.poolApproved' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.distributable_pool_approved | localeMoney:'USD' }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.poolClosed' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.distributable_pool_allocated_or_closed | localeMoney:'USD' }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.poolCount' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.pool_count }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.settlementGross' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.settlement_gross_total | localeMoney:'USD' }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.settlementNet' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.settlement_net_total | localeMoney:'USD' }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.settlementCount' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.settlement_count }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.payoutSimulated' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.payout_paid_simulated_total | localeMoney:'USD' }}</p>
+              <span class="vx-sim-badge">{{ 'royalties.payouts.academicBadge' | t:lang() }}</span>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'royalties.dashboard.payoutBatches' | t:lang() }}</h3>
+              <p class="kpi-value">{{ metrics.payout_batch_count }}</p>
+            </div>
+          </div>
+          @if (metrics.income_note) {
             <p class="muted">{{ metrics.income_note }}</p>
-            <dl class="meta">
-              <dt>{{ 'royalties.dashboard.poolApproved' | t:lang() }}</dt>
-              <dd>{{ metrics.distributable_pool_approved | localeMoney:'USD' }}</dd>
-              <dt>{{ 'royalties.dashboard.poolClosed' | t:lang() }}</dt>
-              <dd>{{ metrics.distributable_pool_allocated_or_closed | localeMoney:'USD' }}</dd>
-              <dt>{{ 'royalties.dashboard.poolCount' | t:lang() }}</dt>
-              <dd>{{ metrics.pool_count }}</dd>
-              <dt>{{ 'royalties.dashboard.settlementGross' | t:lang() }}</dt>
-              <dd>{{ metrics.settlement_gross_total | localeMoney:'USD' }}</dd>
-              <dt>{{ 'royalties.dashboard.settlementNet' | t:lang() }}</dt>
-              <dd>{{ metrics.settlement_net_total | localeMoney:'USD' }}</dd>
-              <dt>{{ 'royalties.dashboard.settlementCount' | t:lang() }}</dt>
-              <dd>{{ metrics.settlement_count }}</dd>
-              <dt>{{ 'royalties.dashboard.payoutSimulated' | t:lang() }}</dt>
-              <dd>{{ metrics.payout_paid_simulated_total | localeMoney:'USD' }}</dd>
-              <dt>{{ 'royalties.dashboard.payoutBatches' | t:lang() }}</dt>
-              <dd>{{ metrics.payout_batch_count }}</dd>
-            </dl>
-            @if (metrics.simulated_only) {
-              <p class="muted">{{ 'royalties.payout.simulatedBanner' | t:lang() }}</p>
-            }
-          </app-enterprise-section-card>
+          }
+          @if (metrics.simulated_only) {
+            <p class="muted">{{ 'royalties.payout.simulatedBanner' | t:lang() }}</p>
+          }
         }
       }
     </div>
@@ -104,10 +147,15 @@ export class RoyaltiesDashboardPage implements OnInit {
   loading = false;
   error: string | null = null;
   readOnly = false;
+  canPayout = false;
+  /** View-only simulated payouts access when payout action is not granted. */
+  canView = false;
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
     this.readOnly = this.access.isReadOnly();
+    this.canPayout = this.access.canPayout();
+    this.canView = this.orgCtx.hasPermission('royalty.view');
     if (!this.orgId) return;
     this.load();
   }

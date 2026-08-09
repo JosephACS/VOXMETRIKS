@@ -42,12 +42,44 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
           <app-enterprise-page-header [title]="campaign.name">
             <app-enterprise-status-badge [status]="campaign.status" />
           </app-enterprise-page-header>
+          <p class="muted" data-testid="campaign-market">
+            {{ 'campaigns.list.market' | t:lang() }}:
+            {{ campaign.market || ('common.notAvailable' | t:lang()) }}
+          </p>
+
+          <div class="vx-summary-strip" data-testid="campaign-summary-strip">
+            <div class="kpi-card">
+              <h3>{{ 'campaigns.detail.budgetTitle' | t:lang() }}</h3>
+              @if (budget) {
+                <p class="kpi-value">{{ budget.amount | localeMoney: budget.currency }}</p>
+              } @else {
+                <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
+              }
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'campaigns.detail.spendTitle' | t:lang() }}</h3>
+              <p class="kpi-value">{{ expensesTotal | localeMoney: 'USD' }}</p>
+            </div>
+            <div class="kpi-card">
+              <h3>{{ 'campaigns.detail.roiSimulated' | t:lang() }}</h3>
+              @if (roi?.status === 'available' && roi?.roi_value != null) {
+                <p class="kpi-value">{{ roi!.roi_value | number: '1.2-2' }}</p>
+              } @else {
+                <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
+              }
+              <span class="vx-sim-badge">{{ 'campaigns.detail.academicEstimate' | t:lang() }}</span>
+            </div>
+          </div>
+
+          <div class="vx-sim-callout" role="note" data-testid="campaign-roi-disclosure">
+            {{ 'campaigns.detail.roiDisclosure' | t:lang() }}
+          </div>
 
           <app-enterprise-section-card [title]="'campaigns.detail.roiTitle' | t:lang()">
             @if (roi) {
               @if (roi.status === 'available' && roi.roi_value != null) {
                 <p class="roi-value">
-                  {{ 'campaigns.detail.roiValue' | t:lang() }}:
+                  {{ 'campaigns.detail.roiSimulated' | t:lang() }}:
                   {{ roi.roi_value | number: '1.2-2' }}
                 </p>
                 @if (roi.budget_utilization != null) {
@@ -260,6 +292,10 @@ export class CampaignDetailPage implements OnInit {
     category: ['ads', Validators.required],
     expense_date: ['', Validators.required],
   });
+
+  get expensesTotal(): number {
+    return this.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }
 
   ngOnInit(): void {
     this.campaignId = Number(this.route.snapshot.paramMap.get('id'));

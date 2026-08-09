@@ -88,6 +88,24 @@ export class SearchComponent implements OnInit {
     Math.max(1, Math.ceil(this.trackTotal() / this.trackPageSize)),
   );
 
+  /** Example queries that only fill/run the existing search pipeline (no fake results). */
+  readonly searchExamples = ['Bad Bunny', 'rock', 'pop'] as const;
+
+  uiState = computed(():
+    | 'initial'
+    | 'searching'
+    | 'empty'
+    | 'provider_unavailable'
+    | 'error'
+    | 'results' => {
+    if (!this.searched() && !this.isLoading()) return 'initial';
+    if (this.isLoading() && !this.hasResults()) return 'searching';
+    if (this.phase() === 'external_unavailable') return 'provider_unavailable';
+    if (this.hasError() && !this.hasResults()) return 'error';
+    if (this.searched() && !this.hasResults() && !this.isLoading()) return 'empty';
+    return 'results';
+  });
+
   trackQueue = computed(() =>
     this.trackResults().map((r) => toPlayableFromSearch(this.covers, r)),
   );
@@ -278,6 +296,11 @@ export class SearchComponent implements OnInit {
   runSearch(q: string, allowExternal = true) {
     this.query.set(q);
     this.search$.next({ q, allowExternal });
+  }
+
+  /** Fills the input and executes the same search path as the toolbar submit. */
+  applyExample(q: string): void {
+    this.runSearch(q, true);
   }
 
   loadTrackPage(page: number) {
