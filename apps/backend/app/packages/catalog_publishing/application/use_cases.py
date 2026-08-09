@@ -18,6 +18,7 @@ from typing import Any, Optional
 
 import duckdb
 
+from app.core.database import transactional
 from app.core.time_util import utc_now
 from app.packages.catalog_publishing.domain.errors import (
     ConflictError,
@@ -1267,12 +1268,12 @@ class CatalogPublishingUseCases:
             )
         return aid
 
-    def _upsert_public_dim_track(
+    def _dim_track_canonical_values(
         self, wtid: int, track: dict[str, Any], sub: dict[str, Any]
-    ) -> None:
-        """Create or refresh the discoverable dim_track row for a published track."""
+    ) -> tuple[list[str], list[Any]] | None:
+        """Return (fields, values) for the canonical dim_track row, or None if table missing."""
         if not _table_exists(self._conn, "dim_track"):
-            return
+            return None
         title = self._public_catalog_title(track, sub)
         artist_id = self._ensure_warehouse_artist_id(sub)
         duration = int(track.get("duration_ms") or 0)
@@ -1283,13 +1284,6 @@ class CatalogPublishingUseCases:
                 "WHERE table_name = 'dim_track'"
             ).fetchall()
         }
-        existing = self._conn.execute(
-            "SELECT 1 FROM dim_track WHERE id_track = ?", [wtid]
-        ).fetchone()
-        if existing:
-            # DuckDB ART indexes can raise duplicate-key on UPDATE; replace row.
-            self._conn.execute("DELETE FROM dim_track WHERE id_track = ?", [wtid])
-
         fields = ["id_track", "nombre_track"]
         values: list[Any] = [wtid, title]
         if "duration_ms" in cols:
@@ -1302,7 +1296,6 @@ class CatalogPublishingUseCases:
             fields.append("id_artista")
             values.append(artist_id)
 
-        # Build search_fold before insert so discoverability is immediate.
         if "search_fold" in cols:
             from app.core.search_fold import _row_search_fold
             from app.packages.catalog.services.text_search import fold_text
@@ -1323,12 +1316,81 @@ class CatalogPublishingUseCases:
                     folded = f"{folded} {rt}".strip()
             fields.append("search_fold")
             values.append(folded)
+        return fields, values
 
+    def _dim_track_row_matches(
+        self, wtid: int, fields: list[str], values: list[Any]
+    ) -> bool:
+        """True when an existing dim_track row already equals the canonical values."""
+        select_cols = ", ".join(fields)
+        row = self._conn.execute(
+            f"SELECT {select_cols} FROM dim_track WHERE id_track = ?", [wtid]
+        ).fetchone()
+        if not row:
+            return False
+        for i, expected in enumerate(values):
+            got = row[i]
+            if got is None and expected is None:
+                continue
+            if got is None or expected is None:
+                return False
+            if isinstance(expected, int):
+                try:
+                    if int(got) != int(expected):
+                        return False
+                except (TypeError, ValueError):
+                    return False
+            elif str(got) != str(expected):
+                return False
+        return True
+
+    def _apply_dim_track_replace(
+        self, wtid: int, fields: list[str], values: list[Any]
+    ) -> None:
+        """Create or refresh dim_track (caller must hold transactional scope).
+
+        DuckDB ART indexes reject DELETE+INSERT of the same primary key inside one
+        transaction, so existing rows are updated in place; missing rows are inserted.
+        """
+        exists = self._conn.execute(
+            "SELECT 1 FROM dim_track WHERE id_track = ?", [wtid]
+        ).fetchone()
+        if exists:
+            set_fields = [f for f in fields if f != "id_track"]
+            set_values = [values[fields.index(f)] for f in set_fields]
+            if not set_fields:
+                return
+            assignments = ", ".join(f"{col} = ?" for col in set_fields)
+            self._conn.execute(
+                f"UPDATE dim_track SET {assignments} WHERE id_track = ?",
+                [*set_values, wtid],
+            )
+            return
         placeholders = ", ".join("?" for _ in fields)
         self._conn.execute(
             f"INSERT INTO dim_track ({', '.join(fields)}) VALUES ({placeholders})",
             values,
         )
+
+    def _upsert_public_dim_track(
+        self, wtid: int, track: dict[str, Any], sub: dict[str, Any]
+    ) -> bool:
+        """Create or refresh dim_track. Returns True when a write occurred.
+
+        Idempotent: skips writes when the row already matches canonical values.
+        Mutations run inside a single ``transactional()`` so a mid-flight failure
+        rolls back to the previous row (UPDATE-in-place for existing PKs because
+        DuckDB ART cannot DELETE+INSERT the same key in one transaction).
+        """
+        planned = self._dim_track_canonical_values(wtid, track, sub)
+        if planned is None:
+            return False
+        fields, values = planned
+        if self._dim_track_row_matches(wtid, fields, values):
+            return False
+        with transactional(self._conn):
+            self._apply_dim_track_replace(wtid, fields, values)
+        return True
 
     def _ensure_catalog_asset(
         self,
@@ -1363,16 +1425,41 @@ class CatalogPublishingUseCases:
         )
         return aid
 
-    def _upsert_audio_source(self, warehouse_track_id: int, playable_url: str) -> None:
-        if not _table_exists(self._conn, "app_track_audio_source"):
-            return
-        from app.packages.streaming.services.audio.cache import migrate_audio_source_columns
-
-        migrate_audio_source_columns(self._conn)
-        self._conn.execute(
-            "DELETE FROM app_track_audio_source WHERE track_id = ?",
+    def _apply_audio_source_replace(
+        self, warehouse_track_id: int, playable_url: str
+    ) -> None:
+        """Create or refresh audio source (caller must hold transactional scope)."""
+        now = _now()
+        exists = self._conn.execute(
+            "SELECT 1 FROM app_track_audio_source WHERE track_id = ?",
             [warehouse_track_id],
-        )
+        ).fetchone()
+        if exists:
+            # DuckDB ART: no DELETE+INSERT same PK in one txn — update in place.
+            self._conn.execute(
+                """
+                UPDATE app_track_audio_source
+                SET provider = 'local_published',
+                    youtube_video_id = NULL,
+                    source_ref = ?,
+                    playable_url = ?,
+                    query = 'local_published',
+                    status = 'ok',
+                    failure_count = 0,
+                    confidence_score = 1.0,
+                    resolved_at = ?,
+                    last_checked_at = ?
+                WHERE track_id = ?
+                """,
+                [
+                    str(warehouse_track_id),
+                    playable_url,
+                    now,
+                    now,
+                    warehouse_track_id,
+                ],
+            )
+            return
         self._conn.execute(
             """
             INSERT INTO app_track_audio_source
@@ -1384,18 +1471,88 @@ class CatalogPublishingUseCases:
                 warehouse_track_id,
                 str(warehouse_track_id),
                 playable_url,
-                _now(),
-                _now(),
+                now,
+                now,
             ],
         )
 
-    def _upsert_cover(self, warehouse_track_id: int, cover_media_id: int) -> None:
-        if not _table_exists(self._conn, "app_track_cover"):
-            return
-        url = f"/api/v1/media/{cover_media_id}/content"
-        self._conn.execute(
-            "DELETE FROM app_track_cover WHERE track_id = ?", [warehouse_track_id]
+    def _audio_source_matches(
+        self, warehouse_track_id: int, playable_url: str
+    ) -> bool:
+        """True when the row already matches canonical local_published values.
+
+        Compares every non-temporal field normalized by
+        ``_apply_audio_source_replace`` (timestamps are ignored).
+        """
+        existing = self._conn.execute(
+            """
+            SELECT provider, youtube_video_id, source_ref, playable_url,
+                   query, status, failure_count, confidence_score
+            FROM app_track_audio_source WHERE track_id = ?
+            """,
+            [warehouse_track_id],
+        ).fetchone()
+        if not existing:
+            return False
+        provider, youtube_video_id, source_ref, got_url, query, status, failures, confidence = (
+            existing
         )
+        if str(provider) != "local_published":
+            return False
+        if youtube_video_id is not None:
+            return False
+        if str(source_ref) != str(warehouse_track_id):
+            return False
+        if str(got_url) != str(playable_url):
+            return False
+        if str(query) != "local_published":
+            return False
+        if str(status) != "ok":
+            return False
+        try:
+            if int(failures or 0) != 0:
+                return False
+        except (TypeError, ValueError):
+            return False
+        try:
+            if float(confidence) != 1.0:
+                return False
+        except (TypeError, ValueError):
+            return False
+        return True
+
+    def _upsert_audio_source(self, warehouse_track_id: int, playable_url: str) -> bool:
+        """Idempotent audio-source upsert. Returns True when a write occurred."""
+        if not _table_exists(self._conn, "app_track_audio_source"):
+            return False
+        from app.packages.streaming.services.audio.cache import migrate_audio_source_columns
+
+        migrate_audio_source_columns(self._conn)
+        if self._audio_source_matches(warehouse_track_id, playable_url):
+            return False
+        with transactional(self._conn):
+            self._apply_audio_source_replace(warehouse_track_id, playable_url)
+        return True
+
+    def _apply_cover_replace(
+        self, warehouse_track_id: int, cover_media_id: int
+    ) -> None:
+        """Create or refresh cover (caller must hold transactional scope)."""
+        url = f"/api/v1/media/{cover_media_id}/content"
+        exists = self._conn.execute(
+            "SELECT 1 FROM app_track_cover WHERE track_id = ?",
+            [warehouse_track_id],
+        ).fetchone()
+        if exists:
+            self._conn.execute(
+                """
+                UPDATE app_track_cover
+                SET image_url = ?, status = 'ok', resolved_at = ?
+                WHERE track_id = ?
+                """,
+                [url, _now(), warehouse_track_id],
+            )
+            return
         self._conn.execute(
             """
             INSERT INTO app_track_cover (track_id, image_url, status, resolved_at)
@@ -1403,6 +1560,26 @@ class CatalogPublishingUseCases:
             """,
             [warehouse_track_id, url, _now()],
         )
+
+    def _cover_matches(self, warehouse_track_id: int, cover_media_id: int) -> bool:
+        url = f"/api/v1/media/{cover_media_id}/content"
+        existing = self._conn.execute(
+            "SELECT image_url, status FROM app_track_cover WHERE track_id = ?",
+            [warehouse_track_id],
+        ).fetchone()
+        return bool(
+            existing and str(existing[0]) == url and str(existing[1]) == "ok"
+        )
+
+    def _upsert_cover(self, warehouse_track_id: int, cover_media_id: int) -> bool:
+        """Idempotent cover upsert. Returns True when a write occurred."""
+        if not _table_exists(self._conn, "app_track_cover"):
+            return False
+        if self._cover_matches(warehouse_track_id, cover_media_id):
+            return False
+        with transactional(self._conn):
+            self._apply_cover_replace(warehouse_track_id, cover_media_id)
+        return True
 
     def suspend(
         self,

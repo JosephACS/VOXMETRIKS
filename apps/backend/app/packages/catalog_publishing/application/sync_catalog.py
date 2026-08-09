@@ -7,6 +7,7 @@ from typing import Any
 
 import duckdb
 
+from app.core.database import transactional
 from app.packages.catalog_publishing.infrastructure.schema import (
     DEMO_WAREHOUSE_TRACK_ID_MIN,
 )
@@ -18,6 +19,11 @@ def sync_published_tracks_to_catalog(conn: duckdb.DuckDBPyConnection) -> dict[st
     """
     Idempotent repair: every ``published`` submission track with a warehouse id
     gets a discoverable ``dim_track`` row (no duplicates).
+
+    Each track's dim_track + cover + audio mutations share one ``transactional()``
+    so a mid-flight failure cannot leave a half-applied replace. Unchanged rows
+    skip writes entirely. Existing primary keys are updated in place (DuckDB ART
+    cannot DELETE+INSERT the same key inside one transaction).
     """
     from app.packages.catalog_publishing.application.use_cases import (
         CatalogPublishingUseCases,
@@ -78,22 +84,49 @@ def sync_published_tracks_to_catalog(conn: duckdb.DuckDBPyConnection) -> dict[st
             "organization_id": r[9],
         }
         wtid = int(r[4])
-        uc._upsert_public_dim_track(wtid, track, sub)
         cover = conn.execute(
             "SELECT cover_media_id FROM app_release_submission WHERE id = ?",
             [int(r[1])],
         ).fetchone()
-        if cover and cover[0]:
-            uc._upsert_cover(wtid, int(cover[0]))
         audio = conn.execute(
             """
             SELECT audio_media_id FROM app_release_submission_track WHERE id = ?
             """,
             [int(r[0])],
         ).fetchone()
-        if audio and audio[0]:
+
+        planned = uc._dim_track_canonical_values(wtid, track, sub)
+        dim_needs = False
+        if planned is not None:
+            fields, values = planned
+            dim_needs = not uc._dim_track_row_matches(wtid, fields, values)
+
+        cover_id = int(cover[0]) if cover and cover[0] else None
+        cover_needs = False
+        if cover_id is not None and _table_exists(conn, "app_track_cover"):
+            cover_needs = not uc._cover_matches(wtid, cover_id)
+
+        playable = None
+        audio_needs = False
+        if audio and audio[0] and _table_exists(conn, "app_track_audio_source"):
+            from app.packages.streaming.services.audio.cache import (
+                migrate_audio_source_columns,
+            )
+
+            migrate_audio_source_columns(conn)
             playable = f"/api/v1/media/{int(audio[0])}/content"
-            uc._upsert_audio_source(wtid, playable)
+            audio_needs = not uc._audio_source_matches(wtid, playable)
+
+        if dim_needs or cover_needs or audio_needs:
+            with transactional(conn):
+                if dim_needs and planned is not None:
+                    fields, values = planned
+                    uc._apply_dim_track_replace(wtid, fields, values)
+                if cover_needs and cover_id is not None:
+                    uc._apply_cover_replace(wtid, cover_id)
+                if audio_needs and playable is not None:
+                    uc._apply_audio_source_replace(wtid, playable)
+
         synced += 1
 
     # Align legacy seed track titles for search ("Published Track" → release name)

@@ -61,6 +61,8 @@ foreach ($port in @(8000, 4200)) {
 }
 
 New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
+# Drop any stale graceful-shutdown request from a prior session (fixed name only).
+Clear-DemoBackendShutdownRequest -PidDir $PidDir
 $script:Owned = New-Object 'System.Collections.Generic.List[object]'
 $script:SessionArtifacts = New-Object 'System.Collections.Generic.List[string]'
 
@@ -123,14 +125,20 @@ function Write-SessionArtifactsManifest {
 }
 
 function Stop-OwnedSessionProcesses {
-    Stop-DemoSessionOwnedRecords -OwnedList $script:Owned
+    $result = Stop-DemoSessionOwnedRecords -OwnedList $script:Owned -PidDir $PidDir -PassThru
     if ($null -ne $script:Owned) { $script:Owned.Clear() }
     $arts = @()
     if ($null -ne $script:SessionArtifacts -and $script:SessionArtifacts.Count -gt 0) {
         $arts = @($script:SessionArtifacts.ToArray())
     }
+    # Always include canonical shutdown request in cleanup set (fixed name; not from manifest).
+    $shutdownReq = Get-DemoBackendShutdownRequestPath -PidDir $PidDir
+    if ($arts -notcontains $shutdownReq) { $arts += $shutdownReq }
     Clear-DemoSessionArtifacts -ArtifactPaths $arts -PidDir $PidDir
     if ($null -ne $script:SessionArtifacts) { $script:SessionArtifacts.Clear() }
+    if ($result -and $result.GracefulFailed) {
+        Write-Warning 'Backend cleanup used force-kill after graceful timeout; runtime is NOT healthy.'
+    }
 }
 
 function Wait-BackendReady {
@@ -192,7 +200,12 @@ try {
     Register-SessionArtifact -Path $FrontendLog
     Register-SessionArtifact -Path $FrontendErr
 
-    $backendArgs = @('-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000')
+    $DemoBackendRunner = Join-Path $BackendDir 'scripts\run_demo_backend.py'
+    if (-not (Test-Path -LiteralPath $DemoBackendRunner)) {
+        throw "Missing demo backend runner: $DemoBackendRunner"
+    }
+    $DemoBackendRunnerResolved = (Resolve-Path -LiteralPath $DemoBackendRunner).Path
+    $backendArgs = @($DemoBackendRunnerResolved)
     $envKeys = @('EMAIL_PROVIDER', 'SKIP_SYSTEM_BOOT', 'JOBS_ENABLED', 'RUN_ETL_ON_BOOT')
     $envSaved = @{}
     foreach ($k in $envKeys) {

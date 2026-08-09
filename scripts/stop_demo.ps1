@@ -7,11 +7,12 @@
     backend.launcher.json  + kind launcher-backend  + executablePath == resolved venv python
     frontend.launcher.json + kind launcher-frontend + executablePath == resolved node.exe
 
-  Those are stopped via Process handle match (PID + StartTimeUtc + executablePath)
-  without requiring WMI (taskkill /T, then Stop-Process fallback on that PID only).
+  Backend: after PID + StartTimeUtc + executablePath validation, create
+  backend.shutdown.request and wait up to 20s for graceful Uvicorn/lifespan exit
+  (log must contain "VOXMETRIK_V2 shutdown complete"). Force-kill only on timeout
+  and then exit 1 (runtime not healthy).
 
-  Port-discovered arbitrary processes still require strict WMI commandLine validation.
-  Missing WMI/commandLine => refuse stop (process left intact).
+  Frontend may be force-stopped after backend handling.
 
   Artifact cleanup deletes only DemoArtifactNames as direct children of PidDir.
   session-artifacts.json is never trusted to expand the delete set.
@@ -45,6 +46,7 @@ if ($nodeCmd) {
 $script:ForeignPort = $false
 $script:UnverifiableListener = $false
 $script:LauncherStopFailed = $false
+$script:BackendGracefulFailed = $false
 
 # Whitelist of artifact file names this demo stack may create (never delete unknowns).
 $DemoArtifactNames = @(
@@ -52,11 +54,12 @@ $DemoArtifactNames = @(
     'frontend.launcher.json',
     'backend.listener-note.json',
     'frontend.listener-note.json',
+    'backend.shutdown.request',
+    'session-artifacts.json',
     'backend.out.log',
     'backend.err.log',
     'frontend.out.log',
     'frontend.err.log',
-    'session-artifacts.json',
     'backend.log',
     'frontend.log',
     'backend.json',
@@ -108,21 +111,18 @@ function Test-PersistedLauncherMetaAllowed {
     return $false
 }
 
-function Stop-SessionOwnedLauncherFromMeta {
-    param(
-        [string]$Path,
-        [string]$ExpectedFileName
-    )
+function Stop-SessionOwnedBackendGracefulFromMeta {
+    param([string]$Path)
     $leaf = [IO.Path]::GetFileName($Path)
-    if (-not [string]::Equals($leaf, $ExpectedFileName, [StringComparison]::OrdinalIgnoreCase)) {
+    if (-not [string]::Equals($leaf, 'backend.launcher.json', [StringComparison]::OrdinalIgnoreCase)) {
         return
     }
 
     $meta = Read-MetaRecord -Path $Path
     if (-not $meta) { return }
 
-    if (-not (Test-PersistedLauncherMetaAllowed -FileName $ExpectedFileName -Meta $meta)) {
-        Write-Warning ("Refusing session-owned stop from {0}: kind/executablePath not an allowed demo launcher (left intact)." -f $ExpectedFileName)
+    if (-not (Test-PersistedLauncherMetaAllowed -FileName 'backend.launcher.json' -Meta $meta)) {
+        Write-Warning 'Refusing session-owned stop from backend.launcher.json: kind/executablePath not an allowed demo launcher (left intact).'
         return
     }
 
@@ -134,7 +134,12 @@ function Stop-SessionOwnedLauncherFromMeta {
 
     $handle = Get-DemoProcessHandleInfo -ProcessId $pidVal
     if (-not $handle) {
-        Write-Host "PID $pidVal not running - ($ExpectedFileName)"
+        Write-Host "PID $pidVal not running - (backend.launcher.json)"
+        # Still require shutdown marker if port is free from a prior graceful exit.
+        if ((-not (Get-PortListenerPid -Port 8000)) -and (Test-DemoBackendShutdownCompleteInLogs -PidDir $PidDir)) {
+            Write-Host 'Backend already stopped with VOXMETRIK_V2 shutdown complete.'
+            return
+        }
         return
     }
 
@@ -145,24 +150,81 @@ function Stop-SessionOwnedLauncherFromMeta {
         Kind           = [string]$meta.kind
     }
     if (-not (Test-SessionOwnedHandleMatch -HandleInfo $handle -Record $record)) {
-        Write-Warning ("Refusing to stop PID {0} from {1}: handle metadata mismatch (left intact)." -f $pidVal, $ExpectedFileName)
+        Write-Warning ("Refusing to stop PID {0} from backend.launcher.json: handle metadata mismatch (left intact)." -f $pidVal)
         return
     }
 
-    # Live exe must also equal the expected resolved demo executable.
-    $expectedExe = if ($ExpectedFileName -eq 'backend.launcher.json') { $VenvPythonResolved } else { $NodeExeResolved }
-    if (-not (Test-DemoExecutablePathEquals -Left ([string]$handle.ExecutablePath) -Right $expectedExe)) {
-        Write-Warning ("Refusing to stop PID {0} from {1}: live executablePath is not the expected demo launcher (left intact)." -f $pidVal, $ExpectedFileName)
+    if (-not (Test-DemoExecutablePathEquals -Left ([string]$handle.ExecutablePath) -Right $VenvPythonResolved)) {
+        Write-Warning ("Refusing to stop PID {0} from backend.launcher.json: live executablePath is not the expected demo launcher (left intact)." -f $pidVal)
+        return
+    }
+
+    try {
+        $gr = Stop-DemoBackendGracefulOrForce -ProcessId ([int]$handle.Pid) -PidDir $PidDir -TimeoutSec 20
+        if ($gr.Ok) {
+            Write-Host ("Stopped PID {0} (launcher-backend) graceful - VOXMETRIK_V2 shutdown complete" -f $handle.Pid)
+        } else {
+            $script:BackendGracefulFailed = $true
+            $script:LauncherStopFailed = $true
+            Write-Warning ("Backend PID {0} did not shut down gracefully ({1}). Forced={2}. Runtime is NOT healthy." -f $handle.Pid, $gr.Detail, $gr.Forced)
+        }
+    } catch {
+        $script:LauncherStopFailed = $true
+        $script:BackendGracefulFailed = $true
+        Write-Warning "Could not stop backend PID $($handle.Pid): $_"
+    }
+}
+
+function Stop-SessionOwnedFrontendFromMeta {
+    param([string]$Path)
+    $leaf = [IO.Path]::GetFileName($Path)
+    if (-not [string]::Equals($leaf, 'frontend.launcher.json', [StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
+
+    $meta = Read-MetaRecord -Path $Path
+    if (-not $meta) { return }
+
+    if (-not (Test-PersistedLauncherMetaAllowed -FileName 'frontend.launcher.json' -Meta $meta)) {
+        Write-Warning 'Refusing session-owned stop from frontend.launcher.json: kind/executablePath not an allowed demo launcher (left intact).'
+        return
+    }
+
+    $pidVal = 0
+    if (-not [int]::TryParse([string]$meta.pid, [ref]$pidVal)) {
+        Write-Warning "Invalid pid in $Path"
+        return
+    }
+
+    $handle = Get-DemoProcessHandleInfo -ProcessId $pidVal
+    if (-not $handle) {
+        Write-Host "PID $pidVal not running - (frontend.launcher.json)"
+        return
+    }
+
+    $record = [pscustomobject]@{
+        Pid            = $pidVal
+        StartTimeUtc   = [string]$meta.startTimeUtc
+        ExecutablePath = [string]$meta.executablePath
+        Kind           = [string]$meta.kind
+    }
+    if (-not (Test-SessionOwnedHandleMatch -HandleInfo $handle -Record $record)) {
+        Write-Warning ("Refusing to stop PID {0} from frontend.launcher.json: handle metadata mismatch (left intact)." -f $pidVal)
+        return
+    }
+
+    if (-not (Test-DemoExecutablePathEquals -Left ([string]$handle.ExecutablePath) -Right $NodeExeResolved)) {
+        Write-Warning ("Refusing to stop PID {0} from frontend.launcher.json: live executablePath is not the expected demo launcher (left intact)." -f $pidVal)
         return
     }
 
     try {
         $ok = Stop-DemoVerifiedLauncher -ProcessId ([int]$handle.Pid)
         if ($ok) {
-            Write-Host ("Stopped PID {0} ({1}) from {2}" -f $handle.Pid, $meta.kind, $ExpectedFileName)
+            Write-Host ("Stopped PID {0} (launcher-frontend) from frontend.launcher.json" -f $handle.Pid)
         } else {
             $script:LauncherStopFailed = $true
-            Write-Warning ("Failed to stop verified launcher PID {0} from {1}" -f $handle.Pid, $ExpectedFileName)
+            Write-Warning ("Failed to stop verified launcher PID {0} from frontend.launcher.json" -f $handle.Pid)
         }
     } catch {
         $script:LauncherStopFailed = $true
@@ -219,15 +281,15 @@ function Clear-WhitelistedDemoArtifacts {
     Clear-DemoSessionArtifacts -ArtifactPaths $toDelete -PidDir $PidDir
 }
 
-# 1) Stop only the two allowed launcher metadata files (handle identity; no WMI).
+# 1) Backend graceful first, then frontend force.
 if (Test-Path -LiteralPath $PidDir) {
     $backendMetaPath = Join-Path $PidDir 'backend.launcher.json'
     $frontendMetaPath = Join-Path $PidDir 'frontend.launcher.json'
     if (Test-Path -LiteralPath $backendMetaPath) {
-        Stop-SessionOwnedLauncherFromMeta -Path $backendMetaPath -ExpectedFileName 'backend.launcher.json'
+        Stop-SessionOwnedBackendGracefulFromMeta -Path $backendMetaPath
     }
     if (Test-Path -LiteralPath $frontendMetaPath) {
-        Stop-SessionOwnedLauncherFromMeta -Path $frontendMetaPath -ExpectedFileName 'frontend.launcher.json'
+        Stop-SessionOwnedFrontendFromMeta -Path $frontendMetaPath
     }
 } else {
     Write-Host 'No scripts/.demo-pids metadata - will still inspect ports 8000/4200 for owned listeners.'
@@ -236,6 +298,7 @@ if (Test-Path -LiteralPath $PidDir) {
 Start-Sleep -Milliseconds 600
 
 # 2) Port reclaim only with strict WMI identity (legacy / leftover listeners).
+# Backend port reclaim after failed graceful still uses force on verified workers only.
 Stop-StrictPortListenerIfOwned -Port 8000 -Kind 'backend'
 Stop-StrictPortListenerIfOwned -Port 4200 -Kind 'frontend'
 
@@ -248,7 +311,10 @@ foreach ($port in @(8000, 4200)) {
     }
 }
 
-if ($stillBusy.Count -gt 0 -or $script:ForeignPort -or $script:UnverifiableListener -or $script:LauncherStopFailed) {
+if ($stillBusy.Count -gt 0 -or $script:ForeignPort -or $script:UnverifiableListener -or $script:LauncherStopFailed -or $script:BackendGracefulFailed) {
+    if ($script:BackendGracefulFailed) {
+        Write-Warning 'Backend closure was not graceful (timeout/force). Do not treat the demo runtime as healthy.'
+    }
     if ($script:UnverifiableListener) {
         Write-Warning 'A listener remained after stopping the session launcher but could not be verified (WMI/commandLine unavailable). Process left intact.'
     }
