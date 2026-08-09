@@ -42,15 +42,22 @@
 
     </div>
 
-    <div class="search-ai-row">
-      <label class="ai-toggle">
-        <input type="checkbox" [checked]="aiMode()" (change)="toggleAiMode()" />
-        Búsqueda natural (IA local)
+    <div class="search-ai-row" role="group" [attr.aria-label]="'search.ai.group' | t:lang()">
+      <label class="ai-toggle" for="search-ai-natural">
+        <input
+          id="search-ai-natural"
+          type="checkbox"
+          [checked]="aiMode()"
+          (change)="toggleAiMode()"
+        />
+        <span>{{ 'search.ai.natural' | t:lang() }}</span>
       </label>
-      <button type="button" class="ai-playlist-btn" (click)="openAiPlaylist()">Crear playlist con IA</button>
+      <button type="button" class="ai-playlist-btn" (click)="openAiPlaylist()">
+        {{ 'search.ai.playlist' | t:lang() }}
+      </button>
     </div>
     @if (nlIntent()) {
-      <p class="nl-intent">Intención detectada: {{ nlIntent() }}</p>
+      <p class="nl-intent">{{ 'search.ai.intent' | t: { intent: nlIntent()! }:lang() }}</p>
     }
     @if (statusMessage()) {
       <p class="search-status" data-testid="search-status">{{ statusMessage() }}</p>

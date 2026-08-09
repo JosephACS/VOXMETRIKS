@@ -33,6 +33,9 @@ export const STATUS_LABEL_KEYS: Record<string, string> = {
   inactive: 'status.inactive',
   disputed: 'status.disputed',
   dismissed: 'status.dismissed',
+  not_found: 'status.not_found',
+  disabled: 'status.disabled',
+  error: 'status.error',
   // CRM prospect lifecycle (stored codes stay English; labels are translated)
   new: 'status.new',
   contacted: 'status.contacted',

@@ -946,7 +946,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       if (role === 'admin') {
         if (s.id === 'main' || s.id === 'reporting') return true;
         if (s.id === 'catalogHub') {
-          return hasOrg && (canOrg('operational') || canOrg('org_admin_basic'));
+          return hasOrg && canOrg('operational');
         }
         if (s.id === 'organizations') {
           return hasOrg && canOrg('org_admin_basic', 'organization.view');

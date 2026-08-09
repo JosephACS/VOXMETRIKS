@@ -5,6 +5,8 @@
  */
 
 import { OrgModuleKind } from '../../packages/organizations/organization-access';
+import { decideProductSurfaceAccess } from '../guards/product-surface.policy';
+import type { NavAccessContext } from '../navigation/nav-access.policy';
 import { SpaceKind } from './space.models';
 import { SpaceNavIconId } from './space-nav.icons';
 
@@ -37,9 +39,42 @@ export interface SpaceNavFilterContext {
     requiredPermission?: string | null,
   ) => boolean;
   hasStaffAccess: boolean;
+  /**
+   * Same product-surface decision used by productSurfaceGuard.
+   * Required for org commercial paths that are OUT_OF_PRODUCT outside organization space.
+   */
+  productSurface?: {
+    navCtx: NavAccessContext;
+    activeSpaceKind: SpaceKind | null | undefined;
+  };
 }
 
-/** Filter nav items using real org/staff gates (UX only; backend remains authority). */
+/**
+ * Single announce gate aligned with route guards:
+ * org RBAC (organizationModuleGuard) + product surface (productSurfaceGuard).
+ */
+export function canAnnounceSpaceNavItem(
+  item: SpaceNavItem,
+  ctx: SpaceNavFilterContext,
+): boolean {
+  if (item.requireStaff && !ctx.hasStaffAccess) return false;
+  if (item.orgModule) {
+    if (!ctx.canAccessOrgModule(item.orgModule, item.orgPermission ?? null)) {
+      return false;
+    }
+  }
+  if (ctx.productSurface) {
+    const verdict = decideProductSurfaceAccess(
+      item.path,
+      ctx.productSurface.navCtx,
+      ctx.productSurface.activeSpaceKind,
+    );
+    if (verdict !== 'allow') return false;
+  }
+  return true;
+}
+
+/** Filter nav items using real org/staff/product-surface gates (UX only; backend remains authority). */
 export function filterSpaceNavSections(
   sections: SpaceNavSection[],
   ctx: SpaceNavFilterContext,
@@ -47,13 +82,7 @@ export function filterSpaceNavSections(
   return sections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => {
-        if (item.requireStaff && !ctx.hasStaffAccess) return false;
-        if (item.orgModule) {
-          return ctx.canAccessOrgModule(item.orgModule, item.orgPermission ?? null);
-        }
-        return true;
-      }),
+      items: section.items.filter((item) => canAnnounceSpaceNavItem(item, ctx)),
     }))
     .filter((s) => s.items.length > 0);
 }

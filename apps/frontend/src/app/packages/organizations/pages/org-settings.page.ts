@@ -9,10 +9,11 @@ import { OrganizationContextService } from '../services/organization-context.ser
 
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 @Component({
   selector: 'app-org-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, StatusLabelPipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-settings-page">
@@ -32,10 +33,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       @if (org(); as o) {
         <form class="org-card org-form" (ngSubmit)="save()">
           <p>
-            Estado:
+            {{ 'common.status' | t:lang() }}:
             <span class="org-badge" [class.org-badge--active]="o.status === 'active'"
               [class.org-badge--closed]="o.status === 'closed'"
-              [class.org-badge--suspended]="o.status === 'suspended_by_platform'">{{ o.status }}</span>
+              [class.org-badge--suspended]="o.status === 'suspended_by_platform'">{{ o.status | statusLabel }}</span>
           </p>
           <label>
             Slug (no editable)

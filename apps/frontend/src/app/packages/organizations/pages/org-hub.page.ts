@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import { OrganizationContextService } from '../services/organization-context.service';
+import { I18nService } from '../../../core/services/i18n.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 
 /**
  * Spec 043 — Organización hub (perfil, miembros, invitaciones, auditoría).
@@ -11,7 +14,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
 @Component({
   selector: 'app-org-hub-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, RouterLink, TranslatePipe, StatusLabelPipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
     <div class="vx-enterprise org-hub">
       <app-enterprise-page-header
@@ -20,7 +23,7 @@ import { OrganizationContextService } from '../services/organization-context.ser
       />
 
       <div class="org-meta">
-        <span class="org-chip">Estado: {{ statusLabel() }}</span>
+        <span class="org-chip">{{ 'common.status' | t:lang() }}: {{ orgStatusCode() | statusLabel }}</span>
         @if (orgId()) {
           <span class="org-chip muted">ID {{ orgId() }}</span>
         }
@@ -85,6 +88,8 @@ import { OrganizationContextService } from '../services/organization-context.ser
 export class OrgHubPage {
   private readonly route = inject(ActivatedRoute);
   private readonly orgCtx = inject(OrganizationContextService);
+  private readonly i18n = inject(I18nService);
+  readonly lang = this.i18n.lang;
 
   readonly orgId = computed(() => {
     const fromRoute = Number(this.route.snapshot.paramMap.get('id'));
@@ -96,9 +101,9 @@ export class OrgHubPage {
     () => this.orgCtx.activeOrganization()?.display_name || 'Organización',
   );
 
-  readonly statusLabel = computed(() => {
+  readonly orgStatusCode = computed(() => {
     const status = (this.orgCtx.activeOrganization() as { status?: string } | null)?.status;
-    return status || this.orgCtx.accessTier() || 'activa';
+    return status || null;
   });
 
   readonly cards = computed(() => {

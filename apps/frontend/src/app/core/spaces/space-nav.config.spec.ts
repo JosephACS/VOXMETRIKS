@@ -65,6 +65,59 @@ describe('space models & nav (045/046)', () => {
     expect(paths).not.toContain('/reports');
   });
 
+  it('hides OUT_OF_PRODUCT org commercial paths when product surface rejects personal space', () => {
+    const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
+    const filtered = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: () => true,
+      productSurface: {
+        activeSpaceKind: 'personal',
+        navCtx: { identityRole: 'user', presentationMode: false },
+      },
+    });
+    const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toContain('/organizations/1');
+    expect(paths).toContain('/catalog');
+    expect(paths).toContain('/artist-profiles');
+    expect(paths).not.toContain('/campaigns');
+    expect(paths).not.toContain('/billing/invoices');
+    expect(paths).not.toContain('/subscriptions/overview');
+  });
+
+  it('keeps org commercial paths when organization space + product surface allow', () => {
+    const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
+    const filtered = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: () => true,
+      productSurface: {
+        activeSpaceKind: 'organization',
+        navCtx: { identityRole: 'user', presentationMode: false },
+      },
+    });
+    const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toContain('/campaigns');
+    expect(paths).toContain('/billing/invoices');
+    expect(paths).toContain('/subscriptions/overview');
+  });
+
+  it('hides operational catalog during onboarding-tier org access', () => {
+    const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
+    const filtered = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: (module) => module === 'onboarding' || module === 'org_admin_basic',
+      productSurface: {
+        activeSpaceKind: 'organization',
+        navCtx: { identityRole: 'user', presentationMode: false },
+      },
+    });
+    const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toContain('/organizations/1');
+    expect(paths).toContain('/subscriptions/overview');
+    expect(paths).not.toContain('/catalog');
+    expect(paths).not.toContain('/artist-profiles');
+    expect(paths).not.toContain('/campaigns');
+  });
+
   it('shows reports only for staff in organization space', () => {
     const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
     const asMember = filterSpaceNavSections(raw, {

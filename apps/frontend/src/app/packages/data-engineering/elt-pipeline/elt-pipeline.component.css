@@ -329,8 +329,24 @@
 
 /* ── Compact layout ── */
 .compact-kpis {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   margin-bottom: 1rem;
+}
+
+.compact-kpis :deep(.kpi-card) {
+  overflow: visible;
+  min-width: 0;
+}
+
+.compact-kpis :deep(.kpi-value) {
+  font-size: clamp(1.05rem, 1.15vw + 0.55rem, 1.45rem);
+  min-height: 1.35rem;
+  line-height: 1.15;
+}
+
+.compact-kpis :deep(.kpi-value-num) {
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .badge-count {

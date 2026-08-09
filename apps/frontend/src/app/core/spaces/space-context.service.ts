@@ -21,6 +21,8 @@ import {
   toPersistedRef,
 } from './space-access.policy';
 import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
+import { normalizeIdentityRole } from '../navigation/nav-access.policy';
+import { presentationModeFromUser } from '../guards/product-surface.policy';
 
 /**
  * Product space context (045 + 046).
@@ -74,6 +76,14 @@ export class SpaceContextService {
       hasStaffAccess,
       canAccessOrgModule: (moduleKind, requiredPermission) =>
         this.orgCtx.canAccessModule(moduleKind, requiredPermission ?? null),
+      productSurface: {
+        activeSpaceKind: kind,
+        navCtx: {
+          identityRole: normalizeIdentityRole(role),
+          platformAdmin: this.crmCtx.roles().includes('platform_admin'),
+          presentationMode: presentationModeFromUser(this.auth.getUser()),
+        },
+      },
     });
   });
 

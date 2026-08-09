@@ -18,12 +18,19 @@ export { presentationModeFromUser as presentationModeFromAuth } from './product-
  *
  * Wired via withProductSurfaceGuard in app.routes.ts for CRM/Billing/etc.
  * NOT applied to Platform Ops (platformAdminGuard).
+ *
+ * Awaits space bootstrap so menu announce and guard see the same activeSpaceKind.
  */
-export const productSurfaceGuard: CanActivateFn = (_route, state): boolean | UrlTree => {
+export const productSurfaceGuard: CanActivateFn = async (
+  _route,
+  state,
+): Promise<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const crm = inject(CrmContextService);
   const spaces = inject(SpaceContextService);
+
+  await spaces.ensureReady();
 
   const ctx: NavAccessContext = {
     identityRole: normalizeIdentityRole(auth.role()),

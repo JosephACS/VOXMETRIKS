@@ -11,7 +11,7 @@ export class AppTitleStrategy extends TitleStrategy {
   override updateTitle(snapshot: RouterStateSnapshot): void {
     const routeTitle = this.buildTitle(snapshot);
     if (!routeTitle) {
-      this.title.setTitle('VOXMETRIK — Music Intelligence Platform');
+      this.title.setTitle('VOXMETRIKS — Music Intelligence Platform');
       return;
     }
     // Route titles are often human-readable (ES/EN literals). Only look up dotted i18n keys.
@@ -19,6 +19,6 @@ export class AppTitleStrategy extends TitleStrategy {
     const label = looksLikeKey ? this.i18n.t(routeTitle) : routeTitle;
     const missing = this.i18n.t('common.missingTranslation');
     const display = looksLikeKey && (label === missing || label === routeTitle) ? routeTitle : label;
-    this.title.setTitle(`${display} | VOXMETRIK`);
+    this.title.setTitle(`${display} | VOXMETRIKS`);
   }
 }

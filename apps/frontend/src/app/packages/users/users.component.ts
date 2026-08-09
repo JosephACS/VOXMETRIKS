@@ -281,7 +281,7 @@ export class UsersComponent implements OnInit {
           this.devices.set(devs);
         } else {
           this.devices.set([
-            { id: 'web', name: 'Web Player', platform: 'VOXMETRIK SPA', lastAccess: 'Ahora', online: true, iconKey: 'monitor' },
+            { id: 'web', name: 'Web Player', platform: 'VOXMETRIKS SPA', lastAccess: 'Ahora', online: true, iconKey: 'monitor' },
           ]);
         }
       },

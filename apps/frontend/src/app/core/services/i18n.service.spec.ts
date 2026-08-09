@@ -62,12 +62,17 @@ describe('I18nService', () => {
     expect(statusLabelKey('past_due')).toBe('status.past_due');
     expect(i18n.t(statusLabelKey('active'))).toBe('Activa');
     expect(i18n.t(statusLabelKey('paid'))).toBe('Pagada');
+    expect(statusLabelKey('not_found')).toBe('status.not_found');
+    expect(i18n.t(statusLabelKey('not_found'))).toBe('No encontrada');
     ui.setLanguage('en');
     await i18n.ensureLocale('en');
     expect(i18n.t(statusLabelKey('past_due'))).toBe('Past due');
     expect(i18n.t(statusLabelKey('draft'))).toBe('Draft');
     expect(i18n.t(statusLabelKey('closed'))).toBe('Closed');
     expect(i18n.t(statusLabelKey('resolved'))).toBe('Resolved');
+    expect(i18n.t(statusLabelKey('active'))).toBe('Active');
+    expect(i18n.t(statusLabelKey('not_found'))).toBe('Not found');
+    expect(i18n.t(statusLabelKey('totally_unknown_xyz'))).toBe(i18n.t('common.notAvailable'));
   });
 
   it('maps HTTP errors to translated messages', () => {

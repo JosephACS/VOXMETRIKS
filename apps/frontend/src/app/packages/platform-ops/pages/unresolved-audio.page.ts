@@ -66,7 +66,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                   <td>{{ row.track_name || '—' }}</td>
                   <td>{{ row.artist_name || '—' }}</td>
                   <td>
-                    <app-enterprise-status-badge [status]="row.status" [label]="row.status" />
+                    <app-enterprise-status-badge [status]="row.status" />
                   </td>
                   <td>
                     <button type="button" class="btn btn-sm" (click)="select(row)">

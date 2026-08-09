@@ -84,6 +84,13 @@ describe('SearchComponent music-core flows', () => {
         template: `
           <p data-testid="phase">{{ phase() }}</p>
           <p data-testid="error">{{ errorMessage() }}</p>
+          <div class="search-ai-row" role="group" aria-label="search.ai.group">
+            <label class="ai-toggle" for="search-ai-natural">
+              <input id="search-ai-natural" type="checkbox" [checked]="aiMode()" (change)="toggleAiMode()" />
+              <span>search.ai.natural</span>
+            </label>
+            <button type="button" class="ai-playlist-btn" (click)="openAiPlaylist()">search.ai.playlist</button>
+          </div>
         `,
         styles: [],
         templateUrl: undefined as unknown as string,
@@ -234,5 +241,20 @@ describe('SearchComponent music-core flows', () => {
     const ai = TestBed.inject(AIService) as unknown as { naturalSearch: ReturnType<typeof vi.fn> };
     expect(ai.naturalSearch).toBeDefined();
     expect(typeof musicSearch).toBe('function');
+  });
+
+  it('renders accessible AI control group with checkbox label and playlist action', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const group = root.querySelector('.search-ai-row');
+    const toggle = root.querySelector('label.ai-toggle');
+    const input = root.querySelector('#search-ai-natural') as HTMLInputElement | null;
+    const btn = root.querySelector('button.ai-playlist-btn');
+    expect(group).toBeTruthy();
+    expect(group?.getAttribute('role')).toBe('group');
+    expect(toggle).toBeTruthy();
+    expect(toggle?.getAttribute('for')).toBe('search-ai-natural');
+    expect(input?.type).toBe('checkbox');
+    expect(btn).toBeTruthy();
+    expect(btn?.textContent).toContain('search.ai.playlist');
   });
 });

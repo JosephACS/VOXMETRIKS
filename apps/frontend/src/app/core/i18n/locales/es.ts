@@ -989,6 +989,10 @@ export const LOCALE_ES = {
     'search.tracksSection': 'Canciones ({{count}})',
     'search.hint': 'Escribe para buscar canciones y artistas en el catálogo.',
     'search.hintDetail': 'La búsqueda usa coincidencias tolerantes a mayúsculas y acentos cuando el backend tiene índice disponible.',
+    'search.ai.group': 'Controles de búsqueda con IA',
+    'search.ai.natural': 'Búsqueda natural (IA local)',
+    'search.ai.playlist': 'Crear playlist con IA',
+    'search.ai.intent': 'Intención detectada: {{intent}}',
     // History
     'history.title': 'Historial',
     'history.subtitle': 'Tu actividad combinada: reproducciones locales, eventos de cuenta y búsquedas del catálogo importado.',
@@ -1291,7 +1295,7 @@ export const LOCALE_ES = {
     'platformOps.audioUnresolved.searchPlaceholder': 'Buscar por título, artista o ID',
     'platformOps.audioUnresolved.empty': 'No hay audio pendiente',
     'platformOps.audioUnresolved.emptyBody':
-      'No hay entradas not_found/error/disabled fuera de publicaciones locales.',
+      'No hay entradas no encontradas, con error o deshabilitadas fuera de publicaciones locales.',
     'platformOps.audioUnresolved.colTrack': 'Canción',
     'platformOps.audioUnresolved.colArtist': 'Artista',
     'platformOps.audioUnresolved.manage': 'Gestionar',

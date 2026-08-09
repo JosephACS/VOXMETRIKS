@@ -1,18 +1,28 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import {
   PersonalAccountApiService,
   PersonalSubscription,
 } from '../services/personal-account-api.service';
+import { personalOwnerTypeLabelKey } from '../personal-subscription.presentation';
 
 @Component({
   selector: 'app-personal-subscription-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [
+    CommonModule,
+    RouterLink,
+    TranslatePipe,
+    StatusLabelPipe,
+    LocaleDatePipe,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   styleUrl: '../personal-account.css',
   template: `
     <div class="vx-enterprise personal-account-page">
@@ -31,15 +41,29 @@ import {
         <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       } @else if (sub()) {
         <app-enterprise-section-card [title]="sub()!.plan_name">
-          <app-enterprise-status-badge [status]="sub()!.status" />
-          <dl class="meta">
-            <dt>{{ 'common.status' | t:lang() }}</dt>
-            <dd>{{ sub()!.status }}</dd>
-            <dt>{{ 'personal.subscription.periodEnd' | t:lang() }}</dt>
-            <dd>{{ sub()!.current_period_end || ('common.notAvailable' | t:lang()) }}</dd>
-            <dt>{{ 'personal.subscription.ownerType' | t:lang() }}</dt>
-            <dd>{{ sub()!.owner_type }}</dd>
-          </dl>
+          <div class="plan-summary">
+            <app-enterprise-status-badge [status]="sub()!.status" />
+            <dl class="meta plan-meta">
+              <div class="plan-meta__row">
+                <dt>{{ 'common.status' | t:lang() }}</dt>
+                <dd>{{ sub()!.status | statusLabel }}</dd>
+              </div>
+              <div class="plan-meta__row">
+                <dt>{{ 'personal.subscription.periodEnd' | t:lang() }}</dt>
+                <dd>
+                  @if (sub()!.current_period_end) {
+                    {{ sub()!.current_period_end | localeDate }}
+                  } @else {
+                    {{ 'personal.subscription.periodEndUnset' | t:lang() }}
+                  }
+                </dd>
+              </div>
+              <div class="plan-meta__row">
+                <dt>{{ 'personal.subscription.ownerType' | t:lang() }}</dt>
+                <dd>{{ ownerTypeKey() | t:lang() }}</dd>
+              </div>
+            </dl>
+          </div>
           @if (!sub()!.is_free && canManageBilling()) {
             <app-enterprise-action-bar>
               <button type="button" class="btn btn--secondary" [disabled]="busy()" (click)="cancel(true)">
@@ -68,6 +92,8 @@ export class PersonalSubscriptionPage implements OnInit {
   busy = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
+
+  readonly ownerTypeKey = computed(() => personalOwnerTypeLabelKey(this.sub()?.owner_type));
 
   ngOnInit(): void {
     this.load();

@@ -173,9 +173,9 @@ export class OrganizationContextService {
         this._roles.set(current.roles ?? []);
         this._permissions.set(current.permissions ?? []);
         this.applySubscriptionAccess(current.subscription_access);
-        // Enrich entitlements only when the member can list subscriptions.
+        // Await enrichment so ensureReady()/guards see the canonical tier (soft keeps /current on failure).
         if (this.hasPermission('subscription.view')) {
-          void this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
+          await this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
         }
       } else if (
         (current.context === 'none' || current.context === 'invalid') &&
@@ -317,7 +317,7 @@ export class OrganizationContextService {
           this._permissions.set(current.permissions ?? []);
           this.applySubscriptionAccess(current.subscription_access);
           if (this.hasPermission('subscription.view')) {
-            void this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
+            await this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
           }
         } else {
           this.clearOrganizationScopedState();

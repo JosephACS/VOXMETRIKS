@@ -16,7 +16,7 @@ import { NotificationToastComponent } from './shared/components/notification-toa
   `,
 })
 export class App {
-  title = 'VOXMETRIK';
+  title = 'VOXMETRIKS';
   private readonly _ui = inject(UiPreferencesService);
   private readonly _i18n = inject(I18nService);
 }
