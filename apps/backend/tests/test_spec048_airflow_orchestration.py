@@ -795,9 +795,36 @@ def test_workflow_reproducible_host_and_dag_wait_contract():
     assert "chown -R 50000:0" in text
     assert "Wait until voxmetriks_elt is listed" in text
     assert "list-import-errors --output json" in text
-    assert "import-errors JSON file is empty" in text
+    assert "assert_import_errors_json.py" in text
     assert "if: always()" in text
     assert "down -v" in text
     # Must not install Airflow on the GitHub runner host.
     assert "pip install apache-airflow" not in text
     assert "apache-airflow==" not in text.split("Install host smoke dependencies")[1].split("Prepare isolated")[0]
+
+
+def test_assert_import_errors_json_handles_null_with_extra_empty_payload(tmp_path):
+    """Literal CI failure: JSONDecodeError Extra data at char 4 (e.g. null[])."""
+    import importlib.util
+
+    script = ROOT / "infrastructure" / "airflow" / "assert_import_errors_json.py"
+    spec = importlib.util.spec_from_file_location("assert_import_errors_json", script)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+
+    assert mod.parse_import_errors_payload("[]") == []
+    assert mod.parse_import_errors_payload("null") == []
+    assert mod.parse_import_errors_payload("null[]") == []
+    assert mod.parse_import_errors_payload("[]\nnull\n") == []
+    with pytest.raises(ValueError, match="empty"):
+        mod.parse_import_errors_payload("   ")
+    rows = mod.parse_import_errors_payload('[{"filename": "x.py"}]')
+    assert rows == [{"filename": "x.py"}]
+    assert mod.main([str(tmp_path / "missing")]) == 2
+    bad = tmp_path / "errs.json"
+    bad.write_text('[{"filename": "broken.py"}]', encoding="utf-8")
+    assert mod.main([str(bad)]) == 1
+    good = tmp_path / "ok.json"
+    good.write_text("null[]", encoding="utf-8")
+    assert mod.main([str(good)]) == 0

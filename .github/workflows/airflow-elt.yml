@@ -207,33 +207,16 @@ jobs:
       - name: Assert zero DAG import errors (machine-readable)
         run: |
           set -euo pipefail
-          if docker compose -f compose.yml exec -T airflow-scheduler \
-               airflow dags list-import-errors --output json >/tmp/af-import-errors.json 2>/tmp/af-import-errors.err; then
-            python - <<'PY'
-          import json
-          from pathlib import Path
-          path = Path("/tmp/af-import-errors.json")
-          raw = path.read_text(encoding="utf-8")
-          if not raw.strip():
-              raise SystemExit("import-errors JSON file is empty; refusing to treat as zero errors")
-          data = json.loads(raw)
-          if isinstance(data, dict):
-              candidates = [data.get(k) for k in ("import_errors", "dags", "data", "items") if k in data]
-              seq = next((c for c in candidates if isinstance(c, list)), None)
-              if seq is None:
-                  raise SystemExit(f"Unexpected import-errors JSON object: {data!r}")
-              data = seq
-          if not isinstance(data, list):
-              raise SystemExit(f"Unexpected import-errors JSON type: {type(data).__name__}")
-          if len(data) != 0:
-              raise SystemExit(f"DAG import errors present ({len(data)}): {data!r}")
-          print("import_errors_json_ok count=0")
-          PY
-          else:
+          if ! docker compose -f compose.yml exec -T airflow-scheduler \
+               airflow dags list-import-errors --output json \
+               >/tmp/af-import-errors.json 2>/tmp/af-import-errors.err; then
             echo "JSON output unavailable; refusing heuristic table grep"
             cat /tmp/af-import-errors.err || true
+            echo "--- stdout ---"
+            cat /tmp/af-import-errors.json || true
             exit 1
           fi
+          python assert_import_errors_json.py /tmp/af-import-errors.json
 
       - name: Run DAG test on isolated data
         run: |
