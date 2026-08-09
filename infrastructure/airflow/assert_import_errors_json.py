@@ -8,16 +8,37 @@ Handles Airflow/CLI wrappers that emit `null` and/or trailing empty JSON values
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
+
+
+_AIRFLOW_INFO_LOG_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\s+"
+    r"\[(?:debug|info)\s*\]\s+"
+)
+
+
+def _strip_airflow_info_logs(raw: str) -> str:
+    """Remove only structured debug/info preamble emitted by the Airflow CLI."""
+    payload_lines = [
+        line
+        for line in raw.lstrip("\ufeff").splitlines()
+        if not _AIRFLOW_INFO_LOG_RE.match(line.strip())
+    ]
+    return "\n".join(payload_lines).strip()
 
 
 def parse_import_errors_payload(raw: str) -> list[Any]:
     if not raw.strip():
         raise ValueError("import-errors JSON file is empty; refusing to treat as zero errors")
 
-    cleaned = raw.lstrip("\ufeff").strip()
+    cleaned = _strip_airflow_info_logs(raw)
+    if not cleaned:
+        raise ValueError(
+            "import-errors JSON payload is absent after Airflow informational logs"
+        )
     decoder = json.JSONDecoder()
     try:
         data, end = decoder.raw_decode(cleaned)

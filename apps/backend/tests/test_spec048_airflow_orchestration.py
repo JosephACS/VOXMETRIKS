@@ -817,8 +817,22 @@ def test_assert_import_errors_json_handles_null_with_extra_empty_payload(tmp_pat
     assert mod.parse_import_errors_payload("null") == []
     assert mod.parse_import_errors_payload("null[]") == []
     assert mod.parse_import_errors_payload("[]\nnull\n") == []
+    airflow_info = (
+        "2026-08-09T22:51:47.803739Z [info     ] setup plugin schemas "
+        "[alembic.runtime.plugins] loc=plugins.py:37\n"
+        "2026-08-09T22:51:47.803904Z [debug    ] setup plugin tables "
+        "[alembic.runtime.plugins] loc=plugins.py:37\n"
+    )
+    assert mod.parse_import_errors_payload(airflow_info + "null[]\n") == []
+    assert mod.parse_import_errors_payload(
+        airflow_info + '[{"filename": "broken.py"}]\n'
+    ) == [{"filename": "broken.py"}]
     with pytest.raises(ValueError, match="empty"):
         mod.parse_import_errors_payload("   ")
+    with pytest.raises(ValueError, match="parse failed"):
+        mod.parse_import_errors_payload("unstructured output\n[]")
+    with pytest.raises(ValueError, match="payload is absent"):
+        mod.parse_import_errors_payload(airflow_info)
     rows = mod.parse_import_errors_payload('[{"filename": "x.py"}]')
     assert rows == [{"filename": "x.py"}]
     assert mod.main([str(tmp_path / "missing")]) == 2
