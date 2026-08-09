@@ -5,7 +5,7 @@
     data-testid="home-catalog-demo"
     [attr.aria-label]="'home.catalogDemo.title' | t:lang()"
   >
-    <div class="sec-head catalog-demo__head">
+    <div class="catalog-demo__head">
       <h2>{{ 'home.catalogDemo.title' | t:lang() }}</h2>
       <p class="catalog-demo__sub">{{ 'home.catalogDemo.subtitle' | t:lang() }}</p>
     </div>
@@ -200,7 +200,7 @@
       </div>
     }
 
-    <div class="panel-card panel-card--goal">
+    <div class="panel-card panel-card--goal" data-testid="home-weekly-goal-panel">
       <div class="panel-head">
         <h3>{{ 'home.goal.title' | t:lang() }}</h3>
       </div>

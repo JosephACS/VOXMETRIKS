@@ -24,7 +24,6 @@ export class HomeHeroComponent {
   readonly userPlan = input.required<string>();
   readonly listenStreak = input(0);
   readonly listenMinutesToday = input(0);
-  readonly weeklyGoalPct = input(0);
   readonly explorerLevel = input(1);
   /** Kept for events classification fallback while the breakdown modal loads. */
   readonly summary = input<StatsSummary | null>(null);

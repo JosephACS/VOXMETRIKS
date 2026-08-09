@@ -14,7 +14,6 @@
       <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ (listenStreak() === 1 ? 'home.chip.streakOne' : 'home.chip.streak') | t: { count: listenStreak() }:lang() }}</span>
     }
     <span class="hero-chip" [attr.title]="'home.tip.estimated' | t">{{ 'home.chip.today' | t: { min: listenMinutesToday() }:lang() }}</span>
-    <span class="hero-chip" [attr.title]="'home.tip.demoSample' | t">{{ 'home.chip.weeklyGoal' | t: { pct: weeklyGoalPct() }:lang() }}</span>
     <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ 'home.chip.explorer' | t: { level: explorerLevel() }:lang() }}</span>
   </div>
 

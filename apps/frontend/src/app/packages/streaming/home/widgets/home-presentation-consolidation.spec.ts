@@ -31,7 +31,6 @@ function i18nStub() {
         'home.discover.playlists': 'Playlists',
         'home.discover.genres': 'Géneros',
         'home.chip.today': `Hoy ${params?.['min'] ?? 0} min`,
-        'home.chip.weeklyGoal': `Meta ${params?.['pct'] ?? 0}%`,
         'home.chip.explorer': `Nivel ${params?.['level'] ?? 1}`,
         'home.chip.streak': `Racha ${params?.['count'] ?? 0}`,
         'home.chip.streakOne': 'Racha 1',
@@ -99,12 +98,12 @@ describe('Home presentation consolidation', () => {
       fixture.componentRef.setInput('userPlan', 'Free');
       fixture.componentRef.setInput('summary', summary);
       fixture.componentRef.setInput('listenMinutesToday', 12);
-      fixture.componentRef.setInput('weeklyGoalPct', 40);
+      fixture.componentRef.setInput('listenStreak', 3);
       fixture.componentRef.setInput('explorerLevel', 2);
       fixture.detectChanges();
     });
 
-    it('keeps user-focus chips and omits global warehouse KPIs from the hero', () => {
+    it('keeps personal chips without weekly-goal chip or warehouse KPIs', () => {
       const root = fixture.nativeElement as HTMLElement;
       expect(root.querySelector('[data-testid="home-hero-user-focus"]')).toBeTruthy();
       expect(root.querySelector('.hero-stats')).toBeNull();
@@ -113,8 +112,11 @@ describe('Home presentation consolidation', () => {
       const text = root.textContent || '';
       expect(text).toContain('Free');
       expect(text).toContain('Hoy 12 min');
-      expect(text).toContain('Meta 40%');
       expect(text).toContain('Nivel 2');
+      expect(text).toContain('Racha 3');
+      expect(text).not.toMatch(/Meta\s+\d+%/);
+      expect(text).not.toMatch(/Objetivo\s+\d+%/);
+      expect(text).not.toContain('home.chip.weeklyGoal');
 
       // Warehouse KPI labels must not appear in the personal hero.
       expect(text).not.toMatch(/\bEventos\b/);
@@ -144,6 +146,8 @@ describe('Home presentation consolidation', () => {
       fixture.componentRef.setInput('genreBars', []);
       fixture.componentRef.setInput('artists', []);
       fixture.componentRef.setInput('genres', []);
+      fixture.componentRef.setInput('weeklyGoalPct', 40);
+      fixture.componentRef.setInput('weeklyDiscoverCount', 40);
       fixture.detectChanges();
     });
 
@@ -153,6 +157,15 @@ describe('Home presentation consolidation', () => {
       expect(strips.length).toBe(1);
       expect(strips[0].getAttribute('aria-label')).toContain('Catálogo global de demostración');
       expect(strips[0].textContent).toContain('Catálogo global de demostración');
+      expect(strips[0].textContent).toContain('Indicadores del warehouse importado');
+
+      const head = strips[0].querySelector('.catalog-demo__head') as HTMLElement | null;
+      const title = strips[0].querySelector('.catalog-demo__head h2') as HTMLElement | null;
+      const sub = strips[0].querySelector('.catalog-demo__sub') as HTMLElement | null;
+      expect(head).toBeTruthy();
+      expect(title).toBeTruthy();
+      expect(sub).toBeTruthy();
+      expect(head!.classList.contains('sec-head')).toBe(false);
 
       const stats = strips[0].querySelectorAll('.catalog-demo__stat');
       expect(stats.length).toBe(5);
@@ -179,6 +192,15 @@ describe('Home presentation consolidation', () => {
       expect(personal!.textContent).toContain('Favoritos');
       expect(personal!.textContent).not.toContain('Eventos');
       expect(personal!.textContent).not.toContain('Tracks');
+    });
+
+    it('keeps weekly goal only in the detailed panel', () => {
+      const root = fixture.nativeElement as HTMLElement;
+      const goal = root.querySelector('[data-testid="home-weekly-goal-panel"]');
+      expect(goal).toBeTruthy();
+      expect(goal!.textContent).toContain('Meta semanal');
+      expect(goal!.textContent).toContain('40%');
+      expect(root.querySelector('[data-testid="home-hero-user-focus"]')).toBeNull();
     });
   });
 });

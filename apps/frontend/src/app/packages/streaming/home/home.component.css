@@ -119,19 +119,34 @@
 }
 
 .catalog-demo__head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
   margin-bottom: 0.65rem;
+  box-sizing: border-box;
 }
 
 .catalog-demo__head h2 {
   margin: 0;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  line-height: 1.35;
   color: var(--vx-fg, var(--text));
 }
 
 .catalog-demo__sub {
-  margin: 0.25rem 0 0;
+  margin: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: right;
   font-size: 0.75rem;
   line-height: 1.35;
   color: var(--vx-muted, rgba(255, 255, 255, 0.55));
@@ -1265,6 +1280,17 @@ a.rail-pill:hover {
   .hero-search { flex-basis: 100%; }
   .discover-shortcuts { width: 100%; }
   .discover-chip { flex: 1; justify-content: center; }
+  .catalog-demo__head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+  }
+  .catalog-demo__head h2,
+  .catalog-demo__sub {
+    width: 100%;
+    flex: none;
+    text-align: left;
+  }
   .catalog-demo__stats { gap: 0.5rem; }
   .catalog-demo__stat {
     flex: 1 1 calc(50% - 0.5rem);
