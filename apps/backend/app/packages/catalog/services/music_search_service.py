@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import duckdb
 
 from app.core.config import get_settings
-from app.core.database import table_exists, transactional
+from app.core.database import serialized_db_access, table_exists, transactional
 from app.packages.catalog.services.track_source_match import (
     artist_overlap,
     build_identity_from_track,
@@ -482,19 +482,23 @@ def _reuse_adopted_source(
     require_preferred: bool,
 ) -> Optional[Dict[str, Any]]:
     """Return reuse payload if ``vid`` is already associated; else None."""
-    if not table_exists(conn, "app_track_audio_source"):
-        return None
-    row = conn.execute(
-        """
-        SELECT track_id FROM app_track_audio_source
-        WHERE youtube_video_id = ? OR source_ref = ?
-        LIMIT 1
-        """,
-        [vid, vid],
-    ).fetchone()
-    if not row:
-        return None
-    tid = int(row[0])
+    # Serialize DuckDB handle access (table_exists + SELECT + fetch). Preferred-
+    # track policy stays outside the lock; no nested transaction / network I/O.
+    with serialized_db_access():
+        if not table_exists(conn, "app_track_audio_source"):
+            return None
+        row = conn.execute(
+            """
+            SELECT track_id FROM app_track_audio_source
+            WHERE youtube_video_id = ? OR source_ref = ?
+            LIMIT 1
+            """,
+            [vid, vid],
+        ).fetchone()
+        if not row:
+            return None
+        tid = int(row[0])
+
     preferred_rejected = False
     if preferred_track_id is not None and int(preferred_track_id) != tid:
         if require_preferred:

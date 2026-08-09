@@ -409,3 +409,78 @@ def test_concurrent_adopt_same_video_one_association(
     assert int(tracks) == 1
     # Exactly one winner creates; the other reuses under the transactional re-check.
     assert sorted(r["reused_source"] for r in results) == [False, True]
+
+
+def test_reuse_fast_path_duckdb_region_is_serialized(
+    conn: duckdb.DuckDBPyConnection,
+) -> None:
+    """Two reuse threads must not overlap the DuckDB critical section (no segfault needed)."""
+    import time
+
+    from app.core import database as db_mod
+    from app.packages.catalog.services import music_search_service as mss
+
+    active = 0
+    max_active = 0
+    counter_lock = threading.Lock()
+    real_table_exists = db_mod.table_exists
+
+    def counting_table_exists(c: duckdb.DuckDBPyConnection, table: str) -> bool:
+        nonlocal active, max_active
+        with counter_lock:
+            active += 1
+            max_active = max(max_active, active)
+        try:
+            # Widen the window; serialization must keep max_active == 1.
+            time.sleep(0.05)
+            return real_table_exists(c, table)
+        finally:
+            with counter_lock:
+                active -= 1
+
+    barrier = threading.Barrier(2)
+    results: list[dict] = []
+    errors: list[BaseException] = []
+
+    def worker() -> None:
+        try:
+            barrier.wait(timeout=5)
+            results.append(adopt_youtube_result(conn, video_id="dQw4w9WgXcQ"))
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    with patch.object(mss, "table_exists", counting_table_exists):
+        t1 = threading.Thread(target=worker)
+        t2 = threading.Thread(target=worker)
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+    assert not errors, errors
+    assert len(results) == 2
+    assert all(r["reused_source"] is True for r in results)
+    assert results[0]["track_id"] == results[1]["track_id"] == 10
+    assert max_active == 1
+
+
+def test_serialized_db_access_releases_on_exception() -> None:
+    from app.core.database import serialized_db_access
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with serialized_db_access():
+            raise RuntimeError("boom")
+    # Lock must be usable again after the exception path.
+    with serialized_db_access():
+        pass
+
+
+def test_serialized_db_access_reentrant_with_transactional(
+    conn: duckdb.DuckDBPyConnection,
+) -> None:
+    from app.core.database import serialized_db_access, transactional
+
+    with serialized_db_access():
+        with transactional(conn):
+            n = conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0]
+            assert int(n) >= 1

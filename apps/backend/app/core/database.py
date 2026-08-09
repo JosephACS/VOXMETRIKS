@@ -245,6 +245,22 @@ def transactional(
             raise
 
 
+@contextmanager
+def serialized_db_access() -> Generator[None, None, None]:
+    """Serialize a short DuckDB critical section under the process ``_db_lock``.
+
+    Use for read/lookup fast paths that touch a shared ``DuckDBPyConnection``
+    (including raw test connections) **outside** ``transactional()``, so concurrent
+    threads cannot interleave ``execute``/``fetch`` on the same handle.
+
+    Re-entrant: safe to nest with ``_LockedConn`` methods and with
+    ``transactional()`` (same ``threading.RLock``). Do not perform network I/O
+    inside this context manager. Does not begin a SQL transaction.
+    """
+    with _db_lock:
+        yield
+
+
 def fetch_all_rows(conn: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -> list[dict]:
     rows = conn.execute(sql, params or []).fetchall()
     cols = [d[0] for d in conn.description]
