@@ -329,12 +329,55 @@ def test_dockerfile_pins_and_verifies_imports():
     text = DOCKERFILE.read_text(encoding="utf-8")
     req = AIRFLOW_REQ.read_text(encoding="utf-8")
     assert "apache/airflow:3.3.0-python3.12" in text
+    assert "constraints-3.3.0/constraints-3.12.txt" in text
+    assert "--constraint" in text
     assert "pip check" in text
     assert "from airflow.sdk import DAG" in text
     assert "airflow.providers.standard.operators.bash" in text
     assert "FabAuthManager" in text
     assert "apache-airflow-providers-standard==1.15.0" in req
     assert "apache-airflow-providers-fab==3.7.1" in req
+    assert "duckdb==1.1.3" in req
+    # Airflow image runtime matrix (constraints-3.3.0 / py3.12) — not backend requirements.
+    assert "pandas==2.1.4" in req
+    assert "pyarrow==24.0.0" in req
+    assert "httpx==0.28.1" in req
+    assert "python-dotenv==1.2.2" in req
+    assert "pandas==2.2.2" not in req
+    assert "pyarrow==16.1.0" not in req
+    assert "httpx==0.27.0" not in req
+
+
+def test_airflow_image_constraints_and_workflow_isolation_contract():
+    docker = DOCKERFILE.read_text(encoding="utf-8")
+    req = AIRFLOW_REQ.read_text(encoding="utf-8")
+    wf = (ROOT / ".github" / "workflows" / "airflow-elt.yml").read_text(encoding="utf-8")
+    # Airflow/Python stay pinned.
+    assert "3.3.0-python3.12" in docker
+    assert "apache-airflow==${AIRFLOW_VERSION}" in docker or 'apache-airflow=="${AIRFLOW_VERSION}"' in docker
+    # Official constraints required for image install.
+    assert (
+        "https://raw.githubusercontent.com/apache/airflow/constraints-3.3.0/constraints-3.12.txt"
+        in docker
+    )
+    assert "pip check" in docker
+    # Approved Airflow-image runtime pins.
+    for pin in (
+        "apache-airflow-providers-standard==1.15.0",
+        "apache-airflow-providers-fab==3.7.1",
+        "duckdb==1.1.3",
+        "pandas==2.1.4",
+        "pyarrow==24.0.0",
+        "httpx==0.28.1",
+        "python-dotenv==1.2.2",
+    ):
+        assert pin in req
+    # Workflow never mounts canonical checkout data/.
+    assert "VOXMETRIKS_DATA_DIR: /tmp/voxmetriks-airflow-smoke-data" in wf
+    assert "/tmp/voxmetriks-airflow-smoke-data" in wf
+    assert "never the checkout data/" in wf or "smoke must not mount it" in wf
+    assert "../../data" not in wf
+    assert "./data" not in wf
 
 
 def test_deterministic_ctl_run_id_integer(tmp_path, monkeypatch):
