@@ -97,11 +97,33 @@ jobs:
           PY
           # Container LocalExecutor runs as UID 50000 — match ownership before mount writes.
           sudo chown -R 50000:0 "$SMOKE_DATA"
-          # bronze readable; silver/gold/warehouse writable by UID 50000
-          sudo -u '#50000' test -r "$SMOKE_DATA/bronze/raw_spotify.parquet"
-          sudo -u '#50000' test -w "$SMOKE_DATA/silver"
-          sudo -u '#50000' test -w "$SMOKE_DATA/gold"
-          sudo -u '#50000' test -w "$SMOKE_DATA/warehouse"
+          # Numeric ownership + owner permission bits via stat/find (UID 50000 is not a host login).
+          bad_owner="$(find "$SMOKE_DATA" \( ! -uid 50000 -o ! -gid 0 \) -printf '%u %g %p\n' | head -n 20 || true)"
+          if [ -n "$bad_owner" ]; then
+            echo "ownership mismatch (expected uid=50000 gid=0):"
+            echo "$bad_owner"
+            exit 1
+          fi
+          bronze="$SMOKE_DATA/bronze/raw_spotify.parquet"
+          bronze_mode="$(stat -c '%a' "$bronze")"
+          bronze_uid="$(stat -c '%u' "$bronze")"
+          bronze_gid="$(stat -c '%g' "$bronze")"
+          test "$bronze_uid" = "50000"
+          test "$bronze_gid" = "0"
+          # Owner-read bit (0400) on bronze file.
+          test $(( 8#$bronze_mode & 8#400 )) -ne 0
+          for d in silver gold warehouse; do
+            path="$SMOKE_DATA/$d"
+            mode="$(stat -c '%a' "$path")"
+            uid="$(stat -c '%u' "$path")"
+            gid="$(stat -c '%g' "$path")"
+            test "$uid" = "50000"
+            test "$gid" = "0"
+            # Owner-write (0200) and owner-exec (0100) on Medallion dirs.
+            test $(( 8#$mode & 8#200 )) -ne 0
+            test $(( 8#$mode & 8#100 )) -ne 0
+          done
+          echo "smoke_data_ownership_ok uid=50000 gid=0 modes_ok"
           # Guard: never point smoke at checkout canonical warehouse.
           test ! -e "$GITHUB_WORKSPACE/data/warehouse/voxmetrik.duckdb" \
             || echo "NOTE: canonical duckdb may exist in checkout; smoke must not mount it"
@@ -130,6 +152,19 @@ jobs:
 
       - name: Build Airflow image
         run: docker compose -f compose.yml build
+
+      - name: Probe smoke volume permissions inside container
+        run: |
+          set -euo pipefail
+          docker compose -f compose.yml run --rm --no-deps \
+            --entrypoint /bin/bash airflow-scheduler -c '
+              set -e
+              test -r /opt/voxmetriks/data/bronze/raw_spotify.parquet
+              touch /opt/voxmetriks/data/silver/.write-probe
+              touch /opt/voxmetriks/data/gold/.write-probe
+              touch /opt/voxmetriks/data/warehouse/.write-probe
+              rm -f /opt/voxmetriks/data/{silver,gold,warehouse}/.write-probe
+            '
 
       - name: Airflow metadata init
         run: docker compose -f compose.yml up airflow-init
