@@ -47,7 +47,7 @@ ENVIRONMENT=production   # desactiva /docs
 
 Ver lista completa en `apps/backend/.env.example`.
 
-## Docker Compose (canónico)
+## Docker Compose (canónico — aplicación)
 
 Archivo: **`compose.yml` en la raíz del repo**. Servicios: `backend`, `frontend`.
 
@@ -67,10 +67,29 @@ docker compose up --build -d
 ```bash
 docker compose logs -f backend
 docker compose down
-make pipeline   # ELT en el host; no es servicio Compose
+make pipeline   # ELT en el host; no es servicio Compose de aplicación
 ```
 
-No usar rutas Compose distintas del `compose.yml` de la raíz, ni inventar servicios Compose `api`, `pipeline` o `pocketbase`.
+No inventar servicios Compose `api`, `pipeline` o `pocketbase` en el stack de aplicación.
+
+## Docker Compose Airflow (orquestación ELT — Spec 048)
+
+Archivo: **`infrastructure/airflow/compose.yml`**. Separado del runtime de producto.
+
+- Airflow 3.3.0 + Python 3.12, LocalExecutor, metadata en Postgres propio.
+- UI por defecto: `http://localhost:8081`.
+- DAG manual `voxmetriks_elt` (`schedule=None`); no dispara ELT al hacer `up`.
+- Entorno académico/demo — **no** producción / HA / Celery / Redis.
+
+```bash
+make down            # liberar DuckDB (mantenimiento obligatorio)
+make airflow-up
+make airflow-trigger # o UI
+make airflow-down
+make up
+```
+
+Credenciales: copiar `infrastructure/airflow/.env.example` → `.env` (placeholders; no versionar secretos).
 
 ## Despliegue manual
 

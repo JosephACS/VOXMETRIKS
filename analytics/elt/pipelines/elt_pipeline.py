@@ -108,17 +108,21 @@ logger = logging.getLogger("voxmetrik.pipeline")
 #  the working directory the user invokes it from.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Allow override via DB_PATH env var; otherwise always land in data/warehouse/
+# Allow override via VOXMETRIKS_DATA_DIR (Medallion roots) and/or DB_PATH.
+# Default remains <project>/data — compatible with existing CLI `make pipeline`.
+_data_env = os.environ.get("VOXMETRIKS_DATA_DIR", "").strip()
+_DATA_ROOT = Path(_data_env) if _data_env else (_PROJECT_ROOT / "data")
+
 _db_env = os.environ.get("DB_PATH", "").strip()
 if _db_env:
     DB_PATH = Path(_db_env)
 else:
-    DB_PATH = _PROJECT_ROOT / "data" / "warehouse" / "voxmetrik.duckdb"
+    DB_PATH = _DATA_ROOT / "warehouse" / "voxmetrik.duckdb"
 
 # Medallion layer directories
-BRONZE_DIR = _PROJECT_ROOT / "data" / "bronze"
-SILVER_DIR = _PROJECT_ROOT / "data" / "silver"
-GOLD_DIR   = _PROJECT_ROOT / "data" / "gold"
+BRONZE_DIR = _DATA_ROOT / "bronze"
+SILVER_DIR = _DATA_ROOT / "silver"
+GOLD_DIR = _DATA_ROOT / "gold"
 
 # Source parquet (Bronze input — cache written after each PocketBase sync)
 BRONZE_PARQUET = BRONZE_DIR / "raw_spotify.parquet"
@@ -1073,10 +1077,17 @@ def gold_build_warehouse(conn: duckdb.DuckDBPyConnection) -> None:
 
 # ── Also export Silver Parquet snapshots of Gold tables ──────────────────────
 
-def _export_gold_parquets(conn: duckdb.DuckDBPyConnection) -> None:
+def _export_gold_parquets(
+    conn: duckdb.DuckDBPyConnection, *, strict: bool = False
+) -> int:
     """
-    Optionally export key Gold tables as Parquet to data/gold/ for BI tools
+    Export key Gold tables as Parquet to data/gold/ for BI tools
     or downstream consumers that don't speak DuckDB.
+
+    strict=False (default): skip missing tables / COPY errors with a warning
+    (preserves classic `make pipeline` / run_pipeline behaviour).
+    strict=True: any missing export or COPY failure raises; used by Airflow stages.
+    Returns the number of tables successfully exported.
     """
     GOLD_DIR.mkdir(parents=True, exist_ok=True)
     tables = [
@@ -1086,13 +1097,36 @@ def _export_gold_parquets(conn: duckdb.DuckDBPyConnection) -> None:
         "agg_top_artistas", "agg_genero_popularidad",
         "agg_distribucion_energia", "agg_tracks_populares",
     ] + ENTERPRISE_EXPORT_TABLES
+    exported = 0
+    errors: list[str] = []
     for table in tables:
         out = GOLD_DIR / f"{table}.parquet"
         try:
             conn.execute(f"COPY {table} TO '{out}' (FORMAT PARQUET)")
+            if not out.exists() or out.stat().st_size <= 0:
+                raise RuntimeError(f"export wrote empty/missing file: {out}")
+            exported += 1
             logger.info(f"[GOLD] Exported {table} → {out.name}")
         except Exception as exc:
-            logger.warning(f"[GOLD] Export {table} skipped: {exc}")
+            msg = f"Export {table} failed: {exc}"
+            if strict:
+                errors.append(msg)
+                logger.error(f"[GOLD] {msg}")
+            else:
+                logger.warning(f"[GOLD] Export {table} skipped: {exc}")
+    if strict:
+        if errors:
+            raise RuntimeError(
+                f"strict gold export failed ({len(errors)}/{len(tables)}): "
+                + " | ".join(errors[:5])
+            )
+        if exported != len(tables):
+            raise RuntimeError(
+                f"strict gold export incomplete: exported={exported} expected={len(tables)}"
+            )
+        if exported == 0:
+            raise RuntimeError("strict gold export produced zero files")
+    return exported
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

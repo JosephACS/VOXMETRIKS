@@ -233,6 +233,27 @@ El warehouse DuckDB **no** se versiona (`.gitignore`); se genera con el pipeline
 
 ---
 
+## 8b. Airflow — orquestación ELT (Spec 048, local/demo)
+
+**Docker es requerido** para ejecutar Airflow. Sin Docker no hay runtime aceptable (solo validación estática / CLI del adaptador).
+
+Stack **aparte**: `infrastructure/airflow/compose.yml` (Airflow 3.3 + Postgres de metadata + LocalExecutor). No forma parte del Compose de aplicación.
+
+1. Detener demo/runtime de aplicación (`make down` / `start_demo.ps1`) — DuckDB es single-writer.
+2. Copiar `infrastructure/airflow/.env.example` → `.env` y **editar placeholders** (`replace-me`, JWT). `make airflow-up` se detiene si faltan o siguen inseguros.
+3. `make airflow-up` → UI en http://localhost:8081
+4. `make airflow-list` / Trigger manual del DAG `voxmetriks_elt` (`schedule=None`)
+5. Revisar graph y logs (`make airflow-logs`)
+6. `make airflow-down`
+7. Volver a levantar la aplicación (`make up` / demo)
+
+Alternativa sin Airflow: `make pipeline` o etapas con `python analytics/elt/pipelines/orchestrated_pipeline.py <stage>`.
+
+No se afirma soporte productivo ni HA. Postgres de Airflow ≠ warehouse DuckDB de negocio. La aceptación del feature exige smoke Docker real (SC-003), no solo “no comprobado”.
+
+
+---
+
 ## Endpoints de referencia (API v1)
 
 | Área | Ejemplos |

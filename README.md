@@ -26,6 +26,7 @@ flowchart LR
     API --> DB[(DuckDB)]
     PB[PocketBase] --> ELT[analytics/elt]
     ELT --> DB
+    AF[Airflow 3.3 LocalExecutor] -->|coordina etapas| ELT
 ```
 
 | Ruta | Rol | Estado |
@@ -33,6 +34,7 @@ flowchart LR
 | `apps/frontend` | SPA Angular | **Implementado** |
 | `apps/backend` | API FastAPI | **Implementado** |
 | `analytics/elt` | Pipeline ELT canónico | **Implementado** |
+| `infrastructure/airflow` | Orquestación Airflow 3.3 (LocalExecutor, demo) | **Parcial** — código en repo; runtime pendiente de smoke Docker |
 | `apps/backend/app/etl` | Refresh runtime / tests | **Parcial** (adaptador; no rebuild completo) |
 | `playback-core` | Dirección futura del player | **Parcial** / propuesto V2 |
 | Organizations / CRM / billing / subscriptions | 016–019 | **Implementado** (MOCK payment; deuda aceptada) |
@@ -74,6 +76,24 @@ docker compose up --build
 ```
 
 Equivalente: `make up`. Frontend en `:8080`, API en `:8000` (diagnóstico; el navegador usa Nginx `/api/`).
+
+### Orquestación ELT con Airflow (Spec 048, local/demo)
+
+Stack **separado** en `infrastructure/airflow/compose.yml` (no sustituye el Compose de aplicación). Airflow solo coordina; el ELT autoritativo sigue en `analytics/elt/pipelines/elt_pipeline.py`. **Docker es requerido** para el runtime Airflow; la aceptación exige smoke real (SC-003).
+
+**Mantenimiento DuckDB (single-writer):** detén la app (`make down` / `start_demo.ps1`) antes de disparar el DAG. No ejecutes Airflow y backend contra el mismo warehouse a la vez.
+
+```bash
+make down                 # o detener start_demo
+# cp infrastructure/airflow/.env.example → .env y editar placeholders (obligatorio)
+make airflow-up           # UI http://localhost:8081 — falla si .env tiene replace-me
+make airflow-list         # debe listar voxmetriks_elt
+make airflow-trigger      # manual; schedule=None
+make airflow-down
+make up                   # volver a la aplicación
+```
+
+CLI por etapas (mismo adaptador que el DAG): `python analytics/elt/pipelines/orchestrated_pipeline.py <stage>`. Detalle: [docs/architecture/elt.md](docs/architecture/elt.md) · [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
