@@ -143,12 +143,174 @@ def test_sync_projects_track_audio_cover_idempotent():
     ).fetchone()
     assert cover and "/api/v1/media/77/content" in str(cover[0])
 
-    second = sync_published_tracks_to_catalog(conn)
+    with patch.object(
+        CatalogPublishingUseCases, "_apply_dim_track_replace"
+    ) as apply_dim:
+        second = sync_published_tracks_to_catalog(conn)
     assert second["synced"] == 1
+    apply_dim.assert_not_called()
     assert (
         int(conn.execute("SELECT COUNT(*) FROM dim_track WHERE id_track = ?", [wtid]).fetchone()[0])
         == 1
     )
+    assert int(conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0]) == 1
+    conn.close()
+
+
+def test_sync_real_change_updates_dim_track():
+    conn = duckdb.connect(":memory:")
+    wtid = _seed_published(conn)
+    sync_published_tracks_to_catalog(conn)
+    before = conn.execute(
+        "SELECT nombre_track FROM dim_track WHERE id_track = ?", [wtid]
+    ).fetchone()[0]
+    conn.execute(
+        "UPDATE app_release_submission SET title = 'Brand New Release' WHERE id = 1"
+    )
+    conn.execute(
+        "UPDATE app_release_submission_track SET title = 'Brand New Track' WHERE id = 1"
+    )
+    sync_published_tracks_to_catalog(conn)
+    after = conn.execute(
+        "SELECT nombre_track FROM dim_track WHERE id_track = ?", [wtid]
+    ).fetchone()[0]
+    assert after != before
+    assert "Brand New" in str(after)
+    assert (
+        int(conn.execute("SELECT COUNT(*) FROM dim_track WHERE id_track = ?", [wtid]).fetchone()[0])
+        == 1
+    )
+    conn.close()
+
+
+def test_upsert_update_rollback_on_midflight_failure():
+    """Mid-flight failure inside transactional UPDATE rolls back prior row."""
+    conn = duckdb.connect(":memory:")
+    wtid = _seed_published(conn)
+    sync_published_tracks_to_catalog(conn)
+    original = conn.execute(
+        "SELECT nombre_track, duration_ms, popularity FROM dim_track WHERE id_track = ?",
+        [wtid],
+    ).fetchone()
+    assert original
+
+    uc = CatalogPublishingUseCases(conn)
+    track = {
+        "id": 1,
+        "title": "Changed Title Forever",
+        "duration_ms": 999000,
+        "warehouse_track_id": wtid,
+    }
+    sub = {
+        "title": "Changed Release",
+        "artist_profile_id": 1,
+        "is_demo": True,
+        "status": "published",
+        "organization_id": 0,
+    }
+    planned = uc._dim_track_canonical_values(wtid, track, sub)
+    assert planned is not None
+    fields, values = planned
+    assert not uc._dim_track_row_matches(wtid, fields, values)
+
+    def flaky_apply(_wtid, _fields, _values):
+        uc._conn.execute(
+            "UPDATE dim_track SET nombre_track = ? WHERE id_track = ?",
+            ["partial-corrupt", wtid],
+        )
+        raise RuntimeError("injected update failure")
+
+    with patch.object(uc, "_apply_dim_track_replace", side_effect=flaky_apply):
+        with pytest.raises(RuntimeError, match="injected update failure"):
+            uc._upsert_public_dim_track(wtid, track, sub)
+
+    restored = conn.execute(
+        "SELECT nombre_track, duration_ms, popularity FROM dim_track WHERE id_track = ?",
+        [wtid],
+    ).fetchone()
+    assert restored == original
+    assert (
+        int(conn.execute("SELECT COUNT(*) FROM dim_track WHERE id_track = ?", [wtid]).fetchone()[0])
+        == 1
+    )
+    conn.close()
+
+
+def test_upsert_audio_source_normalizes_contaminated_local_row():
+    """Contaminated local_published row is normalized; second upsert is a no-op."""
+    conn = duckdb.connect(":memory:")
+    wtid = _seed_published(conn)
+    sync_published_tracks_to_catalog(conn)
+    playable = "/api/v1/media/88/content"
+    now = utc_now()
+    conn.execute(
+        """
+        UPDATE app_track_audio_source
+        SET youtube_video_id = 'contaminatedVid',
+            failure_count = 3,
+            confidence_score = 0.25,
+            resolved_at = ?,
+            last_checked_at = ?
+        WHERE track_id = ?
+        """,
+        [now, now, wtid],
+    )
+    dirty = conn.execute(
+        """
+        SELECT youtube_video_id, failure_count, confidence_score
+        FROM app_track_audio_source WHERE track_id = ?
+        """,
+        [wtid],
+    ).fetchone()
+    assert dirty[0] == "contaminatedVid"
+    assert int(dirty[1]) == 3
+    assert float(dirty[2]) == 0.25
+
+    uc = CatalogPublishingUseCases(conn)
+    assert uc._audio_source_matches(wtid, playable) is False
+    wrote = uc._upsert_audio_source(wtid, playable)
+    assert wrote is True
+    clean = conn.execute(
+        """
+        SELECT provider, youtube_video_id, source_ref, playable_url,
+               query, status, failure_count, confidence_score
+        FROM app_track_audio_source WHERE track_id = ?
+        """,
+        [wtid],
+    ).fetchone()
+    assert clean[0] == "local_published"
+    assert clean[1] is None
+    assert str(clean[2]) == str(wtid)
+    assert clean[3] == playable
+    assert clean[4] == "local_published"
+    assert clean[5] == "ok"
+    assert int(clean[6]) == 0
+    assert float(clean[7]) == 1.0
+    assert uc._audio_source_matches(wtid, playable) is True
+
+    with patch.object(uc, "_apply_audio_source_replace") as apply_audio:
+        second = uc._upsert_audio_source(wtid, playable)
+    assert second is False
+    apply_audio.assert_not_called()
+    conn.close()
+
+
+def test_demo_warehouse_id_9000000_remains_unique():
+    conn = duckdb.connect(":memory:")
+    wtid = DEMO_WAREHOUSE_TRACK_ID_MIN
+    _seed_published(conn)
+    # Force the seeded track onto the canonical demo id.
+    conn.execute(
+        "UPDATE app_release_submission_track SET warehouse_track_id = ?", [wtid]
+    )
+    sync_published_tracks_to_catalog(conn)
+    sync_published_tracks_to_catalog(conn)
+    n = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM dim_track WHERE id_track = ?", [wtid]
+        ).fetchone()[0]
+    )
+    assert n == 1
     assert int(conn.execute("SELECT COUNT(*) FROM dim_track").fetchone()[0]) == 1
     conn.close()
 
@@ -167,7 +329,7 @@ def test_sync_real_failure_is_not_disguised():
     _seed_published(conn)
     with patch.object(
         CatalogPublishingUseCases,
-        "_upsert_public_dim_track",
+        "_dim_track_canonical_values",
         side_effect=RuntimeError("sync boom"),
     ):
         with pytest.raises(RuntimeError, match="sync boom"):

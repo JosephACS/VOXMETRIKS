@@ -206,8 +206,9 @@ function Test-StrictPortWorkerIdentity {
         $exeInVenv = Test-DemoPathMatch $exe $VenvDirLower
         $cmdInVenv = (Test-DemoPathMatch $cmd $VenvPythonLower) -or (Test-DemoPathMatch $cmd $VenvDirLower)
         if (-not ($exeInVenv -or $cmdInVenv)) { return $false }
-        if ($cmd -notmatch 'uvicorn') { return $false }
-        if ($cmd -notmatch 'app\.main') { return $false }
+        $isLegacyUvicorn = ($cmd -match 'uvicorn') -and ($cmd -match 'app\.main')
+        $isDemoRunner = ($cmd -match 'run_demo_backend\.py')
+        if (-not ($isLegacyUvicorn -or $isDemoRunner)) { return $false }
         if (-not (Test-DemoPathMatch $cmd $RepoRootLower)) { return $false }
         return $true
     }
@@ -574,6 +575,136 @@ function Get-DemoOwnedRecordsArray {
     return @($OwnedList.ToArray())
 }
 
+function Get-DemoBackendShutdownRequestPath {
+    param([Parameter(Mandatory = $true)][string]$PidDir)
+    return (Join-Path $PidDir 'backend.shutdown.request')
+}
+
+function Clear-DemoBackendShutdownRequest {
+    <#
+      Removes only the canonical shutdown request file under PidDir (LiteralPath).
+    #>
+    param([Parameter(Mandatory = $true)][string]$PidDir)
+    if ([string]::IsNullOrWhiteSpace($PidDir)) { return }
+    $path = Get-DemoBackendShutdownRequestPath -PidDir $PidDir
+    if (-not (Test-DemoArtifactPathAllowed -ArtifactPath $path -PidDir $PidDir)) {
+        Write-Warning ("Refusing to clear shutdown request outside PidDir: {0}" -f $path)
+        return
+    }
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Request-DemoBackendGracefulShutdown {
+    <#
+      Creates exclusively scripts/.demo-pids/backend.shutdown.request (fixed name).
+      Does not read manifest paths for create/delete.
+    #>
+    param([Parameter(Mandatory = $true)][string]$PidDir)
+    if ([string]::IsNullOrWhiteSpace($PidDir)) {
+        throw 'Request-DemoBackendGracefulShutdown requires PidDir.'
+    }
+    if (-not (Test-Path -LiteralPath $PidDir)) {
+        New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
+    }
+    $path = Get-DemoBackendShutdownRequestPath -PidDir $PidDir
+    if (-not (Test-DemoArtifactPathAllowed -ArtifactPath $path -PidDir $PidDir)) {
+        throw ("Refusing to create shutdown request outside PidDir: {0}" -f $path)
+    }
+    [System.IO.File]::WriteAllText($path, '')
+    return $path
+}
+
+function Test-DemoBackendShutdownCompleteInLogs {
+    param([Parameter(Mandatory = $true)][string]$PidDir)
+    $marker = 'VOXMETRIK_V2 shutdown complete'
+    foreach ($name in @('backend.out.log', 'backend.err.log')) {
+        $logPath = Join-Path $PidDir $name
+        if (-not (Test-Path -LiteralPath $logPath)) { continue }
+        try {
+            $txt = Get-Content -LiteralPath $logPath -Raw -ErrorAction Stop
+            if ($txt -and $txt.Contains($marker)) { return $true }
+        } catch {
+            # keep scanning
+        }
+    }
+    return $false
+}
+
+function Wait-DemoBackendGracefulExit {
+    <#
+      After shutdown request: wait until launcher PID is gone, port 8000 free,
+      and logs contain VOXMETRIK_V2 shutdown complete.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][int]$ProcessId,
+        [Parameter(Mandatory = $true)][string]$PidDir,
+        [int]$TimeoutSec = 20
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        $alive = Test-DemoProcessRunning -ProcessId $ProcessId
+        $portBusy = $null -ne (Get-PortListenerPid -Port 8000)
+        $logOk = Test-DemoBackendShutdownCompleteInLogs -PidDir $PidDir
+        if ((-not $alive) -and (-not $portBusy) -and $logOk) {
+            return [pscustomobject]@{ Ok = $true; Reason = 'graceful' }
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    $aliveFinal = Test-DemoProcessRunning -ProcessId $ProcessId
+    $portBusyFinal = $null -ne (Get-PortListenerPid -Port 8000)
+    $logFinal = Test-DemoBackendShutdownCompleteInLogs -PidDir $PidDir
+    return [pscustomobject]@{
+        Ok       = $false
+        Reason   = 'timeout'
+        Alive    = $aliveFinal
+        PortBusy = $portBusyFinal
+        LogOk    = $logFinal
+    }
+}
+
+function Stop-DemoBackendGracefulOrForce {
+    <#
+      Validated backend launcher only: request graceful shutdown, wait up to TimeoutSec,
+      then force-kill on timeout. Returns @{ Ok; Forced; Detail }.
+      Ok=$true only for confirmed graceful shutdown (process gone + port free + log marker).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][int]$ProcessId,
+        [Parameter(Mandatory = $true)][string]$PidDir,
+        [int]$TimeoutSec = 20
+    )
+    if (-not (Test-DemoProcessRunning -ProcessId $ProcessId)) {
+        $portBusy = $null -ne (Get-PortListenerPid -Port 8000)
+        $logOk = Test-DemoBackendShutdownCompleteInLogs -PidDir $PidDir
+        if ((-not $portBusy) -and $logOk) {
+            return [pscustomobject]@{ Ok = $true; Forced = $false; Detail = 'already-stopped-graceful' }
+        }
+        if (-not $portBusy) {
+            return [pscustomobject]@{ Ok = $false; Forced = $false; Detail = 'already-stopped-without-shutdown-marker' }
+        }
+    }
+
+    $null = Request-DemoBackendGracefulShutdown -PidDir $PidDir
+    $wait = Wait-DemoBackendGracefulExit -ProcessId $ProcessId -PidDir $PidDir -TimeoutSec $TimeoutSec
+    if ($wait.Ok) {
+        return [pscustomobject]@{ Ok = $true; Forced = $false; Detail = 'graceful' }
+    }
+
+    Write-Warning 'Backend graceful shutdown timed out or incomplete; forcing stop. Runtime is NOT healthy.'
+    $forceOk = $true
+    if (Test-DemoProcessRunning -ProcessId $ProcessId) {
+        $forceOk = Stop-DemoVerifiedLauncher -ProcessId $ProcessId
+    }
+    return [pscustomobject]@{
+        Ok     = $false
+        Forced = $true
+        Detail = 'forced-after-timeout'
+        ForceStopOk = $forceOk
+    }
+}
+
 function Stop-DemoProcessTreeByPid {
     <#
       taskkill /T on a previously validated launcher PID. Does not require WMI.
@@ -622,16 +753,28 @@ function Stop-DemoVerifiedLauncher {
 function Stop-DemoSessionOwnedRecords {
     <#
       Stops only session-owned launchers after handle re-validation.
+      Backend (launcher-backend): graceful file request first when PidDir is set;
+      force only after timeout (reported via GracefulFailed).
+      Frontend: force stop after backend handling.
       Does not use WMI. Does not kill arbitrary port listeners by inference.
     #>
     param(
         $OwnedList,
+        [string]$PidDir = '',
+        [int]$BackendGracefulTimeoutSec = 20,
         [switch]$PassThru
     )
     $stopped = New-Object 'System.Collections.Generic.List[int]'
     $failed = $false
+    $gracefulFailed = $false
     $records = @(Get-DemoOwnedRecordsArray -OwnedList $OwnedList)
-    foreach ($rec in $records) {
+
+    # Backend first (graceful), then frontend (force).
+    $ordered = @()
+    $ordered += @($records | Where-Object { [string]$_.Kind -eq 'launcher-backend' })
+    $ordered += @($records | Where-Object { [string]$_.Kind -ne 'launcher-backend' })
+
+    foreach ($rec in $ordered) {
         $kind = [string]$rec.Kind
         if ($kind -notmatch '^launcher-') { continue }
 
@@ -642,13 +785,31 @@ function Stop-DemoSessionOwnedRecords {
             continue
         }
         try {
-            $ok = Stop-DemoVerifiedLauncher -ProcessId ([int]$handle.Pid)
-            if ($ok) {
-                Write-Host ("Stopped owned PID {0} ({1})" -f $handle.Pid, $kind)
-                $stopped.Add([int]$handle.Pid) | Out-Null
+            if ($kind -eq 'launcher-backend' -and -not [string]::IsNullOrWhiteSpace($PidDir)) {
+                $gr = Stop-DemoBackendGracefulOrForce `
+                    -ProcessId ([int]$handle.Pid) `
+                    -PidDir $PidDir `
+                    -TimeoutSec $BackendGracefulTimeoutSec
+                if ($gr.Ok) {
+                    Write-Host ("Stopped owned PID {0} ({1}) graceful" -f $handle.Pid, $kind)
+                    $stopped.Add([int]$handle.Pid) | Out-Null
+                } else {
+                    $gracefulFailed = $true
+                    $failed = $true
+                    Write-Warning ("Backend stop was not graceful (detail={0})." -f $gr.Detail)
+                    if (-not (Test-DemoProcessRunning -ProcessId ([int]$handle.Pid))) {
+                        $stopped.Add([int]$handle.Pid) | Out-Null
+                    }
+                }
             } else {
-                $failed = $true
-                Write-Warning "Failed to stop owned PID $($handle.Pid)"
+                $ok = Stop-DemoVerifiedLauncher -ProcessId ([int]$handle.Pid)
+                if ($ok) {
+                    Write-Host ("Stopped owned PID {0} ({1})" -f $handle.Pid, $kind)
+                    $stopped.Add([int]$handle.Pid) | Out-Null
+                } else {
+                    $failed = $true
+                    Write-Warning "Failed to stop owned PID $($handle.Pid)"
+                }
             }
         } catch {
             $failed = $true
@@ -657,8 +818,9 @@ function Stop-DemoSessionOwnedRecords {
     }
     if ($PassThru) {
         return [pscustomobject]@{
-            StoppedPids = @($stopped.ToArray())
-            Failed      = $failed
+            StoppedPids     = @($stopped.ToArray())
+            Failed          = $failed
+            GracefulFailed  = $gracefulFailed
         }
     }
 }
