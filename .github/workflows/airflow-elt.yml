@@ -233,6 +233,7 @@ jobs:
             echo "JSON output unavailable; refusing heuristic table grep"
             cat /tmp/af-import-errors.err || true
             exit 1
+          fi
 
       - name: Run DAG test on isolated data
         run: |
