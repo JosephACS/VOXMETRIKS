@@ -17,10 +17,11 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
     <div class="vx-enterprise vx-enterprise--wide workpanel-page">
       <header class="wp-head">
         <div>
+          <p class="wp-kicker">Control</p>
           <h1 class="wp-title">Workpanel</h1>
           <p class="wp-sub">Resumen táctico del periodo. Indicadores esenciales y pendientes prioritarios.</p>
         </div>
-        <div class="wp-head-actions">
+        <div class="wp-head-actions" role="toolbar" aria-label="Controles del workpanel">
           <label class="wp-period">
             <span>Periodo</span>
             <select class="input" [(ngModel)]="period" (ngModelChange)="load()">
@@ -157,6 +158,14 @@ import { scopeBadgeLabel } from '../../../shared/reports/report-presentation';
         gap: 1rem;
         margin-bottom: 1rem;
         align-items: flex-end;
+      }
+      .wp-kicker {
+        margin: 0 0 0.25rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent, #1ed896);
       }
       .wp-title {
         margin: 0;

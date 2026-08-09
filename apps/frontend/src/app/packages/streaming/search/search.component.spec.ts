@@ -243,6 +243,46 @@ describe('SearchComponent music-core flows', () => {
     expect(typeof musicSearch).toBe('function');
   });
 
+  it('maps distinct ui states for initial / searching / empty / provider / results', () => {
+    expect(component.uiState()).toBe('initial');
+
+    component.isLoading.set(true);
+    component.searched.set(true);
+    expect(component.uiState()).toBe('searching');
+
+    component.isLoading.set(false);
+    component.searched.set(true);
+    component.phase.set('local_empty');
+    expect(component.uiState()).toBe('empty');
+
+    component.phase.set('external_unavailable');
+    expect(component.uiState()).toBe('provider_unavailable');
+
+    component.phase.set('local');
+    component.trackResults.set([{ id_track: 1, nombre_track: 'A' }]);
+    expect(component.uiState()).toBe('results');
+  });
+
+  it('applyExample only fills and runs the existing search pipeline', async () => {
+    vi.useFakeTimers();
+    musicSearch.mockReturnValue(
+      of({
+        query: 'rock',
+        phase: 'local',
+        message: '',
+        local: { items: [{ id_track: 9, nombre_track: 'Rock Hit' }], total: 1, page: 1, limit: 20 },
+        external: [],
+        missing_local: [],
+        external_available: true,
+      }),
+    );
+    component.applyExample('rock');
+    expect(component.query()).toBe('rock');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(musicSearch).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it('renders accessible AI control group with checkbox label and playlist action', () => {
     const root = fixture.nativeElement as HTMLElement;
     const group = root.querySelector('.search-ai-row');

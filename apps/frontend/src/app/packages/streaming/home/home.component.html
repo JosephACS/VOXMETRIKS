@@ -20,34 +20,11 @@
     }
 
     <div class="home-feed" [class.vm-content-ready]="initialLoadDone()">
-      <app-home-analytics-band
-        [summary]="summary()"
-        [summaryLoading]="summaryLoading()"
-        [favoritesCount]="favoritesCount()"
-        [growthValues]="growthValues()"
-        [sparkLine]="sparkLine()"
-        [sparkArea]="sparkArea()"
-        [hourlyBuckets]="hourlyBuckets()"
-        [peakHour]="peakHour()"
-        [hasHistoryData]="hasHistoryData()"
-        [genreBars]="genreBars()"
-        [artists]="artists()"
-        [genres]="genres()"
-        [weeklyTimePct]="weeklyTimePct()"
-        [weeklyTimeLabel]="weeklyTimeLabel()"
-        [activityFeed]="activityFeed()"
-        [weeklyGoalPct]="weeklyGoalPct()"
-        [weeklyDiscoverCount]="weeklyDiscoverCount()"
-        [topGenre]="topGenre()"
-        [topArtist]="topArtist()"
-        (openCatalogEvents)="homeHero.openEventsBreakdown()"
-      />
-
-      @defer (on viewport) {
+      <!-- Primary product surface: listen → recommend → discover → trends -->
       @if (history().length) {
-        <section class="feed-block">
+        <section class="feed-block" data-testid="home-continue">
           <div class="sec-head">
-            <h2>{{ 'home.section.recent' | t:lang() }}</h2>
+            <h2>{{ 'home.section.continue' | t:lang() }}</h2>
             <a routerLink="/history">{{ 'home.viewAll' | t:lang() }}</a>
           </div>
           <div class="continue-grid">
@@ -85,199 +62,240 @@
         </section>
       }
 
-      @if (audioDna(); as dna) {
-        <section class="feed-block" aria-label="Audio DNA">
-          <div class="sec-head">
-            <h2>Audio DNA</h2>
-            <span class="section-meta">Tu perfil sonoro</span>
-          </div>
-          <div class="insight-strip">
-            @if (dna.energetic != null) {
-              <div class="insight-card">
-                <span class="insight-body">
-                  <span class="insight-label">Energético</span>
-                  <span class="insight-value">{{ dna.energetic }}%</span>
-                </span>
-              </div>
-            }
-            @if (dna.dance != null) {
-              <div class="insight-card">
-                <span class="insight-body">
-                  <span class="insight-label">Dance</span>
-                  <span class="insight-value">{{ dna.dance }}%</span>
-                </span>
-              </div>
-            }
-            @if (dna.acoustic != null) {
-              <div class="insight-card">
-                <span class="insight-body">
-                  <span class="insight-label">Acústico</span>
-                  <span class="insight-value">{{ dna.acoustic }}%</span>
-                </span>
-              </div>
-            }
-            @if (dna.instrumental != null) {
-              <div class="insight-card">
-                <span class="insight-body">
-                  <span class="insight-label">Instrumental</span>
-                  <span class="insight-value">{{ dna.instrumental }}%</span>
-                </span>
-              </div>
-            }
-            @if (dna.positive != null) {
-              <div class="insight-card">
-                <span class="insight-body">
-                  <span class="insight-label">Positivo</span>
-                  <span class="insight-value">{{ dna.positive }}%</span>
-                </span>
-              </div>
-            }
-          </div>
-        </section>
-      }
-
-      @if (smartSections().length) {
-        @for (section of smartSections(); track section.id) {
-          @if (section.id !== 'recommended-for-you') {
-            <app-home-section-widget [section]="section" />
-          }
-        }
-      }
-
       @if (recoForYou().length) {
-        <app-horizontal-section [title]="'home.section.reco' | t" [subtitle]="'home.section.recoSub' | t" link="/recommendations">
-          @for (t of recoForYou(); track t.id_track; let i = $index) {
-            <app-media-card
-              [title]="cleanTitle(t.nombre_track)"
-              [subtitle]="t.nombre_artista ?? '—'"
-              [gradient]="cover(t.id_track)"
-              [coverTrackId]="t.id_track"
-              [coverArtistId]="t.id_artista"
-              [link]="'/tracks/' + t.id_track"
-              [track]="controller.fromTrack(t)"
-              [queue]="recoForYouPlayable()"
-              [tag]="recoBadge(i)"
-              [meta]="recoMeta(t.id_track)"
-            />
-          }
-        </app-horizontal-section>
+        <div data-testid="home-recommendations">
+          <app-horizontal-section [title]="'home.section.reco' | t" [subtitle]="'home.section.recoSub' | t" link="/recommendations">
+            @for (t of recoForYou(); track t.id_track; let i = $index) {
+              <app-media-card
+                [title]="cleanTitle(t.nombre_track)"
+                [subtitle]="t.nombre_artista ?? '—'"
+                [gradient]="cover(t.id_track)"
+                [coverTrackId]="t.id_track"
+                [coverArtistId]="t.id_artista"
+                [link]="'/tracks/' + t.id_track"
+                [track]="controller.fromTrack(t)"
+                [queue]="recoForYouPlayable()"
+                [tag]="recoBadge(i)"
+                [meta]="recoMeta(t.id_track)"
+              />
+            }
+          </app-horizontal-section>
+        </div>
       }
-
-      <section class="insight-strip" aria-label="resumen">
-        <div class="insight-card">
-          <span class="insight-ic" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>
-          </span>
-          <span class="insight-body">
-            <span class="insight-label">{{ 'home.insight.artistOfDay' | t:lang() }}</span>
-            <span class="insight-value">{{ artistOfDay() }}</span>
-          </span>
-        </div>
-        <div class="insight-card">
-          <span class="insight-ic" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          </span>
-          <span class="insight-body">
-            <span class="insight-label">{{ 'home.insight.topGenre' | t:lang() }}</span>
-            <span class="insight-value">{{ topGenre() ?? '—' }}</span>
-          </span>
-        </div>
-      </section>
 
       @if (discoverShown().length) {
-        <app-horizontal-section
-          [title]="'home.section.discover' | t"
-          [subtitle]="'home.section.discoverHint' | t"
-          link="/insights/tracks"
-        >
-          @for (t of discoverShown(); track t.id_track) {
-            <app-media-card
-              [title]="cleanTitle(t.nombre_track)"
-              [subtitle]="t.nombre_artista ?? '—'"
-              [gradient]="cover(t.id_track)"
-              [coverTrackId]="t.id_track"
-              [coverArtistId]="t.id_artista"
-              [link]="'/tracks/' + t.id_track"
-              [track]="controller.fromTrack(t)"
-              [queue]="discoverShownPlayable()"
-              [badge]="t.popularity"
-            />
-          }
-        </app-horizontal-section>
+        <div data-testid="home-discover">
+          <app-horizontal-section
+            [title]="'home.section.discover' | t"
+            [subtitle]="'home.section.discoverHint' | t"
+            link="/insights/tracks"
+          >
+            @for (t of discoverShown(); track t.id_track) {
+              <app-media-card
+                [title]="cleanTitle(t.nombre_track)"
+                [subtitle]="t.nombre_artista ?? '—'"
+                [gradient]="cover(t.id_track)"
+                [coverTrackId]="t.id_track"
+                [coverArtistId]="t.id_artista"
+                [link]="'/tracks/' + t.id_track"
+                [track]="controller.fromTrack(t)"
+                [queue]="discoverShownPlayable()"
+                [badge]="t.popularity"
+              />
+            }
+          </app-horizontal-section>
+        </div>
       }
 
-      @if (artists().length) {
-        <app-horizontal-section [title]="'home.section.artistsPlain' | t" link="/artists">
-          @for (a of artists(); track a.id; let i = $index) {
-            <a class="artist-chip" [routerLink]="'/artists/' + a.id">
-              <span class="artist-rank">#{{ i + 1 }}</span>
-              <span class="artist-avatar" [style.background]="cover('artist-' + a.id)">
-                @if (artistCoverUrl(a.id); as img) {
-                  <img class="artist-avatar-img" [src]="img" [alt]="a.name" loading="lazy" />
-                } @else {
-                  {{ initials(a.name) }}
+      <div data-testid="home-trends">
+        <app-home-analytics-band
+          [summary]="summary()"
+          [summaryLoading]="summaryLoading()"
+          [favoritesCount]="favoritesCount()"
+          [growthValues]="growthValues()"
+          [sparkLine]="sparkLine()"
+          [sparkArea]="sparkArea()"
+          [hourlyBuckets]="hourlyBuckets()"
+          [peakHour]="peakHour()"
+          [hasHistoryData]="hasHistoryData()"
+          [genreBars]="genreBars()"
+          [artists]="artists()"
+          [genres]="genres()"
+          [weeklyTimePct]="weeklyTimePct()"
+          [weeklyTimeLabel]="weeklyTimeLabel()"
+          [activityFeed]="activityFeed()"
+          [weeklyGoalPct]="weeklyGoalPct()"
+          [weeklyDiscoverCount]="weeklyDiscoverCount()"
+          [topGenre]="topGenre()"
+          [topArtist]="topArtist()"
+          (openCatalogEvents)="homeHero.openEventsBreakdown()"
+        />
+      </div>
+
+      <details
+        class="vx-explore-more"
+        data-testid="home-explore-more"
+        [open]="exploreMoreOpen()"
+        (toggle)="onExploreMoreToggle($event)"
+      >
+        <summary class="vx-explore-more__summary">
+          <span class="vx-explore-more__title">{{ 'home.exploreMore' | t:lang() }}</span>
+          <span class="vx-explore-more__hint">{{ 'home.exploreMoreHint' | t:lang() }}</span>
+        </summary>
+        <div class="vx-explore-more__body">
+          @defer (on viewport) {
+            @if (audioDna(); as dna) {
+              <section class="feed-block" aria-label="Audio DNA">
+                <div class="sec-head">
+                  <h2>Audio DNA</h2>
+                  <span class="section-meta">{{ 'home.audioDna.sub' | t:lang() }}</span>
+                </div>
+                <div class="insight-strip">
+                  @if (dna.energetic != null) {
+                    <div class="insight-card">
+                      <span class="insight-body">
+                        <span class="insight-label">Energético</span>
+                        <span class="insight-value">{{ dna.energetic }}%</span>
+                      </span>
+                    </div>
+                  }
+                  @if (dna.dance != null) {
+                    <div class="insight-card">
+                      <span class="insight-body">
+                        <span class="insight-label">Dance</span>
+                        <span class="insight-value">{{ dna.dance }}%</span>
+                      </span>
+                    </div>
+                  }
+                  @if (dna.acoustic != null) {
+                    <div class="insight-card">
+                      <span class="insight-body">
+                        <span class="insight-label">Acústico</span>
+                        <span class="insight-value">{{ dna.acoustic }}%</span>
+                      </span>
+                    </div>
+                  }
+                  @if (dna.instrumental != null) {
+                    <div class="insight-card">
+                      <span class="insight-body">
+                        <span class="insight-label">Instrumental</span>
+                        <span class="insight-value">{{ dna.instrumental }}%</span>
+                      </span>
+                    </div>
+                  }
+                  @if (dna.positive != null) {
+                    <div class="insight-card">
+                      <span class="insight-body">
+                        <span class="insight-label">Positivo</span>
+                        <span class="insight-value">{{ dna.positive }}%</span>
+                      </span>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (smartSections().length) {
+              @for (section of smartSections(); track section.id) {
+                @if (section.id !== 'recommended-for-you') {
+                  <app-home-section-widget [section]="section" />
                 }
-              </span>
-              <span class="artist-name">{{ a.name }}</span>
-              <span class="artist-affinity">{{ artistAffinity(i) }}% {{ 'home.artist.affinity' | t:lang() }}</span>
-              <span class="artist-pop">{{ 'home.artist.popular' | t:lang() }}</span>
-            </a>
-          }
-        </app-horizontal-section>
-      }
+              }
+            }
 
-      @if (playlists().length) {
-        <app-horizontal-section
-          [title]="'home.section.playlists' | t"
-          [subtitle]="'home.section.playlistsHint' | t"
-          link="/playlists"
-          [queryParams]="{ tab: 'catalog' }"
-        >
-          @for (pl of playlists(); track pl.id; let i = $index) {
-            <app-media-card
-              [title]="pl.name"
-              [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
-              [gradient]="cover('pl-' + pl.id)"
-              [mosaicTrackIds]="pl.preview_track_ids?.length ? pl.preview_track_ids : (pl.cover_track_id ? [pl.cover_track_id] : [])"
-              [mosaicSeed]="'pl-cat-' + pl.id"
-              [link]="'/playlists/catalog/' + pl.id"
-              [tag]="playlistBadge(i)"
-            />
-          }
-        </app-horizontal-section>
-      }
+            <section class="insight-strip" aria-label="resumen">
+              <div class="insight-card">
+                <span class="insight-ic" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>
+                </span>
+                <span class="insight-body">
+                  <span class="insight-label">{{ 'home.insight.artistOfDay' | t:lang() }}</span>
+                  <span class="insight-value">{{ artistOfDay() }}</span>
+                </span>
+              </div>
+              <div class="insight-card">
+                <span class="insight-ic" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </span>
+                <span class="insight-body">
+                  <span class="insight-label">{{ 'home.insight.topGenre' | t:lang() }}</span>
+                  <span class="insight-value">{{ topGenre() ?? '—' }}</span>
+                </span>
+              </div>
+            </section>
 
-      @if (genres().length) {
-        <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
-          @for (g of genres(); track g.id_genero) {
-            <a
-              class="genre-chip"
-              routerLink="/tracks"
-              [queryParams]="{ genre_id: g.id_genero, genre_name: g.nombre_genero ?? '' }"
-            >
-              <span class="genre-icon" [style.background]="cover('genre-' + g.id_genero)">♪</span>
-              <span class="genre-text">
-                <span class="genre-name">{{ g.nombre_genero ?? ('home.genreFallback' | t) }}</span>
-                <span class="genre-count">{{ 'home.genre.tracks' | t: { count: g.total_tracks ?? 0 }:lang() }}</span>
-              </span>
-            </a>
-          }
-        </app-horizontal-section>
-      }
+            @if (artists().length) {
+              <app-horizontal-section [title]="'home.section.artistsPlain' | t" link="/artists">
+                @for (a of artists(); track a.id; let i = $index) {
+                  <a class="artist-chip" [routerLink]="'/artists/' + a.id">
+                    <span class="artist-rank">#{{ i + 1 }}</span>
+                    <span class="artist-avatar" [style.background]="cover('artist-' + a.id)">
+                      @if (artistCoverUrl(a.id); as img) {
+                        <img class="artist-avatar-img" [src]="img" [alt]="a.name" loading="lazy" />
+                      } @else {
+                        {{ initials(a.name) }}
+                      }
+                    </span>
+                    <span class="artist-name">{{ a.name }}</span>
+                    <span class="artist-affinity">{{ artistAffinity(i) }}% {{ 'home.artist.affinity' | t:lang() }}</span>
+                    <span class="artist-pop">{{ 'home.artist.popular' | t:lang() }}</span>
+                  </a>
+                }
+              </app-horizontal-section>
+            }
 
-      @if (feedEmpty()) {
-        <div class="home-state home-state--empty">
-          <p>{{ 'home.emptyFeed' | t:lang() }}</p>
-          <a routerLink="/search" class="home-state-link">{{ 'home.searchPlaceholder' | t:lang() }}</a>
+            @if (playlists().length) {
+              <app-horizontal-section
+                [title]="'home.section.playlists' | t"
+                [subtitle]="'home.section.playlistsHint' | t"
+                link="/playlists"
+                [queryParams]="{ tab: 'catalog' }"
+              >
+                @for (pl of playlists(); track pl.id; let i = $index) {
+                  <app-media-card
+                    [title]="pl.name"
+                    [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
+                    [gradient]="cover('pl-' + pl.id)"
+                    [mosaicTrackIds]="pl.preview_track_ids?.length ? pl.preview_track_ids : (pl.cover_track_id ? [pl.cover_track_id] : [])"
+                    [mosaicSeed]="'pl-cat-' + pl.id"
+                    [link]="'/playlists/catalog/' + pl.id"
+                    [tag]="playlistBadge(i)"
+                  />
+                }
+              </app-horizontal-section>
+            }
+
+            @if (genres().length) {
+              <app-horizontal-section [title]="'home.section.genres' | t" link="/genres">
+                @for (g of genres(); track g.id_genero) {
+                  <a
+                    class="genre-chip"
+                    routerLink="/tracks"
+                    [queryParams]="{ genre_id: g.id_genero, genre_name: g.nombre_genero ?? '' }"
+                  >
+                    <span class="genre-icon" [style.background]="cover('genre-' + g.id_genero)">♪</span>
+                    <span class="genre-text">
+                      <span class="genre-name">{{ g.nombre_genero ?? ('home.genreFallback' | t) }}</span>
+                      <span class="genre-count">{{ 'home.genre.tracks' | t: { count: g.total_tracks ?? 0 }:lang() }}</span>
+                    </span>
+                  </a>
+                }
+              </app-horizontal-section>
+            }
+
+            @if (feedEmpty()) {
+              <div class="home-state home-state--empty">
+                <p>{{ 'home.emptyFeed' | t:lang() }}</p>
+                <a routerLink="/search" class="home-state-link">{{ 'home.searchPlaceholder' | t:lang() }}</a>
+              </div>
+            }
+          } @placeholder {
+            <div class="home-defer-placeholder" aria-hidden="true">
+              <div class="skel home-skel--rail"></div>
+            </div>
+          }
         </div>
-      }
-      } @placeholder {
-        <div class="home-defer-placeholder" aria-hidden="true">
-          <div class="skel home-skel--rail"></div>
-          <div class="skel home-skel--rail"></div>
-        </div>
-      }
-
+      </details>
     </div>
   </div>
 </div>
