@@ -32,41 +32,25 @@ node "Cliente" {
 
 
 
-node "Docker Compose — red voxmetrik" as Compose {
+node "Docker Compose app — compose.yml" as Compose {
 
 
 
-  node "Job one-shot" as Job {
+  node "Servicios persistentes" as Svc {
 
-    component "pipeline\npython elt/pipelines/\nelt_pipeline.py" as Pipeline
+    component "backend\nuvicorn app.main:app\n:8000" as API
 
-  }
-
-
-
-  node "Servicio persistente" as Svc {
-
-    component "api\nuvicorn app.main:app\n:8000" as API
+    component "frontend\nnginx + SPA\n:8080" as FEDocker
 
   }
 
 
 
-  node "Fuente opcional" as Src {
+  folder "Volúmenes app" as Vol {
 
-    component "pocketbase\n:8090" as PB
+    database "data/warehouse\nvoxmetrik.duckdb" as VDB
 
-  }
-
-
-
-  folder "Volúmenes" as Vol {
-
-    database "duckdb_data\nvoxmetrik.duckdb" as VDB
-
-    component "parquet_data\nBronze/Silver" as VPQ
-
-    component "pb_data" as VPB
+    component "data/bronze|silver|gold\nParquet" as VPQ
 
   }
 
@@ -74,9 +58,33 @@ node "Docker Compose — red voxmetrik" as Compose {
 
 
 
-cloud "Scripts locales\n(no container)" as Local {
+node "Airflow Spec 048\ninfrastructure/airflow/compose.yml" as AF {
+
+
+
+  component "LocalExecutor\nUI :8081" as AirflowUI
+
+  database "Postgres metadata\n(orquestador)" as AFMeta
+
+  component "DAG voxmetriks_elt\norchestrated_pipeline.py" as DAG
+
+}
+
+
+
+cloud "ELT canónico\n(host o subprocess Airflow)" as LocalELT {
+
+  component "elt_pipeline.py\ntransforms autoritativos" as Pipeline
 
   component "validate_warehouse.py\nanalyze_warehouse.py" as Scripts
+
+}
+
+
+
+cloud "Fuente opcional" as Src {
+
+  component "PocketBase\n(ingest)" as PB
 
 }
 
@@ -90,17 +98,29 @@ SPA --> API : REST /api/v1/*\nBearer session token
 
 SPA --> API : GET /health\n(vía StatsService)
 
+FEDocker ..> SPA : sirve build
 
 
-Ops --> Pipeline : docker compose run\n--rm pipeline
+
+Ops --> Pipeline : make pipeline / CLI
+
+Ops --> DAG : make airflow-trigger\n(mantenimiento DuckDB)
 
 Ops --> Scripts : post-ELT manual
 
 
 
+AirflowUI --> DAG
+
+DAG --> Pipeline : subprocess etapas
+
+AFMeta ..> AirflowUI : metadata only
+
+
+
 Pipeline --> PB : extract CSV\n(opcional)
 
-Pipeline --> VPQ : Bronze / Silver Parquet
+Pipeline --> VPQ : Bronze / Silver / Gold Parquet
 
 Pipeline --> VDB : Gold dims/facts/agg\nctl_carga_dataset\nctl_pipeline_stages
 
@@ -108,11 +128,11 @@ API --> VDB : read + write\n(app_user, app_playlist,\ncatalog CRUD, synthetic)
 
 
 
-PB --> VPB
-
-
-
-Pipeline ..> API : depends_on:\nservice_completed_successfully\n(P7)
+note bottom of AF
+  Separado del compose.yml de aplicación.
+  No producción / HA. schedule=None.
+  No escribir DuckDB a la vez que backend.
+end note
 
 
 

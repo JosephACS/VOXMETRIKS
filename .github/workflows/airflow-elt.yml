@@ -1,0 +1,244 @@
+name: Airflow ELT (Spec 048)
+
+# Isolated smoke for Spec 048 orchestration. Does NOT replace main CI.
+# Does NOT mount or mutate the repository canonical data/ warehouse.
+# Workflow is present for post-audit push; not claimed green until it runs.
+
+on:
+  push:
+    paths:
+      - "infrastructure/airflow/**"
+      - "analytics/elt/**"
+      - "apps/backend/tests/test_spec048_airflow_orchestration.py"
+      - ".specify/features/048-airflow-elt-orchestration/**"
+      - ".github/workflows/airflow-elt.yml"
+  pull_request:
+    paths:
+      - "infrastructure/airflow/**"
+      - "analytics/elt/**"
+      - "apps/backend/tests/test_spec048_airflow_orchestration.py"
+      - ".specify/features/048-airflow-elt-orchestration/**"
+      - ".github/workflows/airflow-elt.yml"
+  workflow_dispatch:
+
+jobs:
+  airflow-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: infrastructure/airflow
+    env:
+      AIRFLOW_UID: "50000"
+      AIRFLOW_UI_PORT: "8081"
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ci-airflow-meta-not-for-prod
+      POSTGRES_DB: airflow
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: ci-airflow-ui-not-for-prod
+      AIRFLOW__API_AUTH__JWT_SECRET: ci-jwt-secret-min-32-chars-xxxxxxxxxxxx
+      # Isolated temp data mount — never the checkout data/ tree.
+      VOXMETRIKS_DATA_DIR: /tmp/voxmetriks-airflow-smoke-data
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host smoke dependencies (not Airflow)
+        working-directory: ${{ github.workspace }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "duckdb==1.1.3" \
+            "pandas==2.2.2" \
+            "pyarrow==16.1.0"
+
+      - name: Prepare isolated Medallion data dir
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          SMOKE_DATA=/tmp/voxmetriks-airflow-smoke-data
+          rm -rf "$SMOKE_DATA"
+          mkdir -p "$SMOKE_DATA"/{bronze,silver,gold,warehouse}
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+          root = Path("/tmp/voxmetriks-airflow-smoke-data")
+          rows = 80
+          df = pd.DataFrame({
+              "id": list(range(1, rows + 1)),
+              "track_id": [f"t{i}" for i in range(rows)],
+              "artists": [f"Artist {i % 5}" for i in range(rows)],
+              "album_name": [f"Album {i % 3}" for i in range(rows)],
+              "track_name": [f"Track {i}" for i in range(rows)],
+              "popularity": [i % 100 for i in range(rows)],
+              "duration_ms": [180000 + i for i in range(rows)],
+              "explicit": [False] * rows,
+              "danceability": [0.5] * rows,
+              "energy": [0.5] * rows,
+              "key": [1] * rows,
+              "loudness": [-5.0] * rows,
+              "mode": [1] * rows,
+              "speechiness": [0.1] * rows,
+              "acousticness": [0.2] * rows,
+              "instrumentalness": [0.0] * rows,
+              "liveness": [0.1] * rows,
+              "valence": [0.5] * rows,
+              "tempo": [120.0] * rows,
+              "time_signature": [4] * rows,
+              "track_genre": ["pop"] * rows,
+          })
+          out = root / "bronze" / "raw_spotify.parquet"
+          df.to_parquet(out, index=False)
+          print(f"seeded {out} rows={len(df)}")
+          PY
+          # Container LocalExecutor runs as UID 50000 — match ownership before mount writes.
+          sudo chown -R 50000:0 "$SMOKE_DATA"
+          # bronze readable; silver/gold/warehouse writable by UID 50000
+          sudo -u '#50000' test -r "$SMOKE_DATA/bronze/raw_spotify.parquet"
+          sudo -u '#50000' test -w "$SMOKE_DATA/silver"
+          sudo -u '#50000' test -w "$SMOKE_DATA/gold"
+          sudo -u '#50000' test -w "$SMOKE_DATA/warehouse"
+          # Guard: never point smoke at checkout canonical warehouse.
+          test ! -e "$GITHUB_WORKSPACE/data/warehouse/voxmetrik.duckdb" \
+            || echo "NOTE: canonical duckdb may exist in checkout; smoke must not mount it"
+          test "$VOXMETRIKS_DATA_DIR" = "/tmp/voxmetriks-airflow-smoke-data"
+
+      - name: Write Airflow .env (CI secrets, not placeholders)
+        run: |
+          cat > .env <<EOF
+          AIRFLOW_UID=50000
+          AIRFLOW_UI_PORT=8081
+          POSTGRES_USER=airflow
+          POSTGRES_PASSWORD=ci-airflow-meta-not-for-prod
+          POSTGRES_DB=airflow
+          _AIRFLOW_WWW_USER_USERNAME=airflow
+          _AIRFLOW_WWW_USER_PASSWORD=ci-airflow-ui-not-for-prod
+          AIRFLOW__API_AUTH__JWT_SECRET=ci-jwt-secret-min-32-chars-xxxxxxxxxxxx
+          AIRFLOW__CORE__FERNET_KEY=
+          VOXMETRIKS_DATA_DIR=/tmp/voxmetriks-airflow-smoke-data
+          POCKETBASE_URL=
+          POCKETBASE_EMAIL=
+          POCKETBASE_PASSWORD=
+          EOF
+
+      - name: docker compose config
+        run: docker compose -f compose.yml config
+
+      - name: Build Airflow image
+        run: docker compose -f compose.yml build
+
+      - name: Airflow metadata init
+        run: docker compose -f compose.yml up airflow-init
+
+      - name: Start api-server, scheduler, dag-processor
+        run: docker compose -f compose.yml up -d airflow-api-server airflow-scheduler airflow-dag-processor postgres
+
+      - name: Wait for Airflow API health
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:8081/api/v2/version" >/dev/null; then
+              echo "api healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Airflow API did not become healthy"
+          docker compose -f compose.yml ps
+          docker compose -f compose.yml logs --no-color --tail=200
+          exit 1
+
+      - name: Wait until voxmetriks_elt is listed
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if docker compose -f compose.yml exec -T airflow-scheduler \
+                 airflow dags list 2>/dev/null | grep -F 'voxmetriks_elt' >/dev/null; then
+              echo "DAG voxmetriks_elt visible (attempt $i)"
+              docker compose -f compose.yml exec -T airflow-scheduler airflow dags list
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for voxmetriks_elt in airflow dags list"
+          docker compose -f compose.yml exec -T airflow-scheduler airflow dags list || true
+          docker compose -f compose.yml logs --no-color --tail=200 airflow-dag-processor airflow-scheduler || true
+          exit 1
+
+      - name: Assert zero DAG import errors (machine-readable)
+        run: |
+          set -euo pipefail
+          if docker compose -f compose.yml exec -T airflow-scheduler \
+               airflow dags list-import-errors --output json >/tmp/af-import-errors.json 2>/tmp/af-import-errors.err; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/tmp/af-import-errors.json")
+          raw = path.read_text(encoding="utf-8")
+          if not raw.strip():
+              raise SystemExit("import-errors JSON file is empty; refusing to treat as zero errors")
+          data = json.loads(raw)
+          if isinstance(data, dict):
+              candidates = [data.get(k) for k in ("import_errors", "dags", "data", "items") if k in data]
+              seq = next((c for c in candidates if isinstance(c, list)), None)
+              if seq is None:
+                  raise SystemExit(f"Unexpected import-errors JSON object: {data!r}")
+              data = seq
+          if not isinstance(data, list):
+              raise SystemExit(f"Unexpected import-errors JSON type: {type(data).__name__}")
+          if len(data) != 0:
+              raise SystemExit(f"DAG import errors present ({len(data)}): {data!r}")
+          print("import_errors_json_ok count=0")
+          PY
+          else:
+            echo "JSON output unavailable; refusing heuristic table grep"
+            cat /tmp/af-import-errors.err || true
+            exit 1
+
+      - name: Run DAG test on isolated data
+        run: |
+          set -euo pipefail
+          # Airflow 3.3: sequential local test of the DAG against mounted smoke data.
+          docker compose -f compose.yml exec -T \
+            -e VOXMETRIKS_DATA_DIR=/opt/voxmetriks/data \
+            -e DB_PATH=/opt/voxmetriks/data/warehouse/voxmetrik.duckdb \
+            airflow-scheduler \
+            airflow dags test voxmetriks_elt
+
+      - name: Verify warehouse, ctl, exports on smoke volume
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import duckdb
+          import pandas as pd
+          root = Path("/tmp/voxmetriks-airflow-smoke-data")
+          db = root / "warehouse" / "voxmetrik.duckdb"
+          assert db.exists(), db
+          conn = duckdb.connect(str(db), read_only=True)
+          assert conn.execute("SELECT COUNT(*) FROM fact_streaming").fetchone()[0] > 0
+          stages = {r[0] for r in conn.execute(
+              "SELECT DISTINCT stage FROM ctl_pipeline_stages WHERE status='OK'"
+          ).fetchall()}
+          required = {
+              "extract_bronze","transform_silver","load_staging",
+              "build_gold_and_aggregates","export_gold","validate_warehouse","finalize_run"
+          }
+          missing = required - stages
+          assert not missing, missing
+          conn.close()
+          for name in ("dim_track.parquet","fact_streaming.parquet","agg_daily_streams.parquet"):
+              p = root / "gold" / name
+              assert p.exists() and p.stat().st_size > 0, p
+              pd.read_parquet(p)
+          print("smoke_verify_ok")
+          PY
+
+      - name: Tear down volumes
+        if: always()
+        run: docker compose -f compose.yml down -v

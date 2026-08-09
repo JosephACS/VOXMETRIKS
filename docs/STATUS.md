@@ -20,8 +20,8 @@
 | Catalog rights / contracts | catalog_rights |
 | Reportes simples / workpanel / complex | reports packages |
 | Platform ops (parcial) | platform_ops |
-| ELT DuckDB | `analytics/elt` |
-| Compose canónico | `compose.yml` (`backend`, `frontend`) |
+| ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |
+| Compose canónico app | `compose.yml` (`backend`, `frontend`) |
 
 ## Capacidades parciales
 
@@ -34,6 +34,7 @@
 | Smart recommendations / AI helpers | Reglas locales; no LLM obligatorio |
 | Royalties | Simulado / diferido — no payouts reales |
 | Unified Music Search (alcance avanzado) | Núcleo implementado; pendiente smoke con API key/proveedor real y alcance avanzado no aprobado |
+| Orquestación ELT Airflow (Spec 048) | Stack + DAG + adaptador en repo; **runtime Docker/Airflow aún no verificado** (aceptación pendiente de smoke CI/local) |
 
 ## Decisiones diferidas (sin inventar parámetros)
 
@@ -46,9 +47,11 @@
 ## Limitaciones reales
 
 - Entorno académico / demo; DuckDB no es OLTP de producción.
+- Spec 048 Airflow: código presente; **no** declarar capacidad verificada hasta smoke real con Docker.
 - Audio vía contrato YouTube Data API / proveedores aprobados + demos.
-- Docker opcional según host (`docker compose` puede no estar en PATH).
+- Docker opcional según host para la app; **Docker es requerido** para ejecutar el stack Airflow.
 - Sin métricas inventadas de cobertura, concurrencia o ROI.
+- DuckDB single-writer: no ejecutar aplicación y DAG Airflow contra el mismo warehouse a la vez.
 
 ## Gates actuales
 

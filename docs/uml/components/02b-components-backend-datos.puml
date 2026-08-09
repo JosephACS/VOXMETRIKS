@@ -52,8 +52,10 @@ Ops ..> DB
 BE67 ..> DB : POST synthetic
 
 note right of ELT
-  Docker service pipeline
-  job one-shot antes de api (P7)
+  Canónico: CLI make pipeline
+  Orquestado: Airflow Spec 048
+  (stack separado; no servicio
+  en compose.yml de aplicación)
 end note
 
 @enduml

@@ -4,11 +4,36 @@
 
 El pipeline ELT transforma el dataset Spotify (~100k filas desde PocketBase) en un warehouse dimensional DuckDB listo para analytics.
 
-**Pipeline canónico (Spec 014 E):** `analytics/elt/pipelines/elt_pipeline.py`  
-**Comando ops:** `make pipeline`  
+**Pipeline canónico (única implementación autoritativa):** `analytics/elt/pipelines/elt_pipeline.py`
+**Adaptador orquestado (Spec 048):** `analytics/elt/pipelines/orchestrated_pipeline.py` — invoca las mismas funciones por etapa; no duplica transforms.
+**Comando ops CLI:** `make pipeline`
+**Orquestación Airflow (local/demo):** `make airflow-up` → UI `:8081` → trigger manual `voxmetriks_elt`
 **Output:** `data/warehouse/voxmetrik.duckdb`
 
 **Backend runtime (no canónico para rebuild completo):** `apps/backend/app/etl/` — refresh Bronze→Silver→Gold *en proceso* cuando ya existe `raw_spotify`. Conservado como adaptador/consumidor; no duplicar el builder de dims/facts.
+
+## Dos caminos de ejecución Medallion
+
+| Camino | Qué hace | Cuándo |
+|--------|----------|--------|
+| CLI directo | `python analytics/elt/pipelines/elt_pipeline.py` / `make pipeline` | Rebuild completo sin Airflow |
+| Orquestado | DAG `voxmetriks_elt` → subprocess por etapa del adaptador | Demo/académico; graph + logs en Airflow |
+
+Ambos reutilizan `bronze_extract`, `silver_transform`, `gold_load_staging`, `gold_build_warehouse`, `_export_gold_parquets`, `verify_warehouse`. Handoff durable: Parquet + DuckDB (nunca DataFrames por XCom).
+
+**Compose de aplicación** (`compose.yml`): solo `backend` + `frontend`.
+**Compose Airflow** (`infrastructure/airflow/compose.yml`): Postgres de metadata del orquestador + LocalExecutor. **No** es el warehouse de negocio.
+
+### Modo mantenimiento (DuckDB single-writer)
+
+Antes de `make airflow-trigger` o de disparar el DAG en la UI:
+
+1. Detener `start_demo.ps1` y/o `make down`.
+2. Ejecutar el DAG.
+3. Apagar Airflow (`make airflow-down`).
+4. Volver a levantar la aplicación.
+
+Si otro proceso bloquea el warehouse, `preflight` falla con mensaje accionable (no mata procesos ni borra `.wal`/`.duckdb`).
 
 ## Flujo completo
 
@@ -75,10 +100,13 @@ Al arrancar FastAPI (`run_system_boot()`):
 ## Ejecución manual
 
 ```bash
-# Pipeline canónico completo
+# Pipeline canónico completo (CLI)
 python analytics/elt/pipelines/elt_pipeline.py
 # o
 make pipeline
+
+# Una etapa orquestable (mismo ELT; útil para depurar)
+python analytics/elt/pipelines/orchestrated_pipeline.py preflight --dag-run-id local-debug
 
 # Refresh backend (requiere warehouse + raw_spotify)
 make etl
@@ -87,11 +115,26 @@ make etl
 python automation/scripts/validate_warehouse.py
 ```
 
+## Orquestación Airflow (Spec 048)
+
+```bash
+make down            # mantenimiento: liberar DuckDB
+make airflow-up      # init + stack; UI http://localhost:8081
+make airflow-list
+make airflow-trigger # o Trigger en la UI — schedule=None
+make airflow-logs
+make airflow-down
+make up
+```
+
+Airflow **no** ejecuta el pipeline al arrancar. Metadata del orquestador vive en Postgres del stack Airflow; datos de negocio en DuckDB/Parquet bajo `VOXMETRIKS_DATA_DIR` (default `data/`).
+
 ## Variables ELT
 
 | Variable | Descripción |
 |----------|-------------|
 | `DB_PATH` | Ruta DuckDB destino |
+| `VOXMETRIKS_DATA_DIR` | Raíz Medallion (`bronze`/`silver`/`gold`/`warehouse`) |
 | `POCKETBASE_URL` | URL PocketBase |
 | `POCKETBASE_EMAIL` | Credencial extract |
 | `POCKETBASE_PASSWORD` | Credencial extract |

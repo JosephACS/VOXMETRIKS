@@ -1,6 +1,8 @@
 {
-  "feature_directory": ".specify/history/047-repository-recovery-hardening",
-  "previous_feature_directory": ".specify/history/046-artist-identity-access",
-  "status": "closed/idle",
-  "note": "No active Spec Kit implementation feature. feature_directory points at history/047 only for tool compatibility. previous_feature_directory → history/046. Next available ID: 048 under .specify/features/. Product truth: docs/STATUS.md. Historical specs: .specify/history/ (001–047)."
+  "feature_directory": ".specify/features/048-airflow-elt-orchestration",
+  "previous_feature_directory": ".specify/history/047-repository-recovery-hardening",
+  "status": "active",
+  "feature_id": "048",
+  "short_name": "airflow-elt-orchestration",
+  "note": "Spec 048 active — Apache Airflow coordinates canonical Medallion ELT. Product truth: docs/STATUS.md. Do not move to history until explicitly closed."
 }

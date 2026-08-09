@@ -1,6 +1,6 @@
 @startuml voxmetriks-elt-flow
-' Flujo ELT — dos caminos documentados (spec 008 RB-PM01, RB-PM02)
-' A) Medallion real: Docker/CLI (elt_pipeline.py)
+' Flujo ELT — caminos documentados
+' A) Medallion real: CLI (elt_pipeline.py) u orquestado Airflow (Spec 048)
 ' B) Consola SPA: timeline simulado + POST synthetic
 
 skinparam activityBackgroundColor #FEFEFE
@@ -8,18 +8,13 @@ skinparam activityBorderColor #333333
 
 title Voxmetriks — Flujo ELT (Medallion + consola UI)
 
-|DevOps / Docker|
+|Ops — CLI canónico|
 start
-:docker compose up --build;
+:make pipeline\npython analytics/elt/pipelines/elt_pipeline.py;
 note right
-  docker-compose.yml
-  pipeline → exit 0
-  api depends_on pipeline OK
+  Única implementación autoritativa
+  de transforms Medallion
 end note
-
-|elt_pipeline.py|
-:ensure_bronze_parquet\n(PocketBase CSV o Parquet local);
-:register_pipeline_stage\nctl_pipeline_stages;
 
 partition "Extract — Bronze" {
   :bronze_extract();
@@ -33,11 +28,29 @@ partition "Transform — Silver" {
 
 partition "Load — Gold (DuckDB)" {
   :gold_load_staging → raw_spotify;
-  :build_enterprise_warehouse\n(dim_*, fact_*, agg_*);
-  :INSERT ctl_carga_dataset\nmodo=elt;
+  :gold_build_warehouse\n(dim_*, fact_*, agg_*);
+  :export + verify_warehouse;
 }
 
-:Export Parquet Gold\n(opcional BI);
+stop
+
+|Ops — Airflow Spec 048|
+start
+:Detener app\n(make down / start_demo);
+:make airflow-up\ninfrastructure/airflow/compose.yml;
+note right
+  LocalExecutor · metadata Postgres
+  UI :8081 · schedule=None
+  NO es compose.yml de aplicación
+end note
+:Trigger manual DAG voxmetriks_elt;
+:subprocess por etapa\norchestrated_pipeline.py;
+note right
+  Reutiliza funciones canónicas
+  Handoff: Parquet + DuckDB
+  Sin DataFrames en XCom
+end note
+:make airflow-down;\nmake up;
 stop
 
 |Engineer — SPA /elt-pipeline|
@@ -71,7 +84,7 @@ stop
 start
 :GET /analytics/explorer/tables;
 :GET /analytics/explorer/preview/{table};
-:GET /stats/loads?limit=10\n(delimitación spec 008);
+:GET /stats/loads?limit=10;
 note right
   Read-only (P6, FR-DE21)
   Sin mutación warehouse
@@ -86,9 +99,10 @@ stop
 
 legend right
   |= Símbolo |= Significado |
-  | **Pipeline CLI** | Único camino medallion completo (FR-PM24, P7) |
+  | **Pipeline CLI** | Camino medallion completo autoritativo |
+  | **Airflow** | Coordina etapas; no duplica transforms (Spec 048) |
   | **Timeline UI** | Visualización; NO invoca elt_pipeline.py |
-  | **POST synthetic** | Mutación controlada P10; no reemplaza ELT |
+  | **POST synthetic** | Mutación controlada; no reemplaza ELT |
 endlegend
 
 @enduml
