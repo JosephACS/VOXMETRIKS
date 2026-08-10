@@ -45,6 +45,9 @@ describe('space models & nav (045/046)', () => {
     expect(paths).toContain('/organizations/5');
     expect(paths).toContain('/catalog');
     expect(paths).toContain('/artist-profiles');
+    const strategic = items.find((i) => i.path === '/business-analytics');
+    expect(strategic?.orgPermission).toBe('biz_analytics.view');
+    expect(strategic?.orgModule).toBe('operational');
     const royalties = items.find((i) => i.path === '/royalties');
     expect(royalties?.orgPermission).toBe('royalty.view');
     expect(royalties?.orgModule).toBe('operational');
@@ -80,6 +83,7 @@ describe('space models & nav (045/046)', () => {
     expect(paths).toContain('/catalog');
     expect(paths).toContain('/artist-profiles');
     expect(paths).not.toContain('/campaigns');
+    expect(paths).not.toContain('/business-analytics');
     expect(paths).not.toContain('/billing/invoices');
     expect(paths).not.toContain('/subscriptions/overview');
   });
@@ -96,6 +100,7 @@ describe('space models & nav (045/046)', () => {
     });
     const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
     expect(paths).toContain('/campaigns');
+    expect(paths).toContain('/business-analytics');
     expect(paths).toContain('/billing/invoices');
     expect(paths).toContain('/subscriptions/overview');
   });
@@ -116,6 +121,7 @@ describe('space models & nav (045/046)', () => {
     expect(paths).not.toContain('/catalog');
     expect(paths).not.toContain('/artist-profiles');
     expect(paths).not.toContain('/campaigns');
+    expect(paths).not.toContain('/business-analytics');
   });
 
   it('shows reports only for staff in organization space', () => {

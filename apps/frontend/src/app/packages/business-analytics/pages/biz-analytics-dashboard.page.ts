@@ -4,7 +4,12 @@ import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { BusinessAnalyticsApiService } from '../services/business-analytics-api.service';
-import { DashboardOverview } from '../models/business-analytics.models';
+import {
+  DashboardOverview,
+  StrategicClassification,
+  StrategicObjective,
+  StrategicOverview,
+} from '../models/business-analytics.models';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { BillingApiService } from '../../billing/services/billing-api.service';
 import { CrmApiService } from '../../crm/services/crm-api.service';
@@ -18,27 +23,121 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
   selector: 'app-biz-analytics-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  styleUrls: ['./biz-analytics-dashboard.page.css'],
   template: `
-    <div class="vx-enterprise biz-analytics-dashboard vx-enterprise--wide">
+    <div class="vx-enterprise biz-analytics-dashboard vx-enterprise--wide" data-testid="strategic-direction">
       @if (!orgId) {
         <app-enterprise-org-required />
       } @else {
         <app-enterprise-page-header
-          [title]="'businessAnalytics.dashboard.title' | t:lang()"
-          [subtitle]="'businessAnalytics.dashboard.subtitle' | t:lang()"
+          [title]="'businessAnalytics.strategic.title' | t:lang()"
+          [subtitle]="'businessAnalytics.strategic.subtitle' | t:lang()"
         />
 
-        <nav class="subnav">
+        <nav class="subnav" aria-label="Business analytics">
           <a routerLink="/business-analytics">{{ 'nav.businessAnalytics.dashboard' | t:lang() }}</a>
           <a routerLink="/business-analytics/kpis">{{ 'businessAnalytics.kpis.title' | t:lang() }}</a>
           <a routerLink="/business-analytics/alerts">{{ 'businessAnalytics.dashboard.alerts' | t:lang() }}</a>
           <a routerLink="/business-analytics/recommendations">{{ 'businessAnalytics.dashboard.recommendations' | t:lang() }}</a>
           <a routerLink="/business-analytics/quality">{{ 'businessAnalytics.quality.title' | t:lang() }}</a>
+          <a routerLink="/reports">{{ 'businessAnalytics.strategic.reports' | t:lang() }}</a>
+          <a routerLink="/business-decisions">{{ 'businessAnalytics.strategic.decisions' | t:lang() }}</a>
         </nav>
 
         @if (loading) {
-          <app-enterprise-loading-skeleton [rows]="6" />
+          <app-enterprise-loading-skeleton [rows]="8" />
         } @else {
+          <section class="period-summary" aria-label="Period">
+            <p class="period-line">
+              {{ 'common.period' | t:lang() }}:
+              <strong>{{ strategic?.period_start || ('common.notAvailable' | t:lang()) }}</strong>
+              →
+              <strong>{{ strategic?.period_end || ('common.notAvailable' | t:lang()) }}</strong>
+            </p>
+            <p class="muted">
+              {{ 'businessAnalytics.strategic.chain' | t:lang() }}
+            </p>
+            <div class="period-actions">
+              @if (strategic?.decision_capability?.can_refresh_strategic) {
+                <button type="button" class="btn btn-secondary" (click)="refreshStrategic()" [disabled]="refreshing">
+                  {{ 'businessAnalytics.strategic.refresh' | t:lang() }}
+                </button>
+              }
+              @if (strategic?.decision_capability?.can_draft_report) {
+                <a class="btn btn-primary" routerLink="/reports">
+                  {{ 'businessAnalytics.strategic.draftReport' | t:lang() }}
+                </a>
+              }
+              @if (strategic?.decision_capability?.can_create_decision) {
+                <a class="btn btn-secondary" routerLink="/business-decisions">
+                  {{ 'businessAnalytics.strategic.openDecision' | t:lang() }}
+                </a>
+              }
+            </div>
+            <p class="muted rule-note">
+              {{ 'businessAnalytics.strategic.noAi' | t:lang() }}
+            </p>
+          </section>
+
+          <section class="oe-grid" aria-label="Strategic objectives">
+            @if (!strategic || strategic.objectives.length === 0) {
+              <app-enterprise-empty-state
+                [title]="'businessAnalytics.strategic.emptyTitle' | t:lang()"
+                [description]="'businessAnalytics.strategic.emptyBody' | t:lang()"
+              />
+            } @else {
+              @for (obj of strategic.objectives; track obj.objective_code) {
+                <article class="oe-card" [attr.data-objective]="obj.objective_code">
+                  <header class="oe-card__head">
+                    <span class="oe-code">{{ obj.objective_code }}</span>
+                    <h3>{{ obj.title }}</h3>
+                    <span class="badge" [class]="badgeClass(obj)">{{ badgeLabel(obj) }}</span>
+                  </header>
+
+                  @if (obj.empty || !obj.kpi) {
+                    <p class="kpi-null">{{ 'businessAnalytics.strategic.unavailableHonest' | t:lang() }}</p>
+                  } @else if (obj.kpi.value == null) {
+                    <p class="kpi-null">
+                      {{ 'common.notAvailable' | t:lang() }}
+                      @if (obj.kpi.unavailable_reason) {
+                        <span class="reason"> — {{ obj.kpi.unavailable_reason }}</span>
+                      }
+                    </p>
+                    <p class="kpi-meta">{{ obj.kpi.kpi_code }} · {{ obj.kpi.source_label }}</p>
+                  } @else {
+                    <p class="kpi-value">
+                      {{ obj.kpi.value | number:'1.0-4' }}
+                      <span class="unit">{{ obj.kpi.unit }}</span>
+                    </p>
+                    <p class="kpi-meta">
+                      {{ obj.kpi.kpi_code }} · {{ obj.kpi.source_label }} · {{ obj.kpi.quality_status }}
+                    </p>
+                    <p class="kpi-meta">
+                      {{ obj.period_start }} → {{ obj.period_end }}
+                    </p>
+                  }
+
+                  @if (obj.trend && (strategic.comparable_periods || 0) >= 2) {
+                    <p class="trend">
+                      {{ 'businessAnalytics.strategic.trend' | t:lang() }}:
+                      {{ obj.trend.delta | number:'1.0-2' }}
+                    </p>
+                  } @else {
+                    <p class="trend muted">{{ 'businessAnalytics.strategic.noTrend' | t:lang() }}</p>
+                  }
+
+                  <footer class="oe-card__links">
+                    @if (obj.evidence_path) {
+                      <a [routerLink]="obj.evidence_path">{{ 'businessAnalytics.strategic.evidence' | t:lang() }}</a>
+                    }
+                    <a routerLink="/reports">{{ 'businessAnalytics.strategic.report' | t:lang() }}</a>
+                    <a routerLink="/business-decisions">{{ 'businessAnalytics.strategic.decision' | t:lang() }}</a>
+                  </footer>
+                </article>
+              }
+            }
+          </section>
+
           <app-enterprise-section-card [title]="'businessAnalytics.dashboard.snapshot' | t:lang()">
             <p class="muted">{{ 'businessAnalytics.dashboard.commercialHint' | t:lang() }}</p>
             <div class="kpi-grid">
@@ -58,14 +157,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 [label]="'businessAnalytics.dashboard.pastDueInvoices' | t:lang()"
                 [value]="fmt(commercial.pastDueCount)"
               />
-              <app-enterprise-stat-card
-                [label]="'businessAnalytics.dashboard.amountDueSum' | t:lang()"
-                [value]="commercial.amountDueSum == null ? ('common.notAvailable' | t:lang()) : (commercial.amountDueSum | number:'1.2-2')"
-              />
-              <app-enterprise-stat-card
-                [label]="'businessAnalytics.dashboard.amountPaidSum' | t:lang()"
-                [value]="commercial.amountPaidSum == null ? ('common.notAvailable' | t:lang()) : (commercial.amountPaidSum | number:'1.2-2')"
-              />
               <div class="kpi-card">
                 <h3>{{ 'businessAnalytics.dashboard.activeMrr' | t:lang() }}</h3>
                 @if (overview?.kpis?.['active_mrr']?.value != null) {
@@ -73,7 +164,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                     {{ overview!.kpis['active_mrr'].value | number:'1.2-2' }}
                     {{ recurring?.primary_currency || '' }}
                   </p>
-                  <p class="kpi-source">{{ overview!.kpis['active_mrr'].source_label }}</p>
                 } @else {
                   <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
                 }
@@ -89,47 +179,8 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                   <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
                 }
               </div>
-              <div class="kpi-card">
-                <h3>{{ 'businessAnalytics.dashboard.pastDueMrr' | t:lang() }}</h3>
-                @if (overview?.kpis?.['past_due_mrr']?.value != null) {
-                  <p class="kpi-value">{{ overview!.kpis['past_due_mrr'].value | number:'1.2-2' }}</p>
-                } @else {
-                  <p class="kpi-null">{{ 'common.notAvailable' | t:lang() }}</p>
-                }
-                <p class="kpi-source muted">{{ 'businessAnalytics.dashboard.pastDueMrrNote' | t:lang() }}</p>
-              </div>
-              <app-enterprise-stat-card
-                [label]="'businessAnalytics.dashboard.openCsRisks' | t:lang()"
-                [value]="fmt(commercial.openRisks)"
-              />
             </div>
           </app-enterprise-section-card>
-
-          @if (overview) {
-            <app-enterprise-section-card [title]="'businessAnalytics.dashboard.warehouseKpi' | t:lang()">
-              <p class="muted">
-                {{ 'common.period' | t:lang() }}: {{ overview.period || ('common.notAvailable' | t:lang()) }}
-              </p>
-              <div class="kpi-grid">
-                @for (entry of kpiEntries; track entry.code) {
-                  <div class="kpi-card">
-                    <h3>{{ entry.code }}</h3>
-                    @if (entry.data.value != null) {
-                      <p class="kpi-value">{{ entry.data.value | number }}</p>
-                    } @else {
-                      <p class="kpi-null">
-                        {{ 'common.notAvailable' | t:lang() }} ({{ entry.data.quality_status || 'null' }})
-                      </p>
-                    }
-                    <p class="kpi-source">{{ entry.data.source_label || ('common.notAvailable' | t:lang()) }}</p>
-                    @if (entry.data.is_synthetic) {
-                      <span class="badge">{{ 'businessAnalytics.dashboard.synthetic' | t:lang() }}</span>
-                    }
-                  </div>
-                }
-              </div>
-            </app-enterprise-section-card>
-          }
         }
 
         @if (error) {
@@ -150,27 +201,22 @@ export class BizAnalyticsDashboardPage implements OnInit {
   private cs = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
 
+  strategic: StrategicOverview | null = null;
   overview: DashboardOverview | null = null;
   recurring: { primary_currency?: string | null } | null = null;
-  kpiEntries: { code: string; data: DashboardOverview['kpis'][string] }[] = [];
   commercial: {
     openOpportunities: number | null;
     activeSubscriptions: number | null;
     invoiceCount: number | null;
     pastDueCount: number | null;
-    amountDueSum: number | null;
-    amountPaidSum: number | null;
-    openRisks: number | null;
   } = {
     openOpportunities: null,
     activeSubscriptions: null,
     invoiceCount: null,
     pastDueCount: null,
-    amountDueSum: null,
-    amountPaidSum: null,
-    openRisks: null,
   };
   loading = false;
+  refreshing = false;
   error: string | null = null;
   orgId: number | null = null;
 
@@ -178,9 +224,44 @@ export class BizAnalyticsDashboardPage implements OnInit {
     return v == null ? this.i18n.t('common.notAvailable') : String(v);
   }
 
+  classificationOf(obj: StrategicObjective): StrategicClassification {
+    const raw = (obj.kpi?.classification || '').toLowerCase();
+    if (raw === 'real' || raw === 'synthetic' || raw === 'proxy' || raw === 'simulated' || raw === 'unavailable') {
+      return raw;
+    }
+    if (!obj.kpi || obj.kpi.value == null) return 'unavailable';
+    if (obj.kpi.is_synthetic) return 'synthetic';
+    if (obj.kpi.is_proxy) return 'proxy';
+    return 'real';
+  }
+
+  badgeClass(obj: StrategicObjective): string {
+    return `badge badge--${this.classificationOf(obj)}`;
+  }
+
+  badgeLabel(obj: StrategicObjective): string {
+    const key = `businessAnalytics.strategic.badge.${this.classificationOf(obj)}`;
+    return this.i18n.t(key);
+  }
+
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.load();
+  }
+
+  refreshStrategic(): void {
+    const orgId = this.orgId;
+    if (!orgId) return;
+    this.refreshing = true;
+    this.api.refreshStrategic(orgId).pipe(catchError(() => of(null))).subscribe({
+      next: () => {
+        this.refreshing = false;
+        this.load();
+      },
+      error: () => {
+        this.refreshing = false;
+      },
+    });
   }
 
   load(): void {
@@ -193,6 +274,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
     this.error = null;
 
     forkJoin({
+      strategic: this.api.getStrategicOverview(orgId).pipe(catchError(() => of(null))),
       dash: this.api.getDashboard(orgId).pipe(catchError(() => of(null))),
       opps: this.crm.listOpportunities(1, 50).pipe(catchError(() => of(null))),
       invoices: this.billing.listInvoices(orgId, {}).pipe(catchError(() => of(null))),
@@ -200,12 +282,12 @@ export class BizAnalyticsDashboardPage implements OnInit {
       risks: this.cs.listRisks(orgId).pipe(catchError(() => of(null))),
     }).subscribe({
       next: (res) => {
+        this.strategic = res.strategic;
         if (res.dash) {
           this.overview = res.dash;
           this.recurring =
             (res.dash as DashboardOverview & { recurring_revenue?: { primary_currency?: string | null } })
               .recurring_revenue ?? null;
-          this.kpiEntries = Object.entries(res.dash.kpis || {}).map(([code, data]) => ({ code, data }));
         }
         if (res.opps?.items) {
           this.commercial.openOpportunities = res.opps.items.filter(
@@ -219,22 +301,12 @@ export class BizAnalyticsDashboardPage implements OnInit {
         }
         if (res.invoices) {
           const items =
-            (res.invoices as { items?: Array<{ status: string; amount_due?: number; amount_paid?: number }> }).items ??
-            (Array.isArray(res.invoices)
-              ? (res.invoices as Array<{ status: string; amount_due?: number; amount_paid?: number }>)
-              : []);
+            (res.invoices as { items?: Array<{ status: string }> }).items ??
+            (Array.isArray(res.invoices) ? (res.invoices as Array<{ status: string }>) : []);
           this.commercial.invoiceCount = items.length;
           this.commercial.pastDueCount = items.filter((i) => i.status === 'past_due').length;
-          const due = items.map((i) => i.amount_due).filter((n): n is number => n != null);
-          const paid = items.map((i) => i.amount_paid).filter((n): n is number => n != null);
-          this.commercial.amountDueSum = due.length ? due.reduce((a, b) => a + b, 0) : null;
-          this.commercial.amountPaidSum = paid.length ? paid.reduce((a, b) => a + b, 0) : null;
         }
-        if (res.risks) {
-          this.commercial.openRisks = res.risks.filter((r) =>
-            ['open', 'intervention_required', 'monitoring'].includes(String((r as { status?: string }).status)),
-          ).length;
-        }
+        void res.risks;
         this.loading = false;
       },
       error: () => {

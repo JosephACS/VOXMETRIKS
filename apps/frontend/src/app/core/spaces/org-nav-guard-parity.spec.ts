@@ -34,14 +34,24 @@ describe('organization nav announce ↔ guard parity', () => {
       spaceKind: 'personal',
       canAccessOrgModule: () => true,
     });
-    for (const path of ['/campaigns', '/billing/invoices', '/subscriptions/overview']) {
+    for (const path of [
+      '/campaigns',
+      '/business-analytics',
+      '/billing/invoices',
+      '/subscriptions/overview',
+    ]) {
       expect(decideProductSurfaceAccess(path, listener, 'personal')).toBe('unavailable');
       expect(paths).not.toContain(path);
     }
   });
 
   it('announces commercial paths only when organization space allows product surface', () => {
-    for (const path of ['/campaigns', '/billing/invoices', '/subscriptions/overview']) {
+    for (const path of [
+      '/campaigns',
+      '/business-analytics',
+      '/billing/invoices',
+      '/subscriptions/overview',
+    ]) {
       expect(decideProductSurfaceAccess(path, listener, 'organization')).toBe('allow');
     }
     const paths = announcePaths({
@@ -49,7 +59,12 @@ describe('organization nav announce ↔ guard parity', () => {
       canAccessOrgModule: () => true,
     });
     expect(paths).toEqual(
-      expect.arrayContaining(['/campaigns', '/billing/invoices', '/subscriptions/overview']),
+      expect.arrayContaining([
+        '/campaigns',
+        '/business-analytics',
+        '/billing/invoices',
+        '/subscriptions/overview',
+      ]),
     );
   });
 
@@ -77,6 +92,7 @@ describe('organization nav announce ↔ guard parity', () => {
     });
     expect(paths).not.toContain('/catalog');
     expect(paths).not.toContain('/artist-profiles');
+    expect(paths).not.toContain('/business-analytics');
   });
 
   it('staff-only reports stay off for non-staff even when org modules pass', () => {

@@ -156,6 +156,14 @@ export function spaceNavSectionsFor(
               orgPermission: 'organization.view',
             },
             {
+              path: '/business-analytics',
+              labelKey: 'businessAnalytics.strategic.title',
+              iconId: 'strategic',
+              exact: false,
+              orgModule: 'operational',
+              orgPermission: 'biz_analytics.view',
+            },
+            {
               path: '/artist-profiles',
               labelKey: 'nav.artistProfiles.list',
               iconId: 'artist',

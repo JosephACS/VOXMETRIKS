@@ -19,6 +19,7 @@
 | Artist Space + invitaciones | artist_space (046) |
 | Catalog rights / contracts | catalog_rights |
 | Reportes simples / workpanel / complex | reports packages |
+| Business analytics / Estratégico AGG (049) | `agg_strategic_kpi_period`; overview OE-01…OE-08; dashboard Dirección estratégica; smoke desktop/móvil |
 | Platform ops (parcial) | platform_ops |
 | ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |
 | Orquestación ELT Airflow (Spec 048) | DAG de ocho tareas + LocalExecutor; smoke Docker/Airflow verificado en CI |
@@ -29,8 +30,8 @@
 | Área | Limitación real |
 |------|-----------------|
 | CRM comercial | Flujos UI/API presentes; lifecycle/conversion con deuda |
+| Business analytics / engagement | Parcial: AGG estratégico OE visible; ROI no certificado; sin IA estratégica; metas comerciales diferidas |
 | Campaigns / ROI | Módulo presente; métricas no certificadas |
-| Business analytics / engagement | Parcial; sin inventar KPIs |
 | Compliance / CS / support | Esqueleto o parcial |
 | Smart recommendations / AI helpers | Reglas locales; no LLM obligatorio |
 | Royalties | Simulado / diferido — no payouts reales |

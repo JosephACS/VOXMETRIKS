@@ -39,6 +39,17 @@ export function decideProductSurfaceAccess(
 ): ProductSurfaceDecision {
   if (spaceAllowsProductPath(path, activeSpaceKind)) {
     const staffOrAllow = classifyProductDeepLink(path, ctx);
+    // Organization reporting has its own membership + permission check in
+    // staffCapabilityGuard. Let that authoritative UX gate decide instead of
+    // rejecting valid organization owners as identity-only listeners.
+    const normalized = (path || '').split('?')[0];
+    const organizationReporting =
+      activeSpaceKind === 'organization' &&
+      (normalized === '/reports' ||
+        normalized.startsWith('/reports/') ||
+        normalized === '/business-decisions' ||
+        normalized.startsWith('/business-decisions/'));
+    if (organizationReporting) return 'allow';
     if (staffOrAllow === 'staff-block') return 'staff-block';
     return 'allow';
   }
