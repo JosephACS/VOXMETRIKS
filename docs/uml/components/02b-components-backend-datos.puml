@@ -1,61 +1,55 @@
 @startuml voxmetriks-components-backend-datos
-' Backend FastAPI + Datos — entrega GA07, figura 16b
-' Layout vertical: Backend arriba, Datos abajo (hidden link fuerza apilado)
-
 skinparam componentStyle rectangle
 skinparam defaultFontSize 11
-skinparam nodesep 28
-skinparam ranksep 40
 top to bottom direction
 
-title Voxmetriks — Backend FastAPI y capa de datos
+title VOXMETRIKS — Componentes backend y datos
 
-package "Backend — FastAPI" as BE #E8F8E8 {
-
-  component "Root API\nGET / · GET /health" as Root
-
-  together {
-    component "PKG-01 Users API\n/api/v1/users/*" as BE01
-    component "PKG-02 Streaming API\nartists · tracks · playlists · favorites" as BE02
-    component "PKG-06/07 Analytics API\nstats · warehouse · explorer · recs" as BE67
-  }
-
-  Root -down-> BE01
-  Root -down-> BE02
-  Root -down-> BE67
+package "FastAPI" as API #E8F8E8 {
+  component "Identity + Organizations\nsesiones · membresías · RBAC" as Identity
+  component "Music + Catalog\nbúsqueda · audio · artistas · derechos" as Music
+  component "Enterprise Operations\nCRM · subscriptions · billing · campaigns" as Enterprise
+  component "Analytics + Reporting\nKPI · reports · decisions · Workpanel" as Analytics
+  component "Platform Ops\nhealth · jobs · audit" as Ops
 }
 
-package "Datos y operaciones" as Data #FFF8E7 {
-
-  together {
-    database "DuckDB\nvoxmetrik.duckdb" as DB
-    component "ELT CLI\nelt_pipeline.py" as ELT
-  }
-
-  together {
-    component "Scripts ops\nvalidate · analyze" as Ops
-    cloud "PocketBase\n(ingest opcional)" as PB
-  }
+package "Datos de negocio — DuckDB" as BusinessData #FFF8E7 {
+  database "Estado operacional\napp_*" as AppDB
+  database "Warehouse Gold\ndim_* · fact_* · agg_* · ctl_*" as Warehouse
+  folder "Medallion\nBronze · Silver · Gold Parquet" as Parquet
 }
 
-' Apila Backend sobre Datos (no lado a lado)
-BE -[hidden]down-> Data
+package "Orquestación ELT — Spec 048" as Orchestration #E8F0FF {
+  component "DAG voxmetriks_elt\n8 tareas · schedule manual" as DAG
+  component "ELT canónico\nelt_pipeline.py" as ELT
+  database "PostgreSQL\nmetadata Airflow" as AirflowMeta
+}
 
-BE01 -down-> DB
-BE02 -down-> DB
-BE67 -down-> DB
-Root -down-> DB
+cloud "PocketBase / Parquet cache\nfuente catálogo" as Source
 
-PB ..> ELT : extract
-ELT -down-> DB : Bronze → Silver → Gold
-Ops ..> DB
-BE67 ..> DB : POST synthetic
+Identity --> AppDB
+Music --> AppDB
+Music --> Warehouse
+Enterprise --> AppDB
+Analytics --> AppDB
+Analytics --> Warehouse
+Ops --> AppDB
+Ops --> Warehouse
 
-note right of ELT
-  Canónico: CLI make pipeline
-  Orquestado: Airflow Spec 048
-  (stack separado; no servicio
-  en compose.yml de aplicación)
+Source --> ELT : extract
+DAG --> ELT : coordina etapas
+DAG --> AirflowMeta : estado/logs
+ELT --> Parquet
+ELT --> Warehouse
+
+note right of AppDB
+  Alcance académico: estado operacional y
+  warehouse comparten el mismo archivo DuckDB.
+  No se afirma OLTP productivo independiente.
 end note
 
+note right of DAG
+  Single-writer: detener la aplicación
+  durante el rebuild Airflow.
+end note
 @enduml

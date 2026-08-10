@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/048-airflow-elt-orchestration",
+  "feature_directory": ".specify/history/048-airflow-elt-orchestration",
   "previous_feature_directory": ".specify/history/047-repository-recovery-hardening",
-  "status": "active",
+  "status": "closed/idle",
   "feature_id": "048",
   "short_name": "airflow-elt-orchestration",
-  "note": "Spec 048 active — Apache Airflow coordinates canonical Medallion ELT. Product truth: docs/STATUS.md. Do not move to history until explicitly closed."
+  "note": "No active Spec Kit implementation feature. Spec 048 is closed with Docker/Airflow smoke verified in GitHub Actions. Next available ID: 049 under .specify/features/. Product truth: docs/STATUS.md."
 }

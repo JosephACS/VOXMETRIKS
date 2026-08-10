@@ -4,17 +4,32 @@ skinparam shadowing false
 skinparam classAttributeIconSize 0
 skinparam defaultFontSize 10
 left to right direction
-title Voxmetriks — Warehouse Medallion (Gold)
+title VOXMETRIKS — Datos operacionales y Warehouse Gold
 
 class dim_track
-class dim_artist
-class dim_genre
-class agg_recomendaciones
-class ctl_pipeline_run
+class dim_artista
+class dim_genero
+class fact_streaming
+class agg_daily_streams
+class agg_artist_growth
+class agg_recommendation_scores
+class ctl_carga_dataset
+class ctl_pipeline_stages
+class app_kpi_snapshot
+class app_executive_report
+class app_business_decision
+class app_decision_action
 
-dim_track --> dim_artist
-dim_track --> dim_genre
-agg_recomendaciones ..> dim_track
-ctl_pipeline_run ..> dim_track
-
+dim_track --> dim_artista
+dim_track --> dim_genero
+fact_streaming --> dim_track
+agg_daily_streams ..> fact_streaming
+agg_artist_growth ..> fact_streaming
+agg_recommendation_scores ..> dim_track
+ctl_carga_dataset ..> fact_streaming : procedencia de carga
+ctl_pipeline_stages ..> agg_daily_streams : ejecución ELT
+app_kpi_snapshot ..> agg_daily_streams : fuente/version
+app_executive_report --> app_kpi_snapshot : snapshot inmutable
+app_business_decision --> app_executive_report : evidencia opcional
+app_business_decision --> app_decision_action
 @enduml

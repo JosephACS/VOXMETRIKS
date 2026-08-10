@@ -2,17 +2,26 @@
 skinparam monochrome true
 skinparam shadowing false
 skinparam defaultFontSize 10
-title Secuencia — Recomendaciones (CU-RC02)
+title Secuencia — Recomendación musical explicable
 
-actor Usuario as U
-participant FE as FE
-participant API as API
-database agg_recomendaciones as AGG
+actor Oyente as U
+participant "Angular" as FE
+participant "Analytics API" as API
+participant "Ranking heurístico" as Rank
+database "agg_recommendation_scores" as Scores
+database "dim_track + fuentes reproducibles" as Catalog
 
-U -> FE : /recommendations
-FE -> API : GET + Bearer
-API -> AGG : scores user_id
-API --> FE : listas
-FE --> U : UI
+U -> FE : abrir recomendaciones
+FE -> API : GET /analytics/recommendations
+API -> Rank : solicitar ranking
+Rank -> Scores : scores globales precomputados
+Rank -> Catalog : metadatos y disponibilidad
+Rank --> API : ranking + razones
+API --> FE : recomendaciones reproducibles
+FE --> U : tarjetas y explicación
 
+note over Rank
+  Reglas, pesos, coescucha y similitud.
+  No se afirma ML entrenado.
+end note
 @enduml

@@ -1257,6 +1257,8 @@ export const ENTERPRISE_EN = {
   'decisions.list.emptyBody': 'Record a decision to start the approval workflow.',
   'decisions.detail.approve': 'Approve',
   'decisions.detail.complete': 'Complete',
+  'decisions.detail.cancel': 'Cancel decision',
+  'decisions.detail.cancelConfirm': 'Cancel this decision and its pending actions?',
   'decisions.detail.addAction': 'Add action',
   'decisions.detail.addFollowUp': 'Add follow-up',
 

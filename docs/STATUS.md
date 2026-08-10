@@ -1,7 +1,7 @@
 # VOXMETRIKS — Estado actual del producto
 
 **Única verdad vigente de capacidades.**  
-**Referencia Git:** `main @ d2f6a27f` (y tip actual de `main` si avanzó solo con consolidación documental).  
+**Referencia Git:** `main @ 49ecc7a2` y cambios posteriores aceptados por CI.
 **Specs históricas:** [`.specify/history/`](../.specify/history/README.md) — no sustituyen este documento.
 
 ## Capacidades implementadas
@@ -21,6 +21,7 @@
 | Reportes simples / workpanel / complex | reports packages |
 | Platform ops (parcial) | platform_ops |
 | ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |
+| Orquestación ELT Airflow (Spec 048) | DAG de ocho tareas + LocalExecutor; smoke Docker/Airflow verificado en CI |
 | Compose canónico app | `compose.yml` (`backend`, `frontend`) |
 
 ## Capacidades parciales
@@ -34,7 +35,6 @@
 | Smart recommendations / AI helpers | Reglas locales; no LLM obligatorio |
 | Royalties | Simulado / diferido — no payouts reales |
 | Unified Music Search (alcance avanzado) | Núcleo implementado; pendiente smoke con API key/proveedor real y alcance avanzado no aprobado |
-| Orquestación ELT Airflow (Spec 048) | Stack + DAG + adaptador en repo; **runtime Docker/Airflow aún no verificado** (aceptación pendiente de smoke CI/local) |
 
 ## Decisiones diferidas (sin inventar parámetros)
 
@@ -47,7 +47,7 @@
 ## Limitaciones reales
 
 - Entorno académico / demo; DuckDB no es OLTP de producción.
-- Spec 048 Airflow: código presente; **no** declarar capacidad verificada hasta smoke real con Docker.
+- Airflow es una capacidad académica/demo verificada en Docker CI; no se afirma HA ni producción.
 - Audio vía contrato YouTube Data API / proveedores aprobados + demos.
 - Docker opcional según host para la app; **Docker es requerido** para ejecutar el stack Airflow.
 - Sin métricas inventadas de cobertura, concurrencia o ROI.

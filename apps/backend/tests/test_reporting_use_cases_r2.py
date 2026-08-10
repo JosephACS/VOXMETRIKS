@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from app.core.database import using_write_conn
 from app.core.time_util import utc_now
 from app.packages.reporting.application.use_cases import (
@@ -13,6 +15,7 @@ from app.packages.reporting.application.use_cases import (
     ReportGenerationUseCases,
     ReportSnapshotUseCases,
 )
+from app.packages.reporting.domain.errors import StateError
 
 
 ORG_ID = 9240
@@ -26,10 +29,10 @@ def _ensure_org(conn, org_id: int = ORG_ID) -> None:
             INSERT INTO app_organization
                 (id, display_name, slug, organization_type, country_code, timezone,
                  default_currency, status, created_by, created_at, updated_at)
-            VALUES (?, 'Reporting R2 Org', 'reporting-r2-org', 'label', 'US', 'UTC',
+            VALUES (?, 'Reporting R2 Org', ?, 'label', 'US', 'UTC',
                     'USD', 'active', 1, ?, ?)
             """,
-            [org_id, now, now],
+            [org_id, f"reporting-r2-org-{org_id}", now, now],
         )
 
 
@@ -99,3 +102,91 @@ def test_immutable_snapshot_and_decision_lifecycle():
         assert dec.status == "completed"
         fus = decisions.list_follow_ups(ORG_ID, dec.id)
         assert len(fus) >= 1
+
+
+def test_report_snapshot_uses_only_requested_org_and_period():
+    other_org_id = ORG_ID + 1
+    with using_write_conn() as conn:
+        _ensure_org(conn)
+        _ensure_org(conn, other_org_id)
+        kpi = conn.execute(
+            "SELECT id FROM app_kpi_definition WHERE code = 'total_streams' "
+            "ORDER BY version DESC LIMIT 1"
+        ).fetchone()
+        assert kpi
+        first_id = int(
+            conn.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM app_kpi_snapshot").fetchone()[0]
+        )
+        now = utc_now()
+        conn.executemany(
+            """
+            INSERT INTO app_kpi_snapshot
+                (id, kpi_definition_id, organization_id, period, value, quality_status,
+                 source_label, is_synthetic, created_at)
+            VALUES (?, ?, ?, ?, ?, 'ok', 'warehouse:fact_streaming', TRUE, ?)
+            """,
+            [
+                [first_id, int(kpi[0]), ORG_ID, "2026-01-15", 11.0, now],
+                [first_id + 1, int(kpi[0]), ORG_ID, "2026-02-15", 99.0, now],
+                [first_id + 2, int(kpi[0]), other_org_id, "2026-01-20", 777.0, now],
+            ],
+        )
+
+        definition = ReportDefinitionUseCases(conn).create(
+            organization_id=ORG_ID,
+            code="org-period-isolation",
+            title="Organization period isolation",
+            actor_user_id=1,
+        )
+        generation = ReportGenerationUseCases(conn).request(
+            organization_id=ORG_ID,
+            definition_id=definition.id,
+            period_start="2026-01-01",
+            period_end="2026-01-31",
+            actor_user_id=1,
+        )
+        _, snapshot, _ = ReportGenerationUseCases(conn).generate_snapshot(
+            organization_id=ORG_ID,
+            generation_id=generation.id,
+            actor_user_id=1,
+        )
+        payload = json.loads(snapshot.payload_json)
+        total_streams = next(k for k in payload["kpis"] if k["code"] == "total_streams")
+
+        assert total_streams["value"] == 11.0
+        assert total_streams["is_synthetic"] is True
+
+
+def test_cancel_decision_closes_pending_actions_and_is_terminal():
+    with using_write_conn() as conn:
+        _ensure_org(conn)
+        decisions = BusinessDecisionUseCases(conn)
+        decision = decisions.create(
+            organization_id=ORG_ID,
+            title="Do not continue rollout",
+            proposal="Cancel after reviewing the evidence",
+            actor_user_id=1,
+        )
+        action = decisions.add_action(
+            organization_id=ORG_ID,
+            decision_id=decision.id,
+            title="Prepare rollout",
+            actor_user_id=1,
+        )
+
+        canceled = decisions.cancel(
+            organization_id=ORG_ID,
+            decision_id=decision.id,
+            reason="Evidence did not support the proposal",
+            actor_user_id=1,
+        )
+
+        assert canceled.status == "canceled"
+        assert canceled.completed_at is not None
+        assert decisions.list_actions(ORG_ID, decision.id)[0].status == "canceled"
+        with pytest.raises(StateError):
+            decisions.cancel(
+                organization_id=ORG_ID,
+                decision_id=decision.id,
+                actor_user_id=1,
+            )

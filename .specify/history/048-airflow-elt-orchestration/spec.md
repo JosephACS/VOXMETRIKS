@@ -2,7 +2,7 @@
 
 **Feature Branch**: `feature/048-airflow-elt-orchestration`  
 **Created**: 2026-08-09  
-**Status**: Active  
+**Status**: Closed — accepted with verified Docker/Airflow smoke
 **Input**: Spec 048 — Orquestación real del ELT con Apache Airflow
 
 ## Declaraciones de alcance (obligatorias)
