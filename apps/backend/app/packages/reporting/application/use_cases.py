@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import duckdb
 
+from app.core.database import transactional
 from app.core.time_util import utc_now
 from app.packages.reporting.domain.entities import (
     BusinessDecision,
@@ -264,10 +265,21 @@ class ReportGenerationUseCases:
                 """
                 SELECT d.id, d.code, d.version, d.name, s.id, s.value, s.quality_status, s.is_synthetic
                 FROM app_kpi_definition d
-                LEFT JOIN app_kpi_snapshot s ON s.kpi_definition_id = d.id
+                LEFT JOIN app_kpi_snapshot s
+                  ON s.kpi_definition_id = d.id
+                 AND s.organization_id = ?
+                 AND (? IS NULL OR s.period >= ?)
+                 AND (? IS NULL OR s.period <= ?)
                 WHERE d.status = 'active'
                 ORDER BY d.code, d.version DESC, s.id DESC
-                """
+                """,
+                [
+                    organization_id,
+                    gen.period_start,
+                    gen.period_start,
+                    gen.period_end,
+                    gen.period_end,
+                ],
             ).fetchall()
         except Exception:
             kpi_rows = []
@@ -715,6 +727,47 @@ class BusinessDecisionUseCases:
         )
         _audit(self._conn, action="decision.completed", target_type="business_decision", target_id=str(decision_id),
                actor_user_id=actor_user_id, organization_id=organization_id, request_id=request_id)
+        return self.get(organization_id, decision_id)
+
+    def cancel(
+        self,
+        *,
+        organization_id: int,
+        decision_id: int,
+        reason: Optional[str] = None,
+        actor_user_id: Optional[int] = None,
+        request_id: Optional[str] = None,
+    ) -> BusinessDecision:
+        reason = (reason or "").strip() or None
+        with transactional(self._conn):
+            decision = self.get(organization_id, decision_id)
+            if decision.status in ("completed", "canceled"):
+                raise StateError("Completed or canceled decisions cannot be canceled")
+
+            now = _now()
+            self._conn.execute(
+                "UPDATE app_business_decision SET status = 'canceled', completed_at = ?, "
+                "updated_at = ? WHERE id = ? AND organization_id = ?",
+                [now, now, decision_id, organization_id],
+            )
+            self._conn.execute(
+                "UPDATE app_decision_action SET status = 'canceled', updated_at = ? "
+                "WHERE decision_id = ? AND status IN ('planned', 'in_progress')",
+                [now, decision_id],
+            )
+            _audit(
+                self._conn,
+                action="decision.canceled",
+                target_type="business_decision",
+                target_id=str(decision_id),
+                actor_user_id=actor_user_id,
+                organization_id=organization_id,
+                previous_values={"status": decision.status},
+                new_values={"status": "canceled"},
+                reason=reason,
+                request_id=request_id,
+            )
+
         return self.get(organization_id, decision_id)
 
     def add_follow_up(

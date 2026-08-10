@@ -23,14 +23,14 @@ Correcciones locales, copy, tests y docs menores **no** abren Spec automáticame
 
 - Prefijo de **tres dígitos** obligatorio (`001`…`999`).
 - **IDs históricos inmutables** — no renumerar, no reutilizar.
-- **Próxima Spec disponible: `048`.** No crear la carpeta hasta abrir la feature.
+- **Próxima Spec disponible: `049`.** No crear la carpeta hasta abrir la feature.
 
 ## Carpetas canónicas
 
 | Ruta | Contenido |
 |------|-----------|
 | [`.specify/features/`](features/) | **Solo features activas** de implementación. Hoy: ninguna (ver README). |
-| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–047). |
+| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–048). |
 | [`.specify/CAPABILITY_MAP.md`](CAPABILITY_MAP.md) | Mapa de familias → Specs/packages → STATUS (sin duplicar runtime). |
 | [`.specify/feature.json`](feature.json) | Puntero de compatibilidad Spec Kit (idle/closed). |
 

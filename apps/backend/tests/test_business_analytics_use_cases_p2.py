@@ -82,6 +82,29 @@ def test_synthetic_snapshot_tagged(db_conn):
     assert snap.is_synthetic is True
 
 
+def test_warehouse_classification_propagates_to_snapshot(db_conn):
+    db_conn.execute("""
+        CREATE TABLE IF NOT EXISTS ctl_carga_dataset (
+            id_carga INTEGER,
+            fecha_carga TIMESTAMP,
+            modo VARCHAR,
+            total_raw INTEGER,
+            total_procesados INTEGER,
+            estado VARCHAR
+        )
+    """)
+    db_conn.execute(
+        "INSERT INTO ctl_carga_dataset VALUES (9001, CURRENT_TIMESTAMP, "
+        "'synthetic_activity_demo', 2, 2, 'OK')"
+    )
+
+    snap = KpiSnapshotUseCases(db_conn).capture(
+        "total_streams", organization_id=ORG, period="2026-01-02",
+    )
+
+    assert snap.is_synthetic is True
+
+
 def test_campaign_roi_absent_when_missing(db_conn):
     snap = KpiSnapshotUseCases(db_conn).capture("campaign_roi", organization_id=ORG, period="2026-01-01")
     assert snap.value is None

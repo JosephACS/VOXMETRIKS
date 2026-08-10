@@ -63,6 +63,7 @@ def test_dashboard(client: TestClient, biz_admin):
     r = client.get("/api/v1/business-analytics/dashboard", headers=biz_admin["org_headers"])
     assert r.status_code == 200, r.text
     assert "kpis" in r.json()
+    assert "recurring_revenue" in r.json()
 
 
 def test_list_kpis(client: TestClient, biz_admin):

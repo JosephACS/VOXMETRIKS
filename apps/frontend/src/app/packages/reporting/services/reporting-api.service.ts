@@ -110,6 +110,14 @@ export class ReportingApiService {
     });
   }
 
+  cancelDecision(orgId: number, id: number, reason?: string) {
+    return this.http.post<BusinessDecision>(
+      `${base}/business-decisions/${id}/cancel`,
+      { reason: reason || null },
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
   addAction(orgId: number, id: number, title: string) {
     return this.http.post<DecisionAction>(`${base}/business-decisions/${id}/actions`, { title }, {
       headers: this.orgHeaders(orgId),

@@ -19,6 +19,7 @@ from app.packages.reporting.presentation.schemas import (
     ApproveReportRequest,
     BusinessDecisionCreateRequest,
     BusinessDecisionOut,
+    CancelDecisionRequest,
     DecisionActionCreateRequest,
     DecisionActionOut,
     DecisionActionUpdateRequest,
@@ -306,6 +307,25 @@ def approve_decision(
         d = BusinessDecisionUseCases(ctx["conn"]).approve(
             organization_id=ctx["organization_id"], decision_id=decision_id,
             actor_user_id=ctx["user_id"], request_id=ctx["request_id"],
+        )
+    except ReportingError as e:
+        raise_reporting_http(e)
+    return BusinessDecisionOut(**d.__dict__)
+
+
+@business_decisions_router.post("/{decision_id}/cancel", response_model=BusinessDecisionOut)
+def cancel_decision(
+    decision_id: int,
+    body: CancelDecisionRequest,
+    ctx: dict = Depends(require_org_reporting_permission("decision.complete")),
+) -> BusinessDecisionOut:
+    try:
+        d = BusinessDecisionUseCases(ctx["conn"]).cancel(
+            organization_id=ctx["organization_id"],
+            decision_id=decision_id,
+            reason=body.reason,
+            actor_user_id=ctx["user_id"],
+            request_id=ctx["request_id"],
         )
     except ReportingError as e:
         raise_reporting_http(e)

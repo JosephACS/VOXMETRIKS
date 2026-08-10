@@ -125,6 +125,10 @@ class BusinessDecisionOut(BaseModel):
     completed_at: Optional[datetime] = None
 
 
+class CancelDecisionRequest(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=1000)
+
+
 class DecisionActionCreateRequest(BaseModel):
     title: str
     assignee_user_id: Optional[int] = None

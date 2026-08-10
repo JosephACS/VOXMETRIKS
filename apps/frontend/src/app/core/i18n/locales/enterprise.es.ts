@@ -1272,6 +1272,8 @@ export const ENTERPRISE_ES = {
   'decisions.list.emptyBody': 'Registra una decisión para iniciar el flujo de aprobación.',
   'decisions.detail.approve': 'Aprobar',
   'decisions.detail.complete': 'Completar',
+  'decisions.detail.cancel': 'Cancelar decisión',
+  'decisions.detail.cancelConfirm': '¿Cancelar esta decisión y sus acciones pendientes?',
   'decisions.detail.addAction': 'Añadir acción',
   'decisions.detail.addFollowUp': 'Añadir seguimiento',
 

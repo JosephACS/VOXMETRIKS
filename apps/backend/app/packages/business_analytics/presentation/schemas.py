@@ -88,6 +88,7 @@ class DashboardOverviewOut(BaseModel):
     organization_id: int
     period: str
     kpis: dict[str, Any]
+    recurring_revenue: Optional[dict[str, Any]] = None
     trends_stub: dict[str, Any]
     comparatives_stub: dict[str, Any]
 

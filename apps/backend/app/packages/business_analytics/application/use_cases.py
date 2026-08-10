@@ -205,6 +205,15 @@ class KpiSnapshotUseCases:
         else:
             value, source_label, quality = _warehouse_value(self._conn, kpi_code)
 
+        effective_is_synthetic = is_synthetic
+        if source_label.startswith("warehouse:") and not effective_is_synthetic:
+            from app.packages.identity.services.data_classification import (
+                SYNTHETIC,
+                classify_warehouse_activity,
+            )
+
+            effective_is_synthetic = classify_warehouse_activity(self._conn) == SYNTHETIC
+
         now = _now()
         sid = _next_id(self._conn, "app_kpi_snapshot")
         self._conn.execute(
@@ -214,7 +223,17 @@ class KpiSnapshotUseCases:
                  source_label, is_synthetic, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            [sid, kpi.id, organization_id, period, value, quality, source_label, is_synthetic, now],
+            [
+                sid,
+                kpi.id,
+                organization_id,
+                period,
+                value,
+                quality,
+                source_label,
+                effective_is_synthetic,
+                now,
+            ],
         )
         row = self._conn.execute(
             "SELECT id, kpi_definition_id, organization_id, period, value, quality_status, "

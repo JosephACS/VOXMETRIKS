@@ -1,0 +1,47 @@
+@startuml voxmetriks-deployment
+skinparam componentStyle rectangle
+skinparam defaultFontSize 10
+top to bottom direction
+title VOXMETRIKS — Despliegue académico/demo
+
+actor Usuario
+
+node "Navegador" as Browser {
+  component "Angular SPA" as SPA
+}
+
+node "Docker Compose app\ncompose.yml" as AppStack {
+  node "frontend :8080" as Front {
+    component "nginx" as Nginx
+  }
+  node "backend :8000" as Back {
+    component "FastAPI / Uvicorn" as API
+  }
+  database "Volumen de datos\nDuckDB + Parquet" as Data
+}
+
+node "Docker Compose Airflow\ninfrastructure/airflow/compose.yml" as AirflowStack {
+  component "api-server :8081" as AirflowUI
+  component "scheduler + dag-processor\nLocalExecutor" as Scheduler
+  database "PostgreSQL metadata" as Meta
+}
+
+cloud "PocketBase opcional" as PB
+cloud "GitHub Actions\nsmoke aislado" as CI
+
+Usuario --> SPA
+SPA --> Nginx
+Nginx --> API : /api
+API --> Data
+AirflowUI --> Scheduler
+Scheduler --> Meta
+Scheduler --> Data : ELT en mantenimiento
+PB --> Scheduler : extract opcional
+CI ..> AirflowStack : build · init · DAG test · down -v
+
+note bottom of AirflowStack
+  Stack separado de la aplicación.
+  schedule=None; sin HA/Celery/Kubernetes.
+  Aplicación y DAG no escriben DuckDB simultáneamente.
+end note
+@enduml

@@ -1,0 +1,40 @@
+@startuml voxmetriks-strategic-decision-flow
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 10
+title Pizarra — Objetivo, KPI y decisión humana
+
+actor "Dirección / analista" as User
+participant "Business Analytics UI" as FE
+participant "Business Analytics API" as BA
+database "KPI snapshots\norg + periodo + procedencia" as KPI
+participant "Reglas explicables\nis_ai=false" as Rules
+participant "Reporting API" as Reports
+database "Decisiones · acciones\nseguimientos" as Decisions
+
+User -> FE : revisar objetivo y evidencia
+FE -> BA : GET dashboard / recommendations
+BA -> KPI : leer KPI de la organización
+BA -> Rules : evaluar reglas y calidad
+Rules --> BA : sugerencia + evidence_ref
+BA --> FE : KPI + fuente + synthetic/quality
+FE --> User : soporte a decisión
+
+alt aprobar propuesta
+  User -> FE : registrar / aprobar decisión
+  FE -> Reports : POST business-decisions / approve
+  Reports -> Decisions : proposed → approved
+  User -> FE : asignar acción y seguimiento
+  FE -> Reports : actions / follow-ups / complete
+  Reports -> Decisions : in_progress → completed
+else cancelar propuesta
+  User -> FE : cancelar decisión
+  FE -> Reports : POST business-decisions/{id}/cancel
+  Reports -> Decisions : → canceled + acciones pendientes canceladas
+end
+
+note over BA,Rules
+  Las reglas empresariales no son IA predictiva.
+  Una persona conserva la decisión final.
+end note
+@enduml

@@ -15,8 +15,8 @@ Mapa de capacidades: [`../CAPABILITY_MAP.md`](../CAPABILITY_MAP.md).
 
 ## Inventario físico
 
-Exactamente **47** carpetas (`001`–`047`), cada una con `spec.md`.
-`closure.md` presente cuando hay evidencia real o reconstrucción verificable (022–023 y 032–047).
+Exactamente **48** carpetas (`001`–`048`), cada una con `spec.md`.
+`closure.md` presente cuando hay evidencia real o reconstrucción verificable (022–023 y 032–048).
 
 ## 001–021 · 024–031 (originales preservados)
 
@@ -80,16 +80,17 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 043 | [043-professional-ux-visual-redesign](043-professional-ux-visual-redesign/) |
 | 044 | [044-product-consolidation-data-clarity](044-product-consolidation-data-clarity/) |
 
-## 045–047 (cerradas; movidas desde features/)
+## 045–048 (cerradas; movidas desde features/)
 
 | ID | Carpeta | Estado |
 |----|---------|--------|
 | 045 | [045-spaces-contextual-navigation](045-spaces-contextual-navigation/) | cerrado |
 | 046 | [046-artist-identity-access](046-artist-identity-access/) | cerrado |
 | 047 | [047-repository-recovery-hardening](047-repository-recovery-hardening/) | cerrado |
+| 048 | [048-airflow-elt-orchestration](048-airflow-elt-orchestration/) | cerrado; smoke Docker/Airflow verificado |
 
 Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-**048** — aún no creada; solo bajo `.specify/features/` cuando se abra.
+**049** — aún no creada; solo bajo `.specify/features/` cuando se abra.

@@ -137,6 +137,21 @@ def test_report_generation_approve_publish_export(client: TestClient, report_adm
     assert fu.status_code == 201
     assert client.post(f"/api/v1/business-decisions/{did}/complete", headers=h).status_code == 200
 
+    canceled = client.post(
+        "/api/v1/business-decisions",
+        headers=h,
+        json={"title": "Cancel proposal", "proposal": "Do not proceed"},
+    )
+    assert canceled.status_code == 201
+    canceled_id = canceled.json()["id"]
+    cancel = client.post(
+        f"/api/v1/business-decisions/{canceled_id}/cancel",
+        headers=h,
+        json={"reason": "Insufficient evidence"},
+    )
+    assert cancel.status_code == 200, cancel.text
+    assert cancel.json()["status"] == "canceled"
+
 
 def test_missing_org_header(client: TestClient, report_admin):
     r = client.get(

@@ -32,12 +32,21 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           <p class="muted">{{ decision.proposal }}</p>
 
           <app-enterprise-action-bar>
-            <button type="button" class="btn btn--primary" (click)="approve()">
-              {{ 'decisions.detail.approve' | t:lang() }}
-            </button>
-            <button type="button" class="btn btn--secondary" (click)="complete()">
-              {{ 'decisions.detail.complete' | t:lang() }}
-            </button>
+            @if (decision.status === 'proposed') {
+              <button type="button" class="btn btn--primary" (click)="approve()">
+                {{ 'decisions.detail.approve' | t:lang() }}
+              </button>
+            }
+            @if (decision.status === 'approved' || decision.status === 'in_progress') {
+              <button type="button" class="btn btn--secondary" (click)="complete()">
+                {{ 'decisions.detail.complete' | t:lang() }}
+              </button>
+            }
+            @if (canCancel(decision.status)) {
+              <button type="button" class="btn btn--danger" (click)="cancel()">
+                {{ 'decisions.detail.cancel' | t:lang() }}
+              </button>
+            }
           </app-enterprise-action-bar>
 
           <app-enterprise-section-card [title]="'reporting.decisions.actions' | t:lang()">
@@ -137,6 +146,19 @@ export class DecisionDetailPage implements OnInit {
   complete(): void {
     if (!this.orgId) return;
     this.api.completeDecision(this.orgId, this.id).subscribe({
+      next: (d) => (this.decision = d),
+      error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
+    });
+  }
+
+  canCancel(status: string): boolean {
+    return status === 'proposed' || status === 'approved' || status === 'in_progress';
+  }
+
+  cancel(): void {
+    if (!this.orgId) return;
+    if (!window.confirm(this.i18n.t('decisions.detail.cancelConfirm'))) return;
+    this.api.cancelDecision(this.orgId, this.id).subscribe({
       next: (d) => (this.decision = d),
       error: (e) => (this.error = e?.error?.detail?.message || this.i18n.t('common.failed')),
     });
