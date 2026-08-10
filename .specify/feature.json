@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/history/048-airflow-elt-orchestration",
-  "previous_feature_directory": ".specify/history/047-repository-recovery-hardening",
+  "feature_directory": ".specify/history/049-taf14-strategic-agg-closure",
+  "previous_feature_directory": ".specify/history/048-airflow-elt-orchestration",
   "status": "closed/idle",
-  "feature_id": "048",
-  "short_name": "airflow-elt-orchestration",
-  "note": "No active Spec Kit implementation feature. Spec 048 is closed with Docker/Airflow smoke verified in GitHub Actions. Next available ID: 049 under .specify/features/. Product truth: docs/STATUS.md."
+  "feature_id": "049",
+  "short_name": "taf14-strategic-agg-closure",
+  "note": "No active Spec Kit implementation feature. Spec 049 is closed: TAF14 strategic AGG (OE-01..OE-08) with smoke desktop/mobile verified. Next available ID: 050 under .specify/features/. Product truth: docs/STATUS.md."
 }

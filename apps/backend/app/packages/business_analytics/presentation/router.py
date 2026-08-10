@@ -29,6 +29,8 @@ from app.packages.business_analytics.presentation.schemas import (
     KpiSnapshotOut,
     MetricSourceOut,
     RecommendationOut,
+    StrategicOverviewOut,
+    StrategicRefreshOut,
 )
 
 business_analytics_router = APIRouter(prefix="/business-analytics", tags=["Business Analytics"])
@@ -161,3 +163,51 @@ def drill_down(
         ctx["organization_id"], dimension=dimension, value=value,
     )
     return DrillDownOut(**data)
+
+
+@business_analytics_router.post("/strategic/refresh", response_model=StrategicRefreshOut)
+def refresh_strategic_overview(
+    include_global: bool = Query(default=False),
+    ctx: dict = Depends(require_org_biz_analytics_permission("biz_analytics.manage")),
+):
+    from app.packages.business_analytics.application.strategic_agg import (
+        default_period,
+        refresh_strategic_kpi_period,
+    )
+
+    allow_global = bool(include_global and ctx.get("is_platform_admin"))
+    period_start, period_end = default_period()
+    rows = refresh_strategic_kpi_period(
+        ctx["conn"],
+        organization_id=ctx["organization_id"],
+        period_start=period_start,
+        period_end=period_end,
+        include_global=allow_global,
+    )
+    return StrategicRefreshOut(
+        organization_id=ctx["organization_id"],
+        period_start=period_start.isoformat(),
+        period_end=period_end.isoformat(),
+        include_global=allow_global,
+        rows_written=len(rows),
+    )
+
+
+@business_analytics_router.get("/strategic/overview", response_model=StrategicOverviewOut)
+def strategic_overview_endpoint(
+    include_global: bool = Query(default=False),
+    ctx: dict = Depends(require_org_biz_analytics_permission("biz_analytics.view")),
+):
+    from app.packages.business_analytics.application.strategic_agg import strategic_overview
+
+    allow_global = bool(include_global and ctx.get("is_platform_admin"))
+    data = strategic_overview(
+        ctx["conn"],
+        organization_id=ctx["organization_id"],
+        include_global=allow_global,
+        can_create_decision=bool(ctx.get("can_create_decision")),
+        can_draft_report=bool(ctx.get("can_draft_report")),
+        can_refresh_strategic=bool(ctx.get("can_refresh_strategic")),
+        auto_refresh=False,
+    )
+    return StrategicOverviewOut(**data)

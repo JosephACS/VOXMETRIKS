@@ -331,12 +331,42 @@ class ReportGenerationUseCases:
             "Historical snapshots are immutable and are not recalculated when KPIs change. "
             "ROI and customer-health sources may be unavailable."
         )
+        strategic_rows: list[dict[str, Any]] = []
+        try:
+            from app.packages.business_analytics.application.strategic_agg import (
+                list_strategic_rows,
+            )
+
+            ps = gen.period_start
+            pe = gen.period_end
+            if hasattr(ps, "isoformat"):
+                pass
+            else:
+                from datetime import date as _date
+
+                ps = _date.fromisoformat(str(ps)[:10]) if ps else None
+                pe = _date.fromisoformat(str(pe)[:10]) if pe else None
+            if ps and pe:
+                strategic_rows = list_strategic_rows(
+                    self._conn,
+                    organization_id=organization_id,
+                    period_start=ps,
+                    period_end=pe,
+                    include_global=False,
+                )
+        except Exception:
+            strategic_rows = []
+            unavailable.append("strategic_agg")
+        if not strategic_rows and "strategic_agg" not in unavailable:
+            unavailable.append("strategic_agg")
+
         payload = {
             "organization_id": organization_id,
             "definition_code": definition.code,
             "period_start": gen.period_start,
             "period_end": gen.period_end,
             "kpis": kpi_payload,
+            "strategic_agg": strategic_rows,
             "campaigns": campaign_summary,
             "billing": {"status": "referenced_when_available"},
             "generated_label": "synthetic_or_warehouse_backed",
@@ -360,6 +390,7 @@ class ReportGenerationUseCases:
         # Sections
         for i, (code, title, content) in enumerate([
             ("summary", "Executive Summary", {"kpis": kpi_payload[:5]}),
+            ("strategic", "Dirección estratégica (AGG)", {"objectives": strategic_rows}),
             ("campaigns", "Campaigns & ROI", campaign_summary),
             ("limitations", "Limitations", {"text": limitations, "unavailable": unavailable}),
         ]):

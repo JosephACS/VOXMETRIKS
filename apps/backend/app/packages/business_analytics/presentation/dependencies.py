@@ -1,4 +1,4 @@
-"""Business analytics dependencies — Spec 023."""
+"""Business analytics dependencies — Spec 023 / 049."""
 
 from __future__ import annotations
 
@@ -19,6 +19,37 @@ def request_id_header(
     return (x_request_id or "").strip() or str(uuid.uuid4())
 
 
+def _has_org_permission(
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    user_id: int,
+    organization_id: int,
+    permission_code: str,
+) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1 FROM app_organization_member m
+        JOIN app_member_role mr ON mr.member_id = m.id AND mr.status = 'active'
+        JOIN app_business_role br ON br.id = mr.role_id
+        JOIN app_role_permission rp ON rp.role_id = br.id
+        JOIN app_permission p ON p.id = rp.permission_id AND p.code = ?
+        WHERE m.organization_id = ? AND m.user_id = ? AND m.status = 'active'
+        LIMIT 1
+        """,
+        [permission_code, organization_id, user_id],
+    ).fetchone()
+    return bool(row)
+
+
+def is_platform_admin_user(conn: duckdb.DuckDBPyConnection, user_id: int) -> bool:
+    try:
+        from app.packages.artists.identity_access.use_cases import is_platform_admin
+
+        return bool(is_platform_admin(conn, user_id))
+    except Exception:
+        return False
+
+
 def require_org_biz_analytics_permission(permission_code: str):
     def _dep(
         user_id: int = Depends(require_user_id),
@@ -33,19 +64,30 @@ def require_org_biz_analytics_permission(permission_code: str):
         except ValueError:
             raise http_error(400, "Invalid X-Organization-Id", code="bad_header")
 
-        perm_row = conn.execute(
-            """
-            SELECT 1 FROM app_organization_member m
-            JOIN app_member_role mr ON mr.member_id = m.id AND mr.status = 'active'
-            JOIN app_business_role br ON br.id = mr.role_id
-            JOIN app_role_permission rp ON rp.role_id = br.id
-            JOIN app_permission p ON p.id = rp.permission_id AND p.code = ?
-            WHERE m.organization_id = ? AND m.user_id = ? AND m.status = 'active'
-            LIMIT 1
-            """,
-            [permission_code, org_id, user_id],
-        ).fetchone()
-        if not perm_row:
+        if not _has_org_permission(
+            conn, user_id=user_id, organization_id=org_id, permission_code=permission_code,
+        ):
             raise http_error(403, f"Missing biz_analytics permission: {permission_code}", code="permission_denied")
-        return {"user_id": user_id, "organization_id": org_id, "request_id": request_id, "conn": conn}
+        return {
+            "user_id": user_id,
+            "organization_id": org_id,
+            "request_id": request_id,
+            "conn": conn,
+            "is_platform_admin": is_platform_admin_user(conn, user_id),
+            "can_create_decision": _has_org_permission(
+                conn, user_id=user_id, organization_id=org_id, permission_code="decision.create",
+            ),
+            "can_draft_report": _has_org_permission(
+                conn, user_id=user_id, organization_id=org_id, permission_code="report.generate",
+            )
+            or _has_org_permission(
+                conn, user_id=user_id, organization_id=org_id, permission_code="report.view",
+            ),
+            "can_refresh_strategic": _has_org_permission(
+                conn,
+                user_id=user_id,
+                organization_id=org_id,
+                permission_code="biz_analytics.manage",
+            ),
+        }
     return _dep

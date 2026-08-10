@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class KpiDefinitionOut(BaseModel):
@@ -106,3 +106,62 @@ class CaptureSnapshotRequest(BaseModel):
     kpi_code: str
     period: str
     is_synthetic: bool = False
+
+
+class StrategicKpiPeriodOut(BaseModel):
+    id: Optional[int] = None
+    organization_id: Optional[int] = None
+    objective_code: str
+    kpi_code: str
+    period_start: Any
+    period_end: Any
+    value: Optional[float] = None
+    unit: str
+    source_label: str
+    quality_status: str
+    is_synthetic: bool = False
+    is_proxy: bool = False
+    availability_status: str
+    unavailable_reason: Optional[str] = None
+    computed_at: Optional[datetime] = None
+    classification: Optional[str] = None
+
+
+class StrategicObjectiveOut(BaseModel):
+    objective_code: str
+    title: str
+    kpi: Optional[dict[str, Any]] = None
+    kpis: list[dict[str, Any]] = Field(default_factory=list)
+    period_start: str
+    period_end: str
+    evidence_path: Optional[str] = None
+    report_path: Optional[str] = None
+    decision_path: Optional[str] = None
+    trend: Optional[dict[str, Any]] = None
+    empty: bool = False
+
+
+class StrategicDecisionCapabilityOut(BaseModel):
+    can_create_decision: bool = False
+    can_draft_report: bool = False
+    can_refresh_strategic: bool = False
+    is_ai: bool = False
+    recommendation_mode: str = "rule_based"
+
+
+class StrategicOverviewOut(BaseModel):
+    organization_id: int
+    period_start: str
+    period_end: str
+    include_global: bool = False
+    comparable_periods: int = 0
+    objectives: list[StrategicObjectiveOut]
+    decision_capability: StrategicDecisionCapabilityOut
+
+
+class StrategicRefreshOut(BaseModel):
+    organization_id: Optional[int] = None
+    period_start: str
+    period_end: str
+    include_global: bool = False
+    rows_written: int

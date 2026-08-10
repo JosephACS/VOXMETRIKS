@@ -79,11 +79,18 @@ describe('decideProductSurfaceAccess (045)', () => {
 
   it('allows organization space commercial campaigns/billing/royalties', () => {
     expect(decideProductSurfaceAccess('/campaigns', listener, 'organization')).toBe('allow');
+    expect(decideProductSurfaceAccess('/business-analytics', listener, 'organization')).toBe(
+      'allow',
+    );
     expect(decideProductSurfaceAccess('/billing/invoices', listener, 'organization')).toBe(
       'allow',
     );
     expect(decideProductSurfaceAccess('/royalties', listener, 'organization')).toBe('allow');
     expect(decideProductSurfaceAccess('/subscriptions/overview', listener, 'organization')).toBe(
+      'allow',
+    );
+    expect(decideProductSurfaceAccess('/reports', listener, 'organization')).toBe('allow');
+    expect(decideProductSurfaceAccess('/business-decisions', listener, 'organization')).toBe(
       'allow',
     );
   });

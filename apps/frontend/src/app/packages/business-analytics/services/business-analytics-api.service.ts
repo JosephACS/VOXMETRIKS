@@ -3,7 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-  BusinessAlert, DashboardOverview, KpiDefinition, KpiSnapshot, Recommendation,
+  BusinessAlert,
+  DashboardOverview,
+  KpiDefinition,
+  KpiSnapshot,
+  Recommendation,
+  StrategicOverview,
+  StrategicRefreshResult,
 } from '../models/business-analytics.models';
 
 const base = environment.apiUrl;
@@ -20,6 +26,24 @@ export class BusinessAnalyticsApiService {
     return this.http.get<DashboardOverview>(`${base}/business-analytics/dashboard`, {
       headers: this.orgHeaders(orgId),
     });
+  }
+
+  getStrategicOverview(orgId: number, includeGlobal = false): Observable<StrategicOverview> {
+    return this.http.get<StrategicOverview>(`${base}/business-analytics/strategic/overview`, {
+      headers: this.orgHeaders(orgId),
+      params: { include_global: String(includeGlobal) },
+    });
+  }
+
+  refreshStrategic(orgId: number, includeGlobal = false): Observable<StrategicRefreshResult> {
+    return this.http.post<StrategicRefreshResult>(
+      `${base}/business-analytics/strategic/refresh`,
+      null,
+      {
+        headers: this.orgHeaders(orgId),
+        params: { include_global: String(includeGlobal) },
+      },
+    );
   }
 
   listKpis(orgId: number): Observable<KpiDefinition[]> {

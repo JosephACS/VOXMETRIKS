@@ -88,9 +88,10 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 046 | [046-artist-identity-access](046-artist-identity-access/) | cerrado |
 | 047 | [047-repository-recovery-hardening](047-repository-recovery-hardening/) | cerrado |
 | 048 | [048-airflow-elt-orchestration](048-airflow-elt-orchestration/) | cerrado; smoke Docker/Airflow verificado |
+| 049 | [049-taf14-strategic-agg-closure](049-taf14-strategic-agg-closure/) | cerrado; TAF14 Estratégico AGG OE-01…OE-08; smoke desktop/móvil |
 
 Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-**049** — aún no creada; solo bajo `.specify/features/` cuando se abra.
+**050** — aún no creada; solo bajo `.specify/features/` cuando se abra.

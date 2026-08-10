@@ -18,6 +18,7 @@ BUSINESS_ANALYTICS_TABLES = (
     "app_business_alert",
     "app_analytics_view_preference",
     "app_recommendation_record",
+    "agg_strategic_kpi_period",
 )
 
 
@@ -32,6 +33,7 @@ def ensure_business_analytics_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_business_alert(conn)
         _create_analytics_view_preference(conn)
         _create_recommendation_record(conn)
+        _create_strategic_kpi_period(conn)
         _seed_metric_sources(conn)
         _seed_default_kpis(conn)
         return
@@ -42,6 +44,7 @@ def ensure_business_analytics_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_business_alert(conn)
     _create_analytics_view_preference(conn)
     _create_recommendation_record(conn)
+    _create_strategic_kpi_period(conn)
     _seed_metric_sources(conn)
     _seed_default_kpis(conn)
     logger.info("Business analytics schema ensured (%s tables)", len(BUSINESS_ANALYTICS_TABLES))
@@ -157,6 +160,39 @@ def _create_recommendation_record(conn: duckdb.DuckDBPyConnection) -> None:
             is_ai           BOOLEAN NOT NULL DEFAULT FALSE,
             created_at      TIMESTAMP NOT NULL
         )
+    """)
+
+
+def _create_strategic_kpi_period(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 049 longitudinal strategic AGG read model.
+
+    Idempotency is enforced by transactional refresh (DELETE scope+period then INSERT).
+    A physical UNIQUE INDEX is intentionally omitted: DuckDB ART indexes can reject
+    re-inserts of deleted keys in the same connection.
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS agg_strategic_kpi_period (
+            id                  INTEGER PRIMARY KEY,
+            organization_id     INTEGER,
+            objective_code      VARCHAR NOT NULL,
+            kpi_code            VARCHAR NOT NULL,
+            period_start        DATE NOT NULL,
+            period_end          DATE NOT NULL,
+            value               DOUBLE,
+            unit                VARCHAR NOT NULL,
+            source_label        VARCHAR NOT NULL,
+            quality_status      VARCHAR NOT NULL,
+            is_synthetic        BOOLEAN NOT NULL DEFAULT FALSE,
+            is_proxy            BOOLEAN NOT NULL DEFAULT FALSE,
+            availability_status VARCHAR NOT NULL,
+            unavailable_reason  VARCHAR,
+            computed_at         TIMESTAMP NOT NULL,
+            CHECK (availability_status IN ('available', 'unavailable', 'partial'))
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS ix_agg_strategic_kpi_period_lookup
+        ON agg_strategic_kpi_period (organization_id, objective_code, period_start, period_end)
     """)
 
 

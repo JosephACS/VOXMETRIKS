@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
 
@@ -16,6 +17,9 @@ from app.packages.reporting.application.use_cases import (
     ReportSnapshotUseCases,
 )
 from app.packages.reporting.domain.errors import StateError
+from app.packages.business_analytics.application.strategic_agg import (
+    refresh_strategic_kpi_period,
+)
 
 
 ORG_ID = 9240
@@ -78,6 +82,7 @@ def test_immutable_snapshot_and_decision_lifecycle():
 
         unavailable = json.loads(snap.unavailable_sources_json)
         assert isinstance(unavailable, list)
+        assert "strategic_agg" in unavailable
 
         dec = decisions.create(
             organization_id=ORG_ID,
@@ -145,6 +150,12 @@ def test_report_snapshot_uses_only_requested_org_and_period():
             period_end="2026-01-31",
             actor_user_id=1,
         )
+        refresh_strategic_kpi_period(
+            conn,
+            organization_id=ORG_ID,
+            period_start=date(2026, 1, 1),
+            period_end=date(2026, 1, 31),
+        )
         _, snapshot, _ = ReportGenerationUseCases(conn).generate_snapshot(
             organization_id=ORG_ID,
             generation_id=generation.id,
@@ -155,6 +166,11 @@ def test_report_snapshot_uses_only_requested_org_and_period():
 
         assert total_streams["value"] == 11.0
         assert total_streams["is_synthetic"] is True
+        strategic = payload["strategic_agg"]
+        assert strategic
+        assert {row["organization_id"] for row in strategic} == {ORG_ID}
+        assert {row["period_start"] for row in strategic} == {"2026-01-01"}
+        assert {row["period_end"] for row in strategic} == {"2026-01-31"}
 
 
 def test_cancel_decision_closes_pending_actions_and_is_terminal():

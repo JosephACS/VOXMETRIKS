@@ -135,6 +135,9 @@ describe('space-access.policy (045)', () => {
 
   it('allows org commercial paths only in organization space', () => {
     expect(isOrganizationSpaceCommercialPath('/campaigns/1')).toBe(true);
+    expect(spaceAllowsProductPath('/business-analytics', 'organization')).toBe(true);
+    expect(spaceAllowsProductPath('/reports', 'organization')).toBe(true);
+    expect(spaceAllowsProductPath('/business-decisions/7', 'organization')).toBe(true);
     expect(spaceAllowsProductPath('/billing/invoices', 'organization')).toBe(true);
     expect(spaceAllowsProductPath('/billing/invoices', 'personal')).toBe(false);
     expect(spaceAllowsProductPath('/platform-ops', 'platform_admin')).toBe(true);

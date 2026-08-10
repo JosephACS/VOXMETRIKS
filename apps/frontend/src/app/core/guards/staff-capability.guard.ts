@@ -6,15 +6,31 @@ import {
   normalizeIdentityRole,
 } from '../navigation/nav-access.policy';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
+import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 
 /**
  * Blocks pure listeners from staff Workpanel / reports / analytics hubs.
  * Authenticated users without permission go to /error/403 (not login).
  */
-export const staffCapabilityGuard: CanActivateFn = (_route, state) => {
+export const staffCapabilityGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const crm = inject(CrmContextService);
+  const organization = inject(OrganizationContextService);
+
+  const path = (state.url || '').split('?')[0];
+  const organizationPermission =
+    path === '/reports' || path.startsWith('/reports/')
+      ? 'report.view'
+      : path === '/business-decisions' || path.startsWith('/business-decisions/')
+        ? 'decision.view'
+        : null;
+  if (organizationPermission) {
+    await organization.ensureReady();
+    if (organization.canAccessModule('operational', organizationPermission)) {
+      return true;
+    }
+  }
 
   const user = auth.getUser();
   const username = (user?.username || '').toLowerCase();

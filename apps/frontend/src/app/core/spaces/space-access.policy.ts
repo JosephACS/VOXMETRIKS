@@ -113,7 +113,10 @@ export function toPersistedRef(space: AppSpace): PersistedSpaceRef {
  */
 export const ORGANIZATION_SPACE_ALLOWED_PREFIXES: readonly string[] = [
   '/campaigns',
+  '/business-analytics',
   '/billing',
+  '/reports',
+  '/business-decisions',
   '/royalties',
   '/payouts',
   '/subscriptions',

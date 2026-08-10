@@ -15,7 +15,7 @@ Mapa de **11 familias** → Specs históricas relacionadas → packages actuales
 | 7 | CRM / campañas / customer success | 017, 022, 025 | `crm`, `campaigns`, `customer_success` | Parcial | ROI no certificado; E2E campaigns; lifecycle CRM |
 | 8 | Suscripciones / billing / royalties | 018, 019, 030, 040 | `subscriptions`, `billing`, `royalties` | Billing/subs implementados; royalties **simulado/diferido** | Payouts reales; pasarela; **colisión histórica ID 030** |
 | 9 | ELT / warehouse / calidad | 007–012, 014, 048 | `analytics`, ELT `analytics/elt`, `infrastructure/airflow`, explorer | Implementado (ELT DuckDB + orquestación Airflow demo verificada) | Single-writer; Airflow manual, sin HA |
-| 10 | Operativo / táctico / estratégico | 007, 023, 024, 028, 040 | `workpanel`, `reporting`, `simple_reports`, `complex_reports`, `business_analytics`, `engagement` | Reportes simples, Workpanel y reportes complejos: **implementados** según `docs/STATUS.md`. Business analytics/engagement: **parcial**. Estratégico AGG: **pendiente de definición y aceptación**; candidato para la próxima Spec después de decisión de producto. No se afirma cierre completo Operativo/Táctico/Estratégico AGG. | Trends stubs; no inventar KPIs; AGG estratégico sin aceptación |
+| 10 | Operativo / táctico / estratégico | 007, 023, 024, 028, 040, **049** | `workpanel`, `reporting`, `simple_reports`, `complex_reports`, `business_analytics`, `engagement` | Reportes simples, Workpanel y reportes complejos: **implementados**. Spec **049** cerrada: Estratégico AGG (OE-01…OE-08 + `agg_strategic_kpi_period`) con smoke desktop/móvil. Business analytics: **parcial** (ROI no certificado; sin IA estratégica). | Metas comerciales diferidas; ROI no certificado |
 | 11 | Platform Ops / compliance / runtime | 011, 026, 027, 039, 041, 042, 047 | `platform_ops`, `compliance`, `compose.yml`, `scripts/start_demo.ps1` | Ops/compliance parcial; Compose canónico; demo endurecida | Docker opcional en PATH; compliance esqueleto |
 
 ## Notas
@@ -23,4 +23,4 @@ Mapa de **11 familias** → Specs históricas relacionadas → packages actuales
 - Specs **032–044** son `HISTORICAL_RECONSTRUCTED`; no afirman completitud por sí solas.
 - Features activas: ninguna — ver [`.specify/features/README.md`](features/README.md).
 - Índice histórico: [`.specify/history/README.md`](history/README.md).
-- Spec **048** está cerrada en history. El siguiente identificador disponible es **049**, sin alcance asignado.
+- Spec **049** está cerrada en history. El siguiente identificador disponible es **050**, sin alcance asignado.
