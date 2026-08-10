@@ -240,16 +240,5 @@
         <div #googleBtn class="google-btn-host"></div>
       </div>
     }
-
-    @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset') {
-      <aside class="demo-card" [attr.aria-label]="'login.demoTitle' | t:lang()">
-        <h3 class="demo-card__title">{{ 'login.demoTitle' | t:lang() }}</h3>
-        <ul class="demo-card__list">
-          <li>{{ 'login.listenerAccount' | t:lang() }}</li>
-          <li>{{ 'login.stewardAccount' | t:lang() }}</li>
-        </ul>
-        <p class="demo-card__note">{{ 'login.demoRoleNote' | t:lang() }}</p>
-      </aside>
-    }
   </div>
 </div>
