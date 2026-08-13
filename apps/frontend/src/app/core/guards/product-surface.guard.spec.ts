@@ -95,10 +95,9 @@ describe('decideProductSurfaceAccess (045)', () => {
     );
   });
 
-  it('still blocks CRM even in organization space', () => {
-    expect(decideProductSurfaceAccess('/crm/prospects', listener, 'organization')).toBe(
-      'unavailable',
-    );
+  it('allows CRM in organization and platform_admin spaces', () => {
+    expect(decideProductSurfaceAccess('/crm/prospects', listener, 'organization')).toBe('allow');
+    expect(decideProductSurfaceAccess('/crm/dashboard', admin, 'platform_admin')).toBe('allow');
   });
 
   it('blocks listener workpanel even in data_ops space exception', () => {

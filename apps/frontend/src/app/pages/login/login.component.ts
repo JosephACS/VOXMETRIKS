@@ -13,6 +13,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UiPreferencesService, AppLanguage } from '../../core/services/ui-preferences.service';
+import { homePathForRole } from '../../core/navigation/nav-access.policy';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BrandMarkComponent } from '../../shared/components/brand-mark/brand-mark.component';
 
@@ -135,7 +136,7 @@ export class LoginComponent implements OnInit {
     const { loginId, password, remember } = this.loginForm.getRawValue();
     this.auth.login(loginId!, password!, remember ?? true).then((res) => {
       if (res.ok) {
-        this.router.navigate(['/discover']);
+        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
         return;
       }
       this.isLoading.set(false);
@@ -166,7 +167,7 @@ export class LoginComponent implements OnInit {
         this.infoMessage.set(this.i18n.t('verify.sent'));
         this.startResendCountdown(60);
       } else if (res.ok) {
-        this.router.navigate(['/discover']);
+        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
       } else {
         this.errorMessage.set(res.error ?? this.i18n.t('login.registerError'));
       }
@@ -183,7 +184,7 @@ export class LoginComponent implements OnInit {
     const code = this.verifyForm.getRawValue().code!;
     this.auth.verifyEmail(this.pendingEmail(), code).then((res) => {
       if (res.ok) {
-        this.router.navigate(['/discover']);
+        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
       } else {
         this.isLoading.set(false);
         this.errorMessage.set(res.error ?? this.i18n.t('verify.invalid'));
@@ -311,7 +312,7 @@ export class LoginComponent implements OnInit {
       this.errorMessage.set('');
       this.auth.loginWithGoogle(resp.credential).then((ok) => {
         if (ok) {
-          this.router.navigate(['/discover']);
+          void this.router.navigateByUrl(homePathForRole(this.auth.role()));
         } else {
           this.isLoading.set(false);
           this.errorMessage.set(this.i18n.t('login.googleError'));

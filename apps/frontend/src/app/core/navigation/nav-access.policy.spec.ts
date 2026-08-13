@@ -14,6 +14,9 @@ import {
   showAnalyticsSection,
   showPlatformOpsInPrimaryNav,
   showReportingSection,
+  homePathForRole,
+  isPersonalSurfacePath,
+  pathRequiresOrgHydrate,
 } from './nav-access.policy';
 
 describe('nav-access.policy', () => {
@@ -21,6 +24,25 @@ describe('nav-access.policy', () => {
   const admin = { identityRole: 'admin' as const };
   const engineer = { identityRole: 'engineer' as const };
   const platformAdmin = { identityRole: 'user' as const, platformAdmin: true };
+
+  it('maps identity role to landing home', () => {
+    expect(homePathForRole('user')).toBe('/discover');
+    expect(homePathForRole('admin')).toBe('/workpanel');
+    expect(homePathForRole('engineer')).toBe('/workpanel');
+  });
+
+  it('never requires org hydrate for listeners or personal surfaces', () => {
+    expect(pathRequiresOrgHydrate('/discover', 'user')).toBe(false);
+    expect(pathRequiresOrgHydrate('/search', 'user')).toBe(false);
+    expect(pathRequiresOrgHydrate('/settings', 'user')).toBe(false);
+    expect(pathRequiresOrgHydrate('/playlists/1', 'user')).toBe(false);
+    expect(isPersonalSurfacePath('/discover')).toBe(true);
+    expect(pathRequiresOrgHydrate('/discover', 'admin')).toBe(false);
+    expect(pathRequiresOrgHydrate('/elt-pipeline', 'engineer')).toBe(false);
+    expect(pathRequiresOrgHydrate('/explorer', 'engineer')).toBe(false);
+    expect(pathRequiresOrgHydrate('/workpanel', 'admin')).toBe(true);
+    expect(pathRequiresOrgHydrate('/reports', 'engineer')).toBe(true);
+  });
 
   it('grants staff reports to admin/engineer/platform_admin only', () => {
     expect(hasStaffReportsNavAccess(listener)).toBe(false);
@@ -70,7 +92,6 @@ describe('nav-access.policy', () => {
     expect(filterMainNavItems(items, admin).map((i) => i.path)).toEqual(['/workpanel']);
     expect(filterMainNavItems(items, engineer).map((i) => i.path)).toEqual([
       '/workpanel',
-      '/elt-pipeline',
     ]);
   });
 
@@ -101,8 +122,9 @@ describe('nav-access.policy', () => {
         { path: '/settings' },
         { path: '/account/plans' },
         { path: '/account/billing' },
+        { path: '/users' },
       ]).map((i) => i.path),
-    ).toEqual(['/settings']);
+    ).toEqual(['/settings', '/account/plans', '/account/billing']);
   });
 
   it('hides analytics section and shows reporting for staff (038)', () => {
@@ -149,7 +171,7 @@ describe('nav-access.policy', () => {
   it('resolves canonical redirects for legacy hubs', () => {
     expect(resolveCanonicalRedirect('/dashboard')).toBe('/workpanel');
     expect(resolveCanonicalRedirect('/analytics')).toBe('/workpanel');
-    expect(resolveCanonicalRedirect('/trending')).toBe('/reports?type=complex');
+    expect(resolveCanonicalRedirect('/trending')).toBe('/discover');
     expect(resolveCanonicalRedirect('/discover')).toBeNull();
   });
 

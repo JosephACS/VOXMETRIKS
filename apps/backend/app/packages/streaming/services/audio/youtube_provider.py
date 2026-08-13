@@ -7,6 +7,7 @@ Does not download, extract stream URLs, or use yt-dlp/scraping.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -15,7 +16,11 @@ from app.core.config import get_settings
 
 from .base import AudioProvider
 from .cache import STATUS_ERROR, STATUS_NOT_FOUND, STATUS_OK
-from .metadata_normalize import build_search_query_variants, normalize_track_meta
+from .metadata_normalize import (
+    build_search_query_variants,
+    normalize_track_meta,
+    strip_title_noise,
+)
 from .models import ResolvedSource, TrackContext
 from .youtube_scoring import (
     build_search_query,
@@ -31,6 +36,29 @@ _YT_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 _REQUEST_TIMEOUT = float(get_settings().audio_provider_timeout_sec or 12.0)
 _SEARCH_MAX_RESULTS = 12
 _MAX_QUERY_ATTEMPTS = 5
+# Ranked YouTube video ids remembered from the last successful search per track.
+# Used for exclude/fallback without a second Data API round-trip (avoids 429 flake).
+_ALTERNATE_IDS: Dict[int, List[str]] = {}
+_ALT_MAX = 8
+
+
+def _remember_alternate_ids(track_id: int, ranked_ids: List[str], chosen_id: Optional[str]) -> None:
+    ordered: List[str] = []
+    for vid in ranked_ids:
+        if not vid or vid == chosen_id or vid in ordered:
+            continue
+        ordered.append(vid)
+        if len(ordered) >= _ALT_MAX:
+            break
+    if ordered:
+        _ALTERNATE_IDS[track_id] = ordered
+
+
+def _next_remembered_alternate(track_id: int, exclude_ids: set[str]) -> Optional[str]:
+    for vid in _ALTERNATE_IDS.get(track_id) or ():
+        if vid not in exclude_ids:
+            return vid
+    return None
 
 
 class YouTubeProvider(AudioProvider):
@@ -46,6 +74,21 @@ class YouTubeProvider(AudioProvider):
         if not queries:
             queries = [build_search_query(track.track_name, track.artist_name)]
 
+        # Prefer cleaned-title queries first (drop "sped up" / "with …" noise) so
+        # recovery can land on an embeddable official upload instead of edit uploads.
+        core = strip_title_noise(track.track_name)
+        if core and core.casefold() != (track.track_name or "").casefold():
+            preferred = [
+                q
+                for q in queries
+                if "sped" not in q.casefold()
+                and "slowed" not in q.casefold()
+                and "nightcore" not in q.casefold()
+            ]
+            rest = [q for q in queries if q not in preferred]
+            if preferred:
+                queries = preferred + rest
+
         api_key = get_settings().youtube_api_key.strip()
         if not api_key:
             return ResolvedSource(
@@ -55,32 +98,58 @@ class YouTubeProvider(AudioProvider):
                 query=queries[0] if queries else "",
             )
 
-        last_outcome = STATUS_NOT_FOUND
-        last_query = queries[0]
-        artists = list(meta.artists)
-
-        for query in queries:
-            last_query = query
-            video, outcome = self._resolve_video(
-                query,
-                api_key,
-                track.duration_ms,
-                expected_title=meta.original_title or track.track_name,
-                expected_artists=artists,
-            )
-            last_outcome = outcome
-            if outcome == STATUS_OK and video:
+        exclude_ids = set(track.exclude_source_refs or ())
+        # Prefer a previously ranked alternate — no extra YouTube search.
+        if exclude_ids:
+            alt = _next_remembered_alternate(track.track_id, exclude_ids)
+            if alt:
                 return ResolvedSource(
                     track_id=track.track_id,
                     provider=self.name,
                     status=STATUS_OK,
-                    source_ref=video["video_id"],
-                    youtube_video_id=video["video_id"],
-                    query=query,
-                    confidence_score=video.get("confidence_score"),
+                    source_ref=alt,
+                    youtube_video_id=alt,
+                    query=queries[0],
+                    confidence_score=0.5,
                 )
-            if outcome == STATUS_ERROR:
+
+        last_outcome = STATUS_NOT_FOUND
+        last_query = queries[0]
+        artists = list(meta.artists)
+        # When excluding a failed embed, retry search briefly — Data API 429 is common.
+        attempts = 3 if exclude_ids else 1
+
+        for attempt in range(attempts):
+            for query in queries:
+                last_query = query
+                video, outcome, ranked_ids = self._resolve_video(
+                    query,
+                    api_key,
+                    track.duration_ms,
+                    expected_title=meta.original_title or track.track_name,
+                    expected_artists=artists,
+                    exclude_ids=exclude_ids,
+                )
+                last_outcome = outcome
+                if outcome == STATUS_OK and video:
+                    _remember_alternate_ids(
+                        track.track_id, ranked_ids, video.get("video_id")
+                    )
+                    return ResolvedSource(
+                        track_id=track.track_id,
+                        provider=self.name,
+                        status=STATUS_OK,
+                        source_ref=video["video_id"],
+                        youtube_video_id=video["video_id"],
+                        query=query,
+                        confidence_score=video.get("confidence_score"),
+                    )
+                if outcome == STATUS_ERROR:
+                    continue
+            if attempt + 1 < attempts and last_outcome in (STATUS_ERROR, STATUS_NOT_FOUND):
+                time.sleep(0.35 * (attempt + 1))
                 continue
+            break
 
         return ResolvedSource(
             track_id=track.track_id,
@@ -88,6 +157,34 @@ class YouTubeProvider(AudioProvider):
             status=last_outcome if last_outcome != STATUS_OK else STATUS_NOT_FOUND,
             query=last_query,
         )
+
+    def warm_alternates(self, track: TrackContext) -> List[str]:
+        """Search once and remember ranked video ids for later exclude recovery."""
+        api_key = get_settings().youtube_api_key.strip()
+        if not api_key:
+            return list(_ALTERNATE_IDS.get(track.track_id) or ())
+        meta = normalize_track_meta(track.track_name, track.artist_name)
+        queries = build_search_query_variants(
+            track.track_name, track.artist_name, max_variants=2
+        )
+        if not queries:
+            queries = [build_search_query(track.track_name, track.artist_name)]
+        artists = list(meta.artists)
+        for query in queries:
+            _video, outcome, ranked_ids = self._resolve_video(
+                query,
+                api_key,
+                track.duration_ms,
+                expected_title=meta.original_title or track.track_name,
+                expected_artists=artists,
+                exclude_ids=None,
+            )
+            if ranked_ids:
+                _ALTERNATE_IDS[track.track_id] = ranked_ids[:_ALT_MAX]
+                return _ALTERNATE_IDS[track.track_id]
+            if outcome == STATUS_ERROR:
+                continue
+        return list(_ALTERNATE_IDS.get(track.track_id) or ())
 
     def search_candidates(
         self,
@@ -113,6 +210,8 @@ class YouTubeProvider(AudioProvider):
                 vid = item.get("video_id")
                 if not vid or vid in seen:
                     continue
+                if track.exclude_source_refs and vid in track.exclude_source_refs:
+                    continue
                 seen.add(vid)
                 score = score_youtube_candidate(
                     item.get("title", ""),
@@ -132,6 +231,12 @@ class YouTubeProvider(AudioProvider):
                 )
 
         ranked.sort(key=lambda c: c.get("score") or -999, reverse=True)
+        if ranked:
+            _remember_alternate_ids(
+                track.track_id,
+                [str(c["video_id"]) for c in ranked if c.get("video_id")],
+                None,
+            )
         return ranked[:max_results]
 
     def search_query_candidates(
@@ -175,17 +280,19 @@ class YouTubeProvider(AudioProvider):
         *,
         expected_title: str,
         expected_artists: List[str],
-    ) -> Tuple[Optional[Dict[str, Any]], str]:
-        api_video, api_ok = self._search_api(
+        exclude_ids: Optional[set[str]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], str, List[str]]:
+        api_video, api_ok, ranked_ids = self._search_api(
             query,
             api_key,
             track_duration_ms,
             expected_title=expected_title,
             expected_artists=expected_artists,
+            exclude_ids=exclude_ids,
         )
         if not api_ok:
-            return None, STATUS_ERROR
-        return api_video, STATUS_OK if api_video else STATUS_NOT_FOUND
+            return None, STATUS_ERROR, ranked_ids
+        return api_video, (STATUS_OK if api_video else STATUS_NOT_FOUND), ranked_ids
 
     def _collect_candidates(self, query: str, api_key: str) -> List[Dict[str, Any]]:
         api_raw, api_ok = self._search_api_raw(query, api_key)
@@ -201,21 +308,64 @@ class YouTubeProvider(AudioProvider):
         *,
         expected_title: str,
         expected_artists: List[str],
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+        exclude_ids: Optional[set[str]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], bool, List[str]]:
         candidates, ok = self._search_api_raw(query, api_key)
         if not ok:
-            return None, False
+            return None, False, []
+        ranked_ids = self._rank_candidate_ids(
+            candidates,
+            track_duration_ms,
+            expected_title=expected_title,
+            expected_artists=expected_artists,
+        )
+        if exclude_ids:
+            candidates = [c for c in candidates if c.get("video_id") not in exclude_ids]
         if not candidates:
-            return None, True
-        return (
-            pick_best_youtube_candidate_detailed(
+            return None, True, ranked_ids
+        picked = pick_best_youtube_candidate_detailed(
+            candidates,
+            track_duration_ms,
+            expected_title=expected_title,
+            expected_artists=expected_artists,
+        )
+        # Recovery path: if the best embed was excluded, accept next-best playable score.
+        if picked is None and exclude_ids:
+            picked = pick_best_youtube_candidate_detailed(
                 candidates,
                 track_duration_ms,
                 expected_title=expected_title,
                 expected_artists=expected_artists,
-            ),
-            True,
-        )
+                min_accept_score=0.0,
+            )
+        return picked, True, ranked_ids
+
+    @staticmethod
+    def _rank_candidate_ids(
+        candidates: List[Dict[str, Any]],
+        track_duration_ms: Optional[int],
+        *,
+        expected_title: str,
+        expected_artists: List[str],
+    ) -> List[str]:
+        scored: List[Tuple[float, str]] = []
+        for item in candidates:
+            vid = item.get("video_id")
+            if not vid:
+                continue
+            score = score_youtube_candidate(
+                item.get("title", ""),
+                video_duration_sec=int(item.get("duration_sec") or 0),
+                track_duration_ms=track_duration_ms,
+                expected_title=expected_title,
+                expected_artists=expected_artists,
+                channel_title=item.get("channel_title") or item.get("uploader") or "",
+            )
+            if score < 0:
+                continue
+            scored.append((float(score), str(vid)))
+        scored.sort(key=lambda t: t[0], reverse=True)
+        return [vid for _, vid in scored]
 
     def _search_api_raw(
         self, query: str, api_key: str

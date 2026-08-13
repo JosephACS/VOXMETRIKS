@@ -13,6 +13,7 @@ import { StatsService } from '../analytics/services/stats.service';
 import { UiPreferencesService } from '../../core/services/ui-preferences.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UserProfile, HistoryEntry } from '../../shared/models/api.models';
+import { productUserDisplayName } from '../../shared/utils/product-presentation.util';
 
 interface ListenRecord {
   id: number;
@@ -124,11 +125,12 @@ export class UsersComponent implements OnInit {
       };
     }
     const planLabel = this.translatePlan(p.plan);
+    const displayName = productUserDisplayName(p.username, this.i18n.t('shell.listenerDisplay'));
     return {
-      name: p.username,
-      username: `@${p.username}`,
+      name: displayName,
+      username: `@${displayName.toLowerCase()}`,
       plan: planLabel,
-      initial: p.username.charAt(0).toUpperCase(),
+      initial: displayName.charAt(0).toUpperCase(),
       avatarGradient: COVER_GRADIENTS[p.id % COVER_GRADIENTS.length],
       badges: [planLabel, p.favorite_genre ?? 'Multi-género'].filter(Boolean),
       lastActive: 'Activo ahora',

@@ -144,6 +144,23 @@
   background: var(--spotify-card-hover);
 }
 
+html[data-theme='light'] .vx-card,
+html[data-theme='light'] .kpi-card,
+html[data-theme='light'] .crm-stat,
+html[data-theme='light'] .org-card,
+html[data-theme='light'] .sub-card,
+html[data-theme='light'] .table-card {
+  background: var(--vx-surface);
+  border-color: var(--vx-border);
+  box-shadow: none;
+}
+
+html[data-theme='light'] .vx-card:hover,
+html[data-theme='light'] .kpi-card:hover {
+  background: color-mix(in srgb, var(--accent) 7%, var(--vx-surface));
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
 .vx-card h2,
 .crm-card h2,
 .commercial-summary h2,
@@ -330,16 +347,25 @@
 .vx-enterprise select:not(.field-input),
 .vx-enterprise textarea:not(.field-input) {
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.6rem;
+  min-height: var(--control-height, 2.5rem);
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--control-radius, 0.5rem);
   border: 1px solid var(--border);
   background: var(--spotify-base);
   color: var(--text);
   font: inherit;
   font-size: 0.875rem;
   outline: none;
-  transition: border-color var(--motion-duration-normal, 220ms) ease,
-    box-shadow var(--motion-duration-normal, 220ms) ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.vx-form textarea,
+.org-form textarea,
+.crm-form textarea,
+.form-field textarea,
+.form-grid textarea,
+.vx-enterprise textarea {
+  min-height: 6.5rem;
 }
 
 .vx-form input:focus,

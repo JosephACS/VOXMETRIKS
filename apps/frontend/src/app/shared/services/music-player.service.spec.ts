@@ -28,12 +28,18 @@ function createMockEngine() {
   let tickFn: (() => void) | null = null;
   const engine = {
     isYoutube: false,
+    currentYoutubeVideoId: null as string | null,
     loadedId: null as number | null,
     setVolume: vi.fn(),
     primeDemo: vi.fn(),
-    startYoutube: vi.fn(),
+    startYoutube: vi.fn((videoId: string) => {
+      engine.isYoutube = true;
+      engine.currentYoutubeVideoId = videoId;
+    }),
     startDemo: vi.fn((_url: string, trackId: number) => {
       engine.loadedId = trackId;
+      engine.isYoutube = false;
+      engine.currentYoutubeVideoId = null;
       return Promise.resolve(true);
     }),
     markLoaded: vi.fn((trackId: number) => { engine.loadedId = trackId; }),
@@ -43,7 +49,11 @@ function createMockEngine() {
     seek: vi.fn((s: number) => s),
     getCurrentTime: vi.fn(() => 0),
     getDuration: vi.fn((_f: number) => 180),
-    stopAll: vi.fn(),
+    stopAll: vi.fn(() => {
+      engine.isYoutube = false;
+      engine.currentYoutubeVideoId = null;
+      engine.loadedId = null;
+    }),
     startTick: vi.fn((fn: () => void) => { tickFn = fn; }),
     destroy: vi.fn(),
     _tick: () => tickFn?.(),

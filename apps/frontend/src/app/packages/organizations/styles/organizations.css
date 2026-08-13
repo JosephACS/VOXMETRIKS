@@ -54,12 +54,14 @@
 .org-form select,
 .org-form textarea {
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.6rem;
+  min-height: var(--control-height, 2.5rem);
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--control-radius, 0.5rem);
   border: 1px solid var(--border);
   background: var(--spotify-base, var(--bg-surface));
   color: var(--text);
   font: inherit;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .org-form input:focus,
@@ -214,6 +216,32 @@
   border-color: rgba(30, 216, 150, 0.45);
   color: var(--accent);
   background: var(--accent-dim);
+}
+
+.org-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.org-member-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.org-member-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+@media (max-width: 640px) {
+  .org-member-row {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {

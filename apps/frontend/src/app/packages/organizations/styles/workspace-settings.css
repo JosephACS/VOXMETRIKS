@@ -1,0 +1,230 @@
+/* Workspace settings surface — Organización / Plan / Facturación */
+.ws-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 0 calc(1.5rem + 88px);
+}
+
+.ws-head {
+  margin-bottom: 1rem;
+}
+
+.ws-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vx-accent, var(--accent, #1ed896));
+}
+
+.ws-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vx-text, var(--color-text, var(--text, #fff)));
+}
+
+.ws-sub {
+  margin: 0.35rem 0 0;
+  max-width: 36rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted, rgba(255, 255, 255, 0.55))));
+}
+
+.ws-section {
+  margin-bottom: 0.85rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--vx-radius-md, 10px);
+  background: var(--vx-surface, var(--color-surface, var(--spotify-card, rgba(18, 18, 18, 0.96))));
+  border: 1px solid var(--vx-border-subtle, var(--border-subtle, var(--border, rgba(255, 255, 255, 0.08))));
+}
+
+:root[data-theme='light'] .ws-section,
+html.light .ws-section,
+body.light .ws-section {
+  background: var(--vx-surface, var(--color-surface, #fff));
+  border-color: var(--vx-border-subtle, rgba(20, 28, 36, 0.1));
+  box-shadow: 0 1px 0 rgba(20, 28, 36, 0.04);
+}
+
+.ws-section__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.ws-identity {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ws-identity__name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--vx-text, var(--color-text, var(--text)));
+}
+
+.ws-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem;
+  align-items: center;
+}
+
+.ws-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 650;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vx-accent, #1ed896) 14%, transparent);
+  color: var(--vx-accent, var(--accent, #1ed896));
+}
+
+.ws-pill--muted {
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.ws-pill--warn {
+  background: color-mix(in srgb, var(--vx-warning, #fbbf24) 18%, transparent);
+  color: var(--vx-warning, #b45309);
+}
+
+.ws-pill--danger {
+  background: color-mix(in srgb, var(--vx-error, #ef4444) 16%, transparent);
+  color: var(--vx-error, #ef4444);
+}
+
+.ws-dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem 1rem;
+  margin: 0;
+}
+
+.ws-dl dt {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.ws-dl dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vx-text, var(--color-text, var(--text)));
+}
+
+.ws-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ws-actions a,
+.ws-actions button {
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.12)));
+  background: transparent;
+  color: var(--vx-text, var(--color-text, var(--text)));
+  cursor: pointer;
+}
+
+.ws-actions a.primary,
+.ws-actions .primary {
+  background: var(--vx-accent, var(--accent, #1ed896));
+  color: #04140e;
+  border-color: transparent;
+}
+
+.ws-actions a:hover,
+.ws-actions button:hover {
+  border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 40%, transparent);
+}
+
+.ws-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ws-rows > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--vx-border-subtle, var(--border-subtle, rgba(255, 255, 255, 0.06)));
+}
+
+.ws-rows > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ws-row__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--vx-text, var(--color-text, var(--text)));
+}
+
+.ws-row__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.ws-row__side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ws-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.ws-link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--vx-accent, var(--accent, #1ed896));
+}
+
+.ws-invoice-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 560px) {
+  .ws-title {
+    font-size: 1.3rem;
+  }
+  .ws-rows > li {
+    grid-template-columns: 1fr;
+  }
+  .ws-row__side {
+    justify-content: flex-start;
+  }
+}

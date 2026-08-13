@@ -30,8 +30,18 @@ _DEFAULT_CHAIN: List[AudioProvider] = [
 ]
 
 
+def _parse_exclude_refs(exclude_source_ref: Optional[str]) -> Optional[set[str]]:
+    if not exclude_source_ref:
+        return None
+    refs = {part.strip() for part in str(exclude_source_ref).split(",") if part.strip()}
+    return refs or None
+
+
 def build_track_context(
-    conn: duckdb.DuckDBPyConnection, track_id: int
+    conn: duckdb.DuckDBPyConnection,
+    track_id: int,
+    *,
+    exclude_source_refs: Optional[set[str]] = None,
 ) -> Optional[TrackContext]:
     row = conn.execute(
         """
@@ -49,6 +59,7 @@ def build_track_context(
         track_name=(row[0] or "").strip(),
         artist_name=(row[1] or "").strip(),
         duration_ms=int(row[2]) if row[2] is not None else None,
+        exclude_source_refs=frozenset(exclude_source_refs or ()),
     )
 
 
@@ -69,8 +80,10 @@ class AudioResolver:
         *,
         force: bool = False,
         skip_provider: Optional[str] = None,
+        exclude_source_ref: Optional[str] = None,
     ) -> Optional[ResolvedSource]:
-        ctx = build_track_context(conn, track_id)
+        excludes = _parse_exclude_refs(exclude_source_ref)
+        ctx = build_track_context(conn, track_id, exclude_source_refs=excludes)
         if ctx is None:
             return None
 
@@ -88,16 +101,21 @@ class AudioResolver:
                 )
                 return self._from_cache(cached)
             if cached and is_cache_usable(cached):
-                log_resolution(
-                    ResolutionLog(
-                        track_id=track_id,
-                        provider=cached["provider"],
-                        outcome=cached["status"],
-                        elapsed_ms=0.0,
-                        from_cache=True,
+                # Cached source is among excluded refs — must re-resolve.
+                cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
+                if excludes and cached_ref in excludes:
+                    pass
+                else:
+                    log_resolution(
+                        ResolutionLog(
+                            track_id=track_id,
+                            provider=cached["provider"],
+                            outcome=cached["status"],
+                            elapsed_ms=0.0,
+                            from_cache=True,
+                        )
                     )
-                )
-                return self._from_cache(cached)
+                    return self._from_cache(cached)
         else:
             cached = read_cache(conn, track_id)
             if cached and cached.get("provider") == "local_published":
@@ -109,6 +127,16 @@ class AudioResolver:
             existing = read_cache(conn, track_id)
             if existing and existing.get("provider") == "local_published":
                 return self._from_cache(existing)
+            # Never poison a playable cache with a negative/partial result
+            # (e.g. skip_provider=youtube → Audius not_found must not wipe YouTube ok).
+            if (
+                result.status != STATUS_OK
+                and existing
+                and existing.get("status") == STATUS_OK
+            ):
+                return result
+            if skip_provider and result.status != STATUS_OK:
+                return result
             write_cache(conn, result)
         return result
 
@@ -118,6 +146,7 @@ class AudioResolver:
         *,
         force: bool = False,
         skip_provider: Optional[str] = None,
+        exclude_source_ref: Optional[str] = None,
     ) -> Optional[ResolvedSource]:
         """Resolve without holding the DB lock across provider network I/O."""
         from app.core.database import get_connection
@@ -125,18 +154,32 @@ class AudioResolver:
 
         conn = get_connection()
         migrate_audio_source_columns(conn)
-        ctx = build_track_context(conn, track_id)
+        excludes = _parse_exclude_refs(exclude_source_ref)
+        ctx = build_track_context(conn, track_id, exclude_source_refs=excludes)
         if ctx is None:
             return None
         if not force:
             cached = read_cache(conn, track_id)
             if cached and is_cache_usable(cached):
-                return self._from_cache(cached)
+                cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
+                if not (excludes and cached_ref in excludes):
+                    return self._from_cache(cached)
 
         result = self._resolve_providers(ctx, skip_provider=skip_provider)
         if result is None:
             return None
 
+        existing = read_cache(get_connection(), track_id)
+        if existing and existing.get("provider") == "local_published":
+            return self._from_cache(existing)
+        if (
+            result.status != STATUS_OK
+            and existing
+            and existing.get("status") == STATUS_OK
+        ):
+            return result
+        if skip_provider and result.status != STATUS_OK:
+            return result
         write_cache(get_connection(), result)
         return result
 

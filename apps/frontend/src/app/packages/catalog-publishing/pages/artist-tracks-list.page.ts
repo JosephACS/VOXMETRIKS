@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { CatalogPublishingApiService } from '../services/catalog-publishing.api';
@@ -7,12 +8,12 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 import {
   ReleaseSubmission,
   SubmissionTrack,
+  displayReleaseTitle,
   hasPrivateMedia,
-  publishingPrimaryLabelKey,
+  humanReleaseStatus,
   publishingUiBucket,
 } from '../models/catalog-publishing.models';
-import { I18nService } from '../../../core/services/i18n.service';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { AuthService } from '../../../core/services/auth.service';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
 interface TrackRow {
@@ -24,102 +25,98 @@ interface TrackRow {
 @Component({
   selector: 'app-artist-tracks-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, FormsModule, RouterModule, ...ENTERPRISE_UI_IMPORTS],
+  styleUrls: ['../styles/catalog-editorial.css'],
   template: `
-    <div class="vx-enterprise artist-tracks-page">
+    <div class="vx-enterprise cat-page" data-testid="artist-tracks-list">
       @if (!orgId) {
         <app-enterprise-org-required />
       } @else {
-        <app-enterprise-page-header
-          [title]="'publishing.tracks.title' | t:lang()"
-          [subtitle]="'publishing.tracks.subtitle' | t:lang()"
-        />
+        <header class="cat-head">
+          <p class="cat-kicker">Catálogo</p>
+          <h1 class="cat-title">Canciones</h1>
+          <p class="cat-sub">Pistas del catálogo vinculadas a lanzamientos.</p>
+        </header>
 
-        @if (anyPrivate) {
-          <div class="private-banner" role="status">
-            {{ 'publishing.media.privateBanner' | t:lang() }}
-          </div>
-        }
+        <div class="cat-toolbar">
+          <input
+            class="cat-search"
+            type="search"
+            [(ngModel)]="query"
+            placeholder="Buscar canción o lanzamiento"
+            aria-label="Buscar canción o lanzamiento"
+          />
+        </div>
 
         @if (loading) {
           <app-enterprise-loading-skeleton [rows]="5" />
         } @else if (error) {
           <app-enterprise-error-state [message]="error" (retry)="load()" />
-        } @else if (!rows.length) {
-          <app-enterprise-empty-state
-            [title]="'publishing.tracks.empty' | t:lang()"
-            [description]="'publishing.tracks.emptyBody' | t:lang()"
-          />
+        } @else if (!filteredRows.length) {
+          <section class="cat-section">
+            <p class="cat-empty">No encontramos contenido con estos filtros.</p>
+          </section>
         } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'publishing.field.trackTitle' | t:lang() }}</th>
-                  <th>{{ 'publishing.releases.title' | t:lang() }}</th>
-                  <th>{{ 'common.status' | t:lang() }}</th>
-                  <th>{{ 'publishing.field.isrc' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of rows; track row.track.id) {
-                  <tr>
-                    <td>
-                      {{ row.track.title }}
-                      @if (row.privateAudio) {
-                        <span class="tag">{{ 'publishing.media.privateTag' | t:lang() }}</span>
+          <section class="cat-section">
+            <ul class="cat-list">
+              @for (row of filteredRows; track row.track.id) {
+                <li>
+                  <a class="cat-row" [routerLink]="['/artist/releases', row.release.id]">
+                    <div class="cat-cover" aria-hidden="true">
+                      @if (coverUrl(row.release); as src) {
+                        <img [src]="src" alt="" loading="lazy" (error)="onCoverError($event)" />
+                      } @else {
+                        <img class="cat-cover__mark" src="/assets/images/voxmetrik-icon.webp" alt="" />
                       }
-                    </td>
-                    <td>
-                      <a [routerLink]="['/artist/releases', row.release.id]">
-                        {{ row.release.title }}
-                      </a>
-                    </td>
-                    <td>
-                      <app-enterprise-status-badge
-                        [status]="badgeStatus(row.release.status)"
-                        [label]="statusLabel(row.release.status)"
-                      />
-                    </td>
-                    <td>{{ row.track.isrc || '—' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
+                    </div>
+                    <div>
+                      <p class="cat-row__title">{{ row.track.title }}</p>
+                      <p class="cat-row__meta">
+                        {{ displayTitle(row.release) }}
+                        @if (row.track.isrc) {
+                          · {{ row.track.isrc }}
+                        }
+                        @if (!row.track.audio_media_id && row.release.status !== 'published') {
+                          · Fuente de reproducción pendiente
+                        }
+                      </p>
+                    </div>
+                    <div class="cat-row__side">
+                      <span class="cat-badge" [ngClass]="badgeClass(row.release.status)">{{
+                        humanStatus(row.release.status)
+                      }}</span>
+                    </div>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
         }
       }
     </div>
   `,
-  styles: `
-    .private-banner {
-      margin: 0 0 1rem;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      background: rgba(240, 195, 106, 0.12);
-      border: 1px solid rgba(240, 195, 106, 0.35);
-      color: #f0c36a;
-      font-size: 0.9rem;
-    }
-    .tag {
-      margin-left: 0.4rem;
-      font-size: 0.75rem;
-      color: #f0c36a;
-    }
-    a { color: inherit; }
-  `,
 })
 export class ArtistTracksListPage implements OnInit {
-  private i18n = inject(I18nService);
-  readonly lang = this.i18n.lang;
   private api = inject(CatalogPublishingApiService);
   private orgCtx = inject(OrganizationContextService);
+  private auth = inject(AuthService);
 
   orgId: number | null = null;
   rows: TrackRow[] = [];
   loading = false;
   error: string | null = null;
-  anyPrivate = false;
+  query = '';
+
+  get filteredRows(): TrackRow[] {
+    const q = this.query.trim().toLowerCase();
+    if (!q) return this.rows;
+    return this.rows.filter(
+      (row) =>
+        row.track.title.toLowerCase().includes(q) ||
+        row.release.title.toLowerCase().includes(q) ||
+        (row.track.isrc || '').toLowerCase().includes(q),
+    );
+  }
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
@@ -144,7 +141,6 @@ export class ArtistTracksListPage implements OnInit {
       .subscribe((releases) => {
         if (!releases.length) {
           this.rows = [];
-          this.anyPrivate = false;
           this.loading = false;
           return;
         }
@@ -171,7 +167,6 @@ export class ArtistTracksListPage implements OnInit {
               }
             }
             this.rows = rows;
-            this.anyPrivate = rows.some((r) => r.privateAudio);
             this.loading = false;
           },
           error: () => {
@@ -182,15 +177,42 @@ export class ArtistTracksListPage implements OnInit {
       });
   }
 
-  statusLabel(status: string): string {
-    return this.i18n.t(publishingPrimaryLabelKey(status));
+  coverUrl(r: ReleaseSubmission): string | null {
+    const id = r.cover_media_id;
+    if (!id) return null;
+    const base = this.api.mediaContentUrl(id);
+    const token = this.auth.getToken();
+    return token ? `${base}${base.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : base;
   }
 
-  badgeStatus(status: string): string {
-    const b = publishingUiBucket(status);
-    if (b === 'draft') return 'draft';
-    if (b === 'published') return 'published';
-    if (b === 'in_review') return 'pending';
-    return status;
+  onCoverError(ev: Event): void {
+    const img = ev.target as HTMLImageElement | null;
+    if (!img) return;
+    img.style.display = 'none';
+    const parent = img.parentElement;
+    if (parent && !parent.querySelector('.cat-cover__mark')) {
+      const mark = document.createElement('img');
+      mark.className = 'cat-cover__mark';
+      mark.src = '/assets/images/voxmetrik-icon.webp';
+      mark.alt = '';
+      parent.appendChild(mark);
+    }
+  }
+
+  displayTitle(r: ReleaseSubmission): string {
+    return displayReleaseTitle(r.title, r.status);
+  }
+
+  humanStatus(status: string): string {
+    return humanReleaseStatus(status);
+  }
+
+  badgeClass(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'published') return 'cat-badge--published';
+    if (s === 'changes_requested') return 'cat-badge--attention';
+    if (s === 'draft') return 'cat-badge--draft';
+    if (publishingUiBucket(s) === 'in_review') return 'cat-badge--review';
+    return '';
   }
 }

@@ -32,6 +32,28 @@ def _parse_bounds(date_from: Optional[str], date_to: Optional[str]) -> tuple[dat
     return start, end
 
 
+def _prefer_fact_stream_bounds(
+    conn: duckdb.DuckDBPyConnection, start: date, end: date, explicit: bool
+) -> tuple[date, date]:
+    """Leaderboards must follow fact_streaming dates, not gold daily watermark."""
+    if explicit or not table_exists(conn, "fact_streaming"):
+        return start, end
+    try:
+        row = conn.execute(
+            "SELECT MIN(fecha_evento)::DATE, MAX(fecha_evento)::DATE FROM fact_streaming"
+        ).fetchone()
+    except Exception:
+        return start, end
+    if not row or not row[1]:
+        return start, end
+    max_d = row[1]
+    if not hasattr(max_d, "year"):
+        return start, end
+    end = max_d + timedelta(days=1)
+    start = max_d - timedelta(days=29)
+    return start, end
+
+
 def _prefer_stream_bounds(conn: duckdb.DuckDBPyConnection, start: date, end: date, explicit: bool) -> tuple[date, date]:
     if explicit or not table_exists(conn, "agg_daily_streams"):
         return start, end
@@ -42,6 +64,39 @@ def _prefer_stream_bounds(conn: duckdb.DuckDBPyConnection, start: date, end: dat
     # last 30 days of available data
     end = max_d + timedelta(days=1) if hasattr(max_d, "year") else end
     start = (max_d - timedelta(days=29)) if hasattr(max_d, "year") else start
+    return start, end
+
+
+def _prefer_monthly_bounds(
+    conn: duckdb.DuckDBPyConnection,
+    start: date,
+    end: date,
+    explicit: bool,
+    table: str,
+    date_expr: str,
+) -> tuple[date, date]:
+    """When dates are implicit, use last ~12 months of available table data."""
+    if explicit or not table_exists(conn, table):
+        return start, end
+    try:
+        row = conn.execute(f"SELECT MIN({date_expr})::DATE, MAX({date_expr})::DATE FROM {table}").fetchone()
+    except Exception:
+        return start, end
+    if not row or not row[1]:
+        return start, end
+    max_d = row[1]
+    if not hasattr(max_d, "year"):
+        return start, end
+    end = max_d + timedelta(days=1)
+    start = date(max_d.year, max_d.month, 1)
+    # Walk back 11 months
+    y, m = start.year, start.month
+    for _ in range(11):
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    start = date(y, m, 1)
     return start, end
 
 
@@ -73,7 +128,9 @@ def run_complex_report(
 
     explicit = bool(date_from or date_to)
     start, end = _parse_bounds(date_from, date_to)
-    if report_id.startswith("top-") or report_id == "streams-by-day":
+    if report_id in {"top-tracks-period", "top-artists-period"}:
+        start, end = _prefer_fact_stream_bounds(conn, start, end, explicit)
+    elif report_id.startswith("top-") or report_id == "streams-by-day":
         start, end = _prefer_stream_bounds(conn, start, end, explicit)
 
     base = {
@@ -107,6 +164,11 @@ def run_complex_report(
     if report_id == "income-by-month":
         if not table_exists(conn, "app_payment"):
             return {**base, "available": False, "unavailable_reason": "No existe la tabla de pagos."}
+        start, end = _prefer_monthly_bounds(
+            conn, start, end, explicit, "app_payment", "COALESCE(settled_at, created_at)"
+        )
+        base["period_start"] = start.isoformat()
+        base["period_end_exclusive"] = end.isoformat()
         rows = conn.execute(
             f"""
             SELECT strftime(COALESCE(settled_at, created_at), '%Y-%m') AS periodo,
@@ -176,21 +238,43 @@ def run_complex_report(
         if not table_exists(conn, "fact_streaming"):
             return {**base, "available": False, "unavailable_reason": "No existe fact_streaming."}
         name_expr = "COALESCE(t.nombre_track, CAST(fs.id_track AS VARCHAR))"
-        join = "LEFT JOIN dim_track t ON t.id_track = fs.id_track" if table_exists(conn, "dim_track") else ""
+        has_track = table_exists(conn, "dim_track")
+        artist_expr = "CAST(NULL AS VARCHAR)"
+        join = ""
+        if has_track:
+            join = "LEFT JOIN dim_track t ON t.id_track = fs.id_track"
+            cols = {r[0] for r in conn.execute("DESCRIBE dim_track").fetchall()}
+            if "artista" in cols:
+                artist_expr = "COALESCE(t.artista, '—')"
+            elif "nombre_artista" in cols:
+                artist_expr = "COALESCE(t.nombre_artista, '—')"
+            elif "id_artista" in cols and table_exists(conn, "dim_artista"):
+                join += " LEFT JOIN dim_artista a ON a.id_artista = t.id_artista"
+                artist_expr = "COALESCE(a.nombre_artista, '—')"
+            else:
+                artist_expr = "'—'"
         rows = conn.execute(
             f"""
-            SELECT fs.id_track, {name_expr}, COALESCE(SUM(fs.streams), COUNT(*)) AS total
+            SELECT fs.id_track, {name_expr}, {artist_expr}, COALESCE(SUM(fs.streams), COUNT(*)) AS total
             FROM fact_streaming fs
             {join}
             WHERE fs.fecha_evento >= ? AND fs.fecha_evento < ?
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
             ORDER BY total DESC
             LIMIT ?
             """,
             [start, end, limit],
         ).fetchall()
-        series = [{"label": str(r[1]), "value": int(r[2])} for r in rows]
-        detail = [{"cancion": r[1], "reproducciones": int(r[2])} for r in rows]
+        series = [{"label": str(r[1]), "value": int(r[3])} for r in rows]
+        detail = [
+            {
+                "track_id": int(r[0]) if r[0] is not None else None,
+                "cancion": r[1],
+                "artista": r[2] or "—",
+                "reproducciones": int(r[3]),
+            }
+            for r in rows
+        ]
         return {
             **base,
             "summary": _series_summary(series),
@@ -198,6 +282,7 @@ def run_complex_report(
             "rows": detail,
             "columns": [
                 {"key": "cancion", "label": "Canción"},
+                {"key": "artista", "label": "Artista"},
                 {"key": "reproducciones", "label": "Reproducciones"},
             ],
         }
@@ -300,6 +385,9 @@ def run_complex_report(
         cols = {r[0] for r in conn.execute(f"DESCRIBE {table}").fetchall()}
         date_col = "updated_at" if "updated_at" in cols else ("closed_at" if "closed_at" in cols else "created_at")
         stage_col = "stage" if "stage" in cols else "status"
+        start, end = _prefer_monthly_bounds(conn, start, end, explicit, table, date_col)
+        base["period_start"] = start.isoformat()
+        base["period_end_exclusive"] = end.isoformat()
         rows = conn.execute(
             f"""
             SELECT strftime({date_col}, '%Y-%m') AS periodo,
@@ -339,6 +427,9 @@ def run_complex_report(
             return {**base, "available": False, "unavailable_reason": "No existe la tabla de suscripciones."}
         cols = {r[0] for r in conn.execute("DESCRIBE app_subscription").fetchall()}
         date_col = "created_at" if "created_at" in cols else "current_period_start"
+        start, end = _prefer_monthly_bounds(conn, start, end, explicit, "app_subscription", date_col)
+        base["period_start"] = start.isoformat()
+        base["period_end_exclusive"] = end.isoformat()
         rows = conn.execute(
             f"""
             SELECT strftime({date_col}, '%Y-%m') AS periodo, COUNT(*) AS altas
@@ -380,6 +471,9 @@ def run_complex_report(
         status_col = "status" if "status" in cols else None
         if not status_col:
             return {**base, "available": False, "unavailable_reason": "La tabla de lanzamientos no tiene estado."}
+        start, end = _prefer_monthly_bounds(conn, start, end, explicit, table, date_col)
+        base["period_start"] = start.isoformat()
+        base["period_end_exclusive"] = end.isoformat()
         rows = conn.execute(
             f"""
             SELECT strftime({date_col}, '%Y-%m') AS periodo,

@@ -43,63 +43,50 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <p class="org-muted">{{ 'organizations.members.empty' | t:lang() }}</p>
         </div>
       } @else {
-        <div class="org-card" style="overflow-x: auto">
-          <table class="org-table">
-            <thead>
-              <tr>
-                <th>{{ 'common.id' | t:lang() }}</th>
-                <th>{{ 'organizations.members.col.user' | t:lang() }}</th>
-                <th>{{ 'common.status' | t:lang() }}</th>
-                <th>{{ 'common.actions' | t:lang() }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (m of items(); track m.id) {
-                <tr>
-                  <td>{{ m.id }}</td>
-                  <td>
-                    #{{ m.user_id }}
-                    @if (m.user_id === currentUserId) {
-                      <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
-                    }
-                  </td>
-                  <td><span class="org-badge">{{ m.status }}</span></td>
-                  <td>
-                    <div class="org-actions">
-                      @if (canSuspend() && m.status === 'active' && m.user_id !== currentUserId) {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'suspend')">
-                          {{ 'organizations.members.suspend' | t:lang() }}
-                        </button>
-                      }
-                      @if (canSuspend() && m.status === 'suspended') {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'reactivate')">
-                          {{ 'organizations.members.reactivate' | t:lang() }}
-                        </button>
-                      }
-                      @if (canRemove() && m.user_id !== currentUserId && m.status !== 'removed') {
-                        <button type="button" class="org-btn org-btn--danger" (click)="remove(m)">
-                          {{ 'organizations.members.remove' | t:lang() }}
-                        </button>
-                      }
-                      @if (m.user_id === currentUserId && m.status === 'active') {
-                        <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'leave')">
-                          {{ 'organizations.members.leave' | t:lang() }}
-                        </button>
-                      }
-                      @if (ctx.hasPermission('role.assign') && m.status === 'active') {
-                        <a
-                          class="org-btn org-btn--ghost"
-                          [routerLink]="['/organizations', orgId, 'roles']"
-                          [queryParams]="{ member: m.id }"
-                          >{{ 'organizations.roles.title' | t:lang() }}</a
-                        >
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="org-card">
+          <ul class="org-member-list">
+            @for (m of items(); track m.id) {
+              <li class="org-member-row">
+                <div>
+                  <strong>Usuario {{ m.user_id }}</strong>
+                  @if (m.user_id === currentUserId) {
+                    <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
+                  }
+                  <div class="org-muted">{{ humanMemberStatus(m.status) }}</div>
+                </div>
+                <div class="org-actions">
+                  @if (canSuspend() && m.status === 'active' && m.user_id !== currentUserId) {
+                    <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'suspend')">
+                      {{ 'organizations.members.suspend' | t:lang() }}
+                    </button>
+                  }
+                  @if (canSuspend() && m.status === 'suspended') {
+                    <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'reactivate')">
+                      {{ 'organizations.members.reactivate' | t:lang() }}
+                    </button>
+                  }
+                  @if (canRemove() && m.user_id !== currentUserId && m.status !== 'removed') {
+                    <button type="button" class="org-btn org-btn--danger" (click)="remove(m)">
+                      {{ 'organizations.members.remove' | t:lang() }}
+                    </button>
+                  }
+                  @if (m.user_id === currentUserId && m.status === 'active') {
+                    <button type="button" class="org-btn org-btn--ghost" (click)="act(m, 'leave')">
+                      {{ 'organizations.members.leave' | t:lang() }}
+                    </button>
+                  }
+                  @if (ctx.hasPermission('role.assign') && m.status === 'active') {
+                    <a
+                      class="org-btn org-btn--ghost"
+                      [routerLink]="['/organizations', orgId, 'roles']"
+                      [queryParams]="{ member: m.id }"
+                      >{{ 'organizations.roles.title' | t:lang() }}</a
+                    >
+                  }
+                </div>
+              </li>
+            }
+          </ul>
           <p class="org-muted">
             {{ 'common.page' | t:lang() }} {{ page }} · {{ 'common.total' | t:lang() }} {{ total }}
           </p>
@@ -151,6 +138,15 @@ export class OrgMembersPageComponent implements OnInit {
 
   canRemove(): boolean {
     return this.ctx.hasPermission('member.remove');
+  }
+
+  humanMemberStatus(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'active') return 'Activo';
+    if (s === 'suspended') return 'Suspendido';
+    if (s === 'removed') return 'Eliminado';
+    if (s === 'left') return 'Salió';
+    return status || 'Sin datos';
   }
 
   async ngOnInit(): Promise<void> {

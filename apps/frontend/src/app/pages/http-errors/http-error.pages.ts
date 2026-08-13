@@ -1,5 +1,7 @@
 import { Component, inject, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { homePathForRole } from '../../core/navigation/nav-access.policy';
+import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
@@ -13,7 +15,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
         <div class="http-error-code" aria-hidden="true">{{ code }}</div>
         <h1 class="http-error-title">{{ titleKey | t:lang() }}</h1>
         <p class="http-error-body">{{ bodyKey | t:lang() }}</p>
-        <a [routerLink]="ctaLink" class="btn btn-primary">{{ ctaKey | t:lang() }}</a>
+        <a [routerLink]="resolvedCtaLink" class="btn btn-primary">{{ ctaKey | t:lang() }}</a>
       </div>
     </div>
   `,
@@ -24,7 +26,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--color-bg);
+        background: var(--color-bg, var(--vx-bg));
         padding: 2rem;
       }
       .http-error-container {
@@ -53,13 +55,21 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
   ],
 })
 export class HttpErrorPageComponent {
+  private readonly auth = inject(AuthService);
   readonly lang = inject(I18nService).lang;
 
   @Input() code = '500';
   @Input() titleKey = 'errors.500.title';
   @Input() bodyKey = 'errors.500.body';
   @Input() ctaKey = 'errors.500.cta';
-  @Input() ctaLink = '/discover';
+  /** When empty, CTA uses role home. */
+  @Input() ctaLink = '';
+
+  get resolvedCtaLink(): string {
+    if (this.ctaLink) return this.ctaLink;
+    if (!this.auth.isAuthenticated()) return '/login';
+    return homePathForRole(this.auth.role());
+  }
 }
 
 @Component({
@@ -85,7 +95,6 @@ export class Error401PageComponent {}
     titleKey="errors.403.title"
     bodyKey="errors.403.body"
     ctaKey="errors.403.cta"
-    ctaLink="/discover"
   />`,
 })
 export class Error403PageComponent {}
@@ -99,7 +108,6 @@ export class Error403PageComponent {}
     titleKey="errors.500.title"
     bodyKey="errors.500.body"
     ctaKey="errors.500.cta"
-    ctaLink="/discover"
   />`,
 })
 export class Error500PageComponent {}

@@ -115,6 +115,41 @@ def test_create_invoice_draft(draft_invoice):
     assert draft_invoice.total == Decimal("0")
 
 
+def test_create_invoice_rejects_inverted_period(db_conn):
+    from datetime import date
+
+    from app.packages.billing.application.use_cases import (
+        BillingProfileUseCases,
+        InvoiceUseCases,
+    )
+    from app.packages.billing.domain.errors import (
+        BillingProfileExistsError,
+        ValidationError,
+    )
+
+    try:
+        profile = BillingProfileUseCases(db_conn).create(
+            actor_user_id=ACTOR,
+            organization_id=ORG,
+            default_currency="USD",
+        )
+        profile_id = profile.id
+    except BillingProfileExistsError:
+        row = db_conn.execute(
+            "SELECT id FROM app_billing_profile WHERE organization_id = ?", [ORG]
+        ).fetchone()
+        profile_id = int(row[0])
+
+    with pytest.raises(ValidationError, match="period_end"):
+        InvoiceUseCases(db_conn).create(
+            actor_user_id=ACTOR,
+            organization_id=ORG,
+            billing_profile_id=profile_id,
+            period_start=date(2026, 12, 1),
+            period_end=date(2020, 1, 1),
+        )
+
+
 def test_issue_invoice_without_items_raises(db_conn, draft_invoice):
     from app.packages.billing.application.use_cases import InvoiceUseCases
     from app.packages.billing.domain.errors import ValidationError

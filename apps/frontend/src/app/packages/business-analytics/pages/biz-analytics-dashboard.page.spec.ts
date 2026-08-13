@@ -63,7 +63,7 @@ describe('BizAnalyticsDashboardPage strategic AGG', () => {
       report_path: '/reports',
       decision_path: '/business-decisions',
       trend: null,
-      empty: false,
+      empty: i !== 0 && i !== 3 ? true : false,
     })),
     decision_capability: {
       can_create_decision: true,
@@ -111,24 +111,26 @@ describe('BizAnalyticsDashboardPage strategic AGG', () => {
     fixture.detectChanges();
   });
 
-  it('renders eight objective cards and strategic header', () => {
+  it('renders eight objectives and strategic header', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('[data-testid="strategic-direction"]')).toBeTruthy();
     expect(root.querySelectorAll('[data-objective]').length).toBe(8);
+    expect(root.textContent).toContain('Dirección estratégica');
     expect(page.strategic?.decision_capability.is_ai).toBe(false);
   });
 
-  it('shows unavailable badge for ROI without inventing zero', () => {
+  it('shows Sin datos for ROI without inventing zero', () => {
     const roi = page.strategic?.objectives.find((o) => o.objective_code === 'OE-04');
     expect(roi?.kpi?.value).toBeNull();
-    expect(page.classificationOf(roi!)).toBe('unavailable');
-    expect(page.badgeLabel(roi!)).toContain('unavailable');
+    expect(page.hasValue(roi!)).toBe(false);
+    expect(page.statusLabel(roi!)).toBe('Sin datos');
+    expect(page.formatKpiValue(roi!)).toBe('Sin datos');
   });
 
   it('does not expose trend with a single comparable period', () => {
     expect(page.strategic?.comparable_periods).toBe(1);
     for (const obj of page.strategic?.objectives || []) {
-      expect(obj.trend).toBeNull();
+      expect(page.trendText(obj)).toBeNull();
     }
   });
 });

@@ -7,7 +7,8 @@ import { CatalogPublishingApiService } from '../services/catalog-publishing.api'
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import {
   ReleaseSubmission,
-  publishingPrimaryLabelKey,
+  displayReleaseTitle,
+  humanReleaseStatus,
   publishingUiBucket,
 } from '../models/catalog-publishing.models';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -69,7 +70,7 @@ import { catalogPublishingAccess } from '../catalog-publishing-access';
               <tbody>
                 @for (r of filtered; track r.id) {
                   <tr>
-                    <td>{{ r.title }}</td>
+                    <td>{{ displayTitle(r) }}</td>
                     <td>{{ r.release_type }}</td>
                     <td>
                       <app-enterprise-status-badge
@@ -164,8 +165,12 @@ export class CatalogReviewInboxPage implements OnInit {
     });
   }
 
+  displayTitle(r: ReleaseSubmission): string {
+    return displayReleaseTitle(r.title, r.status);
+  }
+
   statusLabel(status: string): string {
-    return this.i18n.t(publishingPrimaryLabelKey(status));
+    return humanReleaseStatus(status);
   }
 
   badgeStatus(status: string): string {

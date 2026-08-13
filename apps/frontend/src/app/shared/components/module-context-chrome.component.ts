@@ -3,51 +3,44 @@ import { RouterLink } from '@angular/router';
 import { ModuleContextView } from '../navigation/module-context';
 
 /**
- * Compact module chrome: back + breadcrumb + secondary tabs (043 hotfix).
+ * Compact module chrome: breadcrumb + secondary tabs.
+ * Sibling navigation uses tabs; detail uses breadcrumbs — no redundant “Volver a…”.
  */
 @Component({
   selector: 'app-module-context-chrome',
   standalone: true,
   imports: [RouterLink],
   template: `
-    @if (context) {
+    @if (context && (visibleCrumbs.length || context.tabs.length || context.hubLabel)) {
       <div class="mod-chrome" [attr.data-module]="context.moduleId">
-        <div class="mod-chrome__top">
-          @if (context.showBack) {
-            <a
-              class="mod-chrome__back"
-              [routerLink]="context.hubPath"
-              [queryParams]="context.hubQueryParams || {}"
-            >
-              ← {{ context.backLabel }}
-            </a>
-          } @else {
-            <span class="mod-chrome__hub-label">{{ context.hubLabel }}</span>
-          }
-          @if (context.secondaryBack) {
-            <a
-              class="mod-chrome__back mod-chrome__back--secondary"
-              [routerLink]="context.secondaryBack.path"
-              [queryParams]="context.secondaryBack.queryParams || {}"
-            >
-              ← {{ context.secondaryBack.label }}
-            </a>
-          }
-        </div>
+        @if (context.hubLabel && context.tabs.length) {
+          <p class="mod-chrome__hub-label">{{ context.hubLabel }}</p>
+        }
 
-        <nav class="mod-chrome__crumbs" aria-label="Ruta de navegación">
-          @for (c of context.crumbs; track $index; let last = $last) {
-            @if (!last && c.path) {
-              <a [routerLink]="c.path" [queryParams]="c.queryParams || {}">{{ c.label }}</a>
-              <span class="sep" aria-hidden="true">/</span>
-            } @else if (!last) {
-              <span>{{ c.label }}</span>
-              <span class="sep" aria-hidden="true">/</span>
-            } @else {
-              <span class="current" aria-current="page">{{ c.label }}</span>
-            }
-          }
-        </nav>
+        @if (visibleCrumbs.length) {
+          <nav class="mod-chrome__crumbs" aria-label="Ruta de navegación">
+            <ol class="mod-chrome__crumb-list">
+              @for (c of visibleCrumbs; track $index; let last = $last) {
+                <li class="mod-chrome__crumb">
+                  @if (!last && c.path) {
+                    <a [routerLink]="c.path" [queryParams]="c.queryParams || {}">{{ c.label }}</a>
+                  } @else if (!last) {
+                    <span>{{ c.label }}</span>
+                  } @else {
+                    <span class="current" aria-current="page">{{ c.label }}</span>
+                  }
+                  @if (!last) {
+                    <span class="mod-chrome__sep" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </span>
+                  }
+                </li>
+              }
+            </ol>
+          </nav>
+        }
 
         @if (context.tabs.length) {
           <nav
@@ -77,63 +70,73 @@ import { ModuleContextView } from '../navigation/module-context';
         margin: 0 0 0.85rem;
         max-width: 1200px;
       }
-      .mod-chrome__top {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.65rem 1rem;
-        margin-bottom: 0.35rem;
-      }
-      .mod-chrome__back {
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: var(--accent, #1ed896);
-        text-decoration: none;
-        white-space: nowrap;
-      }
-      .mod-chrome__back:hover {
-        text-decoration: underline;
-      }
-      .mod-chrome__back--secondary {
-        color: var(--color-text-secondary, rgba(255, 255, 255, 0.65));
-      }
       .mod-chrome__hub-label {
-        font-size: 0.75rem;
+        margin: 0 0 0.35rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
+        color: var(--shell-fg-subtle, var(--text-muted, rgba(255, 255, 255, 0.45)));
       }
       .mod-chrome__crumbs {
+        margin: 0 0 0.55rem;
+      }
+      .mod-chrome__crumb-list {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.15rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
         font-size: 0.78rem;
-        color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
-        margin-bottom: 0.55rem;
         line-height: 1.35;
+        color: var(--shell-fg-subtle, var(--text-muted, rgba(255, 255, 255, 0.5)));
+        overflow: hidden;
+      }
+      .mod-chrome__crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.15rem;
+        min-width: 0;
+      }
+      .mod-chrome__crumb a,
+      .mod-chrome__crumb > span:not(.mod-chrome__sep) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 14rem;
       }
       .mod-chrome__crumbs a {
-        color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+        color: var(--shell-fg-muted, var(--text-muted, rgba(255, 255, 255, 0.7)));
         text-decoration: none;
+        font-weight: 500;
       }
       .mod-chrome__crumbs a:hover {
         color: var(--accent, #1ed896);
       }
+      .mod-chrome__crumbs a:focus-visible {
+        outline: 2px solid var(--accent, #1ed896);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
       .mod-chrome__crumbs .current {
-        color: var(--color-text, #fff);
+        color: var(--shell-fg, var(--text, #fff));
         font-weight: 600;
       }
-      .sep {
+      .mod-chrome__sep {
+        display: inline-flex;
+        flex-shrink: 0;
         opacity: 0.45;
+        color: var(--shell-fg-subtle, rgba(255, 255, 255, 0.45));
       }
       .mod-chrome__tabs {
         display: flex;
         flex-wrap: nowrap;
         gap: 0.3rem;
         padding: 0.2rem;
-        background: var(--color-surface-3, rgba(255, 255, 255, 0.04));
+        background: var(--shell-control-bg, rgba(255, 255, 255, 0.04));
+        border: 1px solid var(--shell-border, rgba(255, 255, 255, 0.06));
         border-radius: 8px;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -143,7 +146,7 @@ import { ModuleContextView } from '../navigation/module-context';
       .mod-chrome__tab {
         flex: 0 0 auto;
         text-decoration: none;
-        color: var(--color-text-secondary, rgba(255, 255, 255, 0.65));
+        color: var(--shell-fg-muted, rgba(255, 255, 255, 0.65));
         padding: 0.4rem 0.75rem;
         border-radius: 6px;
         font-size: 0.78rem;
@@ -151,17 +154,24 @@ import { ModuleContextView } from '../navigation/module-context';
         white-space: nowrap;
       }
       .mod-chrome__tab:hover {
-        color: var(--color-text, #fff);
-        background: rgba(255, 255, 255, 0.06);
+        color: var(--shell-fg, #fff);
+        background: var(--shell-hover, rgba(255, 255, 255, 0.06));
+      }
+      .mod-chrome__tab:focus-visible {
+        outline: 2px solid var(--accent, #1ed896);
+        outline-offset: 1px;
       }
       .mod-chrome__tab.is-active {
         color: var(--bg-base, #0a0a0a);
         background: var(--accent, #1ed896);
       }
+      :host-context([data-theme='light']) .mod-chrome__tab.is-active {
+        color: #04140f;
+      }
       @media (max-width: 640px) {
-        .mod-chrome__top {
-          flex-direction: column;
-          align-items: flex-start;
+        .mod-chrome__crumb a,
+        .mod-chrome__crumb > span:not(.mod-chrome__sep) {
+          max-width: 8.5rem;
         }
         .mod-chrome__crumbs {
           font-size: 0.72rem;
@@ -172,4 +182,10 @@ import { ModuleContextView } from '../navigation/module-context';
 })
 export class ModuleContextChromeComponent {
   @Input({ required: true }) context!: ModuleContextView;
+
+  get visibleCrumbs() {
+    const crumbs = this.context?.crumbs ?? [];
+    if (crumbs.length <= 3) return crumbs;
+    return [crumbs[0], ...crumbs.slice(-2)];
+  }
 }

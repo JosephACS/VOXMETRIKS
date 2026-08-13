@@ -211,7 +211,7 @@ def _filter_metrics_for_role(metrics: list[dict[str, Any]], role: str) -> list[d
             "active_subscriptions",
             "streams_period",
             "catalog_tracks",
-            "tracks_without_audio",
+            "playback_availability",
         }
     elif r == "admin":
         allow = {
@@ -221,7 +221,7 @@ def _filter_metrics_for_role(metrics: list[dict[str, Any]], role: str) -> list[d
             "open_alerts",
             "streams_period",
             "catalog_tracks",
-            "tracks_without_audio",
+            "playback_availability",
         }
     else:
         allow = set()
@@ -246,7 +246,7 @@ def _sections_for_role(role: str) -> list[dict[str, Any]]:
                 "description": "Volumen, disponibilidad y reproducibilidad del catálogo analítico global.",
                 "badge": "Analítica global",
                 "scope": "global_analytics",
-                "metric_ids": ["streams_period", "catalog_tracks", "tracks_without_audio"],
+                "metric_ids": ["streams_period", "catalog_tracks", "playback_availability"],
                 "quick_links": [{"label": "Ingeniería de datos", "path": "/elt-pipeline"}],
             },
         ]
@@ -274,7 +274,7 @@ def _sections_for_role(role: str) -> list[dict[str, Any]]:
                 ),
                 "badge": "Analítica global",
                 "scope": "global_analytics",
-                "metric_ids": ["streams_period", "catalog_tracks", "tracks_without_audio"],
+                "metric_ids": ["streams_period", "catalog_tracks", "playback_availability"],
             },
         ]
     return []
@@ -311,12 +311,21 @@ def _metric(
         delta = round((float(value) - float(previous)) / float(previous) * 100.0, 1)
     avail = available and value is not None
     # Semantic zeros: healthy operational outcome vs missing data.
-    if avail and value == 0 and id in {"failed_jobs", "open_alerts"}:
+    if avail and value == 0 and id in {
+        "failed_jobs",
+        "open_alerts",
+        "invoices_pending",
+        "open_opportunities",
+    }:
         status = "healthy_zero"
         if id == "failed_jobs" and not display_caption:
             display_caption = "Sin fallos"
         if id == "open_alerts" and not display_caption:
             display_caption = "Sin alertas"
+        if id == "invoices_pending" and not display_caption:
+            display_caption = "Sin facturas pendientes"
+        if id == "open_opportunities" and not display_caption:
+            display_caption = "Sin oportunidades abiertas"
     return {
         "id": id,
         "label": label,
@@ -429,18 +438,17 @@ def build_workpanel(
     if table_exists(conn, "dim_track"):
         catalog = _count(conn, "SELECT COUNT(*) FROM dim_track")
 
-    no_audio = None
+    cached_sources = None
     if table_exists(conn, "dim_track") and table_exists(conn, "app_track_audio_source"):
-        no_audio = _count(
+        cached_sources = _count(
             conn,
             """
-            SELECT COUNT(*) FROM dim_track t
-            LEFT JOIN app_track_audio_source s ON s.track_id = t.id_track
-            WHERE s.track_id IS NULL
+            SELECT COUNT(*) FROM app_track_audio_source
+            WHERE provider IS NOT NULL AND TRIM(CAST(provider AS VARCHAR)) <> ''
             """,
         )
     elif table_exists(conn, "dim_track"):
-        no_audio = 0
+        cached_sources = 0
 
     invoices_pending = None
     if table_exists(conn, "app_invoice"):
@@ -553,16 +561,24 @@ def build_workpanel(
             display_caption="Catálogo global analítico" if catalog is not None else None,
         ),
         _metric(
-            id="tracks_without_audio",
-            label="Canciones sin fuente de audio",
-            value=no_audio,
-            unit="canciones",
+            id="playback_availability",
+            label="Disponibilidad de reproducción",
+            value=cached_sources if cached_sources is not None else 0,
+            unit="fuentes",
             period="actual",
-            explanation="Contenido del catálogo global analítico pendiente de audio.",
-            detail_path="/simple-reports?report=tracks-without-audio",
-            available=no_audio is not None,
+            explanation=(
+                "Fuentes verificadas en caché. La resolución bajo demanda está activa: "
+                "las fuentes se buscan automáticamente al reproducir. "
+                f"Catálogo musical: {catalog if catalog is not None else '—'}."
+            ),
+            detail_path="/platform-ops/audio-unresolved",
+            available=catalog is not None,
             scope="global_analytics",
-            display_caption="Catálogo global analítico" if no_audio is not None else None,
+            display_caption=(
+                f"Resolución bajo demanda activa · catálogo {int(catalog):,}"
+                if catalog is not None
+                else "Resolución bajo demanda activa"
+            ),
         ),
         _metric(
             id="invoices_pending",
@@ -625,7 +641,6 @@ def build_workpanel(
     for m in metrics:
         if m["id"] in {
             "invoices_pending",
-            "tracks_without_audio",
             "open_alerts",
             "failed_jobs",
             "open_opportunities",

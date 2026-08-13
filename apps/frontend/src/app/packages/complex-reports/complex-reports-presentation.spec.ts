@@ -34,6 +34,7 @@ describe('complex-reports-presentation', () => {
     expect(countStatLabel('top-tracks-period')).toBe('Canciones mostradas');
     expect(countStatLabel('releases-status-month')).toBe('Grupos encontrados');
     expect(countStatLabel('subscription-growth-month')).toBe('Meses con datos');
+    expect(countStatLabel('top-artists-period')).toBe('Artistas mostrados');
   });
 
   it('hides technical id columns', () => {

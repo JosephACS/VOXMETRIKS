@@ -91,8 +91,8 @@ export const CANONICAL_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   { from: '/insights/analytics', to: '/workpanel' },
   { from: '/insights/tracks', to: '/reports?type=complex' },
   { from: '/analytics', to: '/workpanel' },
-  { from: '/trending', to: '/reports?type=complex' },
-  { from: '/comparatives', to: '/reports?type=complex' },
+  { from: '/trending', to: '/discover' },
+  { from: '/comparatives', to: '/discover' },
   { from: '/etl-pipeline', to: '/elt-pipeline' },
 ];
 
@@ -137,9 +137,13 @@ export const LISTENER_LIBRARY_PATHS: ReadonlySet<string> = new Set([
   '/activity',
 ]);
 
-/** Account paths for listeners (043) — settings only in sidebar; plans via user menu if needed. */
+/** Account paths for listeners — personal plans live in the sidebar, not only the user menu. */
 export const LISTENER_ACCOUNT_PATHS: ReadonlySet<string> = new Set([
   '/settings',
+  '/account/plans',
+  '/account/subscription',
+  '/account/household',
+  '/account/billing',
 ]);
 
 /** Reporting items kept in product-final nav (043 hub). */
@@ -230,11 +234,13 @@ export function classifyProductDeepLink(
 
 export interface NavItemLike {
   path: string;
+  labelKey?: string;
 }
 
 /**
  * Filter principal (main) section items for non-presentation users.
- * Spec 043: admin → Workpanel; engineer → Estado técnico + Workpanel; listener → Descubrir + Buscar.
+ * Spec 043: admin → Workpanel; engineer → Estado técnico (/workpanel); listener → Descubrir + Buscar.
+ * Ingeniería de datos (/elt-pipeline) lives in the data section — avoids dual active.
  */
 export function filterMainNavItems<T extends NavItemLike>(
   items: T[],
@@ -243,10 +249,7 @@ export function filterMainNavItems<T extends NavItemLike>(
   if (ctx.presentationMode) return items;
   const role = normalizeIdentityRole(ctx.identityRole);
   if (role === 'engineer') {
-    return items.filter((item) => {
-      const p = item.path.split('?')[0];
-      return p === '/elt-pipeline' || (p === '/workpanel' && hasStaffReportsNavAccess(ctx));
-    });
+    return items.filter((item) => item.path.split('?')[0] === '/workpanel');
   }
   if (hasStaffReportsNavAccess(ctx)) {
     return items.filter((item) => STAFF_MAIN_PRODUCT_PATHS.has(item.path.split('?')[0]));
@@ -283,7 +286,7 @@ export function filterListenerLibraryItems<T extends NavItemLike>(items: T[]): T
   return items.filter((item) => LISTENER_LIBRARY_PATHS.has(item.path.split('?')[0]));
 }
 
-/** Listener account filter (043) — settings only in sidebar. */
+/** Listener account filter — settings plus personal plans/billing. */
 export function filterListenerAccountItems<T extends NavItemLike>(items: T[]): T[] {
   return items.filter((item) => LISTENER_ACCOUNT_PATHS.has(item.path.split('?')[0]));
 }
@@ -329,7 +332,49 @@ export function isEngineerCommercialSection(sectionId: string): boolean {
   );
 }
 
+/** Post-login / `/` / 403 CTA home by identity role. */
 export function homePathForRole(role: IdentityRole): string {
-  void role;
+  const r = String(role || 'user').toLowerCase();
+  if (r === 'admin') return '/workpanel';
+  if (r === 'engineer') return '/workpanel';
   return '/discover';
+}
+
+/** Personal / listener surfaces — must not wait on organization restore. */
+export function isPersonalSurfacePath(path: string): boolean {
+  const p = (path || '').split('?')[0] || '/';
+  if (
+    p === '/discover' ||
+    p === '/search' ||
+    p === '/tracks' ||
+    p === '/liked' ||
+    p === '/history' ||
+    p === '/activity' ||
+    p === '/settings' ||
+    p === '/users' ||
+    p === '/recommendations' ||
+    p === '/artists' ||
+    p === '/genres' ||
+    p === '/audio-features'
+  ) {
+    return true;
+  }
+  if (p === '/playlists' || p.startsWith('/playlists/')) return true;
+  if (p.startsWith('/account')) return true;
+  if (p.startsWith('/artists/')) return true;
+  return false;
+}
+
+/**
+ * Paths that need organization restore before rendering.
+ * Listeners / personal surfaces never; engineer global tools never.
+ */
+export function pathRequiresOrgHydrate(path: string, role: IdentityRole): boolean {
+  const r = normalizeIdentityRole(role);
+  if (r === 'user') return false;
+  if (isPersonalSurfacePath(path)) return false;
+  const p = (path || '').split('?')[0] || '/';
+  if (p === '/elt-pipeline' || p === '/etl-pipeline' || p === '/explorer') return false;
+  if (p === '/platform-ops' || p.startsWith('/platform-ops/')) return false;
+  return true;
 }

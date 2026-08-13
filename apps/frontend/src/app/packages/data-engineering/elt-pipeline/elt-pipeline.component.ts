@@ -1,10 +1,8 @@
-import { SafeHtml } from '@angular/platform-browser';
-import { IconRenderService } from '../../../shared/services/icon-render.service';
-import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { StatsService } from '../../analytics/services/stats.service';
-import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
-import { StatsSummary, LoadRecord, SyntheticLimits } from '../../../shared/models/api.models';
+import { LoadRecord, StatsSummary, SyntheticLimits } from '../../../shared/models/api.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -12,16 +10,15 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 type LayerStatus = 'ready' | 'idle' | 'running' | 'success' | 'warning' | 'failed';
 type PipelineState = 'idle' | 'running' | 'completed' | 'failed';
 type LogLevel = 'INFO' | 'WARN' | 'SUCCESS';
+type OverallStateKey = 'idle' | 'running' | 'completed' | 'failed' | 'offline';
 
 interface TimelineStep {
   id: string;
   name: string;
-  subtitle: string;
-  file: string;
-  icon: string;
-  color: string;
   status: LayerStatus;
   records: number;
+  durationMs: number | null;
+  error: string | null;
 }
 
 interface LogEntry {
@@ -30,10 +27,10 @@ interface LogEntry {
   message: string;
 }
 
-interface ChartSegment {
-  label: string;
-  value: number;
-  color: string;
+interface PipelineIncident {
+  stage: string;
+  message: string;
+  time: string;
 }
 
 interface MultiplierPreset {
@@ -46,15 +43,15 @@ type VolumeMode = 'multiplier' | 'custom';
 @Component({
   selector: 'app-elt-pipeline',
   standalone: true,
-  imports: [CommonModule, KpiCardComponent, TranslatePipe],
+  imports: [CommonModule, RouterModule, TranslatePipe],
   templateUrl: './elt-pipeline.component.html',
   styleUrls: ['./elt-pipeline.component.css'],
 })
 export class EltPipelineComponent implements OnInit, OnDestroy {
   readonly lang = inject(I18nService).lang;
-  private iconRender = inject(IconRenderService);
   private i18n = inject(I18nService);
   private confirm = inject(ConfirmDialogService);
+  private stats = inject(StatsService);
 
   private runTimer: ReturnType<typeof setInterval> | null = null;
   private elapsedTimer: ReturnType<typeof setInterval> | null = null;
@@ -72,19 +69,17 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   selectedMultiplier = signal<1 | 2 | 3 | 4>(2);
   customTarget = signal(400_000);
   logs = signal<LogEntry[]>([]);
-
+  lastError = signal<PipelineIncident | null>(null);
+  lastRunDurationSec = signal<number | null>(null);
   elapsedSeconds = signal(0);
-  throughput = signal(0);
-  transformPct = signal(0);
-  dataQuality = signal(0);
   warehouseSizeMb = signal(0);
 
   timeline = signal<TimelineStep[]>([
-    { id: 'extract', name: 'Extracción', subtitle: 'Fuente', file: 'warehouse', icon: '↓', color: '#3b82f6', status: 'ready', records: 0 },
-    { id: 'bronze', name: 'Carga', subtitle: 'Bronze', file: 'raw', icon: 'B', color: '#cd7f32', status: 'ready', records: 0 },
-    { id: 'silver', name: 'Transformación', subtitle: 'Silver', file: 'clean', icon: 'S', color: '#94a3b8', status: 'ready', records: 0 },
-    { id: 'gold', name: 'Modelado', subtitle: 'Gold', file: 'dim_*', icon: 'G', color: '#f59e0b', status: 'ready', records: 0 },
-    { id: 'warehouse', name: 'Persistencia', subtitle: 'DuckDB', file: 'voxmetrik.duckdb', icon: 'W', color: '#1ed896', status: 'ready', records: 0 },
+    { id: 'extract', name: 'Extracción', status: 'ready', records: 0, durationMs: null, error: null },
+    { id: 'bronze', name: 'Carga', status: 'ready', records: 0, durationMs: null, error: null },
+    { id: 'silver', name: 'Transformación', status: 'ready', records: 0, durationMs: null, error: null },
+    { id: 'gold', name: 'Modelado', status: 'ready', records: 0, durationMs: null, error: null },
+    { id: 'warehouse', name: 'Persistencia', status: 'ready', records: 0, durationMs: null, error: null },
   ]);
 
   multiplierPresets: MultiplierPreset[] = [
@@ -94,16 +89,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     { key: 4, label: '4×' },
   ];
 
-  tableDistribution: ChartSegment[] = [
-    { label: 'Dimensiones', value: 7, color: '#3b82f6' },
-    { label: 'Facts', value: 1, color: '#1ed896' },
-    { label: 'Agregaciones', value: 4, color: '#7c3aed' },
-  ];
-
-  // Volumen operativo: eventos/facts sintéticos sobre catálogo musical real.
   baseTrackCount = computed(() => this.summary()?.total_events ?? this.summary()?.total_streams ?? 0);
-
-  /** Total de registros de actividad en el warehouse (streams, búsquedas, etc.). */
   totalEventCount = computed(() => this.summary()?.total_events ?? this.summary()?.total_streams ?? 0);
 
   targetTrackCount = computed(() => {
@@ -111,9 +97,7 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     return this.baseTrackCount() * this.selectedMultiplier();
   });
 
-  tracksToCreate = computed(() =>
-    Math.max(0, this.targetTrackCount() - this.baseTrackCount())
-  );
+  tracksToCreate = computed(() => Math.max(0, this.targetTrackCount() - this.baseTrackCount()));
 
   estimatedDbMb = computed(() => {
     const total = this.targetTrackCount();
@@ -153,71 +137,102 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       return {
         ok: true,
         level: 'warn' as const,
-        message: `Generación grande: +${this.fmt(delta)} eventos (~${this.estimatedDbMb()} MB en DuckDB). Puede tardar varios minutos.`,
+        message: `Generación grande: +${this.fmt(delta)} eventos (~${this.estimatedDbMb()} MB). Puede tardar varios minutos.`,
       };
     }
     return { ok: true, level: 'ok' as const, message: '' };
   });
 
-  canRunPipeline = computed(() =>
-    this.apiConnected() &&
-    this.pipelineState() !== 'running' &&
-    (this.volumeValidation().ok || this.volumeValidation().level === 'info')
+  canRunPipeline = computed(
+    () =>
+      this.apiConnected() &&
+      this.pipelineState() !== 'running' &&
+      (this.volumeValidation().ok || this.volumeValidation().level === 'info'),
   );
 
-  selectedRecordCount = computed(() => this.targetTrackCount());
-
-  estimatedDuration = computed(() => {
-    const toCreate = this.tracksToCreate();
-    if (toCreate <= 0) return '0s est.';
-    const sec = Math.max(4, Math.ceil(toCreate / 50_000));
-    return `${sec}s est.`;
+  overallStateKey = computed<OverallStateKey>(() => {
+    if (!this.apiConnected()) return 'offline';
+    if (this.pipelineState() === 'running') return 'running';
+    if (this.pipelineState() === 'failed' || this.lastError()) return 'failed';
+    if (this.pipelineState() === 'completed') return 'completed';
+    return 'idle';
   });
 
-  pipelineStatusLabel = computed(() => {
-    this.i18n.tick();
-    switch (this.pipelineState()) {
-      case 'running': return this.i18n.t('elt.status.running');
-      case 'completed': return this.i18n.t('elt.status.completed');
-      case 'failed': return this.i18n.t('elt.status.failed');
-      default: return this.i18n.t('elt.status.idle');
+  overallStatusLabel = computed(() => {
+    switch (this.overallStateKey()) {
+      case 'offline':
+        return 'Sin conexión';
+      case 'running':
+        return 'Procesando';
+      case 'failed':
+        return 'Requiere atención';
+      case 'completed':
+        return 'Completado';
+      default:
+        return 'Listo';
     }
-  });
-
-  warehouseHealth = computed(() => {
-    if (this.pipelineState() === 'failed') return 62;
-    if (this.pipelineState() === 'running') return 78;
-    if (this.dataQuality() > 0) return this.dataQuality();
-    return this.apiConnected() ? 94 : 88;
   });
 
   lastExecutionLabel = computed(() => {
     const load = this.lastLoad();
     if (!load?.fecha_carga) return '—';
     return new Date(load.fecha_carga).toLocaleString('es-ES', {
-      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   });
 
-  totalTables = 12;
+  durationLabel = computed(() => {
+    if (this.pipelineState() === 'running') {
+      return this.formatDurationSec(this.elapsedSeconds());
+    }
+    const sec = this.lastRunDurationSec();
+    if (sec == null || sec <= 0) return null;
+    return this.formatDurationSec(sec);
+  });
 
-  constructor(private stats: StatsService) {}
+  lastUpdateLabel = computed(() => {
+    const updated = this.summary()?.events_updated_at || this.lastLoad()?.fecha_carga;
+    if (!updated) return null;
+    return new Date(updated).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  });
+
+  activeStageLabel = computed(() => {
+    const running = this.timeline().find((s) => s.status === 'running');
+    return running?.name ?? null;
+  });
 
   ngOnInit() {
-    this.loadWarehouseKpis();
-    this.refreshMetrics();
+    this.refreshStatus();
   }
 
   ngOnDestroy() {
     this.clearTimers();
   }
 
+  refreshStatus() {
+    this.loadWarehouseKpis();
+  }
+
   private loadWarehouseKpis() {
+    this.isLoadingKpis.set(true);
     let pending = 4;
-    const done = () => { if (--pending <= 0) this.isLoadingKpis.set(false); };
+    const done = () => {
+      if (--pending <= 0) this.isLoadingKpis.set(false);
+    };
 
     this.stats.getSyntheticLimits().subscribe({
-      next: (l) => { this.limits.set(l); done(); },
+      next: (l) => {
+        this.limits.set(l);
+        done();
+      },
       error: () => {
         this.limits.set({
           max_target_total: 5_000_000,
@@ -234,41 +249,49 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       next: (d) => {
         this.summary.set(d);
         this.apiConnected.set(true);
-        this.refreshMetrics(d.total_events ?? d.total_streams ?? d.total_tracks);
         done();
       },
       error: () => {
         this.apiConnected.set(false);
-        this.refreshMetrics();
         done();
       },
     });
 
     this.stats.getLastLoads(1).subscribe({
-      next: (loads) => { this.lastLoad.set(loads?.[0] ?? null); done(); },
+      next: (loads) => {
+        this.lastLoad.set(loads?.[0] ?? null);
+        done();
+      },
       error: () => done(),
     });
 
     this.stats.getWarehouseStatus().subscribe({
       next: (w) => {
-        this.warehouseSizeMb.set(w.db_size_mb ?? 0);
-        const facts = Object.values(w.layers?.gold?.facts ?? {}).reduce((a, b) => a + b, 0);
-        const aggs = Object.values(w.layers?.gold?.aggregates ?? {}).reduce((a, b) => a + b, 0);
-        const dims = Object.values(w.layers?.gold?.dimensions ?? {}).reduce((a, b) => a + b, 0);
-        this.tableDistribution = [
-          { label: 'Dimensiones', value: dims, color: '#3b82f6' },
-          { label: 'Facts', value: facts, color: '#1ed896' },
-          { label: 'Agregaciones', value: aggs, color: '#7c3aed' },
-        ];
+        if (typeof w.db_size_mb === 'number' && w.db_size_mb > 0) {
+          this.warehouseSizeMb.set(w.db_size_mb);
+        }
+        if (w.last_load) this.lastLoad.set(w.last_load);
         if (w.recent_stages?.length) {
           const stageMap = new Map(w.recent_stages.map((s) => [s.stage, s]));
           this.timeline.update((steps) =>
             steps.map((step) => {
-              const match = stageMap.get(step.id === 'bronze' ? 'load_staging' : step.id === 'gold' ? 'build_warehouse' : step.id);
-              return match
-                ? { ...step, records: match.rows_out, status: match.status === 'OK' ? 'success' as LayerStatus : step.status }
-                : step;
-            })
+              const key =
+                step.id === 'bronze'
+                  ? 'load_staging'
+                  : step.id === 'gold'
+                    ? 'build_warehouse'
+                    : step.id;
+              const match = stageMap.get(key) ?? stageMap.get(step.id);
+              if (!match) return step;
+              const ok = (match.status || '').toUpperCase() === 'OK';
+              return {
+                ...step,
+                records: match.rows_out > 0 ? match.rows_out : step.records,
+                durationMs: match.duration_ms > 0 ? match.duration_ms : step.durationMs,
+                status: ok ? ('success' as LayerStatus) : ('warning' as LayerStatus),
+                error: ok ? null : 'Etapa con advertencias',
+              };
+            }),
           );
         }
         done();
@@ -277,21 +300,10 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     });
   }
 
-  private refreshMetrics(baseRecords?: number) {
-    const count = baseRecords ?? this.targetTrackCount();
-    const factors = [1.0, 0.98, 0.96, 0.94, 1.0];
-    this.timeline.update((steps) =>
-      steps.map((s, i) => ({ ...s, records: Math.round(count * factors[i]) }))
-    );
-    this.warehouseSizeMb.set(+(count / 1000 * 0.5).toFixed(1));
-    this.transformPct.set(97);
-  }
-
   selectMultiplier(key: 1 | 2 | 3 | 4) {
     if (this.pipelineState() === 'running') return;
     this.volumeMode.set('multiplier');
     this.selectedMultiplier.set(key);
-    this.refreshMetrics();
   }
 
   setVolumeMode(mode: VolumeMode) {
@@ -300,7 +312,6 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     if (mode === 'custom' && this.customTarget() <= this.baseTrackCount()) {
       this.customTarget.set(Math.max(this.baseTrackCount() + 1, 400_000));
     }
-    this.refreshMetrics();
   }
 
   onCustomTargetInput(event: Event) {
@@ -309,24 +320,13 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     if (!Number.isFinite(parsed) || parsed < 1) return;
     const max = this.limits()?.max_target_total ?? 5_000_000;
     this.customTarget.set(Math.min(parsed, max));
-    this.refreshMetrics();
   }
 
-  applyQuickTarget(total: number) {
-    if (this.pipelineState() === 'running') return;
-    const max = this.limits()?.max_target_total ?? 5_000_000;
-    this.volumeMode.set('custom');
-    this.customTarget.set(Math.min(total, max));
-    this.refreshMetrics();
-  }
-
-  /** Suma N al total actual (ej. +100K sobre lo que ya hay en BD). */
   applyIncrement(amount = 100_000) {
     if (this.pipelineState() === 'running') return;
     const max = this.limits()?.max_target_total ?? 5_000_000;
     this.volumeMode.set('custom');
     this.customTarget.set(Math.min(this.baseTrackCount() + amount, max));
-    this.refreshMetrics();
   }
 
   runPipeline() {
@@ -342,14 +342,16 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       return;
     }
     if (validation.level === 'warn') {
-      void this.confirm.open({
-        title: this.i18n.t('confirm.continueTitle'),
-        message: `${validation.message}\n\n${this.i18n.t('confirm.continuePrompt')}`,
-        confirmLabel: this.i18n.t('common.continue'),
-        cancelLabel: this.i18n.t('common.cancel'),
-      }).then((ok) => {
-        if (ok) this.executePipeline();
-      });
+      void this.confirm
+        .open({
+          title: this.i18n.t('confirm.continueTitle'),
+          message: `${validation.message}\n\n${this.i18n.t('confirm.continuePrompt')}`,
+          confirmLabel: this.i18n.t('common.continue'),
+          cancelLabel: this.i18n.t('common.cancel'),
+        })
+        .then((ok) => {
+          if (ok) this.executePipeline();
+        });
       return;
     }
 
@@ -361,65 +363,79 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     this.pipelineState.set('running');
     this.runProgress.set(5);
     this.logs.set([]);
+    this.lastError.set(null);
+    this.lastRunDurationSec.set(null);
     this.elapsedSeconds.set(0);
-    this.throughput.set(0);
-    this.dataQuality.set(0);
     this.runStartMs = Date.now();
 
     const target = this.targetTrackCount();
 
-    this.addLog('INFO', 'Paso 1/2 — PocketBase → Bronze → Silver → Gold → DuckDB');
-    this.addLog('INFO', 'Descargando dataset Spotify (~100k) desde PocketBase…');
-
-    this.timeline.update((s) => s.map((l) => ({
-      ...l,
-      status: l.id === 'extract' ? 'running' as LayerStatus : 'idle' as LayerStatus,
-    })));
+    this.addLog('INFO', 'Importando catálogo desde PocketBase…');
+    this.timeline.update((s) =>
+      s.map((l) => ({
+        ...l,
+        status: l.id === 'extract' ? ('running' as LayerStatus) : ('idle' as LayerStatus),
+        error: null,
+      })),
+    );
 
     this.elapsedTimer = setInterval(() => {
-      const sec = Math.floor((Date.now() - this.runStartMs) / 1000);
-      this.elapsedSeconds.set(sec);
+      this.elapsedSeconds.set(Math.floor((Date.now() - this.runStartMs) / 1000));
     }, 500);
 
     this.stats.importFromPocketBase().subscribe({
       next: (res) => {
         const loaded = res.rows_loaded ?? 0;
+        const elapsedMs = Math.round((res.elapsed_s ?? 0) * 1000);
         this.runProgress.set(55);
-        this.addLog('SUCCESS', `${this.fmt(loaded)} tracks reales cargados desde PocketBase (${res.source})`);
+        this.addLog(
+          'SUCCESS',
+          `${this.fmt(loaded)} pistas cargadas desde ${this.humanSource(res.source)}`,
+        );
         this.timeline.update((layers) =>
-          layers.map((l) => ({
-            ...l,
-            records: l.id === 'warehouse' ? loaded : l.records,
-            status: ['extract', 'bronze', 'silver', 'gold', 'warehouse'].includes(l.id)
-              ? 'success' as LayerStatus
-              : l.status,
-          }))
+          layers.map((l) => {
+            if (l.id === 'extract' || l.id === 'bronze') {
+              return {
+                ...l,
+                records: loaded || l.records,
+                durationMs: elapsedMs || l.durationMs,
+                status: 'success' as LayerStatus,
+              };
+            }
+            if (l.id === 'silver' || l.id === 'gold' || l.id === 'warehouse') {
+              return { ...l, status: 'running' as LayerStatus };
+            }
+            return l;
+          }),
         );
         this.stats.getSummary().subscribe({
           next: (fresh) => {
             this.summary.set(fresh);
             const baseEvents = fresh.total_events ?? fresh.total_streams ?? 0;
-            this.refreshMetrics(baseEvents);
             const delta = Math.max(0, target - baseEvents);
             if (delta > 0) {
-              this.addLog('INFO', `Paso 2/2 — Actividad sintética: ${this.fmt(baseEvents)} → ${this.fmt(target)} eventos (+${this.fmt(delta)})`);
+              this.addLog(
+                'INFO',
+                `Expandiendo actividad: ${this.fmt(baseEvents)} → ${this.fmt(target)} (+${this.fmt(delta)})`,
+              );
               this.persistSynthetic(target);
             } else {
-              this.addLog('INFO', 'Sin expansión — el volumen de actividad ya cubre el objetivo');
+              this.addLog('INFO', 'Sin expansión — el volumen ya cubre el objetivo');
               this.completePipeline(baseEvents, 0);
             }
           },
-          error: () => this.failPipeline({}, 'lectura de KPIs post-importación'),
+          error: () => this.failPipeline({}, 'Persistencia', 'No se pudo leer el estado tras la importación.'),
         });
       },
-      error: (err) => this.failPipeline(err, 'importación PocketBase'),
+      error: (err) =>
+        this.failPipeline(err, 'Extracción', 'No se pudo importar el catálogo desde PocketBase.'),
     });
   }
 
   importFromPocketBaseOnly() {
     if (this.pipelineState() === 'running') return;
     if (!this.apiConnected()) {
-      this.addLog('WARN', 'Backend no disponible');
+      this.addLog('WARN', this.i18n.t('elt.backendUnavailable'));
       return;
     }
 
@@ -427,64 +443,146 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     this.pipelineState.set('running');
     this.runProgress.set(0);
     this.logs.set([]);
+    this.lastError.set(null);
     this.runStartMs = Date.now();
-    this.addLog('INFO', 'Sincronizando solo desde PocketBase (sin expansión sintética)…');
+    this.elapsedSeconds.set(0);
+    this.addLog('INFO', 'Importando solo catálogo desde PocketBase…');
+    this.timeline.update((s) =>
+      s.map((l) => ({
+        ...l,
+        status: l.id === 'extract' ? ('running' as LayerStatus) : ('idle' as LayerStatus),
+        error: null,
+      })),
+    );
+
+    this.elapsedTimer = setInterval(() => {
+      this.elapsedSeconds.set(Math.floor((Date.now() - this.runStartMs) / 1000));
+    }, 500);
 
     this.stats.importFromPocketBase().subscribe({
       next: (res) => {
         const loaded = res.rows_loaded ?? 0;
+        this.timeline.update((layers) =>
+          layers.map((l) => ({
+            ...l,
+            records: ['extract', 'bronze', 'warehouse'].includes(l.id) ? loaded || l.records : l.records,
+            status: 'success' as LayerStatus,
+          })),
+        );
         this.stats.getSummary().subscribe({
           next: (fresh) => {
             this.summary.set(fresh);
             this.completePipeline(fresh.total_events ?? fresh.total_streams ?? loaded, 0);
           },
+          error: () => this.completePipeline(loaded, 0),
         });
         this.stats.getLastLoads(1).subscribe({
           next: (loads) => this.lastLoad.set(loads?.[0] ?? null),
         });
       },
-      error: (err) => this.failPipeline(err, 'importación PocketBase'),
+      error: (err) =>
+        this.failPipeline(err, 'Extracción', 'No se pudo importar el catálogo desde PocketBase.'),
     });
   }
 
-  private failPipeline(err: { error?: { detail?: unknown } }, phase: string) {
+  private failPipeline(
+    err: { error?: { detail?: unknown } },
+    stage: string,
+    fallback: string,
+  ) {
     const detail = err?.error?.detail;
-    const msg = typeof detail === 'string' ? detail
-      : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg).join('; ')
-      : `Error en ${phase}`;
-    this.addLog('WARN', msg);
+    const raw =
+      typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join('; ')
+          : '';
+    const message = this.humanizeError(raw) || fallback;
+    const time = new Date().toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    this.addLog('WARN', message);
+    this.lastError.set({ stage: `${stage} requiere atención`, message, time });
     this.pipelineState.set('failed');
+    this.timeline.update((steps) =>
+      steps.map((s) =>
+        s.name === stage || (stage === 'Extracción' && s.id === 'extract')
+          ? { ...s, status: 'failed' as LayerStatus, error: message }
+          : s.status === 'running'
+            ? { ...s, status: 'idle' as LayerStatus }
+            : s,
+      ),
+    );
+    this.lastRunDurationSec.set(Math.floor((Date.now() - this.runStartMs) / 1000));
     this.clearTimers();
   }
 
   private persistSynthetic(target: number) {
-    if (this.runTimer) { clearInterval(this.runTimer); this.runTimer = null; }
+    if (this.runTimer) {
+      clearInterval(this.runTimer);
+      this.runTimer = null;
+    }
     this.runProgress.set(98);
 
     const delta = this.tracksToCreate();
     if (delta <= 0) {
-      this.addLog('INFO', `Ya hay ${this.fmt(this.baseTrackCount())} registros — objetivo ${this.fmt(target)} alcanzado`);
+      this.addLog('INFO', `Ya hay ${this.fmt(this.baseTrackCount())} registros — objetivo alcanzado`);
       this.completePipeline(this.baseTrackCount(), 0);
       return;
     }
 
+    this.timeline.update((layers) =>
+      layers.map((l) =>
+        l.id === 'silver' || l.id === 'gold' || l.id === 'warehouse'
+          ? { ...l, status: 'running' as LayerStatus }
+          : l,
+      ),
+    );
+
     this.stats.generateSynthetic({ target_total: target }).subscribe({
       next: (res) => {
-        this.summary.update((s) => s ? {
-          ...s,
-          total_events: res.after,
-          total_tracks: res.track_total ?? s.total_tracks,
-        } : s);
+        this.summary.update((s) =>
+          s
+            ? {
+                ...s,
+                total_events: res.after,
+                total_tracks: res.track_total ?? s.total_tracks,
+              }
+            : s,
+        );
         if (res.purged_synthetic_tracks) {
-          this.addLog('WARN', `${this.fmt(res.purged_synthetic_tracks)} tracks sintéticos antiguos eliminados del catálogo`);
+          this.addLog(
+            'WARN',
+            `${this.fmt(res.purged_synthetic_tracks)} pistas sintéticas antiguas eliminadas del catálogo`,
+          );
         }
-        this.addLog('SUCCESS', `+${res.created.toLocaleString('es-ES')} eventos generados (${this.fmt(res.before)} → ${this.fmt(res.after)})`);
+        this.addLog(
+          'SUCCESS',
+          `+${res.created.toLocaleString('es-ES')} eventos generados (${this.fmt(res.before)} → ${this.fmt(res.after)})`,
+        );
+        this.timeline.update((layers) =>
+          layers.map((l) => ({
+            ...l,
+            records:
+              l.id === 'silver' || l.id === 'gold' || l.id === 'warehouse'
+                ? res.after || l.records
+                : l.records,
+            status: 'success' as LayerStatus,
+          })),
+        );
         this.completePipeline(res.after, res.created);
         this.stats.getLastLoads(1).subscribe({
           next: (loads) => this.lastLoad.set(loads?.[0] ?? null),
         });
       },
-      error: (err) => this.failPipeline(err, 'expansión sintética'),
+      error: (err) =>
+        this.failPipeline(
+          err,
+          'Transformación',
+          'No se pudo completar la expansión de actividad analítica.',
+        ),
     });
   }
 
@@ -492,11 +590,12 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
     this.clearTimers();
     this.runProgress.set(100);
     this.pipelineState.set('completed');
-    this.transformPct.set(97);
-    this.dataQuality.set(98);
-    this.warehouseSizeMb.set(+(total / 1000 * 0.5).toFixed(1));
-    this.timeline.update((l) => l.map((s) => ({ ...s, status: 'success' as LayerStatus })));
-    this.addLog('SUCCESS', `Pipeline completado — ${this.fmt(total)} eventos de actividad en warehouse`);
+    this.lastError.set(null);
+    this.lastRunDurationSec.set(Math.floor((Date.now() - this.runStartMs) / 1000));
+    this.timeline.update((l) =>
+      l.map((s) => ({ ...s, status: 'success' as LayerStatus, error: null })),
+    );
+    this.addLog('SUCCESS', `Pipeline completado — ${this.fmt(total)} eventos en el almacén`);
     if (created > 0) {
       this.lastLoad.set({
         fecha_carga: new Date().toISOString(),
@@ -506,30 +605,43 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
         estado: 'OK',
       });
     }
-    this.refreshMetrics(total);
-  }
-
-  resetPipeline() {
-    if (this.pipelineState() === 'running') return;
-    this.clearTimers();
-    this.pipelineState.set('idle');
-    this.runProgress.set(0);
-    this.logs.set([]);
-    this.elapsedSeconds.set(0);
-    this.throughput.set(0);
-    this.dataQuality.set(0);
-    this.timeline.update((s) => s.map((l) => ({ ...l, status: 'ready' as LayerStatus })));
-    this.refreshMetrics(this.baseTrackCount());
+    this.refreshStatus();
   }
 
   private addLog(level: LogLevel, message: string) {
-    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const time = new Date().toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
     this.logs.update((logs) => [...logs, { time, level, message }]);
   }
 
   private clearTimers() {
-    if (this.runTimer) { clearInterval(this.runTimer); this.runTimer = null; }
-    if (this.elapsedTimer) { clearInterval(this.elapsedTimer); this.elapsedTimer = null; }
+    if (this.runTimer) {
+      clearInterval(this.runTimer);
+      this.runTimer = null;
+    }
+    if (this.elapsedTimer) {
+      clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
+    }
+  }
+
+  private humanSource(source: string | null | undefined): string {
+    const s = (source || '').toLowerCase();
+    if (s.includes('pocketbase')) return 'PocketBase';
+    if (!s) return 'la fuente configurada';
+    return source!;
+  }
+
+  private humanizeError(raw: string): string {
+    const t = (raw || '').trim();
+    if (!t) return '';
+    if (/stack|traceback|exception at|typeerror|referenceerror/i.test(t)) {
+      return 'No se pudo completar la operación. Revisa la conexión e inténtalo de nuevo.';
+    }
+    return t.length > 220 ? `${t.slice(0, 217)}…` : t;
   }
 
   fmt(val?: number): string {
@@ -540,25 +652,34 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
   }
 
   statusLabel(status: LayerStatus): string {
-    const map: Record<LayerStatus, string> = {
-      ready: 'Ready', idle: 'Waiting', running: 'Running',
-      success: 'Success', warning: 'Warning', failed: 'Failed',
-    };
-    return map[status];
+    switch (status) {
+      case 'ready':
+      case 'idle':
+        return 'Pendiente';
+      case 'running':
+        return 'En ejecución';
+      case 'success':
+        return 'Completado';
+      case 'warning':
+        return 'Con advertencias';
+      case 'failed':
+        return 'Fallido';
+      default: {
+        const _exhaustive: never = status;
+        return _exhaustive;
+      }
+    }
   }
 
-  distBarWidth(value: number): number {
-    const max = Math.max(...this.tableDistribution.map((d) => d.value));
-    return Math.round((value / max) * 100);
+  formatDurationMs(ms: number): string {
+    if (ms < 1000) return `${ms} ms`;
+    return this.formatDurationSec(Math.round(ms / 1000));
   }
 
-  healthColor(score: number): string {
-    if (score >= 90) return '#10b981';
-    if (score >= 75) return '#f59e0b';
-    return '#ef4444';
-  }
-
-  icon(key: string, size = 18): SafeHtml {
-    return this.iconRender.render(key, size);
+  formatDurationSec(sec: number): string {
+    if (sec < 60) return `${sec}s`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return s ? `${m}m ${s}s` : `${m}m`;
   }
 }

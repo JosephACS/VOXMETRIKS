@@ -1,0 +1,290 @@
+/* Catálogo y publicación — editorial music workspace */
+.cat-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 0 calc(1.25rem + 88px);
+}
+
+.cat-head {
+  margin-bottom: 0.85rem;
+}
+
+.cat-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vx-accent, var(--accent, #1ed896));
+}
+
+.cat-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vx-text, var(--color-text, var(--text, #fff)));
+}
+
+.cat-sub {
+  margin: 0.35rem 0 0;
+  max-width: 34rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted, rgba(255, 255, 255, 0.55))));
+}
+
+.cat-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.1)));
+  background: color-mix(in srgb, var(--vx-surface, #121212) 88%, transparent);
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.cat-chip strong {
+  color: var(--vx-text, var(--color-text, var(--text)));
+  font-weight: 700;
+}
+
+.cat-chip--attention {
+  border-color: color-mix(in srgb, var(--vx-warning, #fbbf24) 40%, transparent);
+  color: var(--vx-warning, #b45309);
+}
+
+.cat-chip--attention strong {
+  color: inherit;
+}
+
+.cat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  align-items: center;
+}
+
+.cat-search {
+  flex: 1 1 16rem;
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.1)));
+  background: var(--vx-surface, var(--color-surface, rgba(18, 18, 18, 0.96)));
+  color: var(--vx-text, var(--color-text, var(--text)));
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.cat-search:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 55%, transparent);
+}
+
+.cat-select {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.1)));
+  background: var(--vx-surface, var(--color-surface, rgba(18, 18, 18, 0.96)));
+  color: var(--vx-text, var(--color-text, var(--text)));
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.cat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cat-actions a {
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.12)));
+  color: var(--vx-text, var(--color-text, var(--text)));
+  background: transparent;
+}
+
+.cat-actions a.primary {
+  background: var(--vx-accent, var(--accent, #1ed896));
+  color: #04140e;
+  border-color: transparent;
+}
+
+.cat-section {
+  margin-bottom: 0.9rem;
+  padding: 0.95rem 1.05rem;
+  border-radius: 10px;
+  background: var(--vx-surface, var(--color-surface, rgba(18, 18, 18, 0.96)));
+  border: 1px solid var(--vx-border-subtle, var(--border-subtle, rgba(255, 255, 255, 0.08)));
+}
+
+.cat-section__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin-bottom: 0.65rem;
+}
+
+.cat-section__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.cat-section__link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--vx-accent, var(--accent, #1ed896));
+}
+
+.cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cat-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--vx-border-subtle, rgba(255, 255, 255, 0.06));
+  text-decoration: none;
+  color: inherit;
+}
+
+.cat-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.cat-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--vx-accent, #1ed896) 18%, #1a1a1a), #121212 70%);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--vx-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.cat-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cat-cover__mark {
+  width: 22px;
+  height: 22px;
+  opacity: 0.85;
+}
+
+.cat-row__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--vx-text, var(--color-text, var(--text)));
+  line-height: 1.25;
+}
+
+.cat-row__meta {
+  margin: 0.18rem 0 0;
+  font-size: 0.78rem;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+  line-height: 1.35;
+}
+
+.cat-row__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.cat-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.14);
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+  white-space: nowrap;
+}
+
+.cat-badge--published {
+  background: color-mix(in srgb, var(--vx-accent, #1ed896) 16%, transparent);
+  color: var(--vx-accent, #1ed896);
+}
+
+.cat-badge--review {
+  background: color-mix(in srgb, var(--vx-warning, #fbbf24) 16%, transparent);
+  color: var(--vx-warning, #b45309);
+}
+
+.cat-badge--draft {
+  background: rgba(127, 127, 127, 0.14);
+}
+
+.cat-badge--attention {
+  background: color-mix(in srgb, var(--vx-error, #ef4444) 14%, transparent);
+  color: var(--vx-error, #ef4444);
+}
+
+.cat-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--vx-text-secondary, var(--color-text-muted, var(--text-muted)));
+}
+
+.cat-artist-initial {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--vx-accent, #1ed896);
+}
+
+@media (max-width: 640px) {
+  .cat-title {
+    font-size: 1.28rem;
+  }
+  .cat-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .cat-cover {
+    width: 48px;
+    height: 48px;
+  }
+  .cat-row__side {
+    grid-column: 2;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+  }
+}

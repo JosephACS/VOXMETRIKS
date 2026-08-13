@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { ProfilesLayoutComponent } from './layouts/profiles-layout/profiles-layout.component';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, roleHomeRedirectGuard } from './core/guards/auth.guard';
 import { engineerGuard } from './core/guards/engineer.guard';
 import { staffCapabilityGuard } from './core/guards/staff-capability.guard';
 import {
@@ -64,8 +64,12 @@ export const APP_ROUTES: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'discover',
         pathMatch: 'full',
+        canActivate: [roleHomeRedirectGuard],
+        loadComponent: () =>
+          import('./core/guards/role-home-redirect.component').then(
+            (m) => m.RoleHomeRedirectComponent,
+          ),
       },
       {
         path: 'dashboard',
@@ -206,7 +210,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'trending',
-        redirectTo: 'complex-reports',
+        redirectTo: 'discover',
         pathMatch: 'full',
       },
       {
@@ -323,7 +327,7 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'discover',
+    redirectTo: 'login',
   },
 ];
 

@@ -6,8 +6,9 @@ import { CatalogPublishingApiService } from '../services/catalog-publishing.api'
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import {
   ReleaseDetail,
+  displayReleaseTitle,
   hasPrivateMedia,
-  publishingPrimaryLabelKey,
+  humanReleaseStatus,
   publishingUiBucket,
 } from '../models/catalog-publishing.models';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -47,7 +48,7 @@ import { catalogPublishingAccess } from '../catalog-publishing-access';
         } @else if (!detail) {
           <app-enterprise-empty-state [title]="'publishing.detail.notFound' | t:lang()" />
         } @else {
-          <app-enterprise-page-header [title]="detail.submission.title">
+          <app-enterprise-page-header [title]="displayTitle(detail.submission)">
             <app-enterprise-status-badge
               [status]="badgeStatus(detail.submission.status)"
               [label]="statusLabel(detail.submission.status)"
@@ -284,8 +285,12 @@ export class CatalogReviewDetailPage implements OnInit {
       });
   }
 
+  displayTitle(submission: { title: string; status: string }): string {
+    return displayReleaseTitle(submission.title, submission.status);
+  }
+
   statusLabel(status: string): string {
-    return this.i18n.t(publishingPrimaryLabelKey(status));
+    return humanReleaseStatus(status);
   }
 
   badgeStatus(status: string): string {

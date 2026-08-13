@@ -1,15 +1,14 @@
-<div class="search-page" [attr.data-search-state]="uiState()">
+<div class="search-page listener-surface" [attr.data-search-state]="uiState()">
 
-  <header class="search-header glass-panel">
+  <header class="search-header">
     <div class="header-row">
       <div>
         <h1>{{ 'search.title' | t:lang() }}</h1>
         <p class="search-subtitle">{{ 'search.subtitle' | t:lang() }}</p>
       </div>
-      <app-data-source-badge kind="live" />
     </div>
 
-    <div class="vx-toolbar" role="search" [attr.aria-label]="'search.title' | t:lang()">
+    <div class="vx-toolbar search-toolbar" role="search" [attr.aria-label]="'search.title' | t:lang()">
       <div class="vx-toolbar__search search-box">
         <span [innerHTML]="icon('search', 18)"></span>
         <input
@@ -31,21 +30,6 @@
           {{ 'search.submit' | t:lang() }}
         </button>
       </div>
-
-      <div class="vx-toolbar__actions search-ai-row" role="group" [attr.aria-label]="'search.ai.group' | t:lang()">
-        <label class="ai-toggle" for="search-ai-natural">
-          <input
-            id="search-ai-natural"
-            type="checkbox"
-            [checked]="aiMode()"
-            (change)="toggleAiMode()"
-          />
-          <span>{{ 'search.ai.natural' | t:lang() }}</span>
-        </label>
-        <button type="button" class="ai-playlist-btn" (click)="openAiPlaylist()">
-          {{ 'search.ai.playlist' | t:lang() }}
-        </button>
-      </div>
     </div>
 
     @if (uiState() === 'initial') {
@@ -58,9 +42,6 @@
       </div>
     }
 
-    @if (nlIntent()) {
-      <p class="nl-intent">{{ 'search.ai.intent' | t: { intent: nlIntent()! }:lang() }}</p>
-    }
     @if (statusMessage()) {
       <p class="search-status" data-testid="search-status">{{ statusMessage() }}</p>
     }
@@ -69,68 +50,55 @@
   <app-ai-playlist-dialog />
 
   @if (uiState() === 'initial') {
-    <div class="vx-state-panel vx-state-panel--center" data-testid="search-state-initial" role="status">
+    <div class="vx-state-panel vx-state-panel--center search-idle" data-testid="search-state-initial" role="status">
       <span [innerHTML]="icon('search', 36)"></span>
       <h2>{{ 'search.emptyTitle' | t:lang() }}</h2>
       <p>{{ 'search.hint' | t:lang() }}</p>
       <small>{{ 'search.hintDetail' | t:lang() }}</small>
     </div>
   } @else if (uiState() === 'searching') {
-    <div class="results-grid" data-testid="search-state-searching" aria-busy="true" aria-live="polite">
+    <div class="search-results" data-testid="search-state-searching" aria-busy="true" aria-live="polite">
       @for (s of [1,2,3,4,5,6]; track s) {
-        <div class="result-card skel"></div>
+        <div class="vx-music-row skel"></div>
       }
     </div>
   } @else if (uiState() === 'provider_unavailable') {
-    <div class="vx-state-panel empty error glass-panel" data-testid="search-state-provider" role="alert">
+    <div class="vx-state-panel empty error" data-testid="search-state-provider" role="alert">
       <span [innerHTML]="icon('alert', 32)"></span>
       <p>{{ statusMessage() || ('search.providerUnavailable' | t:lang()) }}</p>
       <button type="button" class="retry-btn" (click)="retrySearch()">{{ 'search.retry' | t:lang() }}</button>
     </div>
   } @else if (uiState() === 'error') {
-    <div class="vx-state-panel empty error glass-panel" data-testid="search-state-error" role="alert">
+    <div class="vx-state-panel empty error" data-testid="search-state-error" role="alert">
       <span [innerHTML]="icon('alert', 32)"></span>
       <p>{{ errorMessage() }}</p>
       <button type="button" class="retry-btn" (click)="retrySearch()">{{ 'search.retry' | t:lang() }}</button>
     </div>
   } @else if (uiState() === 'empty') {
-    <div class="vx-state-panel empty glass-panel" data-testid="search-state-empty" role="status">
+    <div class="vx-state-panel empty" data-testid="search-state-empty" role="status">
       <span [innerHTML]="icon('music', 32)"></span>
-      <p>{{ statusMessage() || ('search.noResults' | t: { query: query() }:lang()) }}</p>
+      <p>{{ 'search.noResultsPlain' | t:lang() }}</p>
       <small>{{ 'search.noResultsHint' | t:lang() }}</small>
     </div>
   } @else {
     <div class="search-results vm-content-ready" data-testid="search-state-results">
-      @if (artistResults().length) {
-        <h2 class="section-title">{{ 'search.artistsSection' | t: { count: artistResults().length }:lang() }}</h2>
-        <div class="artist-row">
-          @for (a of artistResults(); track a.id_artista) {
-            <a class="artist-chip glass-panel" [routerLink]="['/artists', a.id_artista]">
-              <span class="artist-initial">{{ artistLabel(a.nombre_artista).charAt(0) }}</span>
-              <span>{{ artistLabel(a.nombre_artista) }}</span>
-            </a>
-          }
-        </div>
-      }
-
       @if (trackResults().length) {
-        <h2 class="section-title">Resultados de VOXMETRIKS ({{ trackTotal() }})</h2>
-        <cdk-virtual-scroll-viewport itemSize="96" class="search-tracks-viewport">
-          <div class="result-card glass-panel card-hover" *cdkVirtualFor="let r of trackResults(); trackBy: trackId">
+        <h2 class="vx-section-label">{{ 'search.tracksSection' | t: { count: trackTotal() }:lang() }}</h2>
+        <cdk-virtual-scroll-viewport itemSize="64" class="search-tracks-viewport">
+          <div class="vx-music-row" *cdkVirtualFor="let r of trackResults(); trackBy: trackId">
             <button type="button" class="r-play" (click)="playTrack(r, $event)" [attr.aria-label]="'track.playNow' | t">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </button>
-            <a class="r-cover-link" [routerLink]="['/tracks', r.id_track]" [style.background]="cover(r.id_track)">
-              {{ displayTitle(r.nombre_track).charAt(0) }}
+            <a class="vx-music-cover" [routerLink]="['/tracks', r.id_track]" [style.background]="cover(r.id_track)">
+              @if (coverUrl$(r.id_track) | async; as img) {
+                <img [src]="img" [alt]="displayTitle(r.nombre_track)" loading="lazy" />
+              } @else {
+                {{ displayTitle(r.nombre_track).charAt(0) }}
+              }
             </a>
-            <div class="r-body">
-              <a class="r-track" [routerLink]="['/tracks', r.id_track]">{{ displayTitle(r.nombre_track) }}</a>
-              <span class="r-artist">{{ r.nombre_artista ?? '—' }}</span>
-              <span class="r-genre">{{ r.nombre_genero ?? '—' }}</span>
-              <div class="r-pop">
-                <div class="pop-bar"><div class="pop-fill" [style.width.%]="r.popularity ?? 0"></div></div>
-                <span class="mono" title="Popularidad Spotify 0-100">{{ r.popularity ?? '—' }}/100</span>
-              </div>
+            <div class="vx-music-meta">
+              <a class="vx-music-title" [routerLink]="['/tracks', r.id_track]">{{ displayTitle(r.nombre_track) }}</a>
+              <span class="vx-music-sub">{{ r.nombre_artista ?? '—' }}@if (r.nombre_genero) { · {{ r.nombre_genero }} }</span>
             </div>
             <app-track-actions [track]="playable(r)" [queue]="trackQueue()" [artistId]="r.id_artista" size="sm" />
           </div>
@@ -145,38 +113,52 @@
         }
       }
 
+      @if (artistResults().length) {
+        <h2 class="vx-section-label">{{ 'search.artistsSection' | t: { count: artistResults().length }:lang() }}</h2>
+        <div class="artist-row">
+          @for (a of artistResults(); track a.id_artista) {
+            <a class="artist-chip" [routerLink]="['/artists', a.id_artista]">
+              <span class="vx-music-cover vx-music-cover--artist" [style.background]="cover(a.id_artista)">
+                @if (artistCoverUrl$(a.id_artista) | async; as img) {
+                  <img [src]="img" [alt]="artistLabel(a.nombre_artista)" loading="lazy" />
+                } @else {
+                  {{ artistLabel(a.nombre_artista).charAt(0) }}
+                }
+              </span>
+              <span>{{ artistLabel(a.nombre_artista) }}</span>
+            </a>
+          }
+        </div>
+      }
+
       @if (externalResults().length) {
-        <h2 class="section-title">Resultados de YouTube ({{ externalResults().length }})</h2>
-        <p class="external-hint">{{ statusMessage() || 'No encontramos esta canción disponible en VOXMETRIKS. Estos son resultados encontrados en YouTube.' }}</p>
+        <h2 class="vx-section-label">{{ 'search.externalSection' | t: { count: externalResults().length }:lang() }}</h2>
+        <p class="external-hint">{{ statusMessage() || ('search.externalHint' | t:lang()) }}</p>
         <div class="external-list">
           @for (item of externalResults(); track item.video_id) {
-            <div class="result-card glass-panel card-hover external-card" [class.is-adopting]="adoptingVideoId() === item.video_id">
+            <div class="vx-music-row external-card" [class.is-adopting]="adoptingVideoId() === item.video_id">
               <button
                 type="button"
                 class="r-play"
                 (click)="playExternal(item, $event)"
                 [disabled]="adoptingVideoId() === item.video_id"
-                aria-label="Reproducir desde YouTube"
+                aria-label="Reproducir"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               </button>
-              <div class="r-cover-link r-thumb" [style.background-image]="item.thumbnail ? 'url(' + item.thumbnail + ')' : null">
-                @if (!item.thumbnail) { {{ item.title.charAt(0) }} }
+              <div class="vx-music-cover vx-music-cover--placeholder" aria-hidden="true">
+                {{ item.title.charAt(0) }}
               </div>
-              <div class="r-body">
-                <span class="r-track">{{ item.title }}</span>
-                <span class="r-artist">{{ item.channel_title || 'YouTube' }}</span>
-                <span class="r-meta">
-                  <span class="origin-badge">YouTube</span>
-                  <span class="mono">{{ formatDuration(item.duration_sec) }}</span>
-                </span>
+              <div class="vx-music-meta">
+                <span class="vx-music-title">{{ item.title }}</span>
+                <span class="vx-music-sub">{{ item.channel_title || 'YouTube' }} · {{ formatDuration(item.duration_sec) }}</span>
               </div>
               <div class="external-actions">
                 <button type="button" class="ext-btn" (click)="playExternal(item, $event)" [disabled]="!!adoptingVideoId()">
                   Reproducir
                 </button>
                 <button type="button" class="ext-btn ext-btn--secondary" (click)="addExternal(item, $event)" [disabled]="!!adoptingVideoId()">
-                  Añadir a VOXMETRIKS
+                  Añadir
                 </button>
               </div>
             </div>

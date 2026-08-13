@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,12 +8,16 @@ import {
   ComplexReportsApiService,
 } from '../services/complex-reports-api.service';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
-import { ChartWidgetComponent, ChartSeries, ChartWidgetType } from '../../../shared/components/chart-widget/chart-widget.component';
+import {
+  ChartWidgetComponent,
+  ChartSeries,
+  ChartWidgetType,
+} from '../../../shared/components/chart-widget/chart-widget.component';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 import { I18nService } from '../../../core/services/i18n.service';
+import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import {
   classificationLabelEs,
-  countStatLabel,
   formatAnalyzedPeriod,
   formatCellDisplay,
   formatSeriesLabel,
@@ -22,160 +26,276 @@ import {
   inclusiveEndIso,
   isTechnicalColumnKey,
 } from '../complex-reports-presentation';
+import {
+  ReportKpi,
+  ReportVisualizationId,
+  artistDistributionUseful,
+  buildLeaderboardRows,
+  buildReportInsight,
+  buildReportKpis,
+  chartPresetForVisualization,
+  collapseOtros,
+  cumulativeValues,
+  genreCompositionUseful,
+  genreDonutUseful,
+  humanizeStatusLabel,
+  LeaderboardRow,
+  topNSeries,
+  useReleaseStatusComposition,
+  useTemporalSnapshot,
+  visualizationIdForReport,
+  visualizationTestId,
+} from '../complex-reports-visualization';
 
 @Component({
   selector: 'app-complex-reports-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ...ENTERPRISE_UI_IMPORTS, ChartWidgetComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ...ENTERPRISE_UI_IMPORTS,
+    ChartWidgetComponent,
+  ],
+  styleUrls: ['../../../shared/styles/reports-surface.css'],
   template: `
-    <div class="vx-enterprise complex-reports-page">
-      <app-enterprise-page-header
-        title="Reportes"
-        subtitle="Indicadores tácticos por módulo. Datos preparados en el servidor; fórmulas sin cambios."
-      />
+    <div class="vx-enterprise vx-report-page complex-reports-page">
+      @if (!selectedId) {
+        <header class="vx-report-page-header">
+          <h1>Informes complejos</h1>
+          <p>Indicadores tácticos con periodo y visualización. Elige un informe para empezar.</p>
+        </header>
 
-      @if (!selectedId && recommended.length) {
-        <app-enterprise-section-card title="Recomendados para empezar">
-          <div class="rec-row">
+        @if (recommended.length) {
+          <p class="vx-report-group-label">Recomendados</p>
+          <div class="vx-report-rec-row">
             @for (r of recommended; track r.id) {
-              <button type="button" class="rec-card" (click)="pickRecommended(r.id)">
+              <button type="button" class="vx-report-rec-card" (click)="pickRecommended(r.id)">
                 <strong>{{ r.title }}</strong>
                 <span>{{ r.business_module_label || r.business_module }} · {{ r.area }}</span>
               </button>
             }
           </div>
-        </app-enterprise-section-card>
-      }
+        }
 
-      <app-enterprise-section-card title="Selector">
-        <div class="form-grid">
-          <app-enterprise-form-field label="Módulo">
+        <div class="vx-report-selector">
+          <label class="vx-report-field">
+            <span>Módulo</span>
             <select class="select" [(ngModel)]="selectedModule" (ngModelChange)="onModuleChange()">
               <option value="">Todos los módulos</option>
               @for (m of modules; track m.id) {
                 <option [value]="m.id">{{ m.label }}</option>
               }
             </select>
-          </app-enterprise-form-field>
-          <app-enterprise-form-field label="Área">
-            <select class="select" [(ngModel)]="selectedArea" (ngModelChange)="onAreaChange()">
-              <option value="">Todas las áreas</option>
-              @for (a of areas; track a) {
-                <option [value]="a">{{ a }}</option>
-              }
-            </select>
-          </app-enterprise-form-field>
-          <app-enterprise-form-field label="Informe">
+          </label>
+          <label class="vx-report-field">
+            <span>Informe</span>
             <select class="select" [(ngModel)]="selectedId" (ngModelChange)="onReportChange()">
               <option value="">Seleccione un informe</option>
               @for (r of filtered; track r.id) {
                 <option [value]="r.id">{{ r.title }}{{ r.available ? '' : ' (no disponible)' }}</option>
               }
             </select>
-          </app-enterprise-form-field>
+          </label>
+        </div>
+      } @else {
+        <app-enterprise-page-header
+          [reportMode]="true"
+          backPath="/reports"
+          backLabel="Reportes"
+          [title]="reportTitle"
+          [subtitle]="reportLede"
+          badge="Complejo"
+        />
+
+        <div class="vx-report-toolbar sbd-toolbar" data-testid="enterprise-filter-bar">
+          <div class="vx-report-period sbd-period">
+            <label class="vx-report-field sbd-field">
+              <span>Desde</span>
+              <input class="input vx-report-input sbd-input" type="date" [(ngModel)]="dateFrom" data-testid="complex-date-from" />
+            </label>
+            <label class="vx-report-field sbd-field">
+              <span>Hasta</span>
+              <input class="input vx-report-input sbd-input" type="date" [(ngModel)]="dateTo" data-testid="complex-date-to" />
+            </label>
+            <button
+              type="button"
+              class="btn btn--primary vx-report-run sbd-run"
+              (click)="run()"
+              [disabled]="loading || !selected?.available"
+              data-testid="sbd-run"
+            >
+              Actualizar
+            </button>
+            <button
+              type="button"
+              class="vx-report-more sbd-more"
+              (click)="showMoreFilters = !showMoreFilters"
+              [attr.aria-expanded]="showMoreFilters"
+              data-testid="sbd-more-filters"
+            >
+              {{ showMoreFilters ? 'Ocultar filtros' : 'Más filtros' }}
+            </button>
+          </div>
         </div>
 
-        @if (selected) {
-          <div class="plain-summary">
-            <p><strong>Qué muestra:</strong> {{ plainWhat }}</p>
-            <p><strong>Para qué sirve:</strong> {{ plainWhy }}</p>
-            <p><strong>Cómo se calcula:</strong> {{ plainHow }}</p>
-          </div>
-          <details class="tech-details">
-            <summary>Ver detalles del informe</summary>
-            <div class="meta">
-              <p><strong>Módulo:</strong> {{ selected.business_module_label || selected.area }}</p>
-              <p><strong>Categoría:</strong> {{ selected.category || '—' }}</p>
-              <p><strong>Pregunta:</strong> {{ selected.question }}</p>
-              <p><strong>Decisión:</strong> {{ selected.decision || selected.question }}</p>
-              <p><strong>Explicación:</strong> {{ selected.description }}</p>
-              <p><strong>Cálculo:</strong> {{ selected.calculation }}</p>
-              @if (selected.data_classification) {
-                <p><strong>Clasificación:</strong> {{ classificationLabel(selected.data_classification) }}</p>
-              }
-              @if (selected.monetary_classification === 'simulated') {
-                <p class="muted" role="status">Valores monetarios simulados. No son cobros reales.</p>
-              }
-              @if (!selected.available) {
-                <p class="muted"><strong>No disponible:</strong> {{ selected.unavailable_reason }}</p>
-              }
+        @if (showMoreFilters) {
+          <div class="vx-report-advanced sbd-advanced" data-testid="sbd-advanced-filters">
+            <div class="vx-report-selector">
+              <label class="vx-report-field">
+                <span>Módulo</span>
+                <select class="select" [(ngModel)]="selectedModule" (ngModelChange)="onModuleChange()">
+                  <option value="">Todos los módulos</option>
+                  @for (m of modules; track m.id) {
+                    <option [value]="m.id">{{ m.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="vx-report-field">
+                <span>Área</span>
+                <select class="select" [(ngModel)]="selectedArea" (ngModelChange)="onAreaChange()">
+                  <option value="">Todas las áreas</option>
+                  @for (a of areas; track a) {
+                    <option [value]="a">{{ a }}</option>
+                  }
+                </select>
+              </label>
+              <label class="vx-report-field">
+                <span>Informe</span>
+                <select class="select" [(ngModel)]="selectedId" (ngModelChange)="onReportChange()">
+                  <option value="">Seleccione un informe</option>
+                  @for (r of filtered; track r.id) {
+                    <option [value]="r.id">{{ r.title }}{{ r.available ? '' : ' (no disponible)' }}</option>
+                  }
+                </select>
+              </label>
             </div>
-          </details>
+            <div class="vx-report-advanced__actions sbd-advanced__actions">
+              <button type="button" class="btn btn--secondary" (click)="clearDates()">Limpiar fechas</button>
+            </div>
+          </div>
         }
-      </app-enterprise-section-card>
 
-      @if (selected?.available) {
-        <app-enterprise-section-card title="Periodo">
-          <div class="form-grid">
-            <app-enterprise-form-field label="Fecha inicial">
-              <input class="input" type="date" [(ngModel)]="dateFrom" data-testid="complex-date-from" />
-            </app-enterprise-form-field>
-            <app-enterprise-form-field label="Fecha final">
-              <input class="input" type="date" [(ngModel)]="dateTo" data-testid="complex-date-to" />
-            </app-enterprise-form-field>
-          </div>
-          @if (periodHint) {
-            <p class="period-hint" data-testid="complex-period-hint">{{ periodHint }}</p>
-          }
-          <div class="actions">
-            <button type="button" class="btn btn--primary" (click)="run()" [disabled]="loading">
-              Ejecutar consulta
-            </button>
-            <button type="button" class="btn btn--secondary" (click)="clearDates()">Limpiar fechas</button>
-          </div>
-        </app-enterprise-section-card>
-      }
+        @if (false) {
+          <p class="vx-report-period-hint sbd-period-hint" data-testid="complex-period-hint">{{ periodHint }}</p>
+        }
 
-      @if (selected) {
-        @if (loading) {
-          <app-enterprise-loading-skeleton [rows]="6" />
+        @if (isCampaignRoi) {
+          <section class="vx-report-unavailable" [attr.data-testid]="vizTestId" aria-label="No disponible">
+            <h2>Retorno de inversión por campaña</h2>
+            <p class="vx-report-unavailable__status">No disponible actualmente</p>
+            <p>
+              Los datos disponibles no permiten calcular este indicador de forma consistente.
+            </p>
+            <details class="vx-report-method sbd-method">
+              <summary>Datos necesarios</summary>
+              <div class="vx-report-method__body">
+                <p>{{ selected?.calculation || 'Se requieren ingresos atribuibles y coste de campaña por periodo, con trazabilidad homogénea.' }}</p>
+                <p class="vx-report-method__id"><strong>ID:</strong> campaign-roi</p>
+              </div>
+            </details>
+          </section>
+        } @else if (!selected?.available) {
+          <app-enterprise-empty-state [title]="selected?.unavailable_reason || 'Informe no disponible todavía.'" />
+        } @else if (loading) {
+          <app-enterprise-loading-skeleton [rows]="5" />
         } @else if (error) {
           <app-enterprise-error-state [message]="error" (retry)="run()" />
         } @else if (data) {
           @if (!data.available) {
             <app-enterprise-empty-state [title]="data.unavailable_reason || 'Informe no disponible todavía.'" />
           } @else if (!data.series.length && !data.rows.length) {
-            <app-enterprise-empty-state title="No existen datos para el periodo seleccionado." />
+            <app-enterprise-empty-state title="Sin datos para los filtros actuales." />
           } @else {
-            <app-enterprise-section-card title="Resumen">
-              <div class="kpi-grid">
-                <app-enterprise-stat-card label="Total" [value]="fmt(data.summary['total'])" />
-                <app-enterprise-stat-card label="Promedio" [value]="fmt(data.summary['average'])" />
-                <app-enterprise-stat-card label="Máximo" [value]="fmt(data.summary['max'])" />
-                <app-enterprise-stat-card [label]="pointsLabel" [value]="fmt(data.summary['count'])" />
-              </div>
-              <p class="muted" data-testid="complex-period-line">{{ periodLine }}</p>
-              <p class="muted" data-testid="complex-updated-line">Última actualización: {{ updatedLine }}</p>
-              @if (data.includes_synthetic_events || data.data_classification === 'synthetic' || data.data_classification === 'mixed') {
-                <p class="muted" role="status">
-                  {{ data.classification_note || 'Este resultado incluye eventos sintéticos utilizados para pruebas analíticas.' }}
-                </p>
+            <section class="vx-report-kpis sbd-kpis" [class.vx-report-kpis--2x2]="kpis.length === 4" aria-label="Indicadores">
+              @for (k of kpis; track k.key) {
+                <div class="sbd-kpi">
+                  <p class="vx-report-kpi__value sbd-kpi__value" [class.is-accent]="k.accent">{{ formatKpi(k) }}</p>
+                  <p class="vx-report-kpi__label sbd-kpi__label">{{ k.label }}</p>
+                </div>
               }
-              @if (data.data_classification) {
-                <p class="muted">{{ classificationLabel(data.data_classification) }}</p>
-              }
-              @if (data.monetary_classification === 'simulated') {
-                <p class="muted" role="status">
-                  Valores monetarios simulados / de prueba académica. No representan cobros reales.
-                </p>
-              }
-            </app-enterprise-section-card>
+            </section>
 
-            @if (data.series.length) {
-              <app-enterprise-section-card title="Visualización">
+            <p class="vx-report-meta sbd-meta" data-testid="complex-updated-line">
+              <span data-testid="complex-period-line">{{ periodLine }}</span>
+              <span aria-hidden="true">·</span>
+              <span>Actualizado {{ updatedLine }}</span>
+            </p>
+
+            @if (showSnapshot) {
+              <section class="vx-report-snapshot" [attr.data-testid]="vizTestId" aria-label="Instantánea del periodo">
+                @for (card of snapshotCards; track card.key) {
+                  <div class="vx-report-snapshot__card" [class.is-accent]="card.accent">
+                    <p class="vx-report-snapshot__value">{{ card.value }}</p>
+                    <p class="vx-report-snapshot__label">{{ card.label }}</p>
+                    @if (card.hint) {
+                      <p class="vx-report-snapshot__hint">{{ card.hint }}</p>
+                    }
+                    @if (card.progress != null) {
+                      <div class="vx-report-snapshot__bar" aria-hidden="true">
+                        <i [style.width.%]="card.progress"></i>
+                      </div>
+                    }
+                  </div>
+                }
+              </section>
+            } @else if (showLeaderboard) {
+              <section class="vx-report-leaderboard" [attr.data-testid]="vizTestId" aria-label="Leaderboard Top 10">
+                @for (row of leaderboard; track row.rank) {
+                  <div
+                    class="vx-lb-row"
+                    [class.vx-lb-row--1]="row.rank === 1"
+                    [class.vx-lb-row--top]="row.rank === 2 || row.rank === 3"
+                    [class.vx-lb-row--rest]="row.rank >= 4"
+                  >
+                    <span class="vx-lb-rank">{{ row.rank }}</span>
+                    <div class="vx-lb-cover" [attr.data-initials]="coverInitials(row)" [style.background]="coverGradient(row)">
+                      @if (coverFor(row); as img) {
+                        <img [src]="img" [alt]="''" (error)="onCoverError(row.trackId)" />
+                      } @else {
+                        <span class="vx-lb-cover__mark">VX</span>
+                      }
+                    </div>
+                    <div class="vx-lb-meta">
+                      <span class="vx-lb-song">{{ row.title }}</span>
+                      <span class="vx-lb-artist">{{ row.artist }}</span>
+                    </div>
+                    <div class="vx-lb-bar" aria-hidden="true">
+                      <i [style.width.%]="row.barPct"></i>
+                    </div>
+                    <span class="vx-lb-plays">{{ fmtCompact(row.plays) }}</span>
+                  </div>
+                }
+              </section>
+            } @else if (chartSeries.length && chartWidgetType) {
+              <section class="vx-report-chart sbd-chart" [attr.data-testid]="vizTestId" aria-label="Gráfico">
                 <app-chart-widget
                   [type]="chartWidgetType"
                   [labels]="chartLabels"
                   [series]="chartSeries"
-                  [height]="320"
+                  [height]="chartHeight"
                   [title]="null"
+                  [flat]="true"
+                  [dualAxis]="useDualAxis"
+                  [highlightPeak]="highlightPeak"
+                  [percentAxis]="usePercentAxis"
                 />
-              </app-enterprise-section-card>
+              </section>
             }
 
-            @if (data.rows.length && visibleColumns.length) {
-              <app-enterprise-section-card [title]="'Detalle (' + data.rows.length + ')'">
-                <div class="table-wrap">
+            @if (insight) {
+              <aside class="vx-report-insight" data-testid="report-insight">
+                <span class="vx-report-insight__bar" aria-hidden="true"></span>
+                <p>{{ insight }}</p>
+              </aside>
+            }
+
+            @if (data.rows.length && visibleColumns.length && !hideDetailTable) {
+              <section class="vx-report-detail sbd-detail" aria-label="Detalle">
+                <h2 class="vx-report-section-title sbd-section-title">
+                  Detalle
+                  <span class="vx-report-section__meta">{{ tableVisibleRows.length }} / {{ data.rows.length }}</span>
+                </h2>
+                <div class="vx-report-table sbd-table">
                   <table>
                     <thead>
                       <tr>
@@ -185,7 +305,7 @@ import {
                       </tr>
                     </thead>
                     <tbody>
-                      @for (row of data.rows; track $index) {
+                      @for (row of tableVisibleRows; track $index) {
                         <tr>
                           @for (c of visibleColumns; track c.key) {
                             <td>{{ displayCell(row[c.key], c.key) }}</td>
@@ -195,138 +315,56 @@ import {
                     </tbody>
                   </table>
                 </div>
-              </app-enterprise-section-card>
+                @if (tableVisibleRows.length < data.rows.length) {
+                  <div class="vx-report-actions">
+                    <button
+                      type="button"
+                      class="btn btn--secondary"
+                      data-testid="complex-table-more"
+                      (click)="showMoreTableRows()"
+                    >
+                      Ver más
+                    </button>
+                  </div>
+                }
+              </section>
             }
+
+            <details class="vx-report-method sbd-method" data-testid="sbd-methodology">
+              <summary>Cómo se calcula</summary>
+              <div class="vx-report-method__body sbd-method__body">
+                <p><strong>Qué muestra:</strong> {{ plainWhat }}</p>
+                <p><strong>Para qué sirve:</strong> {{ plainWhy }}</p>
+                <p><strong>Cómo se calcula:</strong> {{ plainHow }}</p>
+                @if (selected?.data_classification || data.data_classification) {
+                  <p>
+                    <strong>Origen de los datos:</strong>
+                    {{ classificationLabel(selected?.data_classification || data.data_classification) }}
+                  </p>
+                }
+                @if (data.includes_synthetic_events || data.data_classification === 'synthetic' || data.data_classification === 'mixed') {
+                  <p class="vx-report-muted" role="status">
+                    {{ data.classification_note || 'Este resultado incluye eventos sintéticos utilizados para pruebas analíticas.' }}
+                  </p>
+                }
+                @if (data.monetary_classification === 'simulated' || selected?.monetary_classification === 'simulated') {
+                  <p class="vx-report-muted" role="status">Valores monetarios simulados. No son cobros reales.</p>
+                }
+                <p class="vx-report-method__id"><strong>ID:</strong> {{ selected?.id || data.report_id }}</p>
+              </div>
+            </details>
           }
         }
       }
     </div>
   `,
-  styles: [
-    `
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-      }
-      .plain-summary {
-        margin-top: 0.85rem;
-        padding: 0.75rem 0.85rem;
-        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-        border-radius: 0.45rem;
-      }
-      .plain-summary p {
-        margin: 0.35rem 0;
-        font-size: 0.95rem;
-        line-height: 1.4;
-      }
-      .tech-details {
-        margin-top: 0.65rem;
-      }
-      .tech-details summary {
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.9rem;
-      }
-      .meta p,
-      .muted {
-        margin: 0.35rem 0;
-        font-size: 0.92rem;
-      }
-      .period-hint {
-        margin: 0.65rem 0 0;
-        font-size: 0.9rem;
-        font-weight: 600;
-      }
-      .actions {
-        display: flex;
-        gap: 0.75rem;
-        margin-top: 0.75rem;
-      }
-      .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 0.75rem;
-      }
-      .bars {
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-      }
-      .bar-row {
-        display: grid;
-        grid-template-columns: minmax(90px, 180px) 1fr 70px;
-        gap: 0.5rem;
-        align-items: center;
-      }
-      .bar-label {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 0.85rem;
-      }
-      .bar-track {
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 999px;
-        height: 10px;
-        overflow: hidden;
-      }
-      .bar-fill {
-        height: 100%;
-        background: #3dba7a;
-        border-radius: 999px;
-        min-width: 2px;
-      }
-      .bar-value {
-        text-align: right;
-        font-size: 0.85rem;
-      }
-      .rec-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 0.65rem;
-      }
-      .rec-card {
-        text-align: left;
-        border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-        background: var(--color-surface, rgba(24, 24, 24, 0.9));
-        color: inherit;
-        border-radius: 10px;
-        padding: 0.85rem 1rem;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-      }
-      .rec-card:hover {
-        border-color: rgba(30, 216, 150, 0.35);
-      }
-      .rec-card span {
-        font-size: 0.78rem;
-        opacity: 0.7;
-      }
-      .table-wrap {
-        overflow: auto;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
-      }
-      th,
-      td {
-        padding: 0.45rem 0.6rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        text-align: left;
-      }
-    `,
-  ],
 })
 export class ComplexReportsPage implements OnInit {
   private readonly api = inject(ComplexReportsApiService);
   private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly covers = inject(TrackCoverService);
 
   catalog: ComplexCatalogItem[] = [];
   areas: string[] = [];
@@ -340,7 +378,51 @@ export class ComplexReportsPage implements OnInit {
   loading = false;
   error = '';
   data: ComplexReportData | null = null;
-  private maxSeries = 1;
+  showMoreFilters = false;
+  tableShowCount = 12;
+  private readonly coverMap = signal<Record<number, string | null>>({});
+
+  private get tablePageSize(): number {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches) {
+      return 8;
+    }
+    return 12;
+  }
+
+  get tableVisibleRows(): Record<string, unknown>[] {
+    const rows = this.data?.rows || [];
+    return rows.slice(0, this.tableShowCount);
+  }
+
+  showMoreTableRows(): void {
+    this.tableShowCount += this.tablePageSize;
+  }
+
+  private resetTablePaging(): void {
+    this.tableShowCount = this.tablePageSize;
+  }
+
+  get isCampaignRoi(): boolean {
+    return (this.selectedId || this.data?.report_id) === 'campaign-roi';
+  }
+
+  get reportTitle(): string {
+    return this.selected?.title || 'Informe';
+  }
+
+  get reportLede(): string {
+    if (this.selectedId === 'top-tracks-period') {
+      return 'Las canciones con mayor número de reproducciones durante el periodo seleccionado.';
+    }
+    if (this.selectedId === 'streams-by-day') {
+      return 'Serie temporal de reproducciones del catálogo en el periodo seleccionado.';
+    }
+    return (
+      this.selected?.description ||
+      this.selected?.decision ||
+      'Consulta el periodo y actualiza para ver el resultado.'
+    );
+  }
 
   get filtered(): ComplexCatalogItem[] {
     let items = this.catalog;
@@ -374,10 +456,6 @@ export class ComplexReportsPage implements OnInit {
     return this.selected?.calculation || '—';
   }
 
-  get pointsLabel(): string {
-    return countStatLabel(this.selectedId || this.data?.report_id || '');
-  }
-
   get periodHint(): string {
     if (!this.data?.period_start) return '';
     return formatAnalyzedPeriod(this.data.period_start, this.data.period_end_exclusive);
@@ -393,21 +471,201 @@ export class ComplexReportsPage implements OnInit {
 
   get visibleColumns(): { key: string; label: string }[] {
     const cols = this.data?.columns || [];
-    return cols.filter((c) => !isTechnicalColumnKey(c.key));
+    return cols.filter((c) => !isTechnicalColumnKey(c.key) && c.key !== 'track_id');
   }
 
-  get chartWidgetType(): ChartWidgetType {
-    const t = (this.data?.chart_type || 'bar').toLowerCase();
-    if (t === 'line') return 'line';
-    if (t === 'hbar') return 'hbar';
-    if (t === 'table') return 'bar';
-    if (this.selectedId === 'releases-status-month') return 'stacked-bar';
-    return 'bar';
+  get activeViz(): ReportVisualizationId {
+    const id = this.selectedId || this.data?.report_id || '';
+    let viz = visualizationIdForReport(id);
+    if (viz === 'artist-treemap') {
+      const values = (this.data?.series || []).map((s) => Number(s.value) || 0);
+      if (!artistDistributionUseful(values)) viz = 'artist-ranking';
+    }
+    return viz;
+  }
+
+  get vizTestId(): string {
+    const id = this.selectedId || this.data?.report_id || '';
+    if (id === 'top-genres-period') return 'visualization-genre-composition';
+    if (this.showSnapshot) {
+      if (id === 'income-by-month') return 'visualization-monthly-combo';
+      if (id === 'opportunity-win-rate-month') return 'visualization-percent-trend';
+      if (id === 'subscription-growth-month') return 'visualization-subscription-columns';
+      if (id === 'releases-status-month') return 'visualization-stacked-status';
+    }
+    return visualizationTestId(this.activeViz);
+  }
+
+  get showSnapshot(): boolean {
+    const id = this.selectedId || this.data?.report_id || '';
+    return useTemporalSnapshot(id, this.data?.series || []);
+  }
+
+  get showReleaseComposition(): boolean {
+    const id = this.selectedId || this.data?.report_id || '';
+    return useReleaseStatusComposition(id, this.data?.series || []);
+  }
+
+  get snapshotCards(): { key: string; value: string; label: string; hint?: string; progress?: number; accent?: boolean }[] {
+    const id = this.selectedId || this.data?.report_id || '';
+    const series = this.data?.series || [];
+    const rows = this.data?.rows || [];
+    const summary = this.data?.summary || {};
+    if (id === 'opportunity-win-rate-month') {
+      const row = rows[0] || {};
+      const pct = Number(row['porcentaje'] ?? summary['average'] ?? series[0]?.value ?? 0) || 0;
+      const won = Number(row['ganadas'] ?? 0) || 0;
+      const closed = Number(row['cerradas'] ?? 0) || 0;
+      return [
+        {
+          key: 'rate',
+          value: `${pct.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`,
+          label: 'Tasa del periodo',
+          accent: true,
+          progress: Math.max(0, Math.min(100, pct)),
+        },
+        { key: 'won', value: String(won), label: 'Ganadas' },
+        { key: 'closed', value: String(closed), label: 'Cerradas' },
+      ];
+    }
+    if (id === 'income-by-month') {
+      const v = Number(summary['total'] ?? series[0]?.value ?? 0) || 0;
+      return [
+        {
+          key: 'income',
+          value: this.fmtCompact(v),
+          label: 'Ingresos del mes',
+          hint: this.displaySeriesLabel(String(series[0]?.label || '')),
+          accent: true,
+        },
+      ];
+    }
+    if (id === 'subscription-growth-month') {
+      const v = Number(summary['total'] ?? series[0]?.value ?? 0) || 0;
+      return [
+        {
+          key: 'subs',
+          value: String(Math.round(v)),
+          label: 'Nuevas suscripciones',
+          hint: this.displaySeriesLabel(String(series[0]?.label || '')),
+          accent: true,
+        },
+      ];
+    }
+    if (id === 'releases-status-month') {
+      const total = rows.reduce((a, r) => a + (Number(r['cantidad']) || 0), 0) || 1;
+      return rows.slice(0, 6).map((r, i) => {
+        const n = Number(r['cantidad']) || 0;
+        return {
+          key: `st-${i}`,
+          value: String(n),
+          label: humanizeStatusLabel(String(r['estado'] || '')),
+          progress: Math.round((n / total) * 100),
+        };
+      });
+    }
+    return [];
+  }
+
+  get showLeaderboard(): boolean {
+    return this.activeViz === 'leaderboard' && this.leaderboard.length > 0;
+  }
+
+  get hideDetailTable(): boolean {
+    return false;
+  }
+
+  get leaderboard(): LeaderboardRow[] {
+    if ((this.selectedId || this.data?.report_id) !== 'top-tracks-period') return [];
+    return buildLeaderboardRows(this.data?.rows || [], this.data?.series || [], 10);
+  }
+
+  get kpis(): ReportKpi[] {
+    if (!this.data) return [];
+    return buildReportKpis(this.selectedId || this.data.report_id, this.data.summary || {}, this.data.series || []);
+  }
+
+  get insight(): string | null {
+    if (!this.data) return null;
+    return buildReportInsight(
+      this.selectedId || this.data.report_id,
+      this.data.series || [],
+      this.data.summary || {},
+    );
+  }
+
+  get chartWidgetType(): ChartWidgetType | null {
+    if (this.showSnapshot) return null;
+    const id = this.selectedId || this.data?.report_id || '';
+    if (this.showReleaseComposition) return 'stacked-bar';
+    if (id === 'top-genres-period') {
+      const values = (this.data?.series || []).map((s) => Number(s.value) || 0);
+      // Prefer composition / lollipop; donut only when few varied slices.
+      if (genreDonutUseful(values) && !genreCompositionUseful(values)) return 'pie';
+      return 'hbar';
+    }
+    const preset = chartPresetForVisualization(this.activeViz);
+    return preset;
+  }
+
+  get highlightPeak(): boolean {
+    return this.activeViz === 'temporal-line';
+  }
+
+  get usePercentAxis(): boolean {
+    return this.activeViz === 'percent-trend';
+  }
+
+  get useDualAxis(): boolean {
+    return this.activeViz === 'monthly-combo';
+  }
+
+  get chartHeight(): number {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches) {
+      if (this.activeViz === 'genre-composition' || this.selectedId === 'top-genres-period') return 320;
+      return this.activeViz === 'temporal-line' ? 260 : 280;
+    }
+    return 400;
+  }
+
+  private get chartSourceSeries(): { label: string; value: number }[] {
+    const series = this.data?.series || [];
+    const id = this.selectedId || this.data?.report_id || '';
+    const mapped = series.map((p) => ({
+      label: String(p.label ?? ''),
+      value: Number(p.value) || 0,
+    }));
+    if (id === 'top-tracks-period' || id === 'top-artists-period') {
+      return mapped.slice(0, 10);
+    }
+    if (id === 'top-genres-period') {
+      return mapped; // collapseOtros limits slices in chartSeries
+    }
+    return mapped;
   }
 
   get chartLabels(): string[] {
-    const series = this.data?.series || [];
+    const series = this.chartSourceSeries;
+    const id = this.selectedId || this.data?.report_id || '';
+    if (id === 'top-genres-period' && this.chartWidgetType === 'pie') {
+      return [];
+    }
+    if (id === 'top-genres-period') {
+      const values = series.map((s) => s.value);
+      const composition = collapseOtros(series, 7);
+      const otros = composition.find((p) => p.name === 'Otros');
+      const compositionTotal = composition.reduce((a, p) => a + p.value, 0) || 1;
+      const otrosShare = otros ? otros.value / compositionTotal : 0;
+      const useTopN = series.length > 8 && (otrosShare > 0.4 || !artistDistributionUseful(values));
+      return (useTopN ? topNSeries(series, 8) : composition).map((p) => p.name);
+    }
+    if (this.activeViz === 'artist-treemap') {
+      return [];
+    }
     if (this.selectedId === 'releases-status-month') {
+      if (this.showReleaseComposition) {
+        return ['Distribución'];
+      }
       const months: string[] = [];
       for (const p of series) {
         const raw = String(p.label || '');
@@ -420,11 +678,58 @@ export class ComplexReportsPage implements OnInit {
   }
 
   get chartSeries(): ChartSeries[] {
-    const series = this.data?.series || [];
+    const series = this.chartSourceSeries;
+    const viz = this.activeViz;
+    const id = this.selectedId || this.data?.report_id || '';
+
+    if (id === 'top-genres-period' && this.chartWidgetType === 'pie') {
+      return [{ name: 'Géneros', data: collapseOtros(series, 7) }];
+    }
+    if (id === 'top-genres-period') {
+      const values = series.map((s) => s.value);
+      const composition = collapseOtros(series, 7);
+      const otros = composition.find((p) => p.name === 'Otros');
+      const compositionTotal = composition.reduce((a, p) => a + p.value, 0) || 1;
+      const otrosShare = otros ? otros.value / compositionTotal : 0;
+      // Flat long-tail or Otros >40% → Top 8 ranking (plays), not composition % with giant Otros.
+      const useTopN = series.length > 8 && (otrosShare > 0.4 || !artistDistributionUseful(values));
+      const collapsed = useTopN ? topNSeries(series, 8) : composition;
+      return [
+        {
+          name: useTopN ? 'Reproducciones' : 'Participación',
+          data: useTopN
+            ? collapsed.map((p) => p.value)
+            : collapsed.map((p) => Math.round((p.value / compositionTotal) * 1000) / 10),
+          color: '#1ED896',
+        },
+      ];
+    }
+    if (viz === 'artist-treemap') {
+      return [
+        {
+          name: 'Artistas',
+          data: series.map((s) => ({ name: s.label, value: s.value })),
+        },
+      ];
+    }
+    if (viz === 'monthly-combo') {
+      const values = series.map((p) => p.value);
+      return [
+        { name: 'Ingreso mensual', data: values, color: '#1ed896', type: 'bar', yAxisIndex: 0 },
+        {
+          name: 'Acumulado',
+          data: cumulativeValues(values),
+          color: '#38bdf8',
+          type: 'line',
+          yAxisIndex: 1,
+        },
+      ];
+    }
     if (this.selectedId === 'releases-status-month') {
       const months: string[] = [];
       const statuses = new Set<string>();
       const map = new Map<string, number>();
+      const byStatus = new Map<string, number>();
       for (const p of series) {
         const raw = String(p.label || '');
         const parts = raw.split('·').map((s) => s.trim());
@@ -432,17 +737,50 @@ export class ComplexReportsPage implements OnInit {
         const status = parts[1] || 'total';
         if (!months.includes(month)) months.push(month);
         statuses.add(status);
-        map.set(`${month}||${status}`, Number(p.value) || 0);
+        const n = Number(p.value) || 0;
+        map.set(`${month}||${status}`, n);
+        byStatus.set(status, (byStatus.get(status) || 0) + n);
       }
-      return [...statuses].map((status) => ({
-        name: status,
+      if (this.showReleaseComposition) {
+        const total = [...byStatus.values()].reduce((a, v) => a + v, 0) || 1;
+        return [...byStatus.entries()].map(([status, n], i) => ({
+          name: humanizeStatusLabel(status),
+          data: [Math.round((n / total) * 1000) / 10],
+          color: ['#1ED896', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
+            i % 8
+          ],
+        }));
+      }
+      return [...statuses].map((status, i) => ({
+        name: humanizeStatusLabel(status),
         data: months.map((m) => map.get(`${m}||${status}`) ?? 0),
+        color: ['#1ED896', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
+          i % 8
+        ],
       }));
+    }
+    if (viz === 'percent-trend') {
+      return [
+        {
+          name: 'Win rate',
+          data: series.map((p) => {
+            const v = Number(p.value) || 0;
+            return v <= 1 ? v * 100 : v;
+          }),
+          color: '#1ed896',
+        },
+      ];
     }
     return [
       {
-        name: this.pointsLabel || 'Valor',
+        name:
+          this.selectedId === 'streams-by-day'
+            ? 'Reproducciones'
+            : this.selectedId === 'subscription-growth-month'
+              ? 'Nuevas suscripciones'
+              : 'Valor',
         data: series.map((p) => Number(p.value) || 0),
+        color: '#1ed896',
       },
     ];
   }
@@ -496,6 +834,8 @@ export class ComplexReportsPage implements OnInit {
     this.selected = this.catalog.find((r) => r.id === this.selectedId) || null;
     this.data = null;
     this.error = '';
+    this.showMoreFilters = false;
+    this.resetTablePaging();
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -526,13 +866,14 @@ export class ComplexReportsPage implements OnInit {
       .data(this.selectedId, {
         from: this.dateFrom || undefined,
         to: this.dateTo || undefined,
-        limit: 25,
+        limit: this.selectedId?.startsWith('top-') ? 50 : 40,
       })
       .subscribe({
         next: (res) => {
           this.data = res;
-          this.maxSeries = Math.max(1, ...res.series.map((s) => Number(s.value || 0)));
           this.syncDateInputsFromResult(res);
+          this.resetTablePaging();
+          this.prefetchCovers();
           this.loading = false;
         },
         error: (err) => {
@@ -542,14 +883,62 @@ export class ComplexReportsPage implements OnInit {
       });
   }
 
-  barWidth(value: number | null | undefined): number {
-    const v = Number(value || 0);
-    return Math.max(0, Math.min(100, (v / this.maxSeries) * 100));
+  private prefetchCovers(): void {
+    for (const row of this.leaderboard) {
+      if (!row.trackId) continue;
+      this.covers.cover$(row.trackId).subscribe((url) => {
+        this.coverMap.update((m) => ({ ...m, [row.trackId!]: url }));
+      });
+    }
   }
 
-  fmt(v: number | null | undefined): string {
+  coverFor(row: LeaderboardRow): string | null {
+    if (!row.trackId) return null;
+    return this.coverMap()[row.trackId] ?? null;
+  }
+
+  onCoverError(trackId: number | null): void {
+    if (!trackId) return;
+    this.coverMap.update((m) => ({ ...m, [trackId]: null }));
+  }
+
+  coverInitials(row: LeaderboardRow): string {
+    const t = (row.title || '?').trim();
+    const a = (row.artist || '').trim();
+    const c0 = t.charAt(0).toUpperCase();
+    const c1 = (a.charAt(0) || t.charAt(1) || '').toUpperCase();
+    return `${c0}${c1}`;
+  }
+
+  coverGradient(row: LeaderboardRow): string {
+    const hues = [160, 210, 270, 40, 190, 200, 300, 195, 220, 140];
+    const h = hues[(row.rank - 1) % hues.length];
+    return `linear-gradient(145deg, hsl(${h} 28% 22%), hsl(${h} 20% 10%))`;
+  }
+
+  formatKpi(k: ReportKpi): string {
+    if (k.value == null || Number.isNaN(Number(k.value))) return '—';
+    if (k.format === 'percent') {
+      const v = Number(k.value);
+      const pct = v <= 1 && v >= 0 ? v * 100 : v;
+      return `${pct.toLocaleString('es-ES', { maximumFractionDigits: 0 })} %`;
+    }
+    return this.fmtCompact(k.value);
+  }
+
+  fmtCompact(v: number | null | undefined): string {
     if (v == null || Number.isNaN(Number(v))) return '—';
-    return Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const n = Number(v);
+    const abs = Math.abs(n);
+    if (abs >= 1_000_000) {
+      const s = (n / 1_000_000).toFixed(1).replace(/\.0$/, '').replace('.', ',');
+      return `${s}M`;
+    }
+    if (abs >= 1_000) {
+      const s = (n / 1_000).toFixed(1).replace(/\.0$/, '').replace('.', ',');
+      return `${s}K`;
+    }
+    return n.toLocaleString('es-ES', { maximumFractionDigits: 0 });
   }
 
   classificationLabel(code?: string | null): string {
@@ -561,6 +950,9 @@ export class ComplexReportsPage implements OnInit {
   }
 
   displayCell(value: unknown, key: string): string {
+    if (key === 'estado' || key === 'status') {
+      return humanizeStatusLabel(value == null ? null : String(value));
+    }
     return formatCellDisplay(value, key);
   }
 
@@ -568,7 +960,6 @@ export class ComplexReportsPage implements OnInit {
     return formatSeriesLabel(label);
   }
 
-  /** Fill date inputs with the period actually used by the backend (inclusive). */
   private syncDateInputsFromResult(res: ComplexReportData): void {
     if (!res.period_start || !res.period_end_exclusive) return;
     this.dateFrom = res.period_start.slice(0, 10);

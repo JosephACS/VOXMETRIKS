@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import duckdb
 
 from app.core.config import get_settings
+from app.core.email_format import is_valid_email_format
 from app.core.time_util import utc_now
 from app.packages.engagement.services.app_storage import ensure_app_tables
 from app.packages.engagement.services.favorite_service import favorite_ids
@@ -205,8 +206,14 @@ def register(
     email = email.strip().lower()
     if len(username) < 3:
         raise ValueError("username must be at least 3 characters")
+    if len(username) > 64:
+        raise ValueError("username must be at most 64 characters")
+    if not is_valid_email_format(email):
+        raise ValueError("invalid email format")
     if len(password) < 4:
         raise ValueError("password must be at least 4 characters")
+    if len(password) > 128:
+        raise ValueError("password must be at most 128 characters")
 
     existing = conn.execute(
         f"SELECT {_USER_COLUMNS} FROM app_user WHERE LOWER(email) = ? OR LOWER(username) = ?",

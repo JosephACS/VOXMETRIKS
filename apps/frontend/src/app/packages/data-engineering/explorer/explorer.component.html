@@ -1,227 +1,284 @@
-<div class="explorer-page">
-  <header class="page-header">
-    <div>
-      <h1>{{ 'explorer.title' | t:lang() }}</h1>
-      <p class="page-subtitle">{{ 'explorer.subtitle' | t:lang() }}</p>
+<div class="ex">
+  <header class="ex__header">
+    <div class="ex__identity">
+      <p class="ex__eyebrow">{{ 'explorer.eyebrow' | t:lang() }}</p>
+      <h1 class="ex__title">{{ 'explorer.title' | t:lang() }}</h1>
+      <p class="ex__subtitle">{{ 'explorer.subtitle' | t:lang() }}</p>
     </div>
-    <div class="source-badges">
-      <app-data-source-badge kind="live" />
-      <app-data-source-badge kind="mixed" />
-    </div>
+    @if (lastLoadLabel(); as last) {
+      <div class="ex__meta-pill">
+        <span class="ex__meta-k">{{ 'explorer.lastUpdate' | t:lang() }}</span>
+        <span class="ex__meta-v">{{ last }}</span>
+      </div>
+    }
   </header>
 
   @if (accessDenied()) {
-    <section class="panel access-denied-panel">
+    <section class="ex-panel ex-panel--state">
       <h2>{{ 'explorer.restricted' | t:lang() }}</h2>
-      <p class="error-msg">{{ errorMessage() }}</p>
-      <p class="empty-msg">{{ 'explorer.restrictedHint' | t:lang() }}</p>
+      <p class="ex-msg ex-msg--err">{{ errorMessage() }}</p>
+      <p class="ex-msg">{{ 'explorer.restrictedHint' | t:lang() }}</p>
     </section>
   } @else if (hasError()) {
-    <section class="panel error-panel">
+    <section class="ex-panel ex-panel--state">
       <h2>{{ 'explorer.errorTitle' | t:lang() }}</h2>
-      <p class="error-msg">{{ errorMessage() }}</p>
-      <button type="button" class="retry-btn" (click)="retry()">{{ 'common.retry' | t:lang() }}</button>
+      <p class="ex-msg ex-msg--err">{{ errorMessage() }}</p>
+      <button type="button" class="ex-btn" (click)="retry()">{{ 'common.retry' | t:lang() }}</button>
     </section>
   } @else {
-  <!-- KPIs -->
-  <section class="kpi-grid">
-    <app-kpi-card [label]="'explorer.kpi.total' | t" [value]="kindCounts().total" iconKey="grid" color="primary" [subtitle]="'explorer.kpi.totalSub' | t" />
-    <app-kpi-card [label]="'explorer.kpi.dimensions' | t" [value]="kindCounts().dimension" iconKey="layers" color="info" subtitle="dim_*" />
-    <app-kpi-card [label]="'explorer.kpi.facts' | t" [value]="kindCounts().fact" iconKey="database" color="warning" subtitle="fact_*" />
-    <app-kpi-card [label]="'explorer.kpi.aggregations' | t" [value]="kindCounts().aggregation" iconKey="chart" color="secondary" subtitle="agg_*" />
-  </section>
-
-  <div class="explorer-layout">
-    <!-- Table selector -->
-    <aside class="table-sidebar panel">
-      <div class="sidebar-header">
-        <h2>{{ 'explorer.tables' | t:lang() }}</h2>
+    <div class="ex-shell" [class.ex-shell--detail]="!showMobileList() && !!activeTable()">
+      <aside class="ex-nav" [class.ex-nav--hidden-mobile]="!showMobileList() && !!activeTable()">
+        <div class="ex-nav__head">
+          <h2>{{ 'explorer.tables' | t:lang() }}</h2>
+          <span class="ex-nav__count">{{ filteredTables().length }}</span>
+        </div>
         <input
           type="search"
-          class="search-input"
-          [placeholder]="'explorer.filter' | t"
+          class="ex-search"
+          [placeholder]="'explorer.filter' | t:lang()"
           [ngModel]="searchFilter()"
           (ngModelChange)="onFilterChange($event)"
+          autocomplete="off"
         />
-      </div>
-      <nav class="table-list">
-        @if (isLoadingTables()) {
-          <div class="skeleton-rows compact">
-            @for (s of [1,2,3,4,5]; track s) {
-              <div class="skeleton-row"></div>
+        <nav class="ex-nav__list" aria-label="Tablas del almacén">
+          @if (isLoadingTables()) {
+            <div class="ex-skel">
+              @for (s of [1, 2, 3, 4, 5, 6]; track s) {
+                <div class="ex-skel__row"></div>
+              }
+            </div>
+          } @else if (!tables().length) {
+            <p class="ex-msg">{{ 'explorer.noTables' | t:lang() }}</p>
+          } @else if (!filteredTables().length) {
+            <p class="ex-msg">{{ 'explorer.noTablesFilter' | t:lang() }}</p>
+          } @else {
+            @for (t of filteredTables(); track t.name) {
+              <button
+                type="button"
+                class="ex-table"
+                [class.is-active]="selectedTable() === t.name"
+                (click)="selectTable(t.name)"
+              >
+                <span class="ex-table__human">{{ humanTableName(t.name) }}</span>
+                <span class="ex-table__tech">{{ t.name }}</span>
+                <span class="ex-table__meta">
+                  <span class="ex-chip" [attr.data-kind]="t.kind">{{ kindLabel(t.kind) }}</span>
+                  <span class="ex-table__rows">{{ fmt(t.row_count) }}</span>
+                </span>
+              </button>
             }
-          </div>
-        } @else if (filteredTables().length) {
-          @for (t of filteredTables(); track t.name) {
-          <button
-            type="button"
-            class="table-item"
-            [class.active]="selectedTable() === t.name"
-            (click)="selectTable(t.name)"
-          >
-            <span class="table-name">{{ t.name }}</span>
-            <span class="kind-badge" [class]="kindClass(t.kind)">{{ kindLabel(t.kind) }}</span>
-            <span class="table-rows">{{ 'explorer.rows' | t: { count: fmt(t.row_count) }:lang() }}</span>
+          }
+        </nav>
+      </aside>
+
+      <main class="ex-main" [class.ex-main--hidden-mobile]="showMobileList()">
+        @if (activeTable(); as tbl) {
+          <button type="button" class="ex-back" (click)="backToTables()">
+            {{ 'explorer.backTables' | t:lang() }}
           </button>
-          }
-        } @else {
-          <p class="empty-msg sidebar-empty">{{ 'explorer.noTablesFilter' | t:lang() }}</p>
-        }
-      </nav>
-    </aside>
 
-    <!-- Main preview -->
-    <main class="preview-main">
-      @if (activeTable(); as tbl) {
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <h2>{{ tbl.name }}</h2>
-            <div class="table-meta">
-              <span class="kind-badge lg" [class]="kindClass(tbl.kind)">{{ kindLabel(tbl.kind) }}</span>
-              <span class="meta-item">{{ 'explorer.records' | t: { count: fmt(tbl.row_count) }:lang() }}</span>
-              <span class="meta-item">{{ 'explorer.layer' | t: { layer: tbl.layer }:lang() }}</span>
+          <section class="ex-panel ex-detail">
+            <div class="ex-detail__top">
+              <div>
+                <h2 class="ex-detail__name">{{ humanTableName(tbl.name) }}</h2>
+                <p class="ex-detail__tech">{{ tbl.name }}</p>
+              </div>
+              <span class="ex-chip ex-chip--lg" [attr.data-kind]="tbl.kind">{{ kindLabel(tbl.kind) }}</span>
             </div>
-          </div>
-        </div>
-
-        <div class="sql-client">
-          <div class="sql-bar">
-            <span class="sql-dot"></span>
-            <span>{{ 'explorer.query' | t:lang() }}</span>
-          </div>
-          <pre class="sql-code">{{ sqlQuery() }}</pre>
-        </div>
-
-        <h3 class="section-label">{{ 'explorer.schema' | t:lang() }}</h3>
-        <div class="schema-grid">
-          @for (col of tbl.columns; track col.name) {
-            <div class="schema-col">
-              <span class="col-name">{{ col.name }}</span>
-              <span class="col-type">{{ col.type }}</span>
+            <div class="ex-detail__stats">
+              <div class="ex-stat">
+                <span class="ex-stat__k">{{ 'explorer.stat.rows' | t:lang() }}</span>
+                <span class="ex-stat__v">{{ fmt(tbl.row_count) }}</span>
+              </div>
+              <div class="ex-stat">
+                <span class="ex-stat__k">{{ 'explorer.stat.columns' | t:lang() }}</span>
+                <span class="ex-stat__v">{{ tbl.columns.length || 0 }}</span>
+              </div>
+              <div class="ex-stat">
+                <span class="ex-stat__k">{{ 'explorer.stat.layer' | t:lang() }}</span>
+                <span class="ex-stat__v">{{ tbl.layer || '—' }}</span>
+              </div>
+              @if (lastLoadLabel(); as upd) {
+                <div class="ex-stat">
+                  <span class="ex-stat__k">{{ 'explorer.lastUpdate' | t:lang() }}</span>
+                  <span class="ex-stat__v">{{ upd }}</span>
+                </div>
+              }
             </div>
-          }
-        </div>
+          </section>
 
-        <!-- Data preview -->
-        <h3 class="section-label">{{ 'explorer.preview' | t:lang() }}</h3>
-        <div class="preview-toolbar">
-          <span class="preview-sample-note">{{ 'explorer.sampleNote' | t:lang() }}</span>
-          <div class="page-size-toggle" role="group" [attr.aria-label]="'explorer.pageSize' | t:lang()">
-            <button type="button" class="page-btn" [class.active]="pageSize() === 50" (click)="setPageSize(50)">50</button>
-            <button type="button" class="page-btn" [class.active]="pageSize() === 100" (click)="setPageSize(100)">100</button>
-          </div>
-        </div>
-        @if (isLoadingPreview()) {
-          <div class="skeleton-rows">
-            @for (s of [1,2,3]; track s) {
-              <div class="skeleton-row"></div>
-            }
-          </div>
-        } @else if (previewError()) {
-          <div class="inline-error">
-            <p class="error-msg">{{ previewError() }}</p>
-            <button type="button" class="retry-btn" (click)="loadPreview(tbl.name, page())">{{ 'explorer.retryPreview' | t:lang() }}</button>
-          </div>
-        } @else if (previewColumns().length) {
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  @for (col of previewColumns(); track col) {
-                    <th>{{ col }}</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of pagedRows(); track $index) {
-                  <tr>
-                    @for (col of previewColumns(); track col) {
-                      <td>{{ cellValue(row, col) }}</td>
-                    }
-                  </tr>
+          <section class="ex-panel">
+            <div class="ex-section-head">
+              <h3>{{ 'explorer.schema' | t:lang() }}</h3>
+              <span class="ex-section-meta">{{ schemaColumns().length }}</span>
+            </div>
+            @if (!schemaColumns().length) {
+              <p class="ex-msg">{{ 'explorer.noColumns' | t:lang() }}</p>
+            } @else {
+              <div class="ex-schema">
+                <div class="ex-schema__head">
+                  <span>{{ 'explorer.col.name' | t:lang() }}</span>
+                  <span>{{ 'explorer.col.type' | t:lang() }}</span>
+                </div>
+                @for (col of schemaColumns(); track col.name) {
+                  <div class="ex-schema__row" [class.is-sensitive]="isSensitiveColumn(col.name)">
+                    <span class="ex-schema__name">
+                      {{ col.name }}
+                      @if (isSensitiveColumn(col.name)) {
+                        <span class="ex-schema__flag">{{ 'explorer.col.sensitive' | t:lang() }}</span>
+                      }
+                    </span>
+                    <span class="ex-schema__type">{{ humanType(col.type) }}</span>
+                  </div>
                 }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p class="empty-msg">{{ 'explorer.selectTable' | t:lang() }}</p>
-        }
-
-        <!-- Pagination -->
-        @if (!isLoadingPreview() && previewColumns().length) {
-          <div class="pagination">
-            <button type="button" class="page-btn" [disabled]="page() <= 1" (click)="goPage(page() - 1)">{{ 'explorer.prev' | t:lang() }}</button>
-            <span class="page-info">{{ 'explorer.page' | t: { page: page(), total: totalPages() }:lang() }}</span>
-            <button type="button" class="page-btn" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">{{ 'explorer.next' | t:lang() }}</button>
-          </div>
-        }
-      </section>
-      } @else if (isLoadingTables()) {
-        <div class="panel">
-          <p class="empty-msg">{{ 'explorer.loadingTables' | t:lang() }}</p>
-          <div class="skeleton-rows">
-            @for (s of [1,2,3]; track s) {
-              <div class="skeleton-row"></div>
+              </div>
             }
-          </div>
-        </div>
-      } @else {
-        <div class="panel"><p class="empty-msg">{{ 'explorer.noTables' | t:lang() }}</p></div>
-      }
-    </main>
-  </div>
+          </section>
 
-  <!-- Load history (real data if available) -->
-  <section class="panel loads-panel">
-    <div class="panel-header">
-      <h2>{{ 'explorer.loadsTitle' | t:lang() }}</h2>
-      <span class="panel-meta">{{ 'explorer.loadsMeta' | t:lang() }}</span>
+          <section class="ex-panel">
+            <div class="ex-section-head">
+              <h3>{{ 'explorer.preview' | t:lang() }}</h3>
+              <div class="ex-preview-tools">
+                <span class="ex-section-meta">{{ 'explorer.sampleNote' | t:lang() }}</span>
+                <div class="ex-pagesize" role="group" [attr.aria-label]="'explorer.pageSize' | t:lang()">
+                  <button type="button" class="ex-mini" [class.is-active]="pageSize() === 50" (click)="setPageSize(50)">50</button>
+                  <button type="button" class="ex-mini" [class.is-active]="pageSize() === 100" (click)="setPageSize(100)">100</button>
+                </div>
+              </div>
+            </div>
+
+            @if (isLoadingPreview()) {
+              <div class="ex-skel">
+                @for (s of [1, 2, 3, 4]; track s) {
+                  <div class="ex-skel__row"></div>
+                }
+              </div>
+            } @else if (previewError()) {
+              <div class="ex-inline-err">
+                <p class="ex-msg ex-msg--err">{{ previewError() }}</p>
+                <button type="button" class="ex-btn" (click)="loadPreview(tbl.name, page())">
+                  {{ 'explorer.retryPreview' | t:lang() }}
+                </button>
+              </div>
+            } @else if (!pagedRows().length) {
+              <p class="ex-msg">{{ 'explorer.emptyPreview' | t:lang() }}</p>
+            } @else {
+              @if (hiddenPreviewCols() > 0) {
+                <p class="ex-hint">
+                  {{ 'explorer.moreCols' | t: { count: hiddenPreviewCols() }:lang() }}
+                </p>
+              }
+
+              <div class="ex-preview-scroll">
+                <table class="ex-data">
+                  <thead>
+                    <tr>
+                      @for (col of previewColumns(); track col) {
+                        <th>{{ col }}</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of pagedRows(); track $index) {
+                      <tr>
+                        @for (col of previewColumns(); track col) {
+                          <td>{{ cellValue(row, col) }}</td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="ex-cards" aria-hidden="false">
+                @for (row of pagedRows(); track $index) {
+                  <article class="ex-card">
+                    @for (col of previewColumns(); track col) {
+                      <div class="ex-card__field">
+                        <span class="ex-card__k">{{ col }}</span>
+                        <span class="ex-card__v">{{ cellValue(row, col) }}</span>
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+
+              <div class="ex-pager">
+                <button type="button" class="ex-mini" [disabled]="page() <= 1" (click)="goPage(page() - 1)">
+                  {{ 'explorer.prev' | t:lang() }}
+                </button>
+                <span class="ex-pager__info">
+                  {{ 'explorer.page' | t: { page: page(), total: totalPages() }:lang() }}
+                </span>
+                <button
+                  type="button"
+                  class="ex-mini"
+                  [disabled]="page() >= totalPages()"
+                  (click)="goPage(page() + 1)"
+                >
+                  {{ 'explorer.next' | t:lang() }}
+                </button>
+              </div>
+            }
+          </section>
+        } @else if (isLoadingTables()) {
+          <section class="ex-panel">
+            <p class="ex-msg">{{ 'explorer.loadingTables' | t:lang() }}</p>
+          </section>
+        } @else {
+          <section class="ex-panel">
+            <p class="ex-msg">{{ 'explorer.noTables' | t:lang() }}</p>
+          </section>
+        }
+      </main>
     </div>
 
-    @if (isLoadingLoads()) {
-      <div class="skeleton-rows">
-        @for (s of [1,2,3,4]; track s) {
-          <div class="skeleton-row"></div>
-        }
+    <section class="ex-panel ex-loads">
+      <div class="ex-section-head">
+        <h3>{{ 'explorer.loadsTitle' | t:lang() }}</h3>
+        <span class="ex-section-meta">{{ 'explorer.loadsMeta' | t:lang() }}</span>
       </div>
-    } @else if (loads().length) {
-      <div class="table-wrap">
-        <table class="data-table loads-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>{{ 'explorer.date' | t:lang() }}</th>
-              <th>{{ 'explorer.mode' | t:lang() }}</th>
-              <th>{{ 'explorer.newRecords' | t:lang() }}</th>
-              <th>Total raw</th>
-              <th>{{ 'explorer.state' | t:lang() }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (l of loads(); track l.id_carga ?? $index) {
+      @if (isLoadingLoads()) {
+        <div class="ex-skel">
+          @for (s of [1, 2, 3]; track s) {
+            <div class="ex-skel__row"></div>
+          }
+        </div>
+      } @else if (loads().length) {
+        <div class="ex-preview-scroll">
+          <table class="ex-data ex-data--compact">
+            <thead>
               <tr>
-                <td class="mono">{{ l.id_carga ?? '—' }}</td>
-                <td>{{ l.fecha_carga ? (l.fecha_carga | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
-                <td><span class="mode-badge">{{ l.modo ?? '—' }}</span></td>
-                <td class="mono">{{ l.registros_nuevos ?? '—' }}</td>
-                <td class="mono">{{ l.total_raw ?? '—' }}</td>
-                <td>
-                  <span class="status-ok" [class.status-err]="l.estado !== 'ok'">{{ l.estado ?? '—' }}</span>
-                </td>
+                <th>{{ 'explorer.date' | t:lang() }}</th>
+                <th>{{ 'explorer.mode' | t:lang() }}</th>
+                <th>{{ 'explorer.newRecords' | t:lang() }}</th>
+                <th>{{ 'explorer.state' | t:lang() }}</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    } @else if (loadsError()) {
-      <div class="inline-error">
-        <p class="error-msg">{{ loadsError() }}</p>
-        <button type="button" class="retry-btn" (click)="loadLoads()">{{ 'explorer.retryLoads' | t:lang() }}</button>
-      </div>
-    } @else {
-      <p class="empty-msg">{{ 'explorer.emptyLoads' | t:lang() }}</p>
-    }
-  </section>
+            </thead>
+            <tbody>
+              @for (l of loads(); track l.id_carga ?? $index) {
+                <tr>
+                  <td>{{ l.fecha_carga ? (l.fecha_carga | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                  <td>{{ l.modo ?? '—' }}</td>
+                  <td>{{ l.registros_nuevos ?? '—' }}</td>
+                  <td>
+                    <span class="ex-load-status" [class.is-ok]="(l.estado || '').toLowerCase() === 'ok'">
+                      {{ loadStatusLabel(l.estado) }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (loadsError()) {
+        <div class="ex-inline-err">
+          <p class="ex-msg ex-msg--err">{{ loadsError() }}</p>
+          <button type="button" class="ex-btn" (click)="loadLoads()">{{ 'explorer.retryLoads' | t:lang() }}</button>
+        </div>
+      } @else {
+        <p class="ex-msg">{{ 'explorer.emptyLoads' | t:lang() }}</p>
+      }
+    </section>
   }
 </div>

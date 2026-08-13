@@ -18,7 +18,7 @@ export interface UiPreferences {
 const STORAGE_KEY = 'voxmetrik_ui_prefs';
 
 const DEFAULTS: UiPreferences = {
-  theme: 'dark',
+  theme: 'system',
   language: 'es',
   compactMode: false,
   showKpis: true,
@@ -55,6 +55,12 @@ export class UiPreferencesService {
 
   setTheme(theme: AppTheme): void {
     this.patch({ theme });
+  }
+
+  /** Flip between explicit dark/light for the topbar toggle (persists preference). */
+  toggleDarkLight(): void {
+    const next = this.isVisuallyDark() ? 'light' : 'dark';
+    this.setTheme(next);
   }
 
   /** Maps API dark_mode flag to local theme (dark / light). */
@@ -110,7 +116,7 @@ export class UiPreferencesService {
     document.documentElement.setAttribute('data-theme', resolved);
     document.documentElement.style.colorScheme = resolved;
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute('content', resolved === 'dark' ? '#0a0a0a' : '#E2E5EA');
+    meta?.setAttribute('content', resolved === 'dark' ? '#0C1110' : '#DEE4E1');
   }
 
   private applyCompact(): void {
@@ -133,7 +139,11 @@ export class UiPreferencesService {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...DEFAULTS };
-      return { ...DEFAULTS, ...JSON.parse(raw) };
+      const parsed = { ...DEFAULTS, ...JSON.parse(raw) } as UiPreferences;
+      if (parsed.theme !== 'dark' && parsed.theme !== 'light' && parsed.theme !== 'system') {
+        parsed.theme = 'system';
+      }
+      return parsed;
     } catch {
       return { ...DEFAULTS };
     }

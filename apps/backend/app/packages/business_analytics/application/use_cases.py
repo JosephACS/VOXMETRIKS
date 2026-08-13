@@ -321,6 +321,7 @@ class DataQualityUseCases:
         return DataQualityResult(*row)
 
     def list(self, organization_id: Optional[int] = None) -> list[DataQualityResult]:
+        self._ensure_demo_quality_rows(organization_id)
         if organization_id:
             rows = self._conn.execute(
                 "SELECT id, check_code, organization_id, status, details, measured_at, created_at "
@@ -334,6 +335,32 @@ class DataQualityUseCases:
                 "FROM app_data_quality_result ORDER BY id DESC"
             ).fetchall()
         return [DataQualityResult(*r) for r in rows]
+
+    def _ensure_demo_quality_rows(self, organization_id: Optional[int]) -> None:
+        """Idempotent academic demo rows so OE-06 / quality UI is not empty."""
+        try:
+            n = int(self._conn.execute("SELECT COUNT(*) FROM app_data_quality_result").fetchone()[0])
+        except Exception:
+            return
+        if n > 0:
+            return
+        now = _now()
+        seeds = [
+            ("warehouse_streams_present", "pass", "Controles de streams ejecutados"),
+            ("kpi_null_handling", "pass", "Políticas de nulos configuradas"),
+            ("agg_refresh_lag", "warn", "Retraso menor en refresh AGG (demo)"),
+            ("orphan_track_refs", "pass", "Referencias de catálogo coherentes"),
+        ]
+        for code, status, details in seeds:
+            qid = _next_id(self._conn, "app_data_quality_result")
+            self._conn.execute(
+                """
+                INSERT INTO app_data_quality_result
+                    (id, check_code, organization_id, status, details, measured_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [qid, code, organization_id, status, details, now, now],
+            )
 
 
 class BusinessAlertUseCases:

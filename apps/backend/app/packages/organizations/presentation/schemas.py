@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.email_format import is_valid_email_format
 
 
 class OrganizationCreateRequest(BaseModel):
@@ -81,9 +83,17 @@ class MemberActionRequest(BaseModel):
 
 
 class InvitationCreateRequest(BaseModel):
-    email: str
+    email: str = Field(max_length=254)
     role_codes: list[str] = Field(min_length=1)
     ttl_days: int = Field(default=7, ge=1, le=30)
+
+    @field_validator("email")
+    @classmethod
+    def email_must_look_valid(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not is_valid_email_format(trimmed):
+            raise ValueError("invalid email format")
+        return trimmed
 
 
 class InvitationOut(BaseModel):

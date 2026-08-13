@@ -139,8 +139,11 @@ describe('space-access.policy (045)', () => {
     expect(spaceAllowsProductPath('/reports', 'organization')).toBe(true);
     expect(spaceAllowsProductPath('/business-decisions/7', 'organization')).toBe(true);
     expect(spaceAllowsProductPath('/billing/invoices', 'organization')).toBe(true);
+    expect(spaceAllowsProductPath('/crm/dashboard', 'organization')).toBe(true);
     expect(spaceAllowsProductPath('/billing/invoices', 'personal')).toBe(false);
+    expect(spaceAllowsProductPath('/crm/dashboard', 'personal')).toBe(false);
     expect(spaceAllowsProductPath('/platform-ops', 'platform_admin')).toBe(true);
+    expect(spaceAllowsProductPath('/subscriptions/plans', 'platform_admin')).toBe(true);
     expect(spaceAllowsProductPath('/elt-pipeline', 'data_ops')).toBe(true);
     expect(spaceAllowsProductPath('/elt-pipeline', 'personal')).toBe(false);
   });

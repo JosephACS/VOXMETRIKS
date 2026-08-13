@@ -3,10 +3,11 @@ import {
   Observable,
   Subscription,
   TimeoutError,
+  of,
   race,
   timer,
 } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { catchError, map, switchMap, take } from 'rxjs/operators';
 import { PlayableTrack } from '../../shared/models/player.models';
 import { AudioSource } from '../../shared/models/api.models';
 import { TracksService } from '../../packages/streaming/services/tracks.service';
@@ -126,8 +127,80 @@ export class AudioResolver {
       return;
     }
 
-    const skip = failedProvider === 'stream' ? 'audius' : failedProvider;
     const tried = this.failedProviders.get(track.id) ?? new Set<string>();
+
+    // YouTube: keep requesting next video candidates (accumulate excludes) before
+    // abandoning the provider. Do not require track.youtubeVideoId on every call —
+    // it is cleared after each failed candidate to avoid cache reuse, but prior
+    // yt: ids remain in `tried` so recovery can still ask for the next candidate.
+    if (failedProvider === 'youtube') {
+      if (track.youtubeVideoId) {
+        tried.add(`yt:${track.youtubeVideoId}`);
+      }
+      this.failedProviders.set(track.id, tried);
+      const excludedIds = [...tried]
+        .filter((k) => k.startsWith('yt:') && k !== 'yt:__done__')
+        .map((k) => k.slice(3));
+
+      if (
+        !tried.has('youtube') &&
+        !tried.has('yt:__done__') &&
+        excludedIds.length > 0 &&
+        excludedIds.length <= 4
+      ) {
+        this.cancel(track.id);
+        const requestId = ++this.requestSeq;
+        const started = performance.now();
+        const providersTried = ['youtube', ...excludedIds.map((id) => `exclude:${id}`)];
+        const cleared = { ...track, youtubeVideoId: undefined };
+        callbacks.onTrackUpdated(cleared);
+        callbacks.onResolving();
+        // Wait for failure report so the backend can warm ranked YouTube alternates
+        // before the exclude resolve (avoids a second flaky Data API search).
+        const sub = this.tracksApi.reportAudioSourceFailure(track.id).pipe(
+          // Always continue to exclude resolve, even if reporting fails.
+          catchError(() => of(null)),
+          switchMap(() =>
+            this.fetchSource(track.id, {
+              force: true,
+              excludeSourceRef: excludedIds.join(','),
+              asyncResolve: false,
+            }),
+          ),
+        ).subscribe({
+          next: (src) => {
+            if (callbacks.isStale()) return;
+            const mapped = mapAudioSourceResponse(src);
+            if (
+              mapped.provider === 'youtube' &&
+              mapped.youtubeVideoId &&
+              !tried.has(`yt:${mapped.youtubeVideoId}`) &&
+              isPlayableSource(mapped)
+            ) {
+              this.handleResponse(cleared, src, callbacks, true, requestId, started, providersTried);
+              return;
+            }
+            // No fresh YouTube candidate — stop exclude loop; skip YouTube next.
+            tried.add('yt:__done__');
+            this.failedProviders.set(track.id, tried);
+            this.recoverFromPlaybackError(cleared, 'youtube', callbacks);
+          },
+          error: () => {
+            if (!callbacks.isStale()) {
+              tried.add('yt:__done__');
+              this.failedProviders.set(track.id, tried);
+              this.recoverFromPlaybackError(cleared, 'youtube', callbacks);
+            }
+          },
+        });
+        this.inFlight.set(track.id, sub);
+        return;
+      }
+    }
+
+    this.tracksApi.reportAudioSourceFailure(track.id).subscribe({ error: () => undefined });
+
+    const skip = failedProvider === 'stream' ? 'audius' : failedProvider;
     if (tried.has(skip)) {
       this.finishUnavailable(track, callbacks, ++this.requestSeq, performance.now(), [skip], 'providers_exhausted');
       return;
@@ -139,6 +212,9 @@ export class AudioResolver {
     const requestId = ++this.requestSeq;
     const started = performance.now();
     const providersTried = [skip];
+    const cleared =
+      failedProvider === 'youtube' ? { ...track, youtubeVideoId: undefined } : track;
+    if (cleared !== track) callbacks.onTrackUpdated(cleared);
     callbacks.onResolving();
 
     const sub = this.fetchSource(track.id, {
@@ -148,7 +224,7 @@ export class AudioResolver {
     }).subscribe({
       next: (src) => {
         if (callbacks.isStale()) return;
-        this.handleResponse(track, src, callbacks, true, requestId, started, providersTried);
+        this.handleResponse(cleared, src, callbacks, true, requestId, started, providersTried);
       },
       error: () => {
         if (!callbacks.isStale()) {
@@ -161,7 +237,12 @@ export class AudioResolver {
 
   private fetchSource(
     trackId: number,
-    opts: { force?: boolean; skipProvider?: string; asyncResolve?: boolean },
+    opts: {
+      force?: boolean;
+      skipProvider?: string;
+      excludeSourceRef?: string;
+      asyncResolve?: boolean;
+    },
   ): Observable<AudioSource> {
     return race(
       this.tracksApi.getAudioSource(trackId, opts),
@@ -219,7 +300,16 @@ export class AudioResolver {
     }
 
     const cacheHit = src.status === 'ok' && !fromRecovery;
-    this.applyResolved(track, mapAudioSourceResponse(src), callbacks, requestId, started, providersTried, cacheHit);
+    this.applyResolved(
+      track,
+      mapAudioSourceResponse(src),
+      callbacks,
+      requestId,
+      started,
+      providersTried,
+      cacheHit,
+      fromRecovery,
+    );
   }
 
   private pollPendingSource(
@@ -259,6 +349,7 @@ export class AudioResolver {
             started,
             providersTried,
             false,
+            fromRecovery,
           );
         },
         error: () => {
@@ -282,6 +373,7 @@ export class AudioResolver {
     started: number,
     providersTried: string[],
     cacheHit: boolean,
+    fromRecovery = false,
   ): void {
     if (callbacks.isStale()) return;
     if (resolved.provider && resolved.provider !== 'none') {
@@ -300,6 +392,12 @@ export class AudioResolver {
     }
 
     if (!isPlayableSource(resolved)) {
+      // Negative/partial cache can hide a working alternate provider.
+      // One silent force re-resolve while UI stays on "Preparando…".
+      if (!fromRecovery) {
+        this.retryForceResolve(track, callbacks, requestId, started, providersTried);
+        return;
+      }
       this.finishUnavailable(track, callbacks, requestId, started, providersTried, resolved.status || 'not_playable');
       return;
     }
@@ -322,6 +420,44 @@ export class AudioResolver {
     }
 
     this.finishUnavailable(track, callbacks, requestId, started, providersTried, 'unmapped_provider');
+  }
+
+  private retryForceResolve(
+    track: PlayableTrack,
+    callbacks: AudioResolveCallbacks,
+    requestId: number,
+    started: number,
+    providersTried: string[],
+  ): void {
+    callbacks.onResolving();
+    const sub = this.fetchSource(track.id, { force: true, asyncResolve: false }).subscribe({
+      next: (src) => {
+        if (callbacks.isStale()) return;
+        if (src.status === 'pending') {
+          this.pollPendingSource(track, callbacks, 0, true, requestId, started, providersTried);
+          return;
+        }
+        const forced = mapAudioSourceResponse(src);
+        if (!isPlayableSource(forced)) {
+          this.finishUnavailable(
+            track,
+            callbacks,
+            requestId,
+            started,
+            providersTried,
+            forced.status || 'not_playable_after_force',
+          );
+          return;
+        }
+        this.applyResolved(track, forced, callbacks, requestId, started, providersTried, false, true);
+      },
+      error: () => {
+        if (!callbacks.isStale()) {
+          this.finishUnavailable(track, callbacks, requestId, started, providersTried, 'force_retry_http_error');
+        }
+      },
+    });
+    this.inFlight.set(track.id, sub);
   }
 
   private finishUnavailable(

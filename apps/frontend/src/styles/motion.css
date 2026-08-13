@@ -8,7 +8,7 @@
   /* ── Duraciones ── */
   --motion-duration-instant: 0ms;
   --motion-duration-fast: 150ms;
-  --motion-duration-normal: 220ms;
+  --motion-duration-normal: 180ms;
   --motion-duration-slow: 320ms;
   --motion-duration-slower: 400ms;
 

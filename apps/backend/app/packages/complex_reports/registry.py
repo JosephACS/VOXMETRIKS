@@ -141,4 +141,4 @@ _reg(ComplexReportDef(
     unavailable_reason="faltan ingresos atribuibles directamente a cada campaña.",
 ))
 
-assert len(REPORTS) >= 8
+assert len(REPORTS) == 9, f"Expected 9 complex reports, got {len(REPORTS)}"

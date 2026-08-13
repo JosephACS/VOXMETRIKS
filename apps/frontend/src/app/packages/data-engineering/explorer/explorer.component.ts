@@ -1,12 +1,10 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StatsService } from '../../analytics/services/stats.service';
-import { KpiCardComponent } from '../../../shared/components/kpi-card/kpi-card.component';
-import { LoadRecord, WarehouseTableMeta, TablePreview } from '../../../shared/models/api.models';
-import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
+import { LoadRecord, TablePreview, WarehouseTableMeta } from '../../../shared/models/api.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -26,10 +24,31 @@ const PREFERRED_TABLES = [
   'dim_tiempo',
 ];
 
+const SENSITIVE_COL_RE =
+  /(password|passwd|secret|token|api[_-]?key|auth[_-]?key|private[_-]?key|credential|hash|salt|ssn|session[_-]?id)/i;
+
+const HUMAN_TABLE_NAMES: Record<string, string> = {
+  fact_streaming: 'Streams',
+  fact_user_activity: 'Actividad de usuario',
+  fact_playlist_activity: 'Actividad de playlist',
+  fact_favorites: 'Favoritos',
+  fact_searches: 'Búsquedas',
+  fact_stream_sessions: 'Sesiones',
+  dim_track: 'Pistas',
+  dim_artista: 'Artistas',
+  dim_album: 'Álbumes',
+  dim_usuario: 'Usuarios',
+  dim_playlist: 'Playlists',
+  dim_genero: 'Géneros',
+  dim_tiempo: 'Tiempo',
+};
+
+const MAX_PREVIEW_COLS = 10;
+
 @Component({
   selector: 'app-explorer',
   standalone: true,
-  imports: [CommonModule, FormsModule, KpiCardComponent, DataSourceBadgeComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './explorer.component.html',
   styleUrls: ['./explorer.component.css'],
 })
@@ -37,6 +56,8 @@ export class ExplorerComponent implements OnInit {
   readonly lang = inject(I18nService).lang;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly stats = inject(StatsService);
+  private readonly i18n = inject(I18nService);
 
   isLoadingTables = signal(true);
   isLoadingPreview = signal(false);
@@ -54,13 +75,7 @@ export class ExplorerComponent implements OnInit {
   searchFilter = signal('');
   page = signal(1);
   pageSize = signal(50);
-
-  filteredTables = computed(() => {
-    const q = this.searchFilter().toLowerCase().trim();
-    const list = this.sortedTables();
-    if (!q) return list;
-    return list.filter((t) => t.name.toLowerCase().includes(q));
-  });
+  showMobileList = signal(true);
 
   sortedTables = computed(() => {
     const list = [...this.tables()];
@@ -76,13 +91,34 @@ export class ExplorerComponent implements OnInit {
     });
   });
 
-  activeTable = computed(() =>
-    this.tables().find((t) => t.name === this.selectedTable()) ?? null
+  filteredTables = computed(() => {
+    const q = this.searchFilter().toLowerCase().trim();
+    const list = this.sortedTables();
+    if (!q) return list;
+    return list.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        this.humanTableName(t.name).toLowerCase().includes(q) ||
+        t.kind.toLowerCase().includes(q),
+    );
+  });
+
+  activeTable = computed(
+    () => this.tables().find((t) => t.name === this.selectedTable()) ?? null,
   );
 
-  sqlQuery = computed(() => this.preview()?.query ?? 'SELECT * FROM ...');
+  schemaColumns = computed(() => this.activeTable()?.columns ?? []);
 
-  previewColumns = computed(() => this.preview()?.columns ?? []);
+  previewColumns = computed(() => {
+    const cols = this.preview()?.columns ?? [];
+    const safe = cols.filter((c) => !this.isSensitiveColumn(c));
+    return safe.slice(0, MAX_PREVIEW_COLS);
+  });
+
+  hiddenPreviewCols = computed(() => {
+    const cols = (this.preview()?.columns ?? []).filter((c) => !this.isSensitiveColumn(c));
+    return Math.max(0, cols.length - MAX_PREVIEW_COLS);
+  });
 
   totalPages = computed(() => {
     const p = this.preview();
@@ -92,14 +128,16 @@ export class ExplorerComponent implements OnInit {
 
   pagedRows = computed(() => this.preview()?.rows ?? []);
 
-  kindCounts = computed(() => ({
-    dimension: this.tables().filter((t) => t.kind === 'dimension').length,
-    fact: this.tables().filter((t) => t.kind === 'fact').length,
-    aggregation: this.tables().filter((t) => t.kind === 'aggregation').length,
-    total: this.tables().length,
-  }));
-
-  constructor(private stats: StatsService, private i18n: I18nService) {}
+  lastLoadLabel = computed(() => {
+    const load = this.loads()[0];
+    if (!load?.fecha_carga) return null;
+    return new Date(load.fecha_carga).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  });
 
   ngOnInit() {
     this.loadTables();
@@ -117,16 +155,18 @@ export class ExplorerComponent implements OnInit {
         this.isLoadingTables.set(false);
         const fromQuery = this.route.snapshot.queryParamMap.get('table');
         const preferred =
-          (fromQuery && d?.some((t) => t.name === fromQuery) ? fromQuery : null)
-          ?? d?.find((t) => t.name === 'fact_streaming')?.name
-          ?? d?.find((t) => t.kind === 'fact')?.name
-          ?? d?.[0]?.name;
+          (fromQuery && d?.some((t) => t.name === fromQuery) ? fromQuery : null) ??
+          d?.find((t) => t.name === 'fact_streaming')?.name ??
+          d?.find((t) => t.kind === 'fact')?.name ??
+          d?.[0]?.name;
         if (preferred) {
           this.selectedTable.set(preferred);
+          this.showMobileList.set(false);
           this.loadPreview(preferred, 1);
         }
       },
-      error: (err) => this.handleRequestError(err, 'No se pudieron cargar las tablas del warehouse.'),
+      error: (err) =>
+        this.handleRequestError(err, 'No se pudieron cargar las tablas del almacén.'),
     });
   }
 
@@ -134,7 +174,10 @@ export class ExplorerComponent implements OnInit {
     this.isLoadingLoads.set(true);
     this.loadsError.set('');
     this.stats.getLastLoads(10).subscribe({
-      next: (d) => { this.loads.set(d ?? []); this.isLoadingLoads.set(false); },
+      next: (d) => {
+        this.loads.set(d ?? []);
+        this.isLoadingLoads.set(false);
+      },
       error: (err) => {
         this.isLoadingLoads.set(false);
         this.loadsError.set(this.errorDetail(err, 'No se pudo cargar el historial de cargas.'));
@@ -156,7 +199,7 @@ export class ExplorerComponent implements OnInit {
         this.errorMessage.set(
           typeof err.error?.detail === 'string'
             ? err.error.detail
-            : 'Acceso restringido: se requiere cuenta admin (ingeniero).',
+            : 'Acceso restringido: se requiere cuenta de ingeniería.',
         );
         return;
       }
@@ -180,6 +223,7 @@ export class ExplorerComponent implements OnInit {
   selectTable(name: string) {
     this.selectedTable.set(name);
     this.page.set(1);
+    this.showMobileList.set(false);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { table: name },
@@ -187,6 +231,10 @@ export class ExplorerComponent implements OnInit {
       replaceUrl: true,
     });
     this.loadPreview(name, 1);
+  }
+
+  backToTables() {
+    this.showMobileList.set(true);
   }
 
   setPageSize(size: 50 | 100) {
@@ -201,7 +249,10 @@ export class ExplorerComponent implements OnInit {
     this.isLoadingPreview.set(true);
     this.previewError.set('');
     this.stats.getTablePreview(name, page, this.pageSize()).subscribe({
-      next: (d) => { this.preview.set(d); this.isLoadingPreview.set(false); },
+      next: (d) => {
+        this.preview.set(d);
+        this.isLoadingPreview.set(false);
+      },
       error: (err) => {
         this.preview.set(null);
         this.isLoadingPreview.set(false);
@@ -218,24 +269,45 @@ export class ExplorerComponent implements OnInit {
     this.searchFilter.set(value);
   }
 
+  humanTableName(name: string): string {
+    return HUMAN_TABLE_NAMES[name] ?? name.replace(/^(dim_|fact_|agg_)/, '').replace(/_/g, ' ');
+  }
+
   kindLabel(kind: string): string {
-    this.i18n.tick();
-    const map: Record<string, string> = {
-      dimension: this.i18n.t('explorer.kpi.dimensions'),
-      fact: this.i18n.t('explorer.kpi.facts'),
-      aggregation: this.i18n.t('explorer.kpi.aggregations'),
-      control: 'Control',
-      application: 'App',
-      other: 'Other',
-    };
-    return map[kind] ?? kind;
+    switch (kind) {
+      case 'dimension':
+        return 'Dimensión';
+      case 'fact':
+        return 'Hecho';
+      case 'aggregation':
+        return 'Agregación';
+      case 'control':
+        return 'Control';
+      case 'application':
+        return 'Aplicación';
+      default:
+        return kind || 'Tabla';
+    }
   }
 
-  kindClass(kind: string): string {
-    return `kind-${kind}`;
+  humanType(type: string): string {
+    const t = (type || '').toUpperCase();
+    if (!t) return '—';
+    if (t.includes('VARCHAR') || t.includes('TEXT') || t.includes('STRING')) return type;
+    if (t.includes('INT') || t.includes('BIGINT') || t.includes('HUGEINT')) return type;
+    if (t.includes('DOUBLE') || t.includes('FLOAT') || t.includes('DECIMAL') || t.includes('NUMERIC'))
+      return type;
+    if (t.includes('BOOL')) return type;
+    if (t.includes('TIMESTAMP') || t.includes('DATE') || t.includes('TIME')) return type;
+    return type;
   }
 
-  fmt(n: number): string {
+  isSensitiveColumn(name: string): boolean {
+    return SENSITIVE_COL_RE.test(name);
+  }
+
+  fmt(n?: number | null): string {
+    if (n == null) return '—';
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toLocaleString('es-ES');
@@ -249,7 +321,17 @@ export class ExplorerComponent implements OnInit {
   }
 
   cellValue(row: Record<string, unknown>, col: string): string {
+    if (this.isSensitiveColumn(col)) return '••••';
     const v = row[col];
-    return v != null ? String(v) : '—';
+    if (v == null) return '—';
+    const s = String(v);
+    return s.length > 80 ? `${s.slice(0, 77)}…` : s;
+  }
+
+  loadStatusLabel(estado?: string | null): string {
+    const e = (estado || '').toLowerCase();
+    if (e === 'ok') return 'OK';
+    if (!e) return '—';
+    return estado!;
   }
 }

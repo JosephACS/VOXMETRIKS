@@ -110,6 +110,16 @@ def test_create_artist_profile_same_name_different_org_allowed(db_conn):
     assert artist.organization_id == OTHER_ORG
 
 
+def test_create_artist_profile_oversized_name_raises(db_conn):
+    from app.packages.artists.application.use_cases import ArtistProfileUseCases
+    from app.packages.artists.domain.errors import ValidationError
+
+    with pytest.raises(ValidationError, match="at most 200"):
+        ArtistProfileUseCases(db_conn).create(
+            actor_user_id=ACTOR, organization_id=ORG, display_name="A" * 201,
+        )
+
+
 def test_create_artist_profile_blank_name_raises(db_conn):
     from app.packages.artists.application.use_cases import ArtistProfileUseCases
     from app.packages.artists.domain.errors import ValidationError

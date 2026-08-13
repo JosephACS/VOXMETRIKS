@@ -9,11 +9,12 @@ import {
   viewChild,
 } from '@angular/core';
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart, PieChart } from 'echarts/charts';
+import { LineChart, BarChart, PieChart, TreemapChart } from 'echarts/charts';
 import {
   GridComponent,
   LegendComponent,
   TooltipComponent,
+  MarkPointComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsOption } from 'echarts';
@@ -22,13 +23,23 @@ echarts.use([
   LineChart,
   BarChart,
   PieChart,
+  TreemapChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
+  MarkPointComponent,
   CanvasRenderer,
 ]);
 
-export type ChartWidgetType = 'line' | 'bar' | 'pie' | 'hbar' | 'stacked-bar';
+export type ChartWidgetType =
+  | 'line'
+  | 'bar'
+  | 'pie'
+  | 'hbar'
+  | 'stacked-bar'
+  | 'combo'
+  | 'treemap'
+  | 'percent-line';
 
 export interface ChartSeries {
   name: string;
@@ -36,13 +47,19 @@ export interface ChartSeries {
   color?: string;
   /** When dualAxis is true, bind series to the secondary Y axis. */
   yAxisIndex?: 0 | 1;
+  /** combo: force series type */
+  type?: 'line' | 'bar';
 }
 
 @Component({
   selector: 'app-chart-widget',
   standalone: true,
   template: `
-    <section class="chart-widget vm-animate-chart">
+    <section
+      class="chart-widget vm-animate-chart"
+      [class.chart-widget--flat]="flat()"
+      [attr.data-chart-type]="type()"
+    >
       @if (title()) {
         <header class="chart-widget__header">
           <h3>{{ title() }}</h3>
@@ -71,6 +88,12 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
   readonly series = input<ChartSeries[]>([]);
   readonly height = input(280);
   readonly dualAxis = input(false);
+  /** Flatten glass chrome for embedded report surfaces. */
+  readonly flat = input(false);
+  /** Highlight peak point on temporal line charts. */
+  readonly highlightPeak = input(false);
+  /** Y-axis as percentage (0–100). */
+  readonly percentAxis = input(false);
 
   private readonly host = viewChild<ElementRef<HTMLDivElement>>('host');
   private chart: echarts.ECharts | null = null;
@@ -86,6 +109,8 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
       this.series();
       this.type();
       this.dualAxis();
+      this.highlightPeak();
+      this.percentAxis();
       this.isEmpty();
       this.ensureChart();
       this.render();
@@ -97,7 +122,14 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
     this.render();
     const el = this.host()?.nativeElement;
     if (el) {
-      this.resizeObserver = new ResizeObserver(() => this.chart?.resize());
+      this.resizeObserver = new ResizeObserver(() => {
+        if (!this.chart) {
+          this.ensureChart();
+          this.render();
+          return;
+        }
+        this.chart.resize();
+      });
       this.resizeObserver.observe(el);
     }
   }
@@ -110,137 +142,263 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
 
   isEmpty(): boolean {
     const type = this.type();
-    if (type === 'pie') {
+    if (type === 'pie' || type === 'treemap') {
       const data = this.series()[0]?.data ?? [];
       return !data.length;
     }
     return !this.labels().length || !this.series().some((s) => (s.data as number[]).length);
   }
 
+  private ensureAttempts = 0;
+
   private ensureChart(): void {
     const el = this.host()?.nativeElement;
     if (!el || this.chart) return;
+    // Avoid zero-size init (white canvas on mobile flex layouts).
+    if (el.clientWidth < 8 || el.clientHeight < 8) {
+      this.ensureAttempts += 1;
+      if (this.ensureAttempts < 60) {
+        requestAnimationFrame(() => this.ensureChart());
+      }
+      return;
+    }
+    this.ensureAttempts = 0;
     this.chart = echarts.init(el, undefined, { renderer: 'canvas' });
   }
 
   private render(): void {
-    if (!this.chart) return;
+    if (!this.chart) {
+      this.ensureChart();
+      if (!this.chart) return;
+    }
     if (this.isEmpty()) {
       this.chart.clear();
+      const bg = this.chartSurfaceColor();
+      const isLight =
+        typeof document !== 'undefined' &&
+        document.documentElement.getAttribute('data-theme') === 'light';
+      this.chart.setOption({
+        backgroundColor: bg,
+        title: {
+          text: 'Sin datos para el periodo seleccionado',
+          left: 'center',
+          top: 'middle',
+          textStyle: {
+            color: isLight ? 'rgba(18,25,22,0.48)' : 'rgba(231,237,234,0.45)',
+            fontSize: 13,
+            fontWeight: 400,
+          },
+        },
+      });
       return;
     }
     this.chart.setOption(this.buildOption(), { notMerge: true });
     requestAnimationFrame(() => this.chart?.resize());
   }
 
+  private chartSurfaceColor(): string {
+    if (typeof document === 'undefined') return '#0C1110';
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--vx-surface').trim();
+    return v || '#0C1110';
+  }
+
   private buildOption(): EChartsOption {
     const type = this.type();
     const labels = this.labels();
     const seriesInput = this.series();
-    const palette = ['#1ed896', '#38bdf8', '#a855f7', '#fbbf24', '#f472b6'];
+    const palette = ['#3BCF9A', '#1F8A68', '#4A9B8C', '#6B8F88', '#8A9A94', '#A8B5AF', '#3D5A56', '#88C9B0'];
     const animDuration = 450;
+    const darkBg = this.chartSurfaceColor();
+    const isLight =
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'light';
+    const axisMuted = isLight ? 'rgba(18,25,22,0.48)' : 'rgba(231,237,234,0.45)';
+    const axisLabel = isLight ? 'rgba(18,25,22,0.64)' : 'rgba(231,237,234,0.58)';
+    const split = isLight ? 'rgba(18,28,24,0.1)' : 'rgba(214,228,220,0.07)';
+    const tipBg = isLight ? 'rgba(242,245,243,0.96)' : 'rgba(28,38,34,0.94)';
+    const tipFg = isLight ? '#121916' : '#E7EDEA';
+    const tipBorder = isLight ? 'rgba(18,28,24,0.12)' : 'rgba(214,228,220,0.1)';
+    const labelFg = isLight ? 'rgba(18,25,22,0.78)' : 'rgba(231,237,234,0.75)';
 
     if (type === 'pie') {
       const first = seriesInput[0];
       return {
-        backgroundColor: 'transparent',
+        backgroundColor: darkBg,
         animationDuration: animDuration,
         animationEasing: 'cubicOut',
-        tooltip: { trigger: 'item' },
-        legend: { bottom: 0, textStyle: { color: 'rgba(255,255,255,0.55)' } },
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { show: false },
         series: [
           {
             type: 'pie',
             radius: ['42%', '68%'],
-            center: ['50%', '46%'],
-            itemStyle: { borderRadius: 6, borderColor: '#121212', borderWidth: 2 },
-            label: { color: 'rgba(255,255,255,0.75)' },
+            center: ['50%', '50%'],
+            itemStyle: { borderRadius: 6, borderColor: darkBg, borderWidth: 2 },
+            label: { color: labelFg, formatter: '{b}' },
             animationType: 'scale',
             animationEasing: 'elasticOut',
             data: (first?.data ?? []) as { name: string; value: number }[],
           },
         ],
-        color: palette,
+        color: [...palette],
       };
     }
 
-    const horizontal = type === 'hbar';
+    if (type === 'treemap') {
+      const first = seriesInput[0];
+      const raw = (first?.data ?? []) as { name: string; value: number }[];
+      const data = raw.map((d, i) => ({
+        ...d,
+        itemStyle: { color: palette[i % palette.length] },
+      }));
+      return {
+        backgroundColor: darkBg,
+        animationDuration: animDuration,
+        tooltip: { formatter: '{b}: {c}' },
+        series: [
+          {
+            type: 'treemap',
+            roam: false,
+            nodeClick: false,
+            breadcrumb: { show: false },
+            label: { show: true, color: '#e8e8e8', fontSize: 12 },
+            upperLabel: { show: false },
+            itemStyle: { borderColor: darkBg, borderWidth: 2, gapWidth: 2 },
+            levels: [{ itemStyle: { borderWidth: 0 } }],
+            data,
+          },
+        ],
+        color: [...palette],
+      };
+    }
+
+    const horizontal =
+      type === 'hbar' || (type === 'stacked-bar' && labels.length <= 2 && seriesInput.length >= 2);
     const stacked = type === 'stacked-bar';
-    const seriesType: 'line' | 'bar' = type === 'line' ? 'line' : 'bar';
-    const useDual = this.dualAxis() && type === 'line' && seriesInput.length >= 2;
+    const combo = type === 'combo';
+    const percent = type === 'percent-line' || this.percentAxis();
+    const seriesTypeDefault: 'line' | 'bar' =
+      type === 'line' || type === 'percent-line' ? 'line' : 'bar';
+    const useDual = (this.dualAxis() || combo) && seriesInput.length >= 2;
+    const stackAsPercent = stacked && horizontal;
 
     const echartsSeries = seriesInput.map((s, i) => {
+      const st: 'line' | 'bar' = combo
+        ? (s.type ?? (i === 0 ? 'bar' : 'line'))
+        : seriesTypeDefault;
+      const isAreaLine = st === 'line' && (type === 'line' || type === 'percent-line') && !combo;
+      const values = (s.data as number[]) || [];
+      let markPoint: Record<string, unknown> | undefined;
+      if (this.highlightPeak() && st === 'line' && i === 0 && values.length) {
+        let peakIdx = 0;
+        for (let j = 1; j < values.length; j++) {
+          if ((values[j] ?? 0) > (values[peakIdx] ?? 0)) peakIdx = j;
+        }
+        markPoint = {
+          symbol: 'circle',
+          symbolSize: 10,
+          itemStyle: { color: darkBg, borderColor: '#3BCF9A', borderWidth: 2 },
+          label: { show: false },
+          data: [{ coord: [peakIdx, values[peakIdx]], name: 'Pico' }],
+        };
+      }
       return {
         name: s.name,
-        type: seriesType,
+        type: st,
         stack: stacked ? 'total' : undefined,
-        smooth: type === 'line',
-        symbol: type === 'line' ? 'circle' : undefined,
-        symbolSize: 6,
+        smooth: st === 'line',
+        symbol: st === 'line' ? 'circle' : undefined,
+        symbolSize: st === 'line' ? 5 : undefined,
         yAxisIndex: useDual ? (s.yAxisIndex ?? i) : 0,
         barMaxWidth: horizontal ? 22 : 36,
         itemStyle: { color: s.color ?? palette[i % palette.length] },
         areaStyle:
-          type === 'line' && (s.yAxisIndex ?? i) === 0
+          isAreaLine && (s.yAxisIndex ?? i) === 0
             ? {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(30,216,150,0.22)' },
-                  { offset: 1, color: 'rgba(30,216,150,0)' },
+                  { offset: 0, color: 'rgba(59,207,154,0.22)' },
+                  { offset: 1, color: 'rgba(59,207,154,0)' },
                 ]),
               }
             : undefined,
-        data: s.data as number[],
+        data: values,
+        markPoint,
         animationDuration: animDuration,
         animationEasing: 'cubicOut' as const,
       };
     });
+
+    const valueAxisSingle = {
+      type: 'value' as const,
+      min: percent || stackAsPercent ? 0 : undefined,
+      max: percent || stackAsPercent ? 100 : undefined,
+      axisLabel: {
+        color: axisMuted,
+        formatter: percent || stackAsPercent ? '{value}%' : undefined,
+      },
+      splitLine: { lineStyle: { color: split } },
+    };
 
     const valueAxis = useDual
       ? [
           {
             type: 'value' as const,
             name: seriesInput[0]?.name,
-            nameTextStyle: { color: 'rgba(255,255,255,0.45)', fontSize: 10 },
-            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
-            axisLabel: { color: 'rgba(255,255,255,0.45)' },
+            nameTextStyle: { color: axisMuted, fontSize: 10 },
+            splitLine: { lineStyle: { color: split } },
+            axisLabel: { color: axisMuted },
           },
           {
             type: 'value' as const,
             name: seriesInput[1]?.name,
-            nameTextStyle: { color: 'rgba(255,255,255,0.45)', fontSize: 10 },
+            nameTextStyle: { color: axisMuted, fontSize: 10 },
             splitLine: { show: false },
-            axisLabel: { color: 'rgba(255,255,255,0.45)' },
+            axisLabel: { color: axisMuted },
           },
         ]
-      : {
-          type: 'value' as const,
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
-          axisLabel: { color: 'rgba(255,255,255,0.45)' },
-        };
+      : valueAxisSingle;
 
     const categoryAxis = {
       type: 'category' as const,
       data: labels,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: 'rgba(255,255,255,0.45)' },
+      axisLine: { lineStyle: { color: split } },
+      axisLabel: {
+        color: axisLabel,
+        fontSize: horizontal ? 11 : 10,
+        interval: (labels.length > 14 ? 'auto' : 0) as 0 | 'auto',
+        width: horizontal ? 88 : undefined,
+        overflow: horizontal ? ('truncate' as const) : undefined,
+        hideOverlap: true,
+      },
     };
 
-    return {
-      backgroundColor: 'transparent',
+    const option: EChartsOption = {
+      backgroundColor: darkBg,
       animationDuration: animDuration,
       animationEasing: 'cubicOut',
       grid: {
-        left: horizontal ? 96 : 48,
-        right: useDual ? 48 : 16,
+        left: horizontal ? 108 : 48,
+        right: useDual ? 56 : 16,
         top: 36,
-        bottom: horizontal ? 28 : 28,
+        bottom: horizontal ? 28 : 36,
+        containLabel: !horizontal,
       },
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { color: 'rgba(255,255,255,0.55)' } },
-      xAxis: horizontal ? valueAxis : categoryAxis,
-      yAxis: horizontal ? categoryAxis : valueAxis,
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: tipBg,
+        borderColor: tipBorder,
+        textStyle: { color: tipFg, fontSize: 12 },
+        extraCssText: 'border-radius:8px;padding:8px 10px;',
+        valueFormatter: percent
+          ? (v) => `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} %`
+          : undefined,
+      },
+      legend: { top: 0, textStyle: { color: axisLabel } },
+      xAxis: (horizontal ? valueAxis : categoryAxis) as EChartsOption['xAxis'],
+      yAxis: (horizontal ? categoryAxis : valueAxis) as EChartsOption['yAxis'],
       series: echartsSeries as EChartsOption['series'],
       color: palette,
     };
+    return option;
   }
 }

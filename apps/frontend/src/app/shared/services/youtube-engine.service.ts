@@ -109,13 +109,13 @@ export class YoutubeEngineService {
   private ensureContainer(): void {
     if (document.getElementById(CONTAINER_ID)) return;
     const wrap = document.createElement('div');
-    // Keep the iframe in-viewport and "alive" — off-screen / display:none can
-    // make browsers or YouTube pause background playback.
-    wrap.style.position = 'absolute';
+    // Real-size iframe kept in-viewport but visually invisible.
+    // 1×1 boxes and far off-screen hosts both break embeds for many music videos.
+    wrap.style.position = 'fixed';
     wrap.style.left = '0';
     wrap.style.top = '0';
-    wrap.style.width = '1px';
-    wrap.style.height = '1px';
+    wrap.style.width = '320px';
+    wrap.style.height = '180px';
     wrap.style.opacity = '0';
     wrap.style.overflow = 'hidden';
     wrap.style.pointerEvents = 'none';
@@ -130,9 +130,16 @@ export class YoutubeEngineService {
 
   private createPlayer(): void {
     if (this.player || !window.YT?.Player) return;
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : undefined;
     this.player = new window.YT.Player(CONTAINER_ID, {
       height: '180',
       width: '320',
+      // Privacy-enhanced host often succeeds where www.youtube.com returns 150
+      // for some label-restricted music uploads.
+      host: 'https://www.youtube-nocookie.com',
       playerVars: {
         autoplay: 0,
         controls: 0,
@@ -141,17 +148,49 @@ export class YoutubeEngineService {
         rel: 0,
         playsinline: 1,
         iv_load_policy: 3,
+        // Helps YouTube identify the embed host (paired with referrerpolicy below).
+        ...(origin ? { origin } : {}),
       },
       events: {
         onReady: () => this.handleReady(),
         onStateChange: (e: { data?: number }) => this.handleState(e),
-        onError: () => this.onError?.(),
+        onError: (e: { data?: number }) => {
+          // Ignore stale errors from a previous video after a recovery load.
+          if (this.desired && this.player?.getVideoData) {
+            try {
+              const current = this.player.getVideoData()?.video_id;
+              if (current && this.desired.videoId && current !== this.desired.videoId) {
+                return;
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+          this.onError?.();
+        },
       },
     });
+    this.applyIframeReferrerPolicy();
+  }
+
+  /** YouTube error 153 if Referer is suppressed — keep a cross-origin-safe policy on the iframe. */
+  private applyIframeReferrerPolicy(): void {
+    try {
+      const iframe = document
+        .getElementById(CONTAINER_ID)
+        ?.querySelector('iframe') as HTMLIFrameElement | null;
+      if (iframe) {
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   private handleReady(): void {
     this.ready = true;
+    this.applyIframeReferrerPolicy();
     this.player.setVolume(this.volume);
     if (this.desired) this.applyLoad();
   }

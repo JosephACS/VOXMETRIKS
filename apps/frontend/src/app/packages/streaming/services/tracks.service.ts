@@ -134,6 +134,7 @@ export class TracksService {
     opts: boolean | {
       force?: boolean;
       skipProvider?: string;
+      excludeSourceRef?: string;
       asyncResolve?: boolean;
     } = false,
     skipProvider?: string,
@@ -147,10 +148,20 @@ export class TracksService {
     let params = new HttpParams();
     if (options.force) params = params.set('force', 'true');
     if (options.skipProvider) params = params.set('skip_provider', options.skipProvider);
+    if (options.excludeSourceRef) {
+      params = params.set('exclude_source_ref', options.excludeSourceRef);
+    }
     if (options.asyncResolve === false) params = params.set('async_resolve', 'false');
     return this.http.get<AudioSource>(`${this.API_URL}/${id}/audio-source`, {
       params: params.keys().length ? params : undefined,
     });
+  }
+
+  reportAudioSourceFailure(id: number): Observable<{ track_id: number; status: string }> {
+    return this.http.post<{ track_id: number; status: string }>(
+      `${this.API_URL}/${id}/audio-source/failure`,
+      {},
+    );
   }
 
   getCover(id: number): Observable<CoverArt> {

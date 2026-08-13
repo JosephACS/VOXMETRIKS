@@ -5,15 +5,23 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 # ── ArtistProfile ──────────────────────────────────────────────────────────────
 
 class ArtistProfileCreateRequest(BaseModel):
-    display_name: str
-    legal_name: Optional[str] = None
+    display_name: str = Field(min_length=1, max_length=200)
+    legal_name: Optional[str] = Field(default=None, max_length=200)
     warehouse_artist_id: Optional[int] = None
+
+    @field_validator("display_name")
+    @classmethod
+    def display_name_must_be_visible(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("display_name is required")
+        return name
 
 
 class ArtistProfileOut(BaseModel):

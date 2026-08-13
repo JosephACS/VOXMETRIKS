@@ -6,7 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 # ── BillingProfile ─────────────────────────────────────────────────────────────
@@ -47,15 +47,35 @@ class InvoiceCreateRequest(BaseModel):
     period_start: Optional[date] = None
     period_end: Optional[date] = None
     due_date: Optional[date] = None
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def period_end_not_before_start(self) -> "InvoiceCreateRequest":
+        if (
+            self.period_start is not None
+            and self.period_end is not None
+            and self.period_end < self.period_start
+        ):
+            raise ValueError("period_end must be on or after period_start")
+        return self
 
 
 class InvoiceItemAddRequest(BaseModel):
-    description: str
-    quantity: Decimal = Decimal("1")
-    unit_price: Decimal
+    description: str = Field(min_length=1, max_length=500)
+    quantity: Decimal = Field(default=Decimal("1"), gt=0)
+    unit_price: Decimal = Field(ge=0)
     period_start: Optional[date] = None
     period_end: Optional[date] = None
+
+    @model_validator(mode="after")
+    def period_end_not_before_start(self) -> "InvoiceItemAddRequest":
+        if (
+            self.period_start is not None
+            and self.period_end is not None
+            and self.period_end < self.period_start
+        ):
+            raise ValueError("period_end must be on or after period_start")
+        return self
 
 
 class InvoiceVoidRequest(BaseModel):

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { CatalogPublishingApiService } from '../services/catalog-publishing.api';
@@ -7,140 +8,106 @@ import { OrganizationContextService } from '../../organizations/services/organiz
 import {
   PortalSummary,
   ReleaseSubmission,
-  publishingPrimaryLabelKey,
+  displayReleaseTitle,
+  humanReleaseStatus,
   publishingUiBucket,
 } from '../models/catalog-publishing.models';
-import { I18nService } from '../../../core/services/i18n.service';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { AuthService } from '../../../core/services/auth.service';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import { catalogPublishingAccess } from '../catalog-publishing-access';
 
 @Component({
   selector: 'app-artist-releases-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, FormsModule, RouterModule, ...ENTERPRISE_UI_IMPORTS],
+  styleUrls: ['../styles/catalog-editorial.css'],
   template: `
-    <div class="vx-enterprise artist-releases-page">
+    <div class="vx-enterprise cat-page" data-testid="artist-releases-list">
       @if (!orgId) {
         <app-enterprise-org-required />
       } @else {
-        <app-enterprise-page-header
-          [title]="'publishing.releases.title' | t:lang()"
-          [subtitle]="'publishing.releases.subtitle' | t:lang()"
-        >
-          @if (canCreate) {
-            <a routerLink="/artist/releases/new" class="btn btn--primary">
-              {{ 'publishing.releases.new' | t:lang() }}
-            </a>
-          }
-        </app-enterprise-page-header>
+        <header class="cat-head">
+          <p class="cat-kicker">Catálogo</p>
+          <h1 class="cat-title">Lanzamientos</h1>
+          <p class="cat-sub">Borradores, revisiones y lanzamientos publicados.</p>
+        </header>
 
-        <div class="count-row">
-          <span class="count-chip count-chip--draft">
-            {{ 'publishing.status.draft' | t:lang() }}: {{ countDraft }}
-          </span>
-          <span class="count-chip count-chip--review">
-            {{ 'publishing.status.inReview' | t:lang() }}: {{ countReview }}
-          </span>
-          <span class="count-chip count-chip--published">
-            {{ 'publishing.status.published' | t:lang() }}: {{ countPublished }}
-          </span>
+        <div class="cat-signals">
+          <span class="cat-chip">Borrador <strong>{{ countDraft }}</strong></span>
+          <span class="cat-chip">En revisión <strong>{{ countReview }}</strong></span>
+          <span class="cat-chip">Publicado <strong>{{ countPublished }}</strong></span>
+        </div>
+
+        <div class="cat-toolbar">
+          <input
+            class="cat-search"
+            type="search"
+            [(ngModel)]="query"
+            placeholder="Buscar lanzamiento"
+            aria-label="Buscar lanzamiento"
+          />
+          <select class="cat-select" [(ngModel)]="statusFilter" aria-label="Estado">
+            <option value="all">Todos los estados</option>
+            <option value="draft">Borrador</option>
+            <option value="in_review">En revisión</option>
+            <option value="published">Publicado</option>
+          </select>
+          <div class="cat-actions">
+            @if (canCreate) {
+              <a class="primary" routerLink="/artist/releases/new">Publicar música</a>
+            }
+          </div>
         </div>
 
         @if (loading) {
           <app-enterprise-loading-skeleton [rows]="5" />
         } @else if (error) {
           <app-enterprise-error-state [message]="error" (retry)="load()" />
-        } @else if (!rows.length) {
-          <app-enterprise-empty-state
-            [title]="'publishing.releases.empty' | t:lang()"
-            [description]="'publishing.releases.emptyBody' | t:lang()"
-            [ctaLabel]="'publishing.releases.new' | t:lang()"
-          />
+        } @else if (!filteredRows.length) {
+          <section class="cat-section">
+            <p class="cat-empty">No encontramos contenido con estos filtros.</p>
+          </section>
         } @else {
-          <div class="release-cards">
-            @for (r of rows; track r.id) {
-              <article class="release-card">
-                <div class="release-card__head">
-                  <h3>
-                    <a [routerLink]="['/artist/releases', r.id]">{{ r.title }}</a>
-                  </h3>
-                  <app-enterprise-status-badge
-                    [status]="badgeStatus(r.status)"
-                    [label]="statusLabel(r.status)"
-                  />
-                </div>
-                <p class="muted">
-                  {{ r.release_type }} · #{{ r.id }}
-                  @if (r.planned_release_date) {
-                    · {{ r.planned_release_date }}
-                  }
-                </p>
-                <div class="release-card__actions">
-                  <a [routerLink]="['/artist/releases', r.id]" class="btn btn--secondary btn--sm">
-                    {{ 'publishing.releases.open' | t:lang() }}
+          <section class="cat-section">
+            <ul class="cat-list">
+              @for (r of filteredRows; track r.id) {
+                <li>
+                  <a class="cat-row" [routerLink]="['/artist/releases', r.id]">
+                    <div class="cat-cover" aria-hidden="true">
+                      @if (coverUrl(r); as src) {
+                        <img [src]="src" alt="" loading="lazy" (error)="onCoverError($event)" />
+                      } @else {
+                        <img class="cat-cover__mark" src="/assets/images/voxmetrik-icon.webp" alt="" />
+                      }
+                    </div>
+                    <div>
+                      <p class="cat-row__title">{{ displayTitle(r) }}</p>
+                      <p class="cat-row__meta">
+                        {{ releaseTypeLabel(r.release_type) }}
+                        @if (r.planned_release_date || r.published_at) {
+                          · {{ formatDate(r.published_at || r.planned_release_date!) }}
+                        }
+                      </p>
+                    </div>
+                    <div class="cat-row__side">
+                      <span class="cat-badge" [ngClass]="badgeClass(r.status)">{{
+                        humanStatus(r.status)
+                      }}</span>
+                    </div>
                   </a>
-                </div>
-              </article>
-            }
-          </div>
+                </li>
+              }
+            </ul>
+          </section>
         }
       }
     </div>
   `,
-  styles: `
-    .count-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-    }
-    .count-chip {
-      font-size: 0.8rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.04);
-    }
-    .count-chip--draft { color: #c4c4c4; }
-    .count-chip--review { color: #f0c36a; }
-    .count-chip--published { color: #6fd3a0; }
-    .release-cards {
-      display: grid;
-      gap: 0.85rem;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    }
-    .release-card {
-      padding: 1rem 1.1rem;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(12, 14, 18, 0.72);
-    }
-    .release-card__head {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.75rem;
-      align-items: flex-start;
-    }
-    .release-card h3 {
-      margin: 0;
-      font-size: 1rem;
-    }
-    .release-card h3 a {
-      color: inherit;
-      text-decoration: none;
-    }
-    .release-card__actions {
-      margin-top: 0.75rem;
-    }
-    .muted { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; }
-  `,
 })
 export class ArtistReleasesListPage implements OnInit {
-  private i18n = inject(I18nService);
-  readonly lang = this.i18n.lang;
   private api = inject(CatalogPublishingApiService);
   private orgCtx = inject(OrganizationContextService);
+  private auth = inject(AuthService);
   private access = catalogPublishingAccess();
 
   orgId: number | null = null;
@@ -152,6 +119,18 @@ export class ArtistReleasesListPage implements OnInit {
   countDraft = 0;
   countReview = 0;
   countPublished = 0;
+  query = '';
+  statusFilter: 'all' | 'draft' | 'in_review' | 'published' = 'all';
+
+  get filteredRows(): ReleaseSubmission[] {
+    let rows = this.rows;
+    if (this.statusFilter !== 'all') {
+      rows = rows.filter((r) => publishingUiBucket(r.status) === this.statusFilter);
+    }
+    const q = this.query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => r.title.toLowerCase().includes(q));
+  }
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
@@ -189,7 +168,7 @@ export class ArtistReleasesListPage implements OnInit {
         error: () => {
           this.rows = [];
           this.loading = false;
-          this.error = null; // graceful empty
+          this.error = null;
         },
       });
   }
@@ -212,15 +191,60 @@ export class ArtistReleasesListPage implements OnInit {
     ).length;
   }
 
-  statusLabel(status: string): string {
-    return this.i18n.t(publishingPrimaryLabelKey(status));
+  coverUrl(r: ReleaseSubmission): string | null {
+    const id = r.cover_media_id;
+    if (!id) return null;
+    const base = this.api.mediaContentUrl(id);
+    const token = this.auth.getToken();
+    return token ? `${base}${base.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : base;
   }
 
-  badgeStatus(status: string): string {
-    const b = publishingUiBucket(status);
-    if (b === 'draft') return 'draft';
-    if (b === 'published') return 'published';
-    if (b === 'in_review') return 'pending';
-    return status;
+  onCoverError(ev: Event): void {
+    const img = ev.target as HTMLImageElement | null;
+    if (!img) return;
+    img.style.display = 'none';
+    const parent = img.parentElement;
+    if (parent && !parent.querySelector('.cat-cover__mark')) {
+      const mark = document.createElement('img');
+      mark.className = 'cat-cover__mark';
+      mark.src = '/assets/images/voxmetrik-icon.webp';
+      mark.alt = '';
+      parent.appendChild(mark);
+    }
+  }
+
+  displayTitle(r: ReleaseSubmission): string {
+    return displayReleaseTitle(r.title, r.status);
+  }
+
+  humanStatus(status: string): string {
+    return humanReleaseStatus(status);
+  }
+
+  badgeClass(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'published') return 'cat-badge--published';
+    if (s === 'changes_requested') return 'cat-badge--attention';
+    if (s === 'draft') return 'cat-badge--draft';
+    if (publishingUiBucket(s) === 'in_review') return 'cat-badge--review';
+    return '';
+  }
+
+  releaseTypeLabel(type: string | null | undefined): string {
+    const t = (type || '').toLowerCase();
+    if (t === 'single') return 'Single';
+    if (t === 'ep') return 'EP';
+    if (t === 'album') return 'Álbum';
+    return type || 'Lanzamiento';
+  }
+
+  formatDate(iso: string): string {
+    const d = Date.parse(iso);
+    if (Number.isNaN(d)) return iso.slice(0, 10);
+    return new Date(d)
+      .toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })
+      .replace(/\./g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

@@ -268,6 +268,48 @@ export class AuthService {
     }
   }
 
+  /** Keep chrome theme toggle aligned with cached user + API after reload. */
+  persistDarkMode(dark: boolean): void {
+    const user = this.authState().user;
+    if (!user) return;
+    const next: AppUser = {
+      ...user,
+      preferences: {
+        dark_mode: dark,
+        audio_quality: user.preferences?.audio_quality ?? 'high',
+        recommendations_enabled: user.preferences?.recommendations_enabled ?? true,
+        privacy_public: user.preferences?.privacy_public ?? false,
+        presentation_nav: user.preferences?.presentation_nav,
+        presentation_role: user.preferences?.presentation_role,
+        demo: user.preferences?.demo,
+        language: user.preferences?.language,
+      },
+    };
+    this.authState.set({ ...this.authState(), user: next });
+    const raw = JSON.stringify(next);
+    if (localStorage.getItem(this.USER_KEY) != null) localStorage.setItem(this.USER_KEY, raw);
+    if (sessionStorage.getItem(this.USER_KEY) != null) sessionStorage.setItem(this.USER_KEY, raw);
+    this.http.patch<AppUser>(`${this.API}/me/preferences`, { dark_mode: dark }).subscribe({
+      next: (updated) => {
+        if (!updated) return;
+        const merged: AppUser = {
+          ...this.authState().user,
+          ...updated,
+          preferences: updated.preferences ?? next.preferences,
+        };
+        this.authState.set({ ...this.authState(), user: merged });
+        const mergedRaw = JSON.stringify(merged);
+        if (localStorage.getItem(this.USER_KEY) != null) {
+          localStorage.setItem(this.USER_KEY, mergedRaw);
+        }
+        if (sessionStorage.getItem(this.USER_KEY) != null) {
+          sessionStorage.setItem(this.USER_KEY, mergedRaw);
+        }
+      },
+      error: () => undefined,
+    });
+  }
+
   getStoredToken(): string | null {
     return localStorage.getItem(this.AUTH_KEY) ?? sessionStorage.getItem(this.AUTH_KEY);
   }

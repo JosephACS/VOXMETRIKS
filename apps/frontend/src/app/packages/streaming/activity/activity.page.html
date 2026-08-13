@@ -1,4 +1,4 @@
-<section class="activity-page" data-testid="activity-page">
+<section class="activity-page listener-surface" data-testid="activity-page">
   <header class="activity-header">
     <h1>{{ 'activity.title' | t:lang() }}</h1>
     <p class="lede">{{ 'activity.subtitle' | t:lang() }}</p>
@@ -35,27 +35,27 @@
       </div>
     </div>
   } @else {
-    <section class="summary-grid" [attr.aria-label]="'activity.summary' | t:lang()">
-      <article class="stat-card">
-        <span class="stat-label">{{ 'activity.stat.minutes' | t:lang() }}</span>
-        <strong class="stat-value">{{ summary()?.listened_minutes ?? 0 }}</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">{{ 'activity.stat.plays' | t:lang() }}</span>
-        <strong class="stat-value">{{ summary()?.plays ?? 0 }}</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">{{ 'activity.stat.tracks' | t:lang() }}</span>
-        <strong class="stat-value">{{ summary()?.distinct_tracks ?? 0 }}</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">{{ 'activity.stat.artists' | t:lang() }}</span>
-        <strong class="stat-value">{{ summary()?.distinct_artists ?? 0 }}</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">{{ 'activity.stat.activeDays' | t:lang() }}</span>
-        <strong class="stat-value">{{ summary()?.active_days ?? 0 }}</strong>
-      </article>
+    <section class="vx-listen-strip" [attr.aria-label]="'activity.summary' | t:lang()">
+      <div class="vx-listen-strip__item">
+        <strong class="vx-listen-strip__value">{{ summary()?.listened_minutes ?? 0 }}</strong>
+        <span class="vx-listen-strip__label">{{ 'activity.stat.minutes' | t:lang() }}</span>
+      </div>
+      <div class="vx-listen-strip__item">
+        <strong class="vx-listen-strip__value">{{ summary()?.plays ?? 0 }}</strong>
+        <span class="vx-listen-strip__label">{{ 'activity.stat.plays' | t:lang() }}</span>
+      </div>
+      <div class="vx-listen-strip__item">
+        <strong class="vx-listen-strip__value">{{ summary()?.distinct_tracks ?? 0 }}</strong>
+        <span class="vx-listen-strip__label">{{ 'activity.stat.tracks' | t:lang() }}</span>
+      </div>
+      <div class="vx-listen-strip__item">
+        <strong class="vx-listen-strip__value">{{ summary()?.distinct_artists ?? 0 }}</strong>
+        <span class="vx-listen-strip__label">{{ 'activity.stat.artists' | t:lang() }}</span>
+      </div>
+      <div class="vx-listen-strip__item">
+        <strong class="vx-listen-strip__value">{{ summary()?.active_days ?? 0 }}</strong>
+        <span class="vx-listen-strip__label">{{ 'activity.stat.activeDays' | t:lang() }}</span>
+      </div>
     </section>
 
     <section class="panel">

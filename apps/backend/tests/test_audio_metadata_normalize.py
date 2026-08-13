@@ -26,6 +26,19 @@ def test_strip_remastered_and_year():
     assert strip_title_noise("Song - Deluxe Edition").lower().find("deluxe") < 0
 
 
+def test_strip_with_and_feat_in_title():
+    assert strip_title_noise("Be Kind (with Halsey)") == "Be Kind"
+    assert strip_title_noise("Unholy (feat. Kim Petras)") == "Unholy"
+    assert "Halsey" not in strip_title_noise("Be Kind (with Halsey)")
+    variants = title_variants("Be Kind (with Halsey)")
+    assert "Be Kind" in variants
+
+
+def test_strip_sped_up_version_suffix():
+    assert strip_title_noise("Lights - Sped Up Version") == "Lights"
+    assert "Sped" not in strip_title_noise("Lights - Sped Up Version")
+
+
 def test_title_variants_keep_original():
     variants = title_variants("Billie Jean (Remastered 2003)")
     assert variants[0] == "Billie Jean (Remastered 2003)"

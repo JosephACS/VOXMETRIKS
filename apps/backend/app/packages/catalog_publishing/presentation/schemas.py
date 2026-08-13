@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 class DraftCreateRequest(BaseModel):
     artist_profile_id: int
-    title: str
+    title: str = Field(min_length=1, max_length=200)
     release_type: str = "single"
     version: Optional[str] = None
     label_name: Optional[str] = None
@@ -39,7 +39,7 @@ class MetadataUpdateRequest(BaseModel):
 
 
 class TrackCreateRequest(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=200)
     track_number: int = 1
     disc_number: int = 1
     version: Optional[str] = None

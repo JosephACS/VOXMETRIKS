@@ -314,6 +314,8 @@ def _create_profile(
     name = display_name.strip()
     if not name:
         raise ValidationError("display_name is required")
+    if len(name) > 200:
+        raise ValidationError("display_name must be at most 200 characters")
     now = _now()
     aid = _next_id(conn, "app_artist_profile")
     normalized = _normalize_name(name)

@@ -9,6 +9,7 @@ import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { productArtistDisplayName } from '../../../shared/utils/product-presentation.util';
 
 @Component({
   selector: 'app-artist-profiles-list',
@@ -73,24 +74,22 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [ctaLabel]="'artists.list.create' | t:lang()"
           />
         } @else {
-          <div class="artist-card-grid">
+          <div class="artist-row-list">
             @for (artist of artists; track artist.id) {
-              <a [routerLink]="['/artist-profiles', artist.id]" class="artist-card">
-                <div class="artist-card__cover" aria-hidden="true">
-                  <span>{{ artist.display_name.charAt(0) || '?' }}</span>
+              <a [routerLink]="['/artist-profiles', artist.id]" class="artist-row">
+                <div class="artist-row__avatar" aria-hidden="true">
+                  <span>{{ artistLabel(artist).charAt(0) || '?' }}</span>
                 </div>
-                <div class="artist-card__body">
-                  <h3>{{ artist.display_name }}</h3>
-                  <app-enterprise-status-badge [status]="artist.status" />
-                  @if (artist.warehouse_artist_id) {
-                    <span class="badge badge--linked">
-                      {{ 'artists.list.linked' | t:lang() }}
-                    </span>
-                  } @else {
-                    <span class="badge badge--unlinked">
-                      {{ 'artists.list.notLinked' | t:lang() }}
-                    </span>
-                  }
+                <div class="artist-row__body">
+                  <strong>{{ artistLabel(artist) }}</strong>
+                  <span class="muted">
+                    {{ artist.status | statusLabel }}
+                    @if (artist.warehouse_artist_id) {
+                      · {{ 'artists.list.linked' | t:lang() }}
+                    } @else {
+                      · {{ 'artists.list.notLinked' | t:lang() }}
+                    }
+                  </span>
                 </div>
               </a>
             }
@@ -100,6 +99,49 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
       }
     </div>
   `,
+  styles: [
+    `
+      .artist-row-list {
+        display: grid;
+        gap: 0;
+      }
+      .artist-row {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.7rem 0;
+        border-top: 1px solid var(--vx-border-subtle, var(--border, rgba(255, 255, 255, 0.08)));
+        text-decoration: none;
+        color: inherit;
+      }
+      .artist-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+      .artist-row__avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--vx-accent, #1ed896) 16%, transparent);
+        color: var(--vx-accent, #1ed896);
+        font-weight: 700;
+      }
+      .artist-row__body {
+        display: grid;
+        gap: 0.15rem;
+      }
+      .artist-row__body strong {
+        font-size: 0.95rem;
+      }
+      .artist-row__body .muted {
+        font-size: 0.78rem;
+        color: var(--vx-text-secondary, var(--color-text-muted, rgba(255, 255, 255, 0.5)));
+      }
+    `,
+  ],
 })
 export class ArtistProfilesListPage implements OnInit {
   private i18n = inject(I18nService);
@@ -130,6 +172,10 @@ export class ArtistProfilesListPage implements OnInit {
   onStatusChange(event: Event): void {
     this.statusFilter = (event.target as HTMLSelectElement).value;
     this.load();
+  }
+
+  artistLabel(artist: ArtistProfile): string {
+    return productArtistDisplayName(artist.display_name);
   }
 
   load(): void {

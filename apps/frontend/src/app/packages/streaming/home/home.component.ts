@@ -15,6 +15,7 @@ import {
 } from '../../../shared/models/api.models';
 import { PlayableTrack } from '../../../shared/models/player.models';
 import { displayTrackTitle } from '../../../shared/utils/track-display.util';
+import { productUserDisplayName } from '../../../shared/utils/product-presentation.util';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -113,7 +114,9 @@ export class HomeComponent implements OnInit {
   smartLoading = signal(true);
   growthLabels = signal<string[]>([]);
   growthValues = signal<number[]>([]);
-  userName = computed(() => this.auth.getUser()?.username ?? 'demo');
+  userName = computed(() =>
+    productUserDisplayName(this.auth.getUser()?.username, 'Oyente'),
+  );
   userPlan = computed(() => this.auth.getUser()?.plan ?? 'Free');
   listenStreak = computed(() => listenStreak(this.rawHistory()));
   listenMinutesToday = computed(() => this.listenStats.minutesToday());

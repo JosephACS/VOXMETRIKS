@@ -45,16 +45,19 @@ class AudiusProvider(AudioProvider):
             track.track_name, track.artist_name, max_variants=_MAX_QUERY_ATTEMPTS
         )
         # Audius does not need "official audio" suffix as much — prefer plain variants too.
-        plain = []
-        if meta.primary_artist:
-            plain.append(f"{meta.original_title} {meta.primary_artist}".strip())
-        if meta.all_artists_joined:
-            plain.append(f"{meta.original_title} {meta.all_artists_joined}".strip())
-        plain.append(meta.original_title)
+        # Prefer cleaned titles (without "feat./with …") so warehouse titles like
+        # "Be Kind (with Halsey)" still match Audius catalog entries.
+        plain: List[str] = []
+        for title in meta.title_variants:
+            if meta.primary_artist:
+                plain.append(f"{title} {meta.primary_artist}".strip())
+            if meta.all_artists_joined and meta.all_artists_joined != meta.primary_artist:
+                plain.append(f"{title} {meta.all_artists_joined}".strip())
+            plain.append(title)
         for q in plain:
             if q and q not in queries:
                 queries.append(q)
-        queries = queries[:_MAX_QUERY_ATTEMPTS] or [track.track_name]
+        queries = queries[: max(_MAX_QUERY_ATTEMPTS, 6)] or [track.track_name]
 
         last_query = queries[0]
         for query in queries:
@@ -124,7 +127,26 @@ class AudiusProvider(AudioProvider):
         self, items: List[Dict[str, Any]], track: TrackContext, meta
     ) -> Optional[Dict[str, Any]]:
         artists = list(meta.artists)
-        expect_title = meta.original_title or track.track_name
+        expect_titles = [
+            t
+            for t in (
+                meta.original_title,
+                meta.clean_title,
+                *meta.title_variants,
+                track.track_name,
+            )
+            if t
+        ]
+        # Deduplicate while preserving order.
+        seen_titles: set[str] = set()
+        uniq_expect: List[str] = []
+        for t in expect_titles:
+            key = t.casefold()
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+            uniq_expect.append(t)
+
         best: Optional[Dict[str, Any]] = None
         best_score = -1.0
 
@@ -137,7 +159,7 @@ class AudiusProvider(AudioProvider):
             if _BAD_TITLE_RE.search(title):
                 continue
 
-            sim = title_similarity(title, expect_title)
+            sim = max((title_similarity(title, expected) for expected in uniq_expect), default=0.0)
             if sim < 0.22:
                 continue
 
@@ -148,7 +170,12 @@ class AudiusProvider(AudioProvider):
             score = sim * 50.0 + a_score * 35.0
 
             duration = int(item.get("duration") or 0)
-            if track.duration_ms and duration > 0:
+            # Skip hard duration rejects when the catalog title is a speed/edit variant —
+            # Audius usually has the normal-tempo track.
+            speed_variant = bool(
+                re.search(r"\b(sped\s*up|slowed|nightcore|speed\s*up)\b", expect_titles[0] or "", re.I)
+            )
+            if track.duration_ms and duration > 0 and not speed_variant:
                 track_sec = track.duration_ms / 1000.0
                 ratio = abs(duration - track_sec) / track_sec
                 if ratio > 0.35:

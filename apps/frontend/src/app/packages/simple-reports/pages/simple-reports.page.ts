@@ -12,6 +12,7 @@ import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 import { I18nService } from '../../../core/services/i18n.service';
 import { filterSimpleReportCatalog } from '../simple-reports-catalog.filter';
 import { productVisibleColumns } from '../../../shared/reports/report-presentation';
+
 @Component({
   selector: 'app-simple-reports-page',
   standalone: true,
@@ -21,12 +22,15 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
     RouterLink,
     ...ENTERPRISE_UI_IMPORTS,
   ],
+  styleUrls: ['../../../shared/styles/reports-surface.css'],
   template: `
-    <div class="vx-enterprise simple-reports-page">
-      <app-enterprise-page-header
-        title="Reportes"
-        subtitle="Informes operacionales por módulo. Un solo motor; sin duplicar consultas."
-      />
+    <div class="vx-enterprise vx-report-page simple-reports-page">
+      @if (!selected) {
+        <header class="vx-report-page-header">
+          <h1>Informes simples</h1>
+          <p>Listados operacionales por módulo. Elige un informe del catálogo.</p>
+        </header>
+      }
 
       @if (contextModuleLabel) {
         <p class="context-banner" role="status">
@@ -35,15 +39,16 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
         </p>
       }
 
-      <app-enterprise-section-card title="Filtros del catálogo">
-        <div class="form-grid">
-          <app-enterprise-form-field label="Buscar">
+      @if (!selected) {
+        <div class="vx-report-filters">
+          <label class="vx-report-field">
+            <span>Buscar</span>
             <div class="sr-search">
               <input
                 class="input"
                 [(ngModel)]="searchText"
                 (ngModelChange)="onCatalogFiltersChanged()"
-                placeholder="Título, proceso, módulo o categoría"
+                placeholder="Título o tema…"
                 data-testid="simple-catalog-search"
               />
               @if (searchText.trim()) {
@@ -58,8 +63,9 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                 </button>
               }
             </div>
-          </app-enterprise-form-field>
-          <app-enterprise-form-field label="Módulo">
+          </label>
+          <label class="vx-report-field">
+            <span>Módulo</span>
             <select
               class="select"
               [(ngModel)]="selectedModule"
@@ -71,8 +77,9 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                 <option [value]="m.id">{{ m.label }}</option>
               }
             </select>
-          </app-enterprise-form-field>
-          <app-enterprise-form-field label="Categoría">
+          </label>
+          <label class="vx-report-field">
+            <span>Categoría</span>
             <select
               class="select"
               [(ngModel)]="selectedCategory"
@@ -84,13 +91,11 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                 <option [value]="c">{{ c }}</option>
               }
             </select>
-          </app-enterprise-form-field>
+          </label>
         </div>
 
-        <div class="sr-filter-bar">
-          <span class="sr-filter-count" data-testid="simple-catalog-count">
-            {{ visibleCountLabel }}
-          </span>
+        <div class="vx-report-filter-bar">
+          <span data-testid="simple-catalog-count">{{ visibleCountLabel }}</span>
           @if (hasActiveCatalogFilters) {
             <div class="sr-chips" aria-label="Filtros activos">
               @if (selectedModule) {
@@ -119,63 +124,58 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
             </button>
           }
         </div>
-      </app-enterprise-section-card>
 
-      <div class="sr-groups">
-        @for (g of grouped; track g.module) {
-          <app-enterprise-section-card [title]="g.label + ' (' + g.items.length + ')'">
-            <div class="report-cards">
+        <div class="sr-groups">
+          @for (g of grouped; track g.module) {
+            <p class="vx-report-group-label">{{ g.label }} ({{ g.items.length }})</p>
+            <div class="vx-report-cards">
               @for (r of g.items; track r.id) {
                 <button
                   type="button"
-                  class="report-card"
-                  [class.report-card--active]="selectedReportId === r.id"
+                  class="vx-report-card"
+                  [class.vx-report-card--active]="selectedReportId === r.id"
                   (click)="selectReport(r.id)"
                 >
-                  <span class="report-card__title">{{ r.title }}</span>
-                  <span class="report-card__meta">{{ r.category }} · {{ r.business_process }}</span>
-                  <span class="badges">
-                    <span class="badge">{{ classificationLabel(r.data_classification) }}</span>
-                    @if (r.monetary_classification === 'simulated') {
-                      <span class="badge badge--money">Dinero simulado</span>
-                    }
-                  </span>
+                  <span class="vx-report-card__title">{{ r.title }}</span>
+                  <span class="vx-report-card__meta">{{ r.category }}</span>
+                  @if (r.monetary_classification === 'simulated') {
+                    <span class="vx-report-badges">
+                      <span class="vx-report-badge vx-report-badge--warn">Importes estimados</span>
+                    </span>
+                  }
                 </button>
               }
             </div>
-          </app-enterprise-section-card>
-        } @empty {
-          <app-enterprise-empty-state
-            title="No se encontraron informes con los filtros actuales."
-            description="Los filtros de módulo, categoría o búsqueda están limitando el catálogo."
-            ctaLabel="Limpiar filtros"
-            (ctaClick)="clearCatalogFilters()"
-          />
-        }
-      </div>
+          } @empty {
+            <app-enterprise-empty-state
+              title="No se encontraron informes con los filtros actuales."
+              description="Los filtros de módulo, categoría o búsqueda están limitando el catálogo."
+              ctaLabel="Limpiar filtros"
+              (ctaClick)="clearCatalogFilters()"
+            />
+          }
+        </div>
+      }
 
       @if (selected) {
-        <app-enterprise-section-card [title]="selected.title">
-          <div class="sr-meta">
-            <p><strong>Proceso:</strong> {{ selected.business_process || '—' }}</p>
-            <p><strong>Decisión:</strong> {{ selected.decision || selected.objective }}</p>
-            <p><strong>Módulo:</strong> {{ selected.business_module_label || selected.area }}</p>
-            <p><strong>Clasificación:</strong> {{ classificationLabel(selected.data_classification) }}</p>
-            @if (selected.monetary_classification === 'simulated') {
-              <p class="muted" role="status">Valores monetarios simulados. No representan cobros reales.</p>
-            }
-            @if (selected.demo_backend_dependency) {
-              <p class="muted">Fuente de datos de demostración ({{ selected.demo_backend_dependency }}); el módulo UI demo no forma parte del MVP.</p>
-            }
-            <p class="muted">{{ selected.description }}</p>
-          </div>
+        <app-enterprise-page-header
+          [reportMode]="true"
+          backPath="/reports"
+          backLabel="Reportes"
+          [title]="selected.title"
+          [subtitle]="selected.description || selected.objective || 'Consulta operacional.'"
+          badge="Simple"
+        />
 
-          <div class="form-grid">
-            <app-enterprise-form-field label="Buscar en resultados">
+        <div class="vx-report-toolbar" data-testid="enterprise-filter-bar">
+          <div class="vx-report-period">
+            <label class="vx-report-field">
+              <span>Buscar en resultados</span>
               <input class="input" [(ngModel)]="resultSearch" placeholder="Texto libre" />
-            </app-enterprise-form-field>
+            </label>
             @for (f of selected.filters; track f.key) {
-              <app-enterprise-form-field [label]="f.label">
+              <label class="vx-report-field">
+                <span>{{ f.label }}</span>
                 @if (f.kind === 'select' && f.options.length) {
                   <select class="select" [(ngModel)]="filterValues[f.key]">
                     <option value="">Todos</option>
@@ -186,41 +186,60 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                 } @else {
                   <input class="input" [(ngModel)]="filterValues[f.key]" />
                 }
-              </app-enterprise-form-field>
+              </label>
             }
-          </div>
-          <div class="sr-actions">
             <button type="button" class="btn btn--primary" (click)="runQuery()" [disabled]="loading">
-              Ejecutar consulta
+              Actualizar
             </button>
             <button type="button" class="btn btn--secondary" (click)="clearResultFilters()">
-              Limpiar filtros de resultado
+              Limpiar
             </button>
           </div>
-        </app-enterprise-section-card>
-      }
+        </div>
 
-      @if (selected) {
+        <details class="vx-report-method" data-testid="simple-more-info">
+          <summary>Más información</summary>
+          <div class="vx-report-method__body">
+            @if (selected.decision || selected.objective) {
+              <p><strong>Para qué sirve:</strong> {{ selected.decision || selected.objective }}</p>
+            }
+            <p><strong>Módulo:</strong> {{ selected.business_module_label || selected.area }}</p>
+            @if (selected.business_process) {
+              <p><strong>Proceso:</strong> {{ selected.business_process }}</p>
+            }
+            <p><strong>Origen de los datos:</strong> {{ classificationLabel(selected.data_classification) }}</p>
+            @if (selected.monetary_classification === 'simulated') {
+              <p class="vx-report-muted" role="status">Valores monetarios simulados. No representan cobros reales.</p>
+            }
+            @if (selected.demo_backend_dependency) {
+              <p class="vx-report-muted">Fuente de catálogo ({{ selected.demo_backend_dependency }}).</p>
+            }
+            <p class="vx-report-method__id"><strong>ID:</strong> {{ selected.id }}</p>
+          </div>
+        </details>
+
         @if (loading) {
           <app-enterprise-loading-skeleton [rows]="6" />
         } @else if (error) {
           <app-enterprise-error-state [message]="error" (retry)="runQuery()" />
         } @else if (data) {
-          <app-enterprise-section-card [title]="'Resultados (' + data.total + ')'">
+          <section class="vx-report-detail" aria-label="Resultados">
+            <h2 class="vx-report-section-title">Resultados ({{ data.total }})</h2>
             @if (data.data_classification === 'synthetic' || data.data_classification === 'demo' || data.data_classification === 'mixed') {
-              <p class="muted" role="status">{{ data.classification_note || classificationLabel(data.data_classification) }}</p>
+              <p class="vx-report-muted" role="status">{{ data.classification_note || classificationLabel(data.data_classification) }}</p>
             }
             @if (data.monetary_classification === 'simulated') {
-              <p class="muted" role="status">Dinero simulado / académico.</p>
+              <p class="vx-report-muted" role="status">Dinero simulado / académico.</p>
             }
             @if (!data.items.length) {
               <app-enterprise-empty-state
-                [title]="data.empty_message || 'Sin resultados'"
-                description="Pruebe otros filtros o verifique que existan datos operacionales."
+                [title]="emptyTitle"
+                [description]="emptyDescription"
+                data-testid="simple-empty-state"
               />
             } @else {
-              <app-enterprise-data-table>
-                <table class="data-table">
+              <div class="vx-report-table">
+                <table>
                   <thead>
                     <tr>
                       @for (c of visibleColumns; track c.key) {
@@ -238,12 +257,12 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                     }
                   </tbody>
                 </table>
-              </app-enterprise-data-table>
-              <div class="sr-pager">
+              </div>
+              <div class="vx-report-actions sr-pager">
                 <button type="button" class="btn btn--secondary" [disabled]="page <= 1 || loading" (click)="prevPage()">
                   Anterior
                 </button>
-                <span>Página {{ page }} · {{ pageSize }} por página</span>
+                <span class="vx-report-muted">Página {{ page }} · {{ pageSize }} por página</span>
                 <button
                   type="button"
                   class="btn btn--secondary"
@@ -254,65 +273,70 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
                 </button>
               </div>
             }
-          </app-enterprise-section-card>
+          </section>
         }
       }
     </div>
   `,
   styles: [
     `
-      .muted { color: var(--text-muted, #666); margin: 0.25rem 0 0; }
       .context-banner {
-        display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
-        padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;
-        border: 1px solid var(--border-color, #ddd); border-radius: 0.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.55rem 0;
+        margin-bottom: 0.75rem;
+        font-size: 0.88rem;
+        color: var(--text-muted, rgba(255, 255, 255, 0.55));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       }
-      .context-back { font-weight: 600; }
-      .form-grid {
-        display: grid; gap: 0.75rem;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      .context-back {
+        font-weight: 600;
+        color: var(--accent, #1ed896);
       }
-      .sr-search { position: relative; }
-      .sr-search .input { width: 100%; padding-right: 2rem; }
+      .sr-search {
+        position: relative;
+      }
+      .sr-search .input {
+        width: 100%;
+        padding-right: 2rem;
+      }
       .sr-search__clear {
-        position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);
-        border: 0; background: transparent; cursor: pointer; font-size: 1.25rem;
-        line-height: 1; padding: 0.2rem 0.45rem; opacity: 0.7;
+        position: absolute;
+        right: 0.35rem;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font-size: 1.25rem;
+        line-height: 1;
+        padding: 0.2rem 0.45rem;
+        opacity: 0.7;
+        color: inherit;
       }
-      .sr-search__clear:hover { opacity: 1; }
-      .sr-filter-bar {
-        display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;
-        margin-top: 0.85rem;
+      .sr-search__clear:hover {
+        opacity: 1;
       }
-      .sr-filter-count { font-size: 0.9rem; font-weight: 600; }
-      .sr-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+      .sr-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
       .sr-chip {
-        border: 1px solid var(--border-color, #ccc); background: transparent;
-        border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.78rem; cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: transparent;
+        border-radius: 6px;
+        padding: 0.15rem 0.55rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+        color: inherit;
       }
-      .sr-groups { display: grid; gap: 1rem; margin: 1rem 0; }
-      .report-cards {
-        display: grid; gap: 0.65rem;
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      }
-      .report-card {
-        text-align: left; padding: 0.75rem; border-radius: 0.4rem;
-        border: 1px solid var(--border-color, #ccc); background: transparent; cursor: pointer;
-        display: flex; flex-direction: column; gap: 0.35rem;
-      }
-      .report-card--active { border-color: var(--vx-accent, #1a7a4c); box-shadow: inset 0 0 0 1px var(--vx-accent, #1a7a4c); }
-      .report-card__title { font-weight: 600; font-size: 0.95rem; }
-      .report-card__meta { font-size: 0.8rem; opacity: 0.8; }
-      .badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-      .badge {
-        font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 0.25rem;
-        border: 1px solid currentColor; opacity: 0.85;
-      }
-      .badge--money { color: #8a5a00; }
-      .sr-meta p { margin: 0.3rem 0; }
-      .sr-actions, .sr-pager { display: flex; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center; }
-      @media (max-width: 480px) {
-        .report-cards { grid-template-columns: 1fr; }
+      .sr-groups {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0.5rem 0 1.5rem;
       }
     `,
   ],
@@ -336,7 +360,7 @@ export class SimpleReportsPage implements OnInit {
   /** Result-table free-text filter (not the catalog search). */
   resultSearch = '';
   page = 1;
-  pageSize = 25;
+  pageSize = 12;
   loading = false;
   error = '';
   data: SimpleReportData | null = null;
@@ -348,6 +372,58 @@ export class SimpleReportsPage implements OnInit {
 
   get visibleColumns() {
     return productVisibleColumns(this.data?.columns || []);
+  }
+
+  get emptyTitle(): string {
+    const id = this.selected?.id || '';
+    switch (id) {
+      case 'business-alerts-open':
+        return 'Sin alertas abiertas';
+      case 'job-executions-failed':
+        return 'Sin ejecuciones fallidas';
+      case 'ops-incidents-open':
+        return 'Sin incidentes abiertos';
+      case 'support-cases-open':
+        return 'Sin casos de soporte abiertos';
+      case 'crm-opportunities-open':
+        return 'Sin oportunidades abiertas';
+      case 'data-quality-failed':
+        return 'Sin fallos de calidad';
+      case 'etl-loads-failed':
+        return 'Sin cargas fallidas';
+      case 'payment-attempts-failed':
+        return 'Sin intentos de pago fallidos';
+      case 'audio-source-errors':
+        return 'Sin errores de audio';
+      default:
+        return this.data?.empty_message || 'Sin datos para los filtros actuales.';
+    }
+  }
+
+  get emptyDescription(): string {
+    const id = this.selected?.id || '';
+    switch (id) {
+      case 'business-alerts-open':
+        return 'No hay incidencias de negocio pendientes en este momento.';
+      case 'job-executions-failed':
+        return 'Los trabajos registrados finalizaron correctamente.';
+      case 'ops-incidents-open':
+        return 'No hay incidentes operativos pendientes.';
+      case 'support-cases-open':
+        return 'La bandeja de soporte está al día.';
+      case 'crm-opportunities-open':
+        return 'No hay oportunidades CRM pendientes de seguimiento.';
+      case 'data-quality-failed':
+        return 'Las comprobaciones de calidad no reportan fallos abiertos.';
+      case 'etl-loads-failed':
+        return 'Las cargas registradas finalizaron sin error.';
+      case 'payment-attempts-failed':
+        return 'No hay intentos de cobro fallidos en el alcance actual.';
+      case 'audio-source-errors':
+        return 'No hay errores de resolución de audio pendientes.';
+      default:
+        return 'Pruebe otros filtros o verifique que existan datos operacionales.';
+    }
   }
 
   get contextBackLink(): string {
@@ -401,6 +477,9 @@ export class SimpleReportsPage implements OnInit {
   }
 
   ngOnInit(): void {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches) {
+      this.pageSize = 8;
+    }
     const qp = this.route.snapshot.queryParamMap;
     this.contextModule = qp.get('module') || qp.get('context') || '';
     if (this.contextModule) this.selectedModule = this.contextModule;
@@ -490,6 +569,25 @@ export class SimpleReportsPage implements OnInit {
     if (this.selected) this.runQuery();
   }
 
+  backToCatalog(): void {
+    this.selectedReportId = '';
+    this.selected = null;
+    this.data = null;
+    this.error = '';
+    this.filterValues = {};
+    this.resultSearch = '';
+    this.page = 1;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        report: null,
+        module: this.selectedModule || this.contextModule || null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
   clearResultFilters(): void {
     this.resultSearch = '';
     for (const k of Object.keys(this.filterValues)) this.filterValues[k] = '';
@@ -548,7 +646,7 @@ export class SimpleReportsPage implements OnInit {
       case 'synthetic':
         return 'Datos sintéticos';
       case 'demo':
-        return 'Datos demo';
+        return 'Datos de catálogo';
       case 'mixed':
         return 'Datos mixtos';
       case 'real':
@@ -556,7 +654,7 @@ export class SimpleReportsPage implements OnInit {
       case 'operational':
         return 'Datos operacionales';
       case 'simulated':
-        return 'Simulado';
+        return 'Estimado';
       default:
         return code || 'Clasificación pendiente';
     }

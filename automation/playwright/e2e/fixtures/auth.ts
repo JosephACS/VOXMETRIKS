@@ -9,7 +9,10 @@ export async function loginAs(
   await page.locator('#loginId').fill(loginId);
   await page.locator('#password').fill(password);
   await page.locator('button.submit-btn[type="submit"]').click();
-  await page.waitForURL(/\/(discover|dashboard)/, { timeout: 45_000 });
+  await page.waitForURL(
+    /\/(discover|workpanel|elt-pipeline|dashboard|reports|organizations)/,
+    { timeout: 45_000 },
+  );
   await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 20_000 });
 }
 

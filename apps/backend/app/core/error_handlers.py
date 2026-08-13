@@ -12,7 +12,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
 
@@ -31,13 +30,6 @@ def _error_body(
         "message": message,
         "details": details or {"code": code, "status_code": status_code},
     }
-
-
-def _safe_message(exc: Exception, *, fallback: str) -> str:
-    settings = get_settings()
-    if settings.is_production:
-        return fallback
-    return str(exc) or fallback
 
 
 async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
@@ -82,10 +74,9 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 
 async def duckdb_exception_handler(_request: Request, exc: duckdb.Error) -> JSONResponse:
     logger.error("duckdb_error type=%s", type(exc).__name__, exc_info=True)
-    message = _safe_message(exc, fallback="Database query failed")
     return JSONResponse(
         status_code=503,
-        content=_error_body(message, status_code=503, code="database_error"),
+        content=_error_body("Database query failed", status_code=503, code="database_error"),
     )
 
 
@@ -111,10 +102,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         request.method,
         request.url.path,
     )
-    message = _safe_message(exc, fallback="An unexpected error occurred")
     return JSONResponse(
         status_code=500,
-        content=_error_body(message, status_code=500, code="internal_error"),
+        content=_error_body(
+            "An unexpected error occurred", status_code=500, code="internal_error"
+        ),
     )
 
 

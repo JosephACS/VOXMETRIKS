@@ -95,6 +95,7 @@ def get_audio_source_response(
     force: bool = False,
     async_resolve: bool = True,
     skip_provider: Optional[str] = None,
+    exclude_source_ref: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Return cached audio source or schedule background resolution on miss.
 
@@ -109,7 +110,15 @@ def get_audio_source_response(
 
     from .audio.resolver import build_track_context
 
-    ctx = build_track_context(conn, track_id)
+    ctx = build_track_context(
+        conn,
+        track_id,
+        exclude_source_refs=(
+            {part.strip() for part in str(exclude_source_ref).split(",") if part.strip()}
+            if exclude_source_ref
+            else None
+        ),
+    )
     if ctx is None:
         return None
 
@@ -117,7 +126,14 @@ def get_audio_source_response(
 
     if not force:
         if cached and is_cache_usable(cached):
-            return _api_dict(cached)
+            cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
+            excluded = {
+                part.strip()
+                for part in str(exclude_source_ref or "").split(",")
+                if part.strip()
+            }
+            if not (excluded and cached_ref in excluded):
+                return _api_dict(cached)
 
     if async_resolve and not force:
         _schedule_resolve(track_id, skip_provider=skip_provider)
@@ -139,7 +155,11 @@ def get_audio_source_response(
         if cached_w and cached_w.get("provider") == "local_published":
             return _api_dict(cached_w)
         return resolve_audio_source(
-            write_conn, track_id, force=force, skip_provider=skip_provider
+            write_conn,
+            track_id,
+            force=force,
+            skip_provider=skip_provider,
+            exclude_source_ref=exclude_source_ref,
         )
 
 
@@ -149,12 +169,17 @@ def resolve_audio_source(
     *,
     force: bool = False,
     skip_provider: Optional[str] = None,
+    exclude_source_ref: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Resolve (and cache) the best playable source for a track."""
     migrate_audio_source_columns(conn)
     resolver = get_audio_resolver()
     result = resolver.resolve(
-        conn, track_id, force=force, skip_provider=skip_provider
+        conn,
+        track_id,
+        force=force,
+        skip_provider=skip_provider,
+        exclude_source_ref=exclude_source_ref,
     )
     if result is None:
         return None
@@ -166,9 +191,28 @@ def resolve_audio_source(
 def report_source_failure(
     conn: duckdb.DuckDBPyConnection, track_id: int
 ) -> None:
-    """Increment failure count when frontend playback fails."""
+    """Increment failure count when frontend playback fails.
+
+    Also warm ranked YouTube alternates so the immediate exclude/fallback
+    request can reuse candidates without a second flaky Data API search.
+    """
     migrate_audio_source_columns(conn)
     mark_failure(conn, track_id)
+    cached = read_cache(conn, track_id)
+    if not cached or cached.get("provider") != "youtube":
+        return
+    from .audio.resolver import build_track_context
+    from .audio.youtube_provider import YouTubeProvider, _ALTERNATE_IDS
+
+    if _ALTERNATE_IDS.get(track_id):
+        return
+    ctx = build_track_context(conn, track_id)
+    if ctx is None:
+        return
+    try:
+        YouTubeProvider().warm_alternates(ctx)
+    except Exception:  # noqa: BLE001 — warming must not break failure reporting
+        logger.exception("Failed warming YouTube alternates for track %s", track_id)
 
 
 def list_unresolved_audio(

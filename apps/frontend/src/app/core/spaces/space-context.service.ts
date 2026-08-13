@@ -21,7 +21,7 @@ import {
   toPersistedRef,
 } from './space-access.policy';
 import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
-import { normalizeIdentityRole } from '../navigation/nav-access.policy';
+import { isPersonalSurfacePath, normalizeIdentityRole } from '../navigation/nav-access.policy';
 import { presentationModeFromUser } from '../guards/product-surface.policy';
 
 /**
@@ -111,6 +111,24 @@ export class SpaceContextService {
     return true;
   }
 
+  /**
+   * Align active space with the current URL so staff surfaces never show Personal
+   * as the primary context. Does not navigate.
+   */
+  async ensureSpaceMatchesRoute(url?: string): Promise<void> {
+    if (this._status() !== 'ready') return;
+    const spaces = this._available();
+    const active = this._active();
+    if (!active || !spaces.length) return;
+    const next = this.preferStaffSpaceForCurrentRoute(
+      active,
+      spaces,
+      (url || this.router.url || '').split('?')[0] || '/',
+    );
+    if (next.id === active.id) return;
+    await this.applySpace(next, { persist: true, navigate: false });
+  }
+
   clear(): void {
     this._available.set([]);
     this._active.set(null);
@@ -146,8 +164,12 @@ export class SpaceContextService {
       let chosen: AppSpace =
         restored ??
         this.inferFromOrgContext(spaces) ??
+        this.inferDefaultSpaceForRole(spaces) ??
         spaces.find((s) => s.kind === 'personal') ??
         personalSpace(this.i18n.t('spaces.personal'));
+
+      // Staff/technical surfaces must not stay on Personal as primary context.
+      chosen = this.preferStaffSpaceForCurrentRoute(chosen, spaces);
 
       if (!spaces.some((s) => s.id === chosen.id)) {
         chosen = spaces[0] ?? personalSpace(this.i18n.t('spaces.personal'));
@@ -163,6 +185,49 @@ export class SpaceContextService {
       this._active.set(fallback);
       this.artistCtx.clear();
     }
+  }
+
+  /** Engineer → Data Ops; admin with org → org; otherwise personal. */
+  private inferDefaultSpaceForRole(spaces: AppSpace[]): AppSpace | null {
+    const role = normalizeIdentityRole(this.auth.role());
+    if (role === 'engineer') {
+      return spaces.find((s) => s.kind === 'data_ops') ?? null;
+    }
+    if (role === 'admin') {
+      return (
+        this.inferFromOrgContext(spaces) ??
+        spaces.find((s) => s.kind === 'platform_admin') ??
+        null
+      );
+    }
+    return null;
+  }
+
+  /**
+   * If the current URL is a staff/technical surface and active space is Personal,
+   * switch to Data Ops (engineer) or Organization (admin) when available.
+   */
+  private preferStaffSpaceForCurrentRoute(
+    chosen: AppSpace,
+    spaces: AppSpace[],
+    path = (this.router.url || '').split('?')[0] || '/',
+  ): AppSpace {
+    if (chosen.kind !== 'personal') return chosen;
+    if (isPersonalSurfacePath(path)) return chosen;
+
+    const role = normalizeIdentityRole(this.auth.role());
+    if (role === 'engineer') {
+      return spaces.find((s) => s.kind === 'data_ops') ?? chosen;
+    }
+    if (role === 'admin') {
+      return (
+        this.inferFromOrgContext(spaces) ??
+        spaces.find((s) => s.kind === 'organization') ??
+        spaces.find((s) => s.kind === 'platform_admin') ??
+        chosen
+      );
+    }
+    return chosen;
   }
 
   private async fetchArtistMemberships(): Promise<void> {

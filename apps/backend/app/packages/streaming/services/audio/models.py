@@ -15,6 +15,8 @@ class TrackContext:
     artist_name: str
     duration_ms: Optional[int] = None
     album_name: Optional[str] = None
+    # Video/source refs already known to fail at playback (try next candidate).
+    exclude_source_refs: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass

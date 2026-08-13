@@ -19,7 +19,9 @@
 | Artist Space + invitaciones | artist_space (046) |
 | Catalog rights / contracts | catalog_rights |
 | Reportes simples / workpanel / complex | reports packages |
-| Business analytics / Estratégico AGG (049) | `agg_strategic_kpi_period`; overview OE-01…OE-08; dashboard Dirección estratégica; smoke desktop/móvil |
+| Business analytics / Estratégico AGG (049) | `agg_strategic_kpi_period`; overview OE-01…OE-08; dashboard Dirección estratégica; acceso CTA desde Reportes/Workpanel |
+| Navegación académica consolidada | Listener: Descubrir/Buscar/Biblioteca/Config; Admin: Workpanel/Catálogo/Org/Reportes/Plan; Engineer: ELT/Workpanel/Explorer/Reportes |
+| Reproducción (resolver) | Catálogo = metadatos/portada; YouTube = fuente; matching con scoring; fallback silencioso |
 | Platform ops (parcial) | platform_ops |
 | ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |
 | Orquestación ELT Airflow (Spec 048) | DAG de ocho tareas + LocalExecutor; smoke Docker/Airflow verificado en CI |

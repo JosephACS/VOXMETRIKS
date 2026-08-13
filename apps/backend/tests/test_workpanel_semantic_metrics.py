@@ -64,18 +64,17 @@ def test_income_zero_stays_numeric_ok():
     assert m["display_caption"] is None
 
 
-def test_global_scope_caption_passthrough():
+def test_invoices_pending_zero_is_healthy():
     m = _metric(
-        id="catalog_tracks",
-        label="Canciones en catálogo",
-        value=10,
-        unit="canciones",
+        id="invoices_pending",
+        label="Facturas pendientes o vencidas",
+        value=0,
+        unit="facturas",
         period="actual",
-        explanation="Catálogo global",
+        explanation="Facturas de la organización que aún requieren cobro.",
         detail_path="/x",
         available=True,
-        scope="global_analytics",
-        display_caption="Catálogo global analítico",
+        scope="organization",
     )
-    assert m["scope"] == "global_analytics"
-    assert m["display_caption"] == "Catálogo global analítico"
+    assert m["status"] == "healthy_zero"
+    assert m["display_caption"] == "Sin facturas pendientes"

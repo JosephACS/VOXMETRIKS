@@ -1,0 +1,162 @@
+/* Listener / personal music surface — music-first, not admin dashboard */
+
+.listener-surface,
+.search-page,
+.liked-page,
+.pl-page,
+.activity-page,
+.history-page,
+.settings-page.listener-settings,
+.home-layout {
+  --listener-surface: color-mix(in srgb, var(--bg-surface, #121212) 88%, transparent);
+  --listener-line: color-mix(in srgb, var(--text, #fff) 8%, transparent);
+  --listener-muted: var(--text-muted, rgba(255, 255, 255, 0.45));
+  --listener-accent: var(--accent, #1ed896);
+}
+
+html[data-theme='light'] .listener-surface,
+html[data-theme='light'] .search-page,
+html[data-theme='light'] .liked-page,
+html[data-theme='light'] .pl-page,
+html[data-theme='light'] .activity-page,
+html[data-theme='light'] .history-page,
+html[data-theme='light'] .settings-page,
+html[data-theme='light'] .home-layout {
+  --listener-surface: color-mix(in srgb, var(--vx-surface, #E3EAE6) 55%, transparent);
+  --listener-line: var(--vx-border, rgba(18, 28, 24, 0.16));
+  --listener-muted: var(--color-text-muted, rgba(18, 25, 22, 0.55));
+}
+
+/* Light music rows: not dashboard cards */
+html[data-theme='light'] .vx-music-row,
+html[data-theme='light'] .continue-tile {
+  background: color-mix(in srgb, var(--vx-surface, #E3EAE6) 48%, transparent);
+  border-color: var(--vx-border-subtle, rgba(18, 28, 24, 0.11));
+  box-shadow: none;
+}
+
+html[data-theme='light'] .vx-music-row:hover,
+html[data-theme='light'] .continue-tile:hover {
+  background: color-mix(in srgb, var(--listener-accent, var(--accent)) 8%, var(--vx-surface, #E3EAE6));
+  border-color: color-mix(in srgb, var(--listener-accent, var(--accent)) 24%, transparent);
+}
+
+/* Compact music rows */
+.vx-music-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.vx-music-row:hover {
+  background: color-mix(in srgb, var(--listener-accent) 7%, transparent);
+  border-color: var(--listener-line);
+}
+
+.vx-music-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.4rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--vx-text, var(--text));
+  background: linear-gradient(145deg, var(--spotify-card-hover), var(--spotify-base));
+  position: relative;
+}
+
+.vx-music-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vx-music-cover--artist {
+  border-radius: 50%;
+}
+
+.vx-music-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.vx-music-title {
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.vx-music-sub {
+  font-size: 0.75rem;
+  color: var(--listener-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vx-section-label {
+  margin: 1.15rem 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--listener-muted);
+}
+
+/* Personal activity strip (not KPI cards) */
+.vx-listen-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  align-items: baseline;
+  padding: 0.85rem 0;
+  margin: 0.75rem 0 1rem;
+  border-top: 1px solid var(--listener-line);
+  border-bottom: 1px solid var(--listener-line);
+}
+
+.vx-listen-strip__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.vx-listen-strip__value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.vx-listen-strip__label {
+  font-size: 0.72rem;
+  color: var(--listener-muted);
+}
+
+@media (max-width: 640px) {
+  .vx-music-cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  .vx-listen-strip {
+    gap: 0.55rem 0.9rem;
+  }
+}

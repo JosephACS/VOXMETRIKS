@@ -107,31 +107,6 @@
         </div>
       }
 
-      <div data-testid="home-trends">
-        <app-home-analytics-band
-          [summary]="summary()"
-          [summaryLoading]="summaryLoading()"
-          [favoritesCount]="favoritesCount()"
-          [growthValues]="growthValues()"
-          [sparkLine]="sparkLine()"
-          [sparkArea]="sparkArea()"
-          [hourlyBuckets]="hourlyBuckets()"
-          [peakHour]="peakHour()"
-          [hasHistoryData]="hasHistoryData()"
-          [genreBars]="genreBars()"
-          [artists]="artists()"
-          [genres]="genres()"
-          [weeklyTimePct]="weeklyTimePct()"
-          [weeklyTimeLabel]="weeklyTimeLabel()"
-          [activityFeed]="activityFeed()"
-          [weeklyGoalPct]="weeklyGoalPct()"
-          [weeklyDiscoverCount]="weeklyDiscoverCount()"
-          [topGenre]="topGenre()"
-          [topArtist]="topArtist()"
-          (openCatalogEvents)="homeHero.openEventsBreakdown()"
-        />
-      </div>
-
       <details
         class="vx-explore-more"
         data-testid="home-explore-more"
@@ -143,6 +118,31 @@
           <span class="vx-explore-more__hint">{{ 'home.exploreMoreHint' | t:lang() }}</span>
         </summary>
         <div class="vx-explore-more__body">
+          <div data-testid="home-trends">
+            <app-home-analytics-band
+              [summary]="summary()"
+              [summaryLoading]="summaryLoading()"
+              [favoritesCount]="favoritesCount()"
+              [growthValues]="growthValues()"
+              [sparkLine]="sparkLine()"
+              [sparkArea]="sparkArea()"
+              [hourlyBuckets]="hourlyBuckets()"
+              [peakHour]="peakHour()"
+              [hasHistoryData]="hasHistoryData()"
+              [genreBars]="genreBars()"
+              [artists]="artists()"
+              [genres]="genres()"
+              [weeklyTimePct]="weeklyTimePct()"
+              [weeklyTimeLabel]="weeklyTimeLabel()"
+              [activityFeed]="activityFeed()"
+              [weeklyGoalPct]="weeklyGoalPct()"
+              [weeklyDiscoverCount]="weeklyDiscoverCount()"
+              [topGenre]="topGenre()"
+              [topArtist]="topArtist()"
+              (openCatalogEvents)="homeHero.openEventsBreakdown()"
+            />
+          </div>
+
           @defer (on viewport) {
             @if (audioDna(); as dna) {
               <section class="feed-block" aria-label="Audio DNA">

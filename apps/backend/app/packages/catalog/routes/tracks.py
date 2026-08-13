@@ -310,6 +310,10 @@ def track_audio_source(
     skip_provider: str | None = Query(
         None, description="Skip provider on fallback (e.g. youtube after playback failure)"
     ),
+    exclude_source_ref: str | None = Query(
+        None,
+        description="Comma-separated failed source/video ids to exclude when picking the next candidate",
+    ),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     row = get_audio_source_response(
@@ -318,6 +322,7 @@ def track_audio_source(
         force=force,
         async_resolve=async_resolve,
         skip_provider=skip_provider,
+        exclude_source_ref=exclude_source_ref,
     )
     if row is None:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found")

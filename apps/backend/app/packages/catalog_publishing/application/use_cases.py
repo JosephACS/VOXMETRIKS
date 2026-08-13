@@ -201,8 +201,11 @@ class CatalogPublishingUseCases:
         is_demo: bool = False,
         **meta: Any,
     ) -> dict[str, Any]:
-        if not (title or "").strip():
+        title_n = (title or "").strip()
+        if not title_n:
             raise ValidationError("title is required")
+        if len(title_n) > 200:
+            raise ValidationError("title must be at most 200 characters")
         if release_type not in ("single", "ep", "album", "compilation"):
             raise ValidationError(f"Invalid release_type: {release_type}")
         if idempotency_key:
@@ -222,7 +225,7 @@ class CatalogPublishingUseCases:
             VALUES ({', '.join('?' for _ in _SUB_COLS)})
             """,
             [
-                sid, organization_id, artist_profile_id, release_type, title.strip(),
+                sid, organization_id, artist_profile_id, release_type, title_n,
                 meta.get("version"), meta.get("label_name"), meta.get("genre"),
                 meta.get("language"), bool(meta.get("explicit", False)),
                 meta.get("planned_release_date"), meta.get("actual_release_date"),
@@ -284,8 +287,11 @@ class CatalogPublishingUseCases:
     ) -> dict[str, Any]:
         sub = self._get_submission(submission_id, org_id=organization_id)
         self._assert_editable(sub)
-        if not (title or "").strip():
+        title_n = (title or "").strip()
+        if not title_n:
             raise ValidationError("track title is required")
+        if len(title_n) > 200:
+            raise ValidationError("track title must be at most 200 characters")
         now = _now()
         tid = _next_id(self._conn, "app_release_submission_track")
         sort_order = int(fields.get("sort_order", track_number * 10))
@@ -296,7 +302,7 @@ class CatalogPublishingUseCases:
             VALUES ({', '.join('?' for _ in _TRACK_COLS)})
             """,
             [
-                tid, submission_id, title.strip(), fields.get("version"),
+                tid, submission_id, title_n, fields.get("version"),
                 track_number, int(fields.get("disc_number", 1)),
                 fields.get("primary_artist_id") or sub["artist_profile_id"],
                 fields.get("duration_ms"), fields.get("isrc"),

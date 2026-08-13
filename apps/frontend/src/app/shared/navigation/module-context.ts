@@ -163,8 +163,8 @@ function catalogContext(path: string): ModuleContextView | null {
     moduleId: 'catalog',
     hubLabel: 'Catálogo y publicación',
     hubPath: '/catalog',
-    backLabel: 'Volver a Catálogo y publicación',
-    showBack: !isHub,
+    backLabel: 'Catálogo y publicación',
+    showBack: false,
     crumbs,
     tabs: CATALOG_TABS,
     activeTabPath: tab?.path ?? (isHub ? '/catalog' : null),
@@ -187,7 +187,13 @@ function orgContext(path: string): ModuleContextView | null {
       path: `${hubPath}/invitations`,
       matchPrefixes: [`${hubPath}/invitations`],
     },
+    { label: 'Roles y permisos', path: `${hubPath}/roles`, matchPrefixes: [`${hubPath}/roles`] },
     { label: 'Auditoría', path: `${hubPath}/audit`, matchPrefixes: [`${hubPath}/audit`] },
+    {
+      label: 'Plan y facturación',
+      path: '/subscriptions/overview',
+      matchPrefixes: ['/subscriptions', '/billing'],
+    },
   ];
 
   const isHub = rest === '';
@@ -206,7 +212,7 @@ function orgContext(path: string): ModuleContextView | null {
     sectionLabel = 'Auditoría';
     activeTabPath = `${hubPath}/audit`;
   } else if (rest.startsWith('/roles')) {
-    sectionLabel = 'Roles';
+    sectionLabel = 'Roles y permisos';
     activeTabPath = `${hubPath}/roles`;
   }
 
@@ -219,8 +225,8 @@ function orgContext(path: string): ModuleContextView | null {
     moduleId: 'organization',
     hubLabel: 'Organización',
     hubPath,
-    backLabel: 'Volver a Organización',
-    showBack: !isHub,
+    backLabel: 'Organización',
+    showBack: false,
     crumbs,
     tabs,
     activeTabPath,
@@ -241,37 +247,52 @@ function reportsContext(
   const isComplex = path.startsWith('/complex-reports') || query['type'] === 'complex';
   const isHub = path === '/reports' && !query['type'];
 
-  const tabs: ModuleTab[] = [
-    { label: 'Informes simples', path: '/simple-reports' },
-    { label: 'Informes complejos', path: '/complex-reports' },
-  ];
+  const viewingReport = !!(query['report'] || '').trim();
+  // Hub / list: keep simples|complejos tabs. Detail: breadcrumb + back only (badge on page).
+  const tabs: ModuleTab[] = viewingReport
+    ? []
+    : [
+        { label: 'Informes simples', path: '/simple-reports' },
+        { label: 'Informes complejos', path: '/complex-reports' },
+      ];
 
   const crumbs: BreadcrumbCrumb[] = [{ label: 'Reportes', path: '/reports' }];
   let activeTabPath: string | null = null;
 
   if (isSimple || (path === '/reports' && query['type'] === 'simple')) {
     crumbs.push({ label: 'Informes simples', path: '/simple-reports' });
-    activeTabPath = '/simple-reports';
-    const report = query['report'];
-    if (report) crumbs.push({ label: report });
+    activeTabPath = viewingReport ? null : '/simple-reports';
   } else if (isComplex || (path === '/reports' && query['type'] === 'complex')) {
     crumbs.push({ label: 'Informes complejos', path: '/complex-reports' });
-    activeTabPath = '/complex-reports';
-    const report = query['report'];
-    if (report) crumbs.push({ label: report });
+    activeTabPath = viewingReport ? null : '/complex-reports';
   }
 
   const fromWp = query['from'] === 'workpanel' || query['context'] === 'workpanel';
   const secondaryBack = fromWp
-    ? { label: 'Volver a Workpanel', path: '/workpanel' }
+    ? { label: 'Workpanel', path: '/workpanel' }
     : undefined;
+
+  // Detail views own their header (back + quiet badge). Suppress chrome duplication.
+  if (viewingReport) {
+    return {
+      moduleId: 'reports',
+      hubLabel: 'Reportes',
+      hubPath: '/reports',
+      backLabel: 'Reportes',
+      showBack: false,
+      crumbs: [],
+      tabs: [],
+      activeTabPath: null,
+      secondaryBack,
+    };
+  }
 
   return {
     moduleId: 'reports',
     hubLabel: 'Reportes',
     hubPath: '/reports',
-    backLabel: 'Volver a Reportes',
-    showBack: !isHub,
+    backLabel: 'Reportes',
+    showBack: false,
     crumbs,
     tabs,
     activeTabPath: activeTabPath ?? (isHub ? null : '/simple-reports'),
@@ -314,8 +335,8 @@ function platformOpsContext(path: string): ModuleContextView | null {
     moduleId: 'platformOps',
     hubLabel: 'Administración de plataforma',
     hubPath: '/platform-ops',
-    backLabel: 'Volver a Administración de plataforma',
-    showBack: path !== '/platform-ops',
+    backLabel: 'Administración de plataforma',
+    showBack: false,
     crumbs,
     tabs,
     activeTabPath: isAudio
@@ -359,8 +380,8 @@ function engineeringContext(path: string): ModuleContextView | null {
     moduleId: 'engineering',
     hubLabel: 'Ingeniería de datos',
     hubPath: '/elt-pipeline',
-    backLabel: 'Volver a Ingeniería de datos',
-    showBack: !isElt || path !== '/elt-pipeline',
+    backLabel: 'Ingeniería de datos',
+    showBack: false,
     crumbs,
     tabs,
     activeTabPath: isExplorer ? '/explorer' : isElt ? '/elt-pipeline' : null,

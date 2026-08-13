@@ -261,10 +261,13 @@ class ArtistProfileUseCases:
         warehouse_artist_id: Optional[int] = None,
         request_id: Optional[str] = None,
     ) -> ArtistProfile:
-        if not display_name or not display_name.strip():
+        name = (display_name or "").strip()
+        if not name:
             raise ValidationError("display_name is required")
+        if len(name) > 200:
+            raise ValidationError("display_name must be at most 200 characters")
 
-        normalized = normalize_artist_name(display_name)
+        normalized = normalize_artist_name(name)
         if not normalized:
             raise ValidationError("display_name must contain visible characters")
 
@@ -287,7 +290,7 @@ class ArtistProfileUseCases:
             INSERT INTO app_artist_profile ({_PROFILE_COLS})
             VALUES (?,?,?,?,?,'draft',?,?,?,?)
             """,
-            [aid, organization_id, display_name.strip(), legal_name, normalized,
+            [aid, organization_id, name, legal_name, normalized,
              warehouse_artist_id, actor_user_id, now, now],
         )
         # Primary organization link

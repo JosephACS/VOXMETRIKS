@@ -20,6 +20,7 @@ import { Organization } from '../models/organization.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { productOrgDisplayName } from '../../../shared/utils/product-presentation.util';
 
 @Component({
   selector: 'app-org-selector',
@@ -221,7 +222,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           @if (ctx.isLoading()) {
             {{ 'organizations.selector.loading' | t:lang() }}
           } @else if (ctx.hasOrganization() && ctx.activeOrganization(); as org) {
-            {{ org.display_name }}
+            {{ orgDisplayName(org.display_name) }}
           } @else {
             {{ 'organizations.selector.none' | t:lang() }}
           }
@@ -241,7 +242,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           @if (ctx.hasOrganization() && ctx.activeOrganization(); as active) {
             <div class="org-selector-current">
               <span class="org-selector-current-label">{{ 'organizations.selector.current' | t:lang() }}</span>
-              <div class="org-selector-current-name">{{ active.display_name }}</div>
+              <div class="org-selector-current-name">{{ orgDisplayName(active.display_name) }}</div>
             </div>
           }
 
@@ -285,10 +286,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
                   (mouseenter)="focusIndex.set(i)"
                 >
                   <div class="org-selector-item-row">
-                    <span class="org-selector-item-name">{{ o.display_name }}</span>
-                    @if (o.is_demo) {
-                      <span class="org-badge">{{ 'organizations.selector.demoBadge' | t:lang() }}</span>
-                    }
+                    <span class="org-selector-item-name">{{ orgDisplayName(o.display_name) }}</span>
                   </div>
                   <div class="org-selector-status">{{ o.status | statusLabel }}</div>
                 </button>
@@ -346,6 +344,10 @@ export class OrgSelectorComponent implements OnInit {
   });
 
   readonly showSearch = computed(() => this.ctx.organizations().length > 8 || this.query().length > 0);
+
+  orgDisplayName(raw: string | null | undefined): string {
+    return productOrgDisplayName(raw);
+  }
 
   async ngOnInit(): Promise<void> {
     if (this.ctx.status() === 'idle' || this.ctx.status() === 'error') {

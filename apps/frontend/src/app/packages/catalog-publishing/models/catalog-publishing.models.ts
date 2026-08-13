@@ -1,5 +1,7 @@
 /** Spec 031 catalog publishing API models. */
 
+import { humanizeFixtureReleaseTitle } from '../../../shared/utils/product-presentation.util';
+
 export type ReleaseSubmissionStatus =
   | 'draft'
   | 'submitted'
@@ -188,6 +190,68 @@ export function publishingPrimaryLabelKey(status: string): string {
   if (bucket === 'published') return 'publishing.status.published';
   if (bucket === 'in_review') return 'publishing.status.inReview';
   return `status.${status}`;
+}
+
+/** Human labels for known release statuses (presentation only). */
+export function humanReleaseStatus(status: string | null | undefined): string {
+  const s = (status || '').toLowerCase();
+  if (s === 'draft') return 'Borrador';
+  if (s === 'scheduled') return 'Programado';
+  if (s === 'submitted' || s === 'under_review') return 'En revisión';
+  if (s === 'changes_requested') return 'Cambios solicitados';
+  if (s === 'approved') return 'Aprobado';
+  if (s === 'published') return 'Publicado';
+  if (s === 'withdrawn' || s === 'suspended' || s === 'archived') return 'Retirado';
+  if (s === 'rejected') return 'Rechazado';
+  return status || 'Sin datos';
+}
+
+const KNOWN_STATUS_CODES = [
+  'draft',
+  'scheduled',
+  'submitted',
+  'under_review',
+  'changes_requested',
+  'approved',
+  'published',
+  'withdrawn',
+  'suspended',
+  'archived',
+  'rejected',
+] as const;
+
+/**
+ * Strip trailing " · {status_code}" from demo/raw titles for display only.
+ * Also humanizes fixture titles like "Demo release 2026-05".
+ * Does not mutate stored data.
+ */
+export function displayReleaseTitle(
+  title: string | null | undefined,
+  status?: string | null,
+): string {
+  const raw = (title || '').trim();
+  if (!raw) return '';
+  const statusCode = (status || '').toLowerCase().trim();
+  const patterns = new Set<string>(KNOWN_STATUS_CODES);
+  if (statusCode) patterns.add(statusCode);
+
+  let stripped = raw;
+  for (const code of patterns) {
+    const suffix = ` · ${code}`;
+    if (stripped.toLowerCase().endsWith(suffix.toLowerCase())) {
+      stripped = stripped.slice(0, stripped.length - suffix.length).trim();
+      break;
+    }
+  }
+  // Also strip trailing " · code" when code is any known status even if status arg missing
+  const m = stripped.match(/^(.*)\s+[·•]\s+([a-z_]+)\s*$/i);
+  if (m && KNOWN_STATUS_CODES.includes(m[2].toLowerCase() as (typeof KNOWN_STATUS_CODES)[number])) {
+    stripped = m[1].trim();
+  }
+
+  const humanized = humanizeFixtureReleaseTitle(stripped, 'es');
+  if (humanized) return humanized;
+  return stripped;
 }
 
 export function hasPrivateMedia(

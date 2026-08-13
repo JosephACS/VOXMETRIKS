@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from app.core.email_format import is_valid_email_format
 from app.packages.organizations.domain.enums import (
     InvitationStatus,
     MembershipStatus,
@@ -81,8 +82,8 @@ def normalize_slug(raw: str) -> str:
 
 def normalize_email(raw: str) -> str:
     value = (raw or "").strip().lower()
-    if not value or "@" not in value or value.startswith("@") or value.endswith("@"):
-        raise ValidationError(f"Invalid email: {raw!r}")
+    if not is_valid_email_format(value):
+        raise ValidationError("Invalid email format")
     return value
 
 

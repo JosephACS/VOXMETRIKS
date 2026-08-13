@@ -17,6 +17,7 @@ export class PlayerPlaybackEngine {
   readonly audio = new Audio();
   private usingYt = false;
   private loadedTrackId: number | null = null;
+  private activeYoutubeVideoId: string | null = null;
   private tickTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -48,6 +49,10 @@ export class PlayerPlaybackEngine {
     return this.usingYt;
   }
 
+  get currentYoutubeVideoId(): string | null {
+    return this.usingYt ? this.activeYoutubeVideoId : null;
+  }
+
   get loadedId(): number | null {
     return this.loadedTrackId;
   }
@@ -63,12 +68,14 @@ export class PlayerPlaybackEngine {
 
   startYoutube(videoId: string, autoplay: boolean): void {
     this.usingYt = true;
+    this.activeYoutubeVideoId = videoId;
     this.audio.pause();
     this.yt.load(videoId, autoplay);
   }
 
   startDemo(url: string, trackId: number, autoplay: boolean): Promise<boolean> {
     this.usingYt = false;
+    this.activeYoutubeVideoId = null;
     this.loadedTrackId = trackId;
     this.yt.stop();
     this.audio.src = url;
@@ -121,6 +128,7 @@ export class PlayerPlaybackEngine {
     } catch { /* ignore */ }
     this.yt.stop();
     this.usingYt = false;
+    this.activeYoutubeVideoId = null;
     this.loadedTrackId = null;
   }
 

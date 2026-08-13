@@ -31,6 +31,9 @@ import {
   isStaffIdentity,
   showPlatformOpsInPrimaryNav,
   showReportingSection,
+  homePathForRole,
+  normalizeIdentityRole,
+  pathRequiresOrgHydrate,
   type NavAccessContext,
 } from '../../core/navigation/nav-access.policy';
 import { resolveModuleContext, type ModuleContextView } from '../../shared/navigation/module-context';
@@ -38,6 +41,8 @@ import { ModuleContextChromeComponent } from '../../shared/components/module-con
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SpaceContextService } from '../../core/spaces/space-context.service';
 import { spaceNavIconMarkup } from '../../core/spaces/space-nav.icons';
+import { spaceNavSectionsFor } from '../../core/spaces/space-nav.config';
+import { productUserDisplayName } from '../../shared/utils/product-presentation.util';
 import { SpaceSelectorComponent } from '../../shared/components/space-selector/space-selector.component';
 
 interface NavItemConfig {
@@ -114,8 +119,10 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   sidebarOpen = signal(false);
   sidebarCollapsed = signal(this.readCollapsedPref());
-  /** Spec 043 hotfix — block routed pages until org preference is restored (F5 / deep link). */
-  orgContextHydrating = signal(true);
+  /** Spec 043 hotfix — block routed pages until org preference is restored when required. */
+  orgContextHydrating = signal(false);
+  orgHydrateFailed = signal(false);
+  private orgHydrateTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Spec 043 hotfix — contextual chrome for consolidated module surfaces. */
   moduleContext = toSignal(
@@ -254,7 +261,8 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   userName = computed(() => {
     this.i18n.tick();
-    return this.auth.getUser()?.username ?? this.i18n.t('shell.userDefault');
+    const raw = this.auth.getUser()?.username ?? this.i18n.t('shell.userDefault');
+    return productUserDisplayName(raw, this.i18n.t('shell.listenerDisplay'));
   });
   userPlan = computed(() => {
     this.i18n.tick();
@@ -332,11 +340,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           path: '/workpanel',
           labelKey: 'nav.workpanel',
           icon: this.svgIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'),
-        },
-        {
-          path: '/elt-pipeline',
-          labelKey: 'nav.technicalStatus',
-          icon: this.svgIcon('<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
         },
         {
           path: '/dashboard',
@@ -979,7 +982,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         items = filterReportingNavItems(items, navCtx);
       }
       if (s.id === 'data' && role === 'engineer') {
-        // Ingeniería de datos + explorador; Estado técnico ya está en Principal.
+        // Ingeniería de datos + explorador (Estado técnico is /workpanel in Principal / space nav).
         items = items.filter((item) => item.path.split('?')[0] === '/explorer' || item.path.split('?')[0] === '/elt-pipeline');
       }
       if (s.id === 'personalAccount') {
@@ -1135,14 +1138,22 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   visibleNavGroups = computed((): NavGroupView[] => {
     this.i18n.tick();
     // Spec 045 — contextual nav by product space (skip presentation demo shells).
+    // Keep role-allowed structure stable while spaces bootstrap (no menu remount flicker).
     if (
       !this.isPresentationDemo() &&
       !this.isArtistPortalDemo() &&
-      !this.isFinancePresentationDemo() &&
-      this.spaceCtx.status() === 'ready' &&
-      this.spaceCtx.activeSpace()
+      !this.isFinancePresentationDemo()
     ) {
-      return this.buildSpaceNavGroups();
+      const active = this.spaceCtx.activeSpace();
+      if (this.spaceCtx.status() === 'ready' && active) {
+        return this.buildSpaceNavGroups();
+      }
+      const predicted = this.predictSpaceNavKind();
+      if (predicted) {
+        return this.buildSpaceNavGroupsFromSections(
+          spaceNavSectionsFor(predicted.kind, { organizationId: predicted.organizationId }),
+        );
+      }
     }
     const sections = this.visibleNavSections();
     const byId = new Map(sections.map((s) => [s.id, s]));
@@ -1169,9 +1180,33 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       .filter((g) => g.sections.length > 0);
   });
 
+  /** Predict space kind for stable sidebar before bootstrap completes. */
+  private predictSpaceNavKind(): { kind: 'personal' | 'organization' | 'data_ops' | 'platform_admin'; organizationId: number | null } | null {
+    const role = normalizeIdentityRole(this.userRole());
+    if (role === 'engineer') {
+      return { kind: 'data_ops', organizationId: null };
+    }
+    if (role === 'admin') {
+      const orgId =
+        this.orgCtx.organizationId() ?? this.orgCtx.organizations()[0]?.id ?? null;
+      if (orgId != null) return { kind: 'organization', organizationId: orgId };
+      return { kind: 'platform_admin', organizationId: null };
+    }
+    if (role === 'user') {
+      return { kind: 'personal', organizationId: null };
+    }
+    return null;
+  }
+
   /** Spec 045 — map SpaceNavSection[] into shell NavGroupView. */
   private buildSpaceNavGroups(): NavGroupView[] {
-    return this.spaceCtx.navSections().map((section) => ({
+    return this.buildSpaceNavGroupsFromSections(this.spaceCtx.navSections());
+  }
+
+  private buildSpaceNavGroupsFromSections(
+    sections: ReturnType<typeof spaceNavSectionsFor>,
+  ): NavGroupView[] {
+    return sections.map((section) => ({
       id: section.id,
       title: this.i18n.t(section.titleKey),
       sections: [
@@ -1183,7 +1218,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
             return {
               path: item.path,
               label,
-              // title/aria come from template — keep full label for truncated sidebar text.
               icon: this.svgIcon(spaceNavIconMarkup(item.iconId)),
               exact: item.exact ?? false,
             };
@@ -1223,11 +1257,13 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       this.ui.syncThemeFromDarkMode(user.preferences.dark_mode);
     }
     this.platformEvents.start(this.destroyRef);
-    // Spec 045 — spaces bootstrap includes org + CRM readiness.
-    void this.spaceCtx
-      .bootstrap()
-      .catch(() => undefined)
-      .finally(() => this.orgContextHydrating.set(false));
+    // Spec 045 — spaces bootstrap; org hydrate gate only where org context is required.
+    if (pathRequiresOrgHydrate(this.router.url, this.auth.role())) {
+      this.startOrgHydrate();
+    } else {
+      this.orgContextHydrating.set(false);
+      void this.spaceCtx.bootstrap().catch(() => undefined);
+    }
     this.ensureActiveNavGroupOpen();
     this.refreshHouseholdRole();
     this.router.events
@@ -1235,7 +1271,54 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => this.ensureActiveNavGroupOpen());
+      .subscribe((e) => {
+        this.ensureActiveNavGroupOpen();
+        void this.spaceCtx.ensureSpaceMatchesRoute(e.urlAfterRedirects || e.url);
+        // Entering an org-scoped route after a personal surface: restore if needed.
+        if (
+          pathRequiresOrgHydrate(e.urlAfterRedirects || e.url, this.auth.role()) &&
+          this.spaceCtx.status() !== 'ready' &&
+          !this.orgContextHydrating()
+        ) {
+          this.startOrgHydrate();
+        }
+      });
+  }
+
+  private startOrgHydrate(): void {
+    this.orgHydrateFailed.set(false);
+    this.orgContextHydrating.set(true);
+    if (this.orgHydrateTimer != null) clearTimeout(this.orgHydrateTimer);
+    this.orgHydrateTimer = setTimeout(() => {
+      if (this.orgContextHydrating()) {
+        this.orgHydrateFailed.set(true);
+        this.orgContextHydrating.set(false);
+      }
+    }, 12_000);
+    void this.spaceCtx
+      .bootstrap()
+      .then(() => {
+        this.orgHydrateFailed.set(false);
+      })
+      .catch(() => {
+        this.orgHydrateFailed.set(true);
+      })
+      .finally(() => {
+        if (this.orgHydrateTimer != null) {
+          clearTimeout(this.orgHydrateTimer);
+          this.orgHydrateTimer = null;
+        }
+        this.orgContextHydrating.set(false);
+        this.ensureActiveNavGroupOpen();
+      });
+  }
+
+  retryOrgHydrate(): void {
+    this.startOrgHydrate();
+  }
+
+  roleHomePath(): string {
+    return homePathForRole(this.auth.role());
   }
 
   canManageHousehold(): boolean {
@@ -1275,18 +1358,9 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     if (this.sidebarCollapsed()) return true;
     const state = this.expandedNavGroups();
     if (state[groupId] != null) return state[groupId];
-    // Spec 043 product groups open by default (few items).
+    // Compact product nav (classic + space ids) stays open; only the old demo "admin" pack stays closed.
     if (groupId === 'admin') return false;
-    return (
-      groupId === 'principal' ||
-      groupId === 'library' ||
-      groupId === 'music' ||
-      groupId === 'account' ||
-      groupId === 'management' ||
-      groupId === 'results' ||
-      groupId === 'data' ||
-      groupId === 'collections'
-    );
+    return true;
   }
 
   toggleNavGroup(groupId: string, event?: Event): void {
@@ -1332,6 +1406,18 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           data: true,
           music: true,
           admin: false,
+          'space-main': true,
+          'space-library': true,
+          'space-account': true,
+          'space-org-main': true,
+          'space-org-plan': true,
+          'space-org-crm': true,
+          'space-org-growth': true,
+          'space-org-rights': true,
+          'space-org-cs': true,
+          'space-data': true,
+          'space-platform': true,
+          'space-artist': true,
         };
       }
       const parsed = JSON.parse(raw) as Record<string, boolean>;
@@ -1344,6 +1430,18 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         data: true,
         music: true,
         admin: false,
+        'space-main': true,
+        'space-library': true,
+        'space-account': true,
+        'space-org-main': true,
+        'space-org-plan': true,
+        'space-org-crm': true,
+        'space-org-growth': true,
+        'space-org-rights': true,
+        'space-org-cs': true,
+        'space-data': true,
+        'space-platform': true,
+        'space-artist': true,
         ...parsed,
       };
     } catch {
@@ -1356,6 +1454,18 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         data: true,
         music: true,
         admin: false,
+        'space-main': true,
+        'space-library': true,
+        'space-account': true,
+        'space-org-main': true,
+        'space-org-plan': true,
+        'space-org-crm': true,
+        'space-org-growth': true,
+        'space-org-rights': true,
+        'space-org-cs': true,
+        'space-data': true,
+        'space-platform': true,
+        'space-artist': true,
       };
     }
   }
@@ -1400,6 +1510,19 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     } catch {
       return false;
     }
+  }
+
+  isDarkTheme = computed(() => this.ui.isVisuallyDark());
+
+  themeToggleAria = computed(() =>
+    this.isDarkTheme()
+      ? this.i18n.t('shell.theme.toLight')
+      : this.i18n.t('shell.theme.toDark'),
+  );
+
+  toggleTheme(): void {
+    this.ui.toggleDarkLight();
+    this.auth.persistDarkMode(this.ui.isVisuallyDark());
   }
 
   toggleUserMenu(e: Event) {

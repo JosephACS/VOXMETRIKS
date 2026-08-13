@@ -20,11 +20,27 @@
 }
 
 .page-subtitle {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--listener-muted, rgba(255, 255, 255, 0.45));
   margin: 0.35rem 0 0;
   font-size: 0.9rem;
   max-width: 720px;
   line-height: 1.45;
+}
+
+.settings-page.listener-settings .page-header h1 {
+  letter-spacing: -0.03em;
+}
+
+.settings-page.listener-settings .settings-nav {
+  background: var(--listener-surface, var(--spotify-card));
+  border-color: var(--listener-line, var(--border-subtle, #1e2347));
+}
+
+.settings-page.listener-settings .settings-section {
+  border: 1px solid var(--listener-line, rgba(255, 255, 255, 0.06));
+  border-radius: 1rem;
+  padding: 1.1rem 1.15rem;
+  background: var(--listener-surface, transparent);
 }
 
 .settings-user-card {
@@ -302,8 +318,8 @@
 
 :host-context(html[data-theme='light']) .settings-nav,
 :host-context(html[data-theme='light']) .settings-content {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.08);
+  background: var(--spotify-card, var(--vx-surface-elevated));
+  border-color: var(--border, rgba(18, 28, 24, 0.12));
 }
 
 :host-context(html[data-theme='light']) .nav-tab {
@@ -357,14 +373,14 @@
 }
 
 :host-context(html[data-theme='light']) .setting-control {
-  background-color: #f5f5f5;
-  border-color: rgba(0, 0, 0, 0.12);
-  color: #121212;
+  background-color: var(--vx-surface, #E7ECE9);
+  border-color: var(--border, rgba(18, 28, 24, 0.12));
+  color: var(--text, #121916);
 }
 
 :host-context(html[data-theme='light']) .setting-control option {
-  background: #fff;
-  color: #121212;
+  background: var(--spotify-elevated, #F7FAF8);
+  color: var(--text, #121916);
 }
 
 :host-context(html[data-theme='light']) .select-wrap::after {

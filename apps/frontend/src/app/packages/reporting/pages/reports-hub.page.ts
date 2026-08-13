@@ -182,16 +182,17 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
   selector: 'app-reports-hub-page',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ...ENTERPRISE_UI_IMPORTS],
+  styleUrls: ['../../../shared/styles/reports-surface.css'],
   template: `
-    <div class="vx-enterprise reports-hub">
-      <app-enterprise-page-header
-        title="Reportes"
-        subtitle="Consulta información operativa y analítica. Los datos de demostración y los alcances globales están identificados."
-      />
+    <div class="vx-enterprise vx-report-page reports-hub">
+      <header class="vx-report-page-header">
+        <h1>Reportes</h1>
+        <p>Consulta operativa y analítica por módulo. Abre un informe para ver el detalle.</p>
+      </header>
 
-      <div class="hub-type-links" role="navigation" aria-label="Tipo de informe">
-        <a routerLink="/simple-reports" class="hub-type-link">Informes simples</a>
-        <a routerLink="/complex-reports" class="hub-type-link">Informes complejos</a>
+      <div class="vx-report-link-row" role="navigation" aria-label="Dirección estratégica">
+        <a routerLink="/business-analytics">Dirección estratégica</a>
+        <span>Objetivos y KPI conectados</span>
       </div>
 
       @if (loading()) {
@@ -207,102 +208,105 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
           (retry)="loadCatalog()"
         />
       } @else {
-        <app-enterprise-section-card title="Filtros del catálogo">
-          <div class="form-grid">
-            <app-enterprise-form-field label="Buscar">
-              <div class="hub-search">
-                <input
-                  class="input"
-                  [ngModel]="searchText()"
-                  (ngModelChange)="searchText.set($event); onFiltersChanged()"
-                  placeholder="Título, módulo, categoría o id"
-                  data-testid="hub-catalog-search"
-                />
-                @if (searchText().trim()) {
-                  <button
-                    type="button"
-                    class="hub-search__clear"
-                    data-testid="hub-catalog-search-clear"
-                    (click)="clearSearchOnly()"
-                    aria-label="Borrar búsqueda"
-                  >
-                    ×
-                  </button>
-                }
-              </div>
-            </app-enterprise-form-field>
-            <app-enterprise-form-field label="Módulo">
-              <select
-                class="select"
-                [ngModel]="selectedModule()"
-                (ngModelChange)="selectedModule.set($event); onFiltersChanged()"
-                data-testid="hub-catalog-module"
-              >
-                <option value="">Todos los módulos</option>
-                @for (m of modules(); track m.id) {
-                  <option [value]="m.id">{{ m.label }}</option>
-                }
-              </select>
-            </app-enterprise-form-field>
-            <app-enterprise-form-field label="Categoría">
-              <select
-                class="select"
-                [ngModel]="selectedCategory()"
-                (ngModelChange)="selectedCategory.set($event); onFiltersChanged()"
-                data-testid="hub-catalog-category"
-              >
-                <option value="">Todas</option>
-                @for (c of categories(); track c) {
-                  <option [value]="c">{{ c }}</option>
-                }
-              </select>
-            </app-enterprise-form-field>
-            <app-enterprise-form-field label="Alcance">
-              <select
-                class="select"
-                [ngModel]="selectedScope()"
-                (ngModelChange)="selectedScope.set($event); onFiltersChanged()"
-                data-testid="hub-catalog-scope"
-              >
-                <option value="">Todos</option>
-                <option value="organization">Organización</option>
-                <option value="platform">Plataforma</option>
-                <option value="global_analytics">Analítica global</option>
-              </select>
-            </app-enterprise-form-field>
-            <app-enterprise-form-field label="Estado">
-              <select
-                class="select"
-                [ngModel]="selectedReadiness()"
-                (ngModelChange)="selectedReadiness.set($event); onFiltersChanged()"
-                data-testid="hub-catalog-readiness"
-              >
-                <option value="">Todos</option>
-                <option value="available">Disponible</option>
-                <option value="empty">Sin registros</option>
-                <option value="demo">Datos de demostración</option>
-                <option value="unavailable">No disponible</option>
-                <option value="adjusted">Aproximación</option>
-              </select>
-            </app-enterprise-form-field>
-          </div>
+        <div class="vx-report-filters" data-testid="hub-catalog-filters">
+          <label class="vx-report-field">
+            <span>Buscar</span>
+            <div class="hub-search">
+              <input
+                class="input"
+                [ngModel]="searchText()"
+                (ngModelChange)="searchText.set($event); onFiltersChanged()"
+                placeholder="Título o tema…"
+                data-testid="hub-catalog-search"
+              />
+              @if (searchText().trim()) {
+                <button
+                  type="button"
+                  class="hub-search__clear"
+                  data-testid="hub-catalog-search-clear"
+                  (click)="clearSearchOnly()"
+                  aria-label="Borrar búsqueda"
+                >
+                  ×
+                </button>
+              }
+            </div>
+          </label>
+          <label class="vx-report-field">
+            <span>Módulo</span>
+            <select
+              class="select"
+              [ngModel]="selectedModule()"
+              (ngModelChange)="selectedModule.set($event); onFiltersChanged()"
+              data-testid="hub-catalog-module"
+            >
+              <option value="">Todos los módulos</option>
+              @for (m of modules(); track m.id) {
+                <option [value]="m.id">{{ m.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="vx-report-field">
+            <span>Categoría</span>
+            <select
+              class="select"
+              [ngModel]="selectedCategory()"
+              (ngModelChange)="selectedCategory.set($event); onFiltersChanged()"
+              data-testid="hub-catalog-category"
+            >
+              <option value="">Todas</option>
+              @for (c of categories(); track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </label>
+          <label class="vx-report-field">
+            <span>Alcance</span>
+            <select
+              class="select"
+              [ngModel]="selectedScope()"
+              (ngModelChange)="selectedScope.set($event); onFiltersChanged()"
+              data-testid="hub-catalog-scope"
+            >
+              <option value="">Todos</option>
+              <option value="organization">Organización</option>
+              <option value="platform">Plataforma</option>
+              <option value="global_analytics">Analítica global</option>
+            </select>
+          </label>
+          <label class="vx-report-field">
+            <span>Estado</span>
+            <select
+              class="select"
+              [ngModel]="selectedReadiness()"
+              (ngModelChange)="selectedReadiness.set($event); onFiltersChanged()"
+              data-testid="hub-catalog-readiness"
+            >
+              <option value="">Todos</option>
+              <option value="available">Disponible</option>
+              <option value="empty">Sin registros</option>
+              <option value="demo">Catálogo de muestra</option>
+              <option value="unavailable">No disponible</option>
+              <option value="adjusted">Aproximación</option>
+            </select>
+          </label>
+        </div>
 
-          <div class="hub-filter-bar">
-            <span class="hub-filter-count" data-testid="hub-catalog-count">
-              {{ filtered().length }} de {{ master().length }} informes
-            </span>
-            @if (hasActiveFilters()) {
-              <button
-                type="button"
-                class="btn btn--secondary"
-                data-testid="hub-catalog-clear-filters"
-                (click)="clearAllFilters()"
-              >
-                Limpiar filtros
-              </button>
-            }
-          </div>
-        </app-enterprise-section-card>
+        <div class="vx-report-filter-bar">
+          <span data-testid="hub-catalog-count">
+            {{ filtered().length }} de {{ master().length }} informes
+          </span>
+          @if (hasActiveFilters()) {
+            <button
+              type="button"
+              class="btn btn--secondary"
+              data-testid="hub-catalog-clear-filters"
+              (click)="clearAllFilters()"
+            >
+              Limpiar filtros
+            </button>
+          }
+        </div>
 
         @if (filtered().length === 0) {
           <app-enterprise-empty-state
@@ -311,31 +315,54 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
             ctaLabel="Limpiar filtros"
             (ctaClick)="clearAllFilters()"
           />
+        } @else if (searchActive()) {
+          <section class="vx-report-section" data-testid="hub-search-results">
+            <div class="vx-report-section__toggle" aria-live="polite">
+              <span>Resultados</span>
+              <span class="vx-report-section__meta">{{ filtered().length }}</span>
+            </div>
+            <div class="vx-report-cards">
+              @for (r of filtered(); track r.kind + ':' + r.id) {
+                <a class="vx-report-card" [routerLink]="linkPath(r)" [queryParams]="linkQuery(r)">
+                  <strong class="vx-report-card__title">{{ r.title }}</strong>
+                  <span class="vx-report-card__meta">{{ r.description }}</span>
+                  <span class="vx-report-badges">
+                    <span class="vx-report-badge vx-report-badge--subtle">
+                      {{ r.kind === 'complex' ? 'Complejo' : 'Simple' }}
+                    </span>
+                    @if (r.readiness === 'unavailable') {
+                      <span class="vx-report-badge vx-report-badge--warn">{{ readyLabel(r.readiness) }}</span>
+                    }
+                  </span>
+                </a>
+              }
+            </div>
+          </section>
         } @else {
-          <section class="hub-section" data-testid="hub-recommended">
+          <section class="vx-report-section" data-testid="hub-recommended">
             <button
               type="button"
-              class="hub-section__toggle"
+              class="vx-report-section__toggle"
               (click)="toggleSection('recommended')"
               [attr.aria-expanded]="isOpen('recommended')"
+              data-testid="hub-toggle-recommended"
             >
               <span>Recomendados</span>
-              <span class="hub-section__meta">{{ recommended().length }}</span>
+              <span class="vx-report-section__meta">{{ recommended().length }}</span>
             </button>
             @if (isOpen('recommended')) {
-              <div class="hub-cards">
+              <div class="vx-report-cards">
                 @for (r of recommended(); track r.kind + ':' + r.id) {
-                  <a class="hub-card" [routerLink]="linkPath(r)" [queryParams]="linkQuery(r)">
-                    <strong>{{ r.title }}</strong>
-                    <span class="hub-card__desc">{{ r.description }}</span>
-                    <span class="hub-badges">
-                      <span class="hub-badge hub-badge--scope">{{ scopeLabel(r.scope) }}</span>
-                      <span class="hub-badge hub-badge--ready">{{ readyLabel(r.readiness) }}</span>
-                      @if (r.kind === 'complex') {
-                        <span class="hub-badge">Complejo</span>
-                      } @else {
-                        <span class="hub-badge">Simple</span>
-                      }
+                  <a class="vx-report-card" [routerLink]="linkPath(r)" [queryParams]="linkQuery(r)">
+                    <strong class="vx-report-card__title">{{ r.title }}</strong>
+                    <span class="vx-report-card__meta">{{ r.description }}</span>
+                    <span class="vx-report-badges">
+                      <span class="vx-report-badge vx-report-badge--subtle">
+                        {{ r.kind === 'complex' ? 'Complejo' : 'Simple' }}
+                      </span>
+@if (r.readiness === 'unavailable') {
+                      <span class="vx-report-badge vx-report-badge--warn">{{ readyLabel(r.readiness) }}</span>
+                    }
                     </span>
                   </a>
                 }
@@ -344,28 +371,30 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
           </section>
 
           @for (g of moduleGroups(); track g.id) {
-            <section class="hub-section" [attr.data-testid]="'hub-module-' + g.id">
+            <section class="vx-report-section" [attr.data-testid]="'hub-module-' + g.id">
               <button
                 type="button"
-                class="hub-section__toggle"
+                class="vx-report-section__toggle"
                 (click)="toggleSection(g.id)"
                 [attr.aria-expanded]="isOpen(g.id)"
+                [attr.data-testid]="'hub-toggle-' + g.id"
               >
                 <span>{{ g.label }}</span>
-                <span class="hub-section__meta">{{ g.items.length }}</span>
+                <span class="vx-report-section__meta">{{ g.items.length }}</span>
               </button>
               @if (isOpen(g.id)) {
-                <div class="hub-cards">
+                <div class="vx-report-cards">
                   @for (r of g.items; track r.kind + ':' + r.id) {
-                    <a class="hub-card" [routerLink]="linkPath(r)" [queryParams]="linkQuery(r)">
-                      <strong>{{ r.title }}</strong>
-                      <span class="hub-card__desc">{{ r.description }}</span>
-                      <span class="hub-badges">
-                        <span class="hub-badge hub-badge--scope">{{ scopeLabel(r.scope) }}</span>
-                        <span class="hub-badge hub-badge--ready">{{ readyLabel(r.readiness) }}</span>
-                        @if (r.category) {
-                          <span class="hub-badge">{{ r.category }}</span>
-                        }
+                    <a class="vx-report-card" [routerLink]="linkPath(r)" [queryParams]="linkQuery(r)">
+                      <strong class="vx-report-card__title">{{ r.title }}</strong>
+                      <span class="vx-report-card__meta">{{ r.description }}</span>
+                      <span class="vx-report-badges">
+                        <span class="vx-report-badge vx-report-badge--subtle">
+                          {{ r.kind === 'complex' ? 'Complejo' : 'Simple' }}
+                        </span>
+@if (r.readiness === 'unavailable') {
+                      <span class="vx-report-badge vx-report-badge--warn">{{ readyLabel(r.readiness) }}</span>
+                    }
                       </span>
                     </a>
                   }
@@ -389,20 +418,15 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
         text-decoration: none;
         font-size: 0.8125rem;
         font-weight: 600;
-        padding: 0.4rem 0.85rem;
+        padding: 0.35rem 0.75rem;
         border-radius: 6px;
         color: var(--color-text-secondary, rgba(255, 255, 255, 0.65));
-        background: var(--color-surface-3, rgba(255, 255, 255, 0.04));
-        border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: transparent;
       }
       .hub-type-link:hover {
         color: var(--color-text, #fff);
         border-color: rgba(30, 216, 150, 0.28);
-      }
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 0.75rem;
       }
       .hub-search {
         position: relative;
@@ -424,96 +448,6 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
         line-height: 1;
         padding: 0.25rem 0.4rem;
       }
-      .hub-filter-bar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-        margin-top: 0.85rem;
-      }
-      .hub-filter-count {
-        font-size: 0.8125rem;
-        color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
-      }
-      .hub-section {
-        margin: 0.85rem 0 1.1rem;
-        border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-        border-radius: 10px;
-        background: var(--color-surface, rgba(24, 24, 24, 0.92));
-        overflow: hidden;
-      }
-      .hub-section__toggle {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.85rem 1rem;
-        border: 0;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.9375rem;
-        text-align: left;
-      }
-      .hub-section__toggle:hover {
-        background: rgba(255, 255, 255, 0.03);
-      }
-      .hub-section__meta {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
-      }
-      .hub-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-        gap: 0.65rem;
-        padding: 0 1rem 1rem;
-      }
-      .hub-card {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-        padding: 0.9rem 1rem;
-        border-radius: 8px;
-        text-decoration: none;
-        color: inherit;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
-      }
-      .hub-card:hover {
-        border-color: rgba(30, 216, 150, 0.28);
-      }
-      .hub-card__desc {
-        font-size: 0.75rem;
-        color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
-        line-height: 1.35;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      .hub-badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem;
-        margin-top: 0.2rem;
-      }
-      .hub-badge {
-        font-size: 0.6875rem;
-        font-weight: 600;
-        padding: 0.15rem 0.45rem;
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
-      }
-      .hub-badge--scope {
-        border: 1px solid rgba(30, 216, 150, 0.25);
-      }
-      .hub-badge--ready {
-        border: 1px solid rgba(255, 255, 255, 0.12);
-      }
       .hub-skeleton {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -521,7 +455,7 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
       }
       .hub-skeleton__card {
         height: 96px;
-        border-radius: 10px;
+        border-radius: 8px;
         background: linear-gradient(
           90deg,
           rgba(255, 255, 255, 0.04),
@@ -537,11 +471,6 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
         }
         100% {
           background-position: -100% 0;
-        }
-      }
-      @media (max-width: 390px) {
-        .hub-cards {
-          grid-template-columns: 1fr;
         }
       }
     `,
@@ -560,10 +489,10 @@ export class ReportsHubPage implements OnInit {
   readonly loadError = signal<string | null>(null);
   readonly openSections = signal<Record<string, boolean>>({
     recommended: true,
-    organization: true,
-    catalog_publishing: true,
-    control_decision: true,
-    data_engineering: true,
+    organization: false,
+    catalog_publishing: false,
+    control_decision: false,
+    data_engineering: false,
   });
 
   readonly searchText = signal('');
@@ -582,11 +511,15 @@ export class ReportsHubPage implements OnInit {
     }),
   );
 
+  readonly searchActive = computed(() => this.searchText().trim().length > 0);
+
   readonly recommended = computed(() => {
     const role = this.auth.role();
     const ids =
       role === 'engineer' ? ENGINEER_RECOMMENDED : ADMIN_RECOMMENDED;
-    const max = role === 'engineer' ? 6 : 8;
+    const mobile =
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches;
+    const max = mobile ? (role === 'engineer' ? 4 : 6) : role === 'engineer' ? 6 : 8;
     const byId = new Map(this.filtered().map((r) => [r.id, r]));
     const out: HubReportItem[] = [];
     for (const id of ids) {

@@ -103,7 +103,14 @@ export class MusicPlayerService {
       onYtEnded: () => this.onEnded(),
       onYtError: () => {
         const t = this.currentTrack();
-        if (this.engine.isYoutube && t) this.handleAudioFailure(t, 'youtube');
+        if (!this.engine.isYoutube || !t) return;
+        // Prefer the id the engine was playing — currentTrack may be cleared mid-recovery.
+        const playingId = this.engine.currentYoutubeVideoId;
+        const withId =
+          playingId && t.youtubeVideoId !== playingId
+            ? { ...t, youtubeVideoId: playingId }
+            : t;
+        this.handleAudioFailure(withId, 'youtube');
       },
       onYtBuffering: () => {
         if (this.status() !== 'error') this.setStatus('buffering');
@@ -577,7 +584,12 @@ export class MusicPlayerService {
           this.setStatus('loading');
           this.resolvePhase.set('resolving');
         },
-        onYoutube: (videoId) => this.startYt(track, videoId, true, {}, token),
+        onYoutube: (videoId) => {
+          const latest = this.currentTrack();
+          const withId = { ...(latest && latest.id === track.id ? latest : track), youtubeVideoId: videoId };
+          if (token === this.playbackToken) this.currentTrack.set(withId);
+          this.startYt(withId, videoId, true, {}, token);
+        },
         onStream: (url) => this.startStream(track, url, true, {}, token),
         onPreview: (url) => this.startPreview(track, url, true, {}, token),
         onNotFound: () => this.failPlayback(track, token, 'unavailable'),

@@ -77,21 +77,90 @@ export function countStatLabel(reportId: string): string {
       return 'Días con datos';
     case 'top-tracks-period':
       return 'Canciones mostradas';
+    case 'top-artists-period':
+      return 'Artistas mostrados';
+    case 'top-genres-period':
+      return 'Géneros mostrados';
     case 'releases-status-month':
       return 'Grupos encontrados';
     case 'subscription-growth-month':
       return 'Meses con datos';
+    case 'income-by-month':
+      return 'Meses con datos';
+    case 'opportunity-win-rate-month':
+      return 'Meses con datos';
+    case 'campaign-roi':
+      return 'Campañas';
     default:
       return 'Elementos';
+  }
+}
+
+export function summaryStatLabels(reportId: string): {
+  total: string;
+  average: string;
+  max: string;
+} {
+  switch (reportId) {
+    case 'streams-by-day':
+      return {
+        total: 'Total de reproducciones',
+        average: 'Promedio diario',
+        max: 'Máximo diario',
+      };
+    case 'top-tracks-period':
+      return {
+        total: 'Reproducciones',
+        average: 'Promedio por canción',
+        max: 'Máximo',
+      };
+    case 'top-artists-period':
+      return {
+        total: 'Reproducciones',
+        average: 'Promedio por artista',
+        max: 'Máximo',
+      };
+    case 'top-genres-period':
+      return {
+        total: 'Reproducciones',
+        average: 'Promedio por género',
+        max: 'Máximo',
+      };
+    case 'subscription-growth-month':
+      return {
+        total: 'Nuevas suscripciones',
+        average: 'Promedio mensual',
+        max: 'Máximo mensual',
+      };
+    case 'income-by-month':
+      return {
+        total: 'Ingresos totales',
+        average: 'Promedio mensual',
+        max: 'Máximo mensual',
+      };
+    case 'opportunity-win-rate-month':
+      return {
+        total: 'Tasa de cierre',
+        average: 'Promedio mensual',
+        max: 'Máximo mensual',
+      };
+    case 'releases-status-month':
+      return {
+        total: 'Lanzamientos',
+        average: 'Promedio por grupo',
+        max: 'Máximo',
+      };
+    default:
+      return { total: 'Total', average: 'Promedio', max: 'Máximo' };
   }
 }
 
 export function classificationLabelEs(code?: string | null): string {
   switch ((code || '').toLowerCase()) {
     case 'demo':
-      return 'Datos de demostración';
+      return 'Datos de catálogo';
     case 'synthetic':
-      return 'Datos sintéticos';
+      return 'Datos de ejemplo';
     case 'operational':
       return 'Datos operacionales';
     case 'mixed':
@@ -99,7 +168,7 @@ export function classificationLabelEs(code?: string | null): string {
     case 'real':
       return 'Datos reales';
     case 'simulated':
-      return 'Simulado';
+      return 'Estimado';
     default:
       return code || '—';
   }

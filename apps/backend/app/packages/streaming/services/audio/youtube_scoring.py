@@ -205,9 +205,11 @@ def pick_best_youtube_candidate_detailed(
     *,
     expected_title: Optional[str] = None,
     expected_artists: Optional[Sequence[str]] = None,
+    min_accept_score: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     best: Optional[Dict[str, Any]] = None
     best_score = -1.0
+    threshold = _MIN_ACCEPT_SCORE if min_accept_score is None else float(min_accept_score)
 
     for item in candidates:
         video_id = item.get("video_id")
@@ -226,7 +228,7 @@ def pick_best_youtube_candidate_detailed(
             expected_artists=expected_artists,
             channel_title=item.get("channel_title") or item.get("uploader") or "",
         )
-        if score < 0 or score < _MIN_ACCEPT_SCORE:
+        if score < 0 or score < threshold:
             continue
         if score > best_score:
             best_score = score

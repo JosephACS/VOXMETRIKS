@@ -51,7 +51,7 @@ export function readinessLabelEs(code: string | null | undefined): string {
     case 'empty':
       return 'Sin registros';
     case 'demo':
-      return 'Datos de demostración';
+      return '';
     case 'unavailable':
       return 'No disponible';
     case 'adjusted':

@@ -120,6 +120,10 @@ export const ORGANIZATION_SPACE_ALLOWED_PREFIXES: readonly string[] = [
   '/royalties',
   '/payouts',
   '/subscriptions',
+  '/crm',
+  '/customer-success',
+  '/support',
+  '/compliance',
 ];
 
 export function isOrganizationSpaceCommercialPath(path: string): boolean {
@@ -139,6 +143,7 @@ export function spaceAllowsProductPath(
   if (spaceKind === 'platform_admin') {
     const p = (path || '').split('?')[0];
     if (p === '/platform-ops' || p.startsWith('/platform-ops/')) return true;
+    if (isOrganizationSpaceCommercialPath(path)) return true;
   }
   if (spaceKind === 'artist') {
     const p = (path || '').split('?')[0];

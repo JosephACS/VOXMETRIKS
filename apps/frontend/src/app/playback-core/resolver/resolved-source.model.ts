@@ -21,7 +21,7 @@ export interface ResolvedPlaybackSource {
 }
 
 export const RESOLVE_FRIENDLY_ERROR =
-  'Audio no disponible para esta canción (YouTube/Audius no resolvieron una fuente reproducible).';
+  'Esta canción no está disponible temporalmente.';
 
 export type AudioAvailability =
   | 'ok'

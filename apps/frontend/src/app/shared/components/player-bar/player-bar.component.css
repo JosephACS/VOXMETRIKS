@@ -12,6 +12,100 @@
   color: var(--shell-fg);
 }
 
+.player-bar--staff-compact {
+  height: 52px;
+  --player-height: 52px;
+}
+
+.player-bar--staff-idle {
+  height: auto;
+  --player-height: 0px;
+  left: auto;
+  right: 12px;
+  bottom: 12px;
+  width: auto;
+  max-width: min(220px, calc(100vw - 24px));
+  border-radius: 12px;
+  border: 1px solid var(--shell-border);
+  background: var(--shell-player);
+  opacity: 0.88;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+@media (max-width: 520px) {
+  .player-bar--staff-idle {
+    max-width: 48px;
+    min-width: 48px;
+    border-radius: 999px;
+    right: 10px;
+    bottom: 10px;
+    padding: 0;
+  }
+  .player-bar--staff-idle .player-inner {
+    padding: 6px;
+    justify-content: center;
+    min-height: 48px;
+  }
+  .player-bar--staff-idle .track-meta,
+  .player-bar--staff-idle .player-controls,
+  .player-bar--staff-idle .expand-btn {
+    display: none !important;
+  }
+  .player-bar--staff-idle .cover-btn--staff-idle {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.player-bar--staff-idle .player-inner {
+  padding: 6px 10px;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.player-bar--staff-idle .player-controls .ctrl-btn.sm,
+.player-bar--staff-idle .time-row,
+.player-bar--staff-idle .player-extra {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .player-bar--staff-idle {
+    left: auto;
+  }
+}
+
+.player-bar--staff-compact .player-inner,
+.player-bar--staff-idle .player-inner {
+  padding: 0 12px;
+  gap: 10px;
+}
+
+.player-bar--staff-compact .cover-btn,
+.player-bar--staff-idle .cover-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.player-bar--staff-idle .cover-btn--staff-idle {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 22%, var(--spotify-card)) 0%, var(--spotify-base) 100%);
+  border: 1px solid var(--shell-border);
+  flex-shrink: 0;
+}
+
+.player-bar--staff-idle .cover-btn--staff-idle .cover-initial {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
+.player-bar--staff-idle .expand-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 @media (min-width: 1024px) {
   /* Leave the sidebar column free for scroll/click; width still follows --sidebar-w */
   .player-bar {
@@ -46,7 +140,7 @@
   position: relative;
   height: 100%;
   border-radius: 999px;
-  background: #1ed896;
+  background: var(--accent);
 }
 
 .player-progress-thumb {
@@ -56,7 +150,7 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--play-btn-bg);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   transform: translate(50%, -50%) scale(0);
   transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
@@ -68,7 +162,7 @@
 }
 
 .player-progress-wrap:hover .player-progress-fill {
-  background: #1ed896;
+  background: var(--accent);
 }
 
 .player-progress-wrap:hover .player-progress-thumb {
@@ -267,7 +361,7 @@
 }
 
 .ctrl-btn.sm { width: 28px; height: 28px; color: var(--shell-fg-muted); }
-.ctrl-btn.sm.active { color: #1ed896; }
+.ctrl-btn.sm.active { color: var(--accent); }
 .ctrl-btn:hover:not(:disabled) { color: var(--shell-fg); transform: scale(1.06); }
 .ctrl-btn:disabled { opacity: 0.35; cursor: default; }
 
@@ -280,8 +374,8 @@
 
 .play-btn:hover:not(:disabled) {
   transform: scale(1.08);
-  background: #1ed896;
-  color: #000;
+  background: var(--accent);
+  color: var(--btn-on-accent, var(--play-btn-fg));
 }
 
 .time-row {
@@ -323,7 +417,7 @@
 
 .volume-slider {
   flex: 1;
-  accent-color: #1ed896;
+  accent-color: var(--accent);
   height: 4px;
 }
 
@@ -359,7 +453,7 @@
 
 .mute-btn:hover { color: var(--shell-fg); }
 
-.ctrl-btn.repeat-one { position: relative; color: #1ed896; }
+.ctrl-btn.repeat-one { position: relative; color: var(--accent); }
 
 .repeat-badge {
   position: absolute;
@@ -375,7 +469,7 @@
 .inline-retry {
   border: none;
   background: transparent;
-  color: #1ed896;
+  color: var(--accent);
   cursor: pointer;
   text-decoration: underline;
   padding: 0;

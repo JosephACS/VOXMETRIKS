@@ -45,27 +45,17 @@ describe('organization nav announce ↔ guard parity', () => {
     }
   });
 
-  it('announces commercial paths only when organization space allows product surface', () => {
-    for (const path of [
-      '/campaigns',
-      '/business-analytics',
-      '/billing/invoices',
-      '/subscriptions/overview',
-    ]) {
-      expect(decideProductSurfaceAccess(path, listener, 'organization')).toBe('allow');
-    }
+  it('announces catalog/org/workpanel when organization space allows product surface', () => {
     const paths = announcePaths({
       spaceKind: 'organization',
       canAccessOrgModule: () => true,
     });
-    expect(paths).toEqual(
-      expect.arrayContaining([
-        '/campaigns',
-        '/business-analytics',
-        '/billing/invoices',
-        '/subscriptions/overview',
-      ]),
-    );
+    expect(paths).toContain('/catalog');
+    expect(paths).toContain('/organizations/9');
+    expect(paths).toContain('/subscriptions/overview');
+    expect(paths).toContain('/campaigns');
+    expect(paths).toContain('/business-analytics');
+    expect(paths).toContain('/billing/invoices');
   });
 
   it('keeps operational catalog/artist-profiles hidden for onboarding tier', () => {

@@ -145,6 +145,39 @@ def test_skip_provider_on_fallback(conn):
     yt.resolve.assert_not_called()
 
 
+def test_skip_provider_not_found_does_not_poison_ok_cache(conn):
+    """Partial fallback failure must not wipe a previously playable YouTube cache."""
+    write_cache(
+        conn,
+        ResolvedSource(
+            track_id=10,
+            provider="youtube",
+            status=STATUS_OK,
+            youtube_video_id="good-id",
+            source_ref="good-id",
+            query="ok",
+        ),
+    )
+    yt = MagicMock(spec=YouTubeProvider)
+    yt.name = "youtube"
+    aud = MagicMock(spec=AudiusProvider)
+    aud.name = "audius"
+    aud.resolve.return_value = ResolvedSource(
+        track_id=10,
+        provider="audius",
+        status=STATUS_NOT_FOUND,
+        query="miss",
+    )
+    resolver = AudioResolver(providers=[yt, aud])
+    result = resolver.resolve(conn, 10, force=True, skip_provider="youtube")
+    assert result is not None
+    assert result.status == STATUS_NOT_FOUND
+    cached = read_cache(conn, 10)
+    assert cached is not None
+    assert cached["status"] == STATUS_OK
+    assert cached["youtube_video_id"] == "good-id"
+
+
 def test_migrate_audio_source_columns_idempotent(conn):
     migrate_audio_source_columns(conn)
     migrate_audio_source_columns(conn)

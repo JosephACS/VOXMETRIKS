@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.core.email_format import is_valid_email_format
 
 
 class _Base(BaseModel):
@@ -354,10 +356,18 @@ class UserLogin(BaseModel):
 
 
 class UserRegister(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(min_length=3, max_length=64)
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=4, max_length=128)
     favorite_genre: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def email_must_look_valid(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not is_valid_email_format(trimmed):
+            raise ValueError("invalid email format")
+        return trimmed
 
 
 class VerifyEmailRequest(BaseModel):

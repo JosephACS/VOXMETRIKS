@@ -48,6 +48,13 @@ from app.packages.billing.domain.errors import (
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
+def _assert_period_order(
+    period_start: Optional[date], period_end: Optional[date]
+) -> None:
+    if period_start is not None and period_end is not None and period_end < period_start:
+        raise ValidationError("period_end must be on or after period_start")
+
+
 def _next_id(conn: duckdb.DuckDBPyConnection, table: str) -> int:
     row = conn.execute(f"SELECT COALESCE(MAX(id), 0) + 1 FROM {table}").fetchone()
     return int(row[0])
@@ -419,6 +426,7 @@ class InvoiceUseCases:
             raise NotFoundError(f"billing_profile id={billing_profile_id}")
         if str(profile_row[1]) == "suspended":
             raise InvalidTransitionError("Billing profile is suspended")
+        _assert_period_order(period_start, period_end)
 
         currency = str(profile_row[0])
         now = _now()
@@ -507,6 +515,7 @@ class InvoiceUseCases:
             raise ValidationError("quantity must be > 0")
         if unit_price < 0:
             raise ValidationError("unit_price must be >= 0")
+        _assert_period_order(period_start, period_end)
 
         amount = quantity * unit_price
         now = _now()

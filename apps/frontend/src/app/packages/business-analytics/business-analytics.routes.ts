@@ -5,7 +5,7 @@ export const BUSINESS_ANALYTICS_ROUTES: Routes = [
     path: 'business-analytics',
     loadComponent: () =>
       import('./pages/biz-analytics-dashboard.page').then((m) => m.BizAnalyticsDashboardPage),
-    title: 'Analítica empresarial',
+    title: 'Dirección estratégica',
   },
   {
     path: 'business-analytics/kpis',

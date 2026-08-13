@@ -8,6 +8,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
+import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import {
   MusicSearchExternalItem,
   TracksService,
@@ -18,13 +19,12 @@ import { primaryArtistName } from '../../../shared/utils/artist.util';
 import { TrackActionsComponent } from '../../../shared/components/track-actions/track-actions.component';
 import { PlayerController } from '../../../playback-core/player.controller';
 import { toPlayableFromSearch } from '../../../playback-core/adapters/track.adapter';
-import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { displayTrackTitle } from '../../../shared/utils/track-display.util';
 import { SearchHistoryService } from '../services/search-history.service';
 import { AIService } from '../../ai/services/ai.service';
 import { AiPlaylistDialogComponent } from '../../ai/components/ai-playlist-dialog.component';
-import { Subject, combineLatest, of } from 'rxjs';
+import { Observable, Subject, combineLatest, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 
 const TRACK_PAGE_SIZE = 20;
@@ -46,7 +46,7 @@ type SearchPhase =
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, ScrollingModule,
-    TrackActionsComponent, DataSourceBadgeComponent, TranslatePipe,
+    TrackActionsComponent, TranslatePipe,
     AiPlaylistDialogComponent,
   ],
   templateUrl: './search.component.html',
@@ -56,6 +56,7 @@ export class SearchComponent implements OnInit {
   readonly lang = inject(I18nService).lang;
   private iconRender = inject(IconRenderService);
   private covers = inject(CoverArtService);
+  private trackCover = inject(TrackCoverService);
   private readonly controller = inject(PlayerController);
   private destroyRef = inject(DestroyRef);
   private route = inject(ActivatedRoute);
@@ -132,7 +133,7 @@ export class SearchComponent implements OnInit {
         this.statusMessage.set('Buscando en VOXMETRIKS…');
         this.phase.set('local');
 
-        if (this.aiMode() || this._looksNatural(term)) {
+        if (this.aiMode()) {
           return this.aiSvc.naturalSearch(term).pipe(
             map((res) => ({
               term,
@@ -332,6 +333,15 @@ export class SearchComponent implements OnInit {
 
   cover(trackId: number): string {
     return this.covers.gradientFor(trackId);
+  }
+
+  /** Catalog artwork only — never YouTube thumbnails as primary cover. */
+  coverUrl$(trackId: number): Observable<string | null> {
+    return this.trackCover.cover$(trackId);
+  }
+
+  artistCoverUrl$(artistId: number): Observable<string | null> {
+    return this.trackCover.artistCover$(artistId);
   }
 
   icon(key: string, size = 18): SafeHtml {

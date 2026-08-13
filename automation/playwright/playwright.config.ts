@@ -28,7 +28,7 @@ export default defineConfig({
   projects: [
     {
       name: 'auth',
-      testMatch: 'auth.spec.ts',
+      testMatch: /(auth|release-candidate-final|final-technical-release)\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: { cookies: [], origins: [] },
@@ -37,7 +37,11 @@ export default defineConfig({
     {
       name: 'authenticated',
       testMatch: /.*\.spec\.ts$/,
-      testIgnore: '**/auth.spec.ts',
+      testIgnore: [
+        '**/auth.spec.ts',
+        '**/release-candidate-final.spec.ts',
+        '**/final-technical-release.spec.ts',
+      ],
       use: {
         ...devices['Desktop Chrome'],
         storageState: DEMO_AUTH_FILE,

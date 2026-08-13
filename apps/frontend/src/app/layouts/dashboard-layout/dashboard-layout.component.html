@@ -55,7 +55,7 @@
             <div class="nav-group-body">
               @for (section of group.sections; track section.id) {
                 <div class="nav-section">
-                  @for (item of section.items; track item.path) {
+                  @for (item of section.items; track item.path + ':' + item.label) {
                     <a
                       class="nav-item"
                       [routerLink]="item.path"
@@ -99,13 +99,30 @@
         } @else if (showOrgSelector()) {
           <app-org-selector />
         }
+        <button
+          type="button"
+          class="topbar-theme-btn"
+          data-testid="theme-toggle-btn"
+          [attr.aria-label]="themeToggleAria()"
+          [attr.title]="themeToggleAria()"
+          (click)="toggleTheme()"
+        >
+          @if (isDarkTheme()) {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+          } @else {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"/>
+            </svg>
+          }
+        </button>
         <div class="user-menu-wrap">
           <button type="button" class="topbar-user-btn" data-testid="user-menu-btn" (click)="toggleUserMenu($event)">
             <div class="topbar-user-avatar" [style.background]="avatarGradient()">{{ userInitial() }}</div>
             <span class="topbar-user-name">{{ userName() }}</span>
-            @if (isDemoUser()) {
-              <span class="demo-badge">{{ 'shell.demo' | t:lang() }}</span>
-            } @else if (isEngineerRole()) {
+            @if (isEngineerRole()) {
               <span class="role-badge role-badge--engineer">{{ roleLabel() }}</span>
             }
             <svg class="topbar-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -160,9 +177,20 @@
     <main class="page-content">
       <div class="page-shell" [@routeFade]="router.url">
         @if (orgContextHydrating()) {
-          <div class="org-hydrate" role="status" aria-live="polite">
+          <div class="org-hydrate" role="status" aria-live="polite" data-testid="org-hydrate-loading">
             <p class="org-hydrate__title">Restaurando organización…</p>
             <p class="org-hydrate__sub">Preparando el contexto empresarial antes de cargar la pantalla.</p>
+          </div>
+        } @else if (orgHydrateFailed()) {
+          <div class="org-hydrate org-hydrate--error" role="alert" data-testid="org-hydrate-error">
+            <p class="org-hydrate__title">No pudimos restaurar la organización.</p>
+            <p class="org-hydrate__sub">Reintenta o vuelve al inicio de tu espacio.</p>
+            <div class="org-hydrate__actions">
+              <button type="button" class="btn btn--primary" (click)="retryOrgHydrate()" data-testid="org-hydrate-retry">
+                Reintentar
+              </button>
+              <a class="btn btn--secondary" [routerLink]="roleHomePath()" data-testid="org-hydrate-home">Ir al inicio</a>
+            </div>
           </div>
         } @else {
           @if (moduleContext(); as ctx) {
