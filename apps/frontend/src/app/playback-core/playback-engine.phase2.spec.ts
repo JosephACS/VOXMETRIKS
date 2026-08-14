@@ -124,6 +124,8 @@ describe('Playback Engine Phase 2', () => {
     svc.stopPlayback();
     sessionStorage.clear();
     localStorage.clear();
+    // A failed assertion must never leak fake timers into later spec files.
+    vi.useRealTimers();
   });
 
   it('1. play/pause toggles status', async () => {
@@ -192,11 +194,10 @@ describe('Playback Engine Phase 2', () => {
     const a = sampleTrack({ id: 1 });
     const b = sampleTrack({ id: 2 });
     controller.setQueue([a, b], 0);
-    await vi.advanceTimersByTimeAsync(350);
+    await vi.runAllTimersAsync();
     const session = restorePlaybackSession();
     expect(session?.queue.length).toBe(2);
     expect(session?.queueIndex).toBe(0);
-    vi.useRealTimers();
   });
 
   it('9. player state survives simulated navigation (singleton)', async () => {
