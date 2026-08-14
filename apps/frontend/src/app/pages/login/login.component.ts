@@ -3,19 +3,48 @@
  */
 
 import { Component, inject, signal, OnInit, NgZone, ElementRef, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
 import {
+  AbstractControl,
   ReactiveFormsModule,
   FormBuilder,
+  ValidationErrors,
   Validators,
 } from '@angular/forms';
 
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UiPreferencesService, AppLanguage } from '../../core/services/ui-preferences.service';
-import { homePathForRole } from '../../core/navigation/nav-access.policy';
+import { PostAuthOrchestrator } from '../../core/spaces/post-auth.orchestrator';
+import { captureReturnUrl, isSafeReturnUrl } from '../../core/spaces/return-url';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BrandMarkComponent } from '../../shared/components/brand-mark/brand-mark.component';
+import { environment } from '../../../environments/environment';
+
+/** Minimum length accepted by the backend password policy. */
+const MIN_PASSWORD_LENGTH = 8;
+
+/** Shipped demo/seed credentials — refuse them for new or reset passwords. */
+const FORBIDDEN_PASSWORDS = new Set(['demo123', 'admin123', 'password', '12345678']);
+
+function notCommonPassword(control: AbstractControl): ValidationErrors | null {
+  const value = String(control.value ?? '').trim().toLowerCase();
+  if (!value) return null;
+  return FORBIDDEN_PASSWORDS.has(value) ? { commonPassword: true } : null;
+}
+
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const password = group.get('password')?.value;
+  const confirm = group.get('passwordConfirm')?.value;
+  if (!password || !confirm) return null;
+  return password === confirm ? null : { passwordMismatch: true };
+}
+
+function resetPasswordsMatch(group: AbstractControl): ValidationErrors | null {
+  const password = group.get('newPassword')?.value;
+  const confirm = group.get('passwordConfirm')?.value;
+  if (!password || !confirm) return null;
+  return password === confirm ? null : { passwordMismatch: true };
+}
 
 type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
@@ -40,7 +69,7 @@ const GIS_SCRIPT_ID = 'google-identity-services';
 export class LoginComponent implements OnInit {
   readonly lang = inject(I18nService).lang;
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly orchestrator = inject(PostAuthOrchestrator);
   private readonly fb = inject(FormBuilder);
   private readonly i18n = inject(I18nService);
   private readonly ui = inject(UiPreferencesService);
@@ -52,6 +81,8 @@ export class LoginComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly showPassword = signal(false);
+  /** Credentials were accepted but the session manifest could not be loaded. */
+  protected readonly bootstrapFailed = signal(false);
 
   // Email verification
   protected readonly pendingEmail = signal('');
@@ -71,12 +102,21 @@ export class LoginComponent implements OnInit {
     remember: [true],
   });
 
-  protected readonly registerForm = this.fb.group({
-    username: ['', [Validators.required, Validators.minLength(3)]],
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(4)]],
-    favoriteGenre: ['Pop'],
-  });
+  /** Opt-in flag, never derived from `production`, so staging builds stay quiet. */
+  protected readonly showDevChannel = environment.devVerificationChannel === true;
+
+  protected readonly registerForm = this.fb.group(
+    {
+      username: ['', [Validators.required, Validators.minLength(3)]],
+      email: ['', [Validators.required, Validators.email]],
+      password: [
+        '',
+        [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), notCommonPassword],
+      ],
+      passwordConfirm: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+    },
+    { validators: passwordsMatch },
+  );
 
   protected readonly verifyForm = this.fb.group({
     code: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
@@ -86,11 +126,18 @@ export class LoginComponent implements OnInit {
     email: ['', [Validators.required, Validators.email]],
   });
 
-  protected readonly resetForm = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    code: ['', [Validators.required, Validators.minLength(6)]],
-    newPassword: ['', [Validators.required, Validators.minLength(4)]],
-  });
+  protected readonly resetForm = this.fb.group(
+    {
+      email: ['', [Validators.required, Validators.email]],
+      code: ['', [Validators.required, Validators.minLength(6)]],
+      newPassword: [
+        '',
+        [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), notCommonPassword],
+      ],
+      passwordConfirm: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+    },
+    { validators: resetPasswordsMatch },
+  );
 
   ngOnInit(): void {
     this.auth.getAuthConfig().then((cfg) => {
@@ -100,15 +147,20 @@ export class LoginComponent implements OnInit {
       }
     }).catch((err) => console.error('[LoginComponent] getAuthConfig failed', err));
 
-    // Deep-link: /login?mode=reset&email=...
+    // Deep-link: /login?mode=reset&email=...&returnUrl=...
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
     const email = params.get('email');
+    const returnUrl = params.get('returnUrl');
+    if (isSafeReturnUrl(returnUrl)) captureReturnUrl(returnUrl);
     if (mode === 'reset') {
       this.setMode('reset');
       if (email) this.resetForm.patchValue({ email });
     } else if (mode === 'forgot') {
       this.setMode('forgot');
+    } else if (mode === 'verify' && email) {
+      this.pendingEmail.set(email);
+      this.setMode('verify');
     }
   }
 
@@ -120,6 +172,22 @@ export class LoginComponent implements OnInit {
     this.mode.set(m);
     this.errorMessage.set('');
     this.infoMessage.set('');
+    this.bootstrapFailed.set(false);
+  }
+
+  /**
+   * The session manifest is the only source of allowed spaces, so a bootstrap
+   * failure keeps the user here with a retry instead of guessing a destination.
+   */
+  protected continueAfterAuth(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    this.bootstrapFailed.set(false);
+    void this.orchestrator.goAfterAuthenticated().catch(() => {
+      this.isLoading.set(false);
+      this.bootstrapFailed.set(true);
+      this.errorMessage.set(this.i18n.t('login.bootstrapFailed'));
+    });
   }
 
   protected togglePassword(): void {
@@ -136,7 +204,7 @@ export class LoginComponent implements OnInit {
     const { loginId, password, remember } = this.loginForm.getRawValue();
     this.auth.login(loginId!, password!, remember ?? true).then((res) => {
       if (res.ok) {
-        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
+        this.continueAfterAuth();
         return;
       }
       this.isLoading.set(false);
@@ -157,17 +225,17 @@ export class LoginComponent implements OnInit {
     }
     this.isLoading.set(true);
     this.errorMessage.set('');
-    const { username, email, password, favoriteGenre } = this.registerForm.getRawValue();
-    this.auth.register(username!, email!, password!, favoriteGenre || undefined).then((res) => {
+    const { username, email, password } = this.registerForm.getRawValue();
+    this.auth.register(username!, email!, password!).then((res) => {
       this.isLoading.set(false);
       if (res.ok && res.verificationRequired) {
         this.pendingEmail.set(res.email ?? email!);
-        this.devCode.set(res.devCode ?? '');
+        if (this.showDevChannel) this.devCode.set(res.devCode ?? '');
         this.setMode('verify');
         this.infoMessage.set(this.i18n.t('verify.sent'));
         this.startResendCountdown(60);
       } else if (res.ok) {
-        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
+        this.continueAfterAuth();
       } else {
         this.errorMessage.set(res.error ?? this.i18n.t('login.registerError'));
       }
@@ -184,7 +252,7 @@ export class LoginComponent implements OnInit {
     const code = this.verifyForm.getRawValue().code!;
     this.auth.verifyEmail(this.pendingEmail(), code).then((res) => {
       if (res.ok) {
-        void this.router.navigateByUrl(homePathForRole(this.auth.role()));
+        this.continueAfterAuth();
       } else {
         this.isLoading.set(false);
         this.errorMessage.set(res.error ?? this.i18n.t('verify.invalid'));
@@ -198,7 +266,7 @@ export class LoginComponent implements OnInit {
     this.infoMessage.set('');
     this.auth.resendCode(this.pendingEmail()).then((res) => {
       if (res.ok) {
-        this.devCode.set(res.devCode ?? '');
+        if (this.showDevChannel) this.devCode.set(res.devCode ?? '');
         this.infoMessage.set(this.i18n.t('verify.resent'));
         this.startResendCountdown(res.retryAfterSec ?? 60);
       } else {
@@ -218,7 +286,7 @@ export class LoginComponent implements OnInit {
     this.auth.forgotPassword(email).then((res) => {
       this.isLoading.set(false);
       this.infoMessage.set(res.message ?? this.i18n.t('reset.generic'));
-      this.devCode.set(res.devCode ?? '');
+      if (this.showDevChannel) this.devCode.set(res.devCode ?? '');
       this.resetForm.patchValue({ email });
       this.setMode('reset');
     });
@@ -312,7 +380,7 @@ export class LoginComponent implements OnInit {
       this.errorMessage.set('');
       this.auth.loginWithGoogle(resp.credential).then((ok) => {
         if (ok) {
-          void this.router.navigateByUrl(homePathForRole(this.auth.role()));
+          this.continueAfterAuth();
         } else {
           this.isLoading.set(false);
           this.errorMessage.set(this.i18n.t('login.googleError'));

@@ -1,0 +1,48 @@
+/* Shared layout for the post-auth choice surfaces (first access, space chooser). */
+
+.vx-choice-page {
+  max-width: 40rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.vx-choice-page__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.vx-choice-page__subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--vx-text-secondary, var(--color-text-muted, rgba(255, 255, 255, 0.55)));
+}
+
+.vx-choice-page__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.vx-choice-page__empty {
+  margin-top: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--vx-text-secondary, var(--color-text-muted, rgba(255, 255, 255, 0.55)));
+}
+
+@media (max-width: 560px) {
+  .vx-choice-page {
+    margin: 1.25rem auto;
+  }
+
+  .vx-choice-page__title {
+    font-size: 1.25rem;
+  }
+
+  .vx-choice-page__options .org-btn {
+    width: 100%;
+  }
+}

@@ -2,9 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { MusicPlayerService } from '../../../shared/services/music-player.service';
-import { OrganizationContextService } from '../../organizations/services/organization-context.service';
-import { HistoryService } from '../../../packages/streaming/services/history.service';
+import { SessionCleanupCoordinator } from '../../../core/spaces/session-cleanup.coordinator';
 import { PersonalAccountApiService } from './personal-account-api.service';
 import { SecurityApiService } from './security-api.service';
 import { AuthResponse } from '../../../shared/models/api.models';
@@ -21,9 +19,7 @@ const SESSION_SELECTED_KEY = 'voxmetriks_profile_session_selected';
 export class ProfileSwitchService {
   private auth = inject(AuthService);
   private router = inject(Router);
-  private player = inject(MusicPlayerService);
-  private orgCtx = inject(OrganizationContextService);
-  private history = inject(HistoryService, { optional: true });
+  private cleanup = inject(SessionCleanupCoordinator);
   private personalApi = inject(PersonalAccountApiService);
   private securityApi = inject(SecurityApiService);
 
@@ -147,15 +143,8 @@ export class ProfileSwitchService {
   }
 
   clearPrivateClientState(): void {
-    this.player.stopPlayback();
-    this.orgCtx.clearOrganizationScopedState();
-    try {
-      // Never wipe account history on profile switch / logout — local cache only.
-      this.history?.clearLocalCache?.();
-    } catch {
-      /* optional */
-    }
-    this.clearSessionSelected();
+    // Single implementation so profile switch, logout and 401 clear the same state.
+    this.cleanup.clearPrivateClientState();
   }
 
   /** Logout safely and open login with optional suggested username (never password). */

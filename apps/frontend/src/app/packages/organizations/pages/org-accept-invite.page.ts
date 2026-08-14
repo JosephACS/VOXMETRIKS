@@ -77,8 +77,19 @@ export class OrgAcceptInvitePageComponent implements OnInit {
 
   ngOnInit(): void {
     // Prefer query token only — never path params (Referer/history leakage).
+    const state = window.history.state as { invitationToken?: unknown } | null;
+    const memoryToken =
+      typeof state?.invitationToken === 'string' ? state.invitationToken.trim() : '';
     const q = this.route.snapshot.queryParamMap.get('token');
-    this.token = q || '';
+    this.token = memoryToken || q || '';
+    if (q) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { token: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   async accept(): Promise<void> {

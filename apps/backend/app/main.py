@@ -59,7 +59,7 @@ from app.packages.engagement.routes import (
     playlists_router,
 )
 from app.packages.engagement.services.app_storage import ensure_app_tables
-from app.packages.identity.routes import users_router, security_router
+from app.packages.identity.routes import users_router, security_router, session_router
 from app.packages.identity.services.user_storage import ensure_user_tables
 from app.packages.organizations.infrastructure.schema import ensure_organization_tables
 from app.packages.organizations.routes import organizations_router
@@ -289,6 +289,7 @@ def create_app() -> FastAPI:
     application.include_router(platform_router, prefix="/api/v1")
     application.include_router(users_router, prefix="/api/v1")
     application.include_router(security_router, prefix="/api/v1")
+    application.include_router(session_router, prefix="/api/v1")
     application.include_router(organizations_router, prefix="/api/v1")
     application.include_router(crm_router, prefix="/api/v1")
     application.include_router(contracts_router, prefix="/api/v1")

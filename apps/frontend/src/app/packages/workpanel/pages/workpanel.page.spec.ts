@@ -12,7 +12,7 @@ const SYNTHETIC_FALLBACK =
 const SIMULATED_AMOUNTS =
   'Importes académicos/simulados — no representan cobros reales.';
 const COMBINED_COMPACT =
-  'Datos sintéticos de demostración; importes académicos/simulados (no cobros reales).';
+  'Datos sintéticos del warehouse; importes académicos/simulados (no cobros reales).';
 
 function baseResponse(overrides: Partial<WorkpanelResponse> = {}): WorkpanelResponse {
   return {
@@ -206,7 +206,7 @@ describe('WorkpanelPage data notice', () => {
 
     expect(fixture.nativeElement.querySelectorAll('[role="status"]').length).toBe(1);
     expect(fixture.nativeElement.querySelector('.wp-empty')?.textContent).toContain(
-      'Sin pendientes críticos',
+      'Sin prioridades críticas',
     );
   });
 

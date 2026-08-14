@@ -103,17 +103,16 @@ describe('AudioResolver Phase 3', () => {
     expect(onStream).toHaveBeenCalledWith('https://api.audius.co/v1/tracks/55/stream');
   });
 
-  it('4. not_found force-retries once then onNotFound if still empty', () => {
-    getAudioSource
-      .mockReturnValueOnce(of({ track_id: 1, provider: 'audius', status: 'not_found' }))
-      .mockReturnValueOnce(of({ track_id: 1, provider: 'audius', status: 'not_found' }));
+  it('4. terminal not_found reports unavailable in one call (no silent retry)', () => {
+    getAudioSource.mockReturnValue(
+      of({ track_id: 1, provider: 'audius', status: 'not_found' }),
+    );
     const onNotFound = vi.fn();
     const onPreview = vi.fn();
-    const onResolving = vi.fn();
     resolver.resolvePlayableSource(
       { ...track(), audioUrl: '/assets/audio/demo-01.wav' },
       {
-        onResolving,
+        onResolving: vi.fn(),
         onYoutube: vi.fn(),
         onStream: vi.fn(),
         onPreview,
@@ -122,15 +121,48 @@ describe('AudioResolver Phase 3', () => {
         isStale: () => false,
       },
     );
-    expect(getAudioSource).toHaveBeenCalledTimes(2);
-    expect(getAudioSource).toHaveBeenLastCalledWith(1, { force: true, asyncResolve: false });
-    expect(onNotFound).toHaveBeenCalled();
+    expect(getAudioSource).toHaveBeenCalledTimes(1);
+    expect(getAudioSource).toHaveBeenCalledWith(1, { asyncResolve: false });
+    expect(onNotFound).toHaveBeenCalledTimes(1);
     expect(onPreview).not.toHaveBeenCalled();
   });
 
-  it('4b. not_found then force YouTube ok recovers without surfacing failure', () => {
+  it('4b. terminal not_found does not auto-recover; explicit recovery still can', () => {
+    getAudioSource.mockReturnValueOnce(
+      of({ track_id: 1, provider: 'audius', status: 'not_found' }),
+    );
+    const onYoutube = vi.fn();
+    const onNotFound = vi.fn();
+    const callbacks = {
+      onResolving: vi.fn(),
+      onYoutube,
+      onStream: vi.fn(),
+      onPreview: vi.fn(),
+      onNotFound,
+      onTrackUpdated: vi.fn(),
+      isStale: () => false,
+    };
+
+    resolver.resolvePlayableSource(track(), callbacks);
+    expect(getAudioSource).toHaveBeenCalledTimes(1);
+    expect(onNotFound).toHaveBeenCalledTimes(1);
+    expect(onYoutube).not.toHaveBeenCalled();
+
+    getAudioSource.mockReturnValue(
+      of({
+        track_id: 1,
+        provider: 'youtube',
+        youtube_video_id: 'recovered',
+        status: 'ok',
+      }),
+    );
+    resolver.recoverFromPlaybackError(track(), 'stream', callbacks);
+    expect(onYoutube).toHaveBeenCalledWith('recovered');
+  });
+
+  it('4c. ambiguous non-terminal failure still force-retries once', () => {
     getAudioSource
-      .mockReturnValueOnce(of({ track_id: 1, provider: 'audius', status: 'not_found' }))
+      .mockReturnValueOnce(of({ track_id: 1, provider: 'none', status: 'error' }))
       .mockReturnValueOnce(
         of({
           track_id: 1,
@@ -150,6 +182,8 @@ describe('AudioResolver Phase 3', () => {
       onTrackUpdated: vi.fn(),
       isStale: () => false,
     });
+    expect(getAudioSource).toHaveBeenCalledTimes(2);
+    expect(getAudioSource).toHaveBeenLastCalledWith(1, { force: true, asyncResolve: false });
     expect(onYoutube).toHaveBeenCalledWith('recovered');
     expect(onNotFound).not.toHaveBeenCalled();
   });

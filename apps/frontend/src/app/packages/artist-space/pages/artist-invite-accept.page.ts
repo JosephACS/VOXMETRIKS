@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ArtistSpaceApiService } from '../services/artist-space-api.service';
@@ -56,7 +56,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
     </div>
   `,
 })
-export class ArtistInviteAcceptPage {
+export class ArtistInviteAcceptPage implements OnInit {
   private readonly api = inject(ArtistSpaceApiService);
   private readonly spaces = inject(SpaceContextService);
   private readonly i18n = inject(I18nService);
@@ -69,6 +69,12 @@ export class ArtistInviteAcceptPage {
   readonly form = this.fb.nonNullable.group({
     token: ['', Validators.required],
   });
+
+  ngOnInit(): void {
+    const state = window.history.state as { invitationToken?: unknown } | null;
+    const token = typeof state?.invitationToken === 'string' ? state.invitationToken.trim() : '';
+    if (token) this.form.controls.token.setValue(token);
+  }
 
   accept(): void {
     const token = this.form.getRawValue().token.trim();

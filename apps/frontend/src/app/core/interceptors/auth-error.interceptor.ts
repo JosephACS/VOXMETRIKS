@@ -18,8 +18,12 @@ export const authErrorInterceptor: HttpInterceptorFn = (req, next) => {
         req.url.includes('/users/verify-email') ||
         req.url.includes('/users/resend-code') ||
         req.url.includes('/users/google') ||
-        req.url.includes('/users/auth-config');
+        req.url.includes('/users/auth-config') ||
+        req.url.includes('/users/forgot-password') ||
+        req.url.includes('/users/reset-password');
       if (err.status === 401 && isApi && !isAuthRoute) {
+        // A rejected session must not carry its destination over: clearSession()
+        // delegates to SessionCleanupCoordinator, which drops the captured returnUrl.
         auth.clearSession();
         void router.navigate(['/login']);
       }

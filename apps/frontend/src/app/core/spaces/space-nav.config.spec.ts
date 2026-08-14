@@ -36,6 +36,8 @@ describe('space models & nav (043 product)', () => {
       '/account/household',
       '/account/billing',
       '/settings',
+      '/artist-space/claim',
+      '/organizations/new',
     ]);
   });
 
@@ -124,16 +126,26 @@ describe('space models & nav (043 product)', () => {
     expect(paths).toContain('/reports');
   });
 
-  it('platform admin nav includes commercial modules without Platform Ops entries', () => {
+  it('platform admin nav includes commercial modules and Platform Ops entries', () => {
     const paths = spaceNavSectionsFor('platform_admin').flatMap((s) =>
       s.items.map((i) => i.path),
     );
     expect(paths.slice(0, 4)).toEqual(['/workpanel', '/catalog', '/reports', '/settings']);
+    expect(paths).toContain('/platform-ops/artist-requests');
+    expect(paths).toContain('/platform-ops/audio-unresolved');
     expect(paths).toContain('/subscriptions/plans');
     expect(paths).toContain('/billing/invoices');
     expect(paths).toContain('/crm/dashboard');
     expect(paths).toContain('/campaigns');
     expect(paths).toContain('/account/plans');
+  });
+
+  it('hides Platform Ops entries from non-staff nav contexts', () => {
+    const raw = spaceNavSectionsFor('platform_admin');
+    const paths = filterSpaceNavSections(raw, {
+      hasStaffAccess: false,
+      canAccessOrgModule: () => true,
+    }).flatMap((s) => s.items.map((i) => i.path));
     expect(paths.some((p) => p.startsWith('/platform-ops'))).toBe(false);
   });
 

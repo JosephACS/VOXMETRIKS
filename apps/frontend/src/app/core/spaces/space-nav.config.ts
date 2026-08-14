@@ -279,6 +279,24 @@ export function spaceNavSectionsFor(
           ],
         },
         personalAccountNavSection({ includeSettings: true }),
+        {
+          id: 'space-entry',
+          titleKey: 'firstAccess.group',
+          items: [
+            {
+              path: '/artist-space/claim',
+              labelKey: 'firstAccess.artist',
+              iconId: 'artist',
+              exact: true,
+            },
+            {
+              path: '/organizations/new',
+              labelKey: 'firstAccess.organization',
+              iconId: 'organization',
+              exact: true,
+            },
+          ],
+        },
       ];
     case 'organization': {
       const orgId = opts?.organizationId;
@@ -363,6 +381,26 @@ export function spaceNavSectionsFor(
             { path: '/catalog', labelKey: 'nav.catalogHub', iconId: 'catalog', exact: true },
             { path: '/reports', labelKey: 'spaces.nav.reports', iconId: 'reports', exact: true },
             { path: '/settings', labelKey: 'nav.settings', iconId: 'settings', exact: true },
+          ],
+        },
+        {
+          id: 'space-platform-ops',
+          titleKey: 'nav.section.platformOps',
+          items: [
+            {
+              path: '/platform-ops/artist-requests',
+              labelKey: 'nav.platformOps.artistRequests',
+              iconId: 'artist_requests',
+              exact: true,
+              requireStaff: true,
+            },
+            {
+              path: '/platform-ops/audio-unresolved',
+              labelKey: 'nav.platformOps.audioUnresolved',
+              iconId: 'unresolved_audio',
+              exact: true,
+              requireStaff: true,
+            },
           ],
         },
         ...adminCommercialNavSections({ gateOrgModules: false }),

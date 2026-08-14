@@ -11,7 +11,9 @@ import duckdb
 
 from app.core.time_util import utc_now
 from app.packages.identity.services.password_security import (
+    PasswordPolicyError,
     hash_password,
+    validate_account_password,
     verify_password,
 )
 from app.packages.identity.services.user_storage import create_session, ensure_user_tables
@@ -609,13 +611,10 @@ def change_account_password(
     _verify_account_password(conn, user_id, current_password)
     if (new_password or "") != (confirm_password or ""):
         raise ProfilePinError("Las contraseñas no coinciden", code="password_mismatch")
-    if len(new_password or "") < 4:
-        raise ProfilePinError("La nueva contraseña es demasiado corta", code="password_weak")
-    if new_password == current_password:
-        raise ProfilePinError("La nueva contraseña debe ser distinta", code="password_same")
-    common = {"password", "123456", "1234", "qwerty", "demo123", "admin123"}
-    if (new_password or "").lower() in common:
-        raise ProfilePinError("Elige una contraseña más segura", code="password_weak")
+    try:
+        validate_account_password(new_password, current_password=current_password)
+    except PasswordPolicyError as exc:
+        raise ProfilePinError(str(exc), code=exc.code) from exc
 
     conn.execute(
         "UPDATE app_user SET password_hash = ? WHERE id = ?",

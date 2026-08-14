@@ -37,3 +37,51 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 def needs_rehash(stored_hash: str) -> bool:
     return is_legacy_hash(stored_hash)
+
+
+# Shared account-password policy (register / reset / change). PIN is separate.
+MIN_ACCOUNT_PASSWORD_LENGTH = 8
+MAX_ACCOUNT_PASSWORD_LENGTH = 128
+COMMON_ACCOUNT_PASSWORDS = frozenset(
+    {
+        "password",
+        "123456",
+        "1234",
+        "12345678",
+        "qwerty",
+        "letmein",
+        "admin",
+        "passw0rd",
+        "demo123",
+        "admin123",
+    }
+)
+
+
+class PasswordPolicyError(ValueError):
+    """Account password rejected by the shared policy."""
+
+    def __init__(self, message: str, *, code: str = "password_weak") -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def validate_account_password(
+    password: str,
+    *,
+    current_password: str | None = None,
+) -> str:
+    """Return the password if it satisfies the shared account policy."""
+    value = password or ""
+    if len(value) < MIN_ACCOUNT_PASSWORD_LENGTH:
+        raise PasswordPolicyError("password must be at least 8 characters")
+    if len(value) > MAX_ACCOUNT_PASSWORD_LENGTH:
+        raise PasswordPolicyError("password must be at most 128 characters")
+    if current_password is not None and value == current_password:
+        raise PasswordPolicyError(
+            "password must be different from current",
+            code="password_same",
+        )
+    if value.lower() in COMMON_ACCOUNT_PASSWORDS:
+        raise PasswordPolicyError("choose a stronger password")
+    return value

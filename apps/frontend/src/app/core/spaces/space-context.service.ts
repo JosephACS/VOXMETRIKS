@@ -1,6 +1,8 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { I18nService } from '../services/i18n.service';
 import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
@@ -12,17 +14,28 @@ import {
   AppSpace,
   PersistedSpaceRef,
   SPACE_STORAGE_KEY,
+  artistSpace,
+  dataOpsSpace,
   homePathForSpace,
+  organizationSpace,
   personalSpace,
+  platformAdminSpace,
 } from './space.models';
 import {
-  buildAvailableSpaces,
+  SessionBootstrap,
+  SessionBootstrapError,
+  SessionSpace,
+} from './session-bootstrap.model';
+import {
   isPersistedSpaceStillValid,
   toPersistedRef,
 } from './space-access.policy';
 import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
 import { isPersonalSurfacePath, normalizeIdentityRole } from '../navigation/nav-access.policy';
 import { presentationModeFromUser } from '../guards/product-surface.policy';
+
+/** Bootstrap rejected by the backend — the interceptor already dropped the session. */
+const UNAUTHORIZED_REASON = 'session_unauthorized';
 
 /**
  * Product space context (045 + 046).
@@ -32,6 +45,7 @@ import { presentationModeFromUser } from '../guards/product-surface.policy';
  */
 @Injectable({ providedIn: 'root' })
 export class SpaceContextService {
+  private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly crmCtx = inject(CrmContextService);
@@ -45,7 +59,9 @@ export class SpaceContextService {
   private readonly _active = signal<AppSpace | null>(null);
   private readonly _error = signal<string | null>(null);
   private readonly _artistBackendMissing = signal(true);
+  private readonly _manifest = signal<SessionBootstrap | null>(null);
   private artistMembershipCache: ArtistSpaceMineItem[] = [];
+  private readonly sessionApi = `${environment.apiUrl}/session`;
 
   readonly status = this._status.asReadonly();
   readonly availableSpaces = this._available.asReadonly();
@@ -53,6 +69,7 @@ export class SpaceContextService {
   readonly error = this._error.asReadonly();
   /** False once GET /artist-space/mine succeeds (even if empty). */
   readonly artistBackendMissing = this._artistBackendMissing.asReadonly();
+  readonly manifest = this._manifest.asReadonly();
 
   readonly activeSpaceKind = computed(() => this._active()?.kind ?? null);
   readonly hasMultipleSpaces = computed(() => this._available().length > 1);
@@ -103,12 +120,58 @@ export class SpaceContextService {
   }
 
   async selectSpace(spaceId: string, options?: { navigate?: boolean }): Promise<boolean> {
+    const previous = this._active();
     const target = this._available().find((s) => s.id === spaceId);
     if (!target) {
       return false;
     }
-    await this.applySpace(target, { persist: true, navigate: options?.navigate !== false });
-    return true;
+    try {
+      const body = await firstValueFrom(
+        this.http.post<SessionBootstrap>(`${this.sessionApi}/context`, {
+          space_key: toApiSpaceKey(target),
+        }),
+      );
+      this.applyManifest(body);
+      await this.applySpace(target, {
+        persist: true,
+        navigate: options?.navigate !== false,
+      });
+      return true;
+    } catch {
+      if (previous) {
+        this._active.set(previous);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Authoritative session manifest. Throws instead of inventing spaces so callers
+   * can surface a retry rather than route the user into a fabricated context.
+   */
+  async bootstrapFromSession(): Promise<SessionBootstrap> {
+    await this.bootstrap({ force: true });
+    const manifest = this._manifest();
+    if (this._status() !== 'ready' || !manifest) {
+      throw new SessionBootstrapError(
+        this._error() || 'session_bootstrap_failed',
+        this._error() === UNAUTHORIZED_REASON,
+      );
+    }
+    return manifest;
+  }
+
+  async completeFirstAccess(intent?: string): Promise<void> {
+    try {
+      const body = await firstValueFrom(
+        this.http.post<SessionBootstrap>(`${this.sessionApi}/first-access`, {
+          intent: intent ?? null,
+        }),
+      );
+      this.applyManifest(body);
+    } catch {
+      /* first-access is advisory */
+    }
   }
 
   /**
@@ -134,6 +197,7 @@ export class SpaceContextService {
     this._active.set(null);
     this._status.set('idle');
     this._error.set(null);
+    this._manifest.set(null);
     this.artistMembershipCache = [];
     this.artistCtx.clear();
     try {
@@ -151,56 +215,51 @@ export class SpaceContextService {
     this._status.set('loading');
     this._error.set(null);
     try {
+      const remote = await this.fetchSessionBootstrap();
       await Promise.all([
-        this.orgCtx.ensureReady(),
+        this.orgCtx.ensureReady().catch(() => undefined),
         this.crmCtx.bootstrap().catch(() => undefined),
         this.fetchArtistMemberships(),
       ]);
-
-      const spaces = this.rebuildAvailable();
-      this._available.set(spaces);
-
-      const restored = isPersistedSpaceStillValid(this.readPersisted(), spaces);
-      let chosen: AppSpace =
-        restored ??
-        this.inferFromOrgContext(spaces) ??
-        this.inferDefaultSpaceForRole(spaces) ??
+      this.applyManifest(remote);
+      const spaces = this._available();
+      const chosen =
+        spaces.find((s) => s.id === appSpaceIdFromKey(remote.active_space_key)) ??
+        isPersistedSpaceStillValid(this.readPersisted(), spaces) ??
         spaces.find((s) => s.kind === 'personal') ??
-        personalSpace(this.i18n.t('spaces.personal'));
-
-      // Staff/technical surfaces must not stay on Personal as primary context.
-      chosen = this.preferStaffSpaceForCurrentRoute(chosen, spaces);
-
-      if (!spaces.some((s) => s.id === chosen.id)) {
-        chosen = spaces[0] ?? personalSpace(this.i18n.t('spaces.personal'));
+        spaces[0];
+      if (!chosen) {
+        this.failBootstrap(new Error('session_bootstrap_empty_spaces'));
+        return;
       }
-
       await this.applySpace(chosen, { persist: true, navigate: false });
       this._status.set('ready');
     } catch (e) {
-      this._status.set('error');
-      this._error.set(e instanceof Error ? e.message : 'space_bootstrap_failed');
-      const fallback = personalSpace(this.i18n.t('spaces.personal'));
-      this._available.set([fallback]);
-      this._active.set(fallback);
-      this.artistCtx.clear();
+      this.failBootstrap(e);
     }
   }
 
-  /** Engineer → Data Ops; admin with org → org; otherwise personal. */
-  private inferDefaultSpaceForRole(spaces: AppSpace[]): AppSpace | null {
-    const role = normalizeIdentityRole(this.auth.role());
-    if (role === 'engineer') {
-      return spaces.find((s) => s.kind === 'data_ops') ?? null;
-    }
-    if (role === 'admin') {
-      return (
-        this.inferFromOrgContext(spaces) ??
-        spaces.find((s) => s.kind === 'platform_admin') ??
-        null
-      );
-    }
-    return null;
+  /**
+   * Bootstrap failure is a hard error: the client never guesses which spaces the
+   * account owns, otherwise the UI would authorize surfaces the backend did not grant.
+   */
+  private failBootstrap(error: unknown): void {
+    const unauthorized = error instanceof HttpErrorResponse && error.status === 401;
+    this._available.set([]);
+    this._active.set(null);
+    this._manifest.set(null);
+    this.artistMembershipCache = [];
+    this.artistCtx.clear();
+    this._status.set('error');
+    this._error.set(
+      unauthorized
+        ? UNAUTHORIZED_REASON
+        : error instanceof HttpErrorResponse
+          ? `session_bootstrap_http_${error.status}`
+          : error instanceof Error
+            ? error.message
+            : 'session_bootstrap_failed',
+    );
   }
 
   /**
@@ -241,37 +300,26 @@ export class SpaceContextService {
     }
   }
 
-  private rebuildAvailable(): AppSpace[] {
-    const role = this.auth.role();
-    const crmRoles = this.crmCtx.roles();
-    const hasPlatformAdminSpace =
-      role === 'admin' || crmRoles.includes('platform_admin');
-
-    const artistMemberships = this.artistMembershipCache.map((m) => ({
-      id: m.artist_profile_id,
-      name: m.display_name,
-    }));
-
-    return buildAvailableSpaces({
-      authenticated: this.auth.isAuthenticated(),
-      identityRole: role,
-      hasEngineerAccess: this.auth.hasEngineerAccess(),
-      hasPlatformAdminSpace,
-      organizations: this.orgCtx.organizations().map((o) => ({
-        id: o.id,
-        name: o.display_name || o.legal_name || `Organización ${o.id}`,
-      })),
-      artistMemberships,
-      personalLabel: this.i18n.t('spaces.personal'),
-      dataOpsLabel: this.i18n.t('spaces.dataOps'),
-      platformAdminLabel: this.i18n.t('spaces.platformAdmin'),
-    });
-  }
-
   private inferFromOrgContext(spaces: AppSpace[]): AppSpace | null {
     const orgId = this.orgCtx.organizationId();
     if (orgId == null) return null;
     return spaces.find((s) => s.kind === 'organization' && s.organizationId === orgId) ?? null;
+  }
+
+  /** Rejects on HTTP failure — callers must not fall back to a locally built manifest. */
+  private fetchSessionBootstrap(): Promise<SessionBootstrap> {
+    return firstValueFrom(
+      this.http.get<SessionBootstrap>(`${this.sessionApi}/bootstrap`),
+    );
+  }
+
+  private applyManifest(manifest: SessionBootstrap): void {
+    this._manifest.set(manifest);
+    this._available.set(
+      (manifest.spaces || [])
+        .filter((space) => space.capabilities.some((capability) => capability.allowed))
+        .map(appSpaceFromSession),
+    );
   }
 
   private async applySpace(
@@ -334,6 +382,40 @@ export class SpaceContextService {
       localStorage.setItem(SPACE_STORAGE_KEY, JSON.stringify(ref));
     } catch {
       /* ignore quota */
+    }
+  }
+}
+
+function toApiSpaceKey(space: AppSpace): string {
+  if (space.kind === 'organization') return `organization:${space.organizationId}`;
+  if (space.kind === 'artist') return `artist:${space.artistProfileId}`;
+  return space.kind;
+}
+
+function appSpaceIdFromKey(key: string): string {
+  if (key.startsWith('organization:')) return `org:${key.split(':')[1]}`;
+  return key;
+}
+
+function appSpaceFromSession(item: SessionSpace): AppSpace {
+  switch (item.kind) {
+    case 'personal':
+      return personalSpace(item.display_name);
+    case 'data_ops':
+      return dataOpsSpace(item.display_name);
+    case 'platform_admin':
+      return platformAdminSpace(item.display_name);
+    case 'organization': {
+      const id = Number(item.key.split(':')[1]);
+      return organizationSpace(id, item.display_name);
+    }
+    case 'artist': {
+      const id = Number(item.key.split(':')[1]);
+      return artistSpace(id, item.display_name);
+    }
+    default: {
+      const _exhaustive: never = item.kind;
+      return personalSpace(String(_exhaustive));
     }
   }
 }

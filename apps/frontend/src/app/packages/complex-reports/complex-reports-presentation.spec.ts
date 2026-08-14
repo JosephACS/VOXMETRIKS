@@ -48,7 +48,7 @@ describe('complex-reports-presentation', () => {
   it('humanizes months and classifications', () => {
     expect(formatYearMonthEs('2026-07')).toBe('Julio de 2026');
     expect(formatSeriesLabel('2026-07')).toBe('Julio de 2026');
-    expect(classificationLabelEs('demo')).toBe('Datos de demostración');
+    expect(classificationLabelEs('demo')).toBe('Datos sintéticos');
     expect(classificationLabelEs('synthetic')).toBe('Datos sintéticos');
     expect(classificationLabelEs('operational')).toBe('Datos operacionales');
   });

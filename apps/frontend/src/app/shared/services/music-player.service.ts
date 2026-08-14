@@ -141,6 +141,7 @@ export class MusicPlayerService {
   setQueue(tracks: PlayableTrack[], startIndex = 0) {
     this.queueState.setAll(tracks, startIndex);
     this.syncQueueSignal();
+    this.schedulePersist();
     const track = this.queueState.current;
     if (track) this.loadTrack(track, true);
   }

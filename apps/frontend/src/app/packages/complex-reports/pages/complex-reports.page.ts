@@ -513,9 +513,11 @@ export class ComplexReportsPage implements OnInit {
     const summary = this.data?.summary || {};
     if (id === 'opportunity-win-rate-month') {
       const row = rows[0] || {};
-      const pct = Number(row['porcentaje'] ?? summary['average'] ?? series[0]?.value ?? 0) || 0;
-      const won = Number(row['ganadas'] ?? 0) || 0;
-      const closed = Number(row['cerradas'] ?? 0) || 0;
+      const rec = row as Record<string, unknown>;
+      const sum = summary as Record<string, unknown>;
+      const pct = Number(rec['porcentaje'] ?? sum['average'] ?? series[0]?.value ?? 0) || 0;
+      const won = Number(rec['ganadas'] ?? 0) || 0;
+      const closed = Number(rec['cerradas'] ?? 0) || 0;
       return [
         {
           key: 'rate',
@@ -529,7 +531,7 @@ export class ComplexReportsPage implements OnInit {
       ];
     }
     if (id === 'income-by-month') {
-      const v = Number(summary['total'] ?? series[0]?.value ?? 0) || 0;
+      const v = Number((summary as Record<string, unknown>)['total'] ?? series[0]?.value ?? 0) || 0;
       return [
         {
           key: 'income',
@@ -541,7 +543,7 @@ export class ComplexReportsPage implements OnInit {
       ];
     }
     if (id === 'subscription-growth-month') {
-      const v = Number(summary['total'] ?? series[0]?.value ?? 0) || 0;
+      const v = Number((summary as Record<string, unknown>)['total'] ?? series[0]?.value ?? 0) || 0;
       return [
         {
           key: 'subs',
@@ -553,13 +555,14 @@ export class ComplexReportsPage implements OnInit {
       ];
     }
     if (id === 'releases-status-month') {
-      const total = rows.reduce((a, r) => a + (Number(r['cantidad']) || 0), 0) || 1;
+      const total = rows.reduce((a, r) => a + (Number((r as Record<string, unknown>)['cantidad']) || 0), 0) || 1;
       return rows.slice(0, 6).map((r, i) => {
-        const n = Number(r['cantidad']) || 0;
+        const rec = r as Record<string, unknown>;
+        const n = Number(rec['cantidad']) || 0;
         return {
           key: `st-${i}`,
           value: String(n),
-          label: humanizeStatusLabel(String(r['estado'] || '')),
+          label: humanizeStatusLabel(String(rec['estado'] || '')),
           progress: Math.round((n / total) * 100),
         };
       });
@@ -571,9 +574,7 @@ export class ComplexReportsPage implements OnInit {
     return this.activeViz === 'leaderboard' && this.leaderboard.length > 0;
   }
 
-  get hideDetailTable(): boolean {
-    return false;
-  }
+  readonly hideDetailTable = false;
 
   get leaderboard(): LeaderboardRow[] {
     if ((this.selectedId || this.data?.report_id) !== 'top-tracks-period') return [];

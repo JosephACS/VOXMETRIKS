@@ -392,9 +392,11 @@ export class AudioResolver {
     }
 
     if (!isPlayableSource(resolved)) {
-      // Negative/partial cache can hide a working alternate provider.
-      // One silent force re-resolve while UI stays on "Preparando…".
-      if (!fromRecovery) {
+      // A terminal verdict is already the backend's final answer: retrying it only
+      // keeps the UI on "Preparando…" and races the next user action.
+      // Ambiguous results (empty payload, provider error) still earn one force re-resolve.
+      const terminal = resolved.status === 'not_found' || resolved.status === 'disabled';
+      if (!fromRecovery && !terminal) {
         this.retryForceResolve(track, callbacks, requestId, started, providersTried);
         return;
       }

@@ -21,12 +21,19 @@ describe('dashboard space nav icons', () => {
     expect(personalIcons).toContain(spaceNavIconMarkup('settings'));
     expect(new Set(personalIcons).size).toBeGreaterThan(1);
 
-    const platform = spaceNavSectionsFor('platform_admin').flatMap((s) => s.items);
-    const platformIcons = platform.map((i) => spaceNavIconMarkup(i.iconId));
+    const platformSections = spaceNavSectionsFor('platform_admin');
+    const platformIcons = platformSections
+      .flatMap((s) => s.items)
+      .map((i) => spaceNavIconMarkup(i.iconId));
     expect(platformIcons).toContain(spaceNavIconMarkup('artist_requests'));
     expect(platformIcons).toContain(spaceNavIconMarkup('unresolved_audio'));
     expect(platformIcons).toContain(spaceNavIconMarkup('workpanel'));
     expect(platformIcons).toContain(spaceNavIconMarkup('reports'));
-    expect(new Set(platformIcons).size).toBe(platformIcons.length);
+    // Icons may repeat across sections (billing appears under plan and royalties),
+    // but never inside one section, where two identical glyphs are indistinguishable.
+    for (const section of platformSections) {
+      const icons = section.items.map((i) => spaceNavIconMarkup(i.iconId));
+      expect(new Set(icons).size).toBe(icons.length);
+    }
   });
 });

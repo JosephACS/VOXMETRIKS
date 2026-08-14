@@ -11,14 +11,17 @@ import duckdb
 
 from app.core.config import get_settings
 from app.core.database import get_table_columns, table_exists
-from app.core.schema_bootstrap import schema_ready
+from app.core.schema_bootstrap import (
+    mark_connection_schema_ready,
+    schema_ready_for_connection,
+)
 from app.core.time_util import utc_now
 
 from .password_security import hash_password
 
 
 def ensure_user_tables(conn: duckdb.DuckDBPyConnection) -> None:
-    if schema_ready():
+    if schema_ready_for_connection(conn) and table_exists(conn, "app_user"):
         return
     conn.execute("""
         CREATE TABLE IF NOT EXISTS app_user (
@@ -55,6 +58,7 @@ def ensure_user_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _migrate_user_role(conn)
     _migrate_auth_columns(conn)
     _seed_demo_users(conn)
+    mark_connection_schema_ready(conn)
 
 
 def _migrate_auth_columns(conn: duckdb.DuckDBPyConnection) -> None:

@@ -9,8 +9,9 @@ export async function loginAs(
   await page.locator('#loginId').fill(loginId);
   await page.locator('#password').fill(password);
   await page.locator('button.submit-btn[type="submit"]').click();
+  // Spec 050 can legitimately land on first access or the space chooser.
   await page.waitForURL(
-    /\/(discover|workpanel|elt-pipeline|dashboard|reports|organizations)/,
+    /\/(discover|workpanel|elt-pipeline|dashboard|reports|organizations|welcome)/,
     { timeout: 45_000 },
   );
   await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 20_000 });

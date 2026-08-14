@@ -163,6 +163,39 @@
   font-size: 0.85rem;
 }
 
+.org-advanced {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+}
+
+.org-advanced > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.org-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.org-advanced > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.4rem;
+  transition: transform 0.15s ease;
+}
+
+.org-advanced[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.org-advanced > label {
+  display: block;
+  margin-top: 0.75rem;
+}
+
 .org-badge {
   display: inline-block;
   padding: 0.15rem 0.5rem;

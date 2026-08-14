@@ -5,7 +5,6 @@ import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { FavoritesService } from '../../packages/streaming/services/favorites.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
-import { MusicPlayerService } from '../../shared/services/music-player.service';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { UiPreferencesService } from '../../core/services/ui-preferences.service';
@@ -109,7 +108,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   router = inject(Router);
   private favorites = inject(FavoritesService);
   private history = inject(HistoryService);
-  private player = inject(MusicPlayerService);
   private destroyRef = inject(DestroyRef);
   private platformEvents = inject(PlatformEventsService);
   private orgCtx = inject(OrganizationContextService);
@@ -1539,9 +1537,8 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.player.stopPlayback();
-    this.spaceCtx.clear();
-    this.orgCtx.clearOrganizationScopedState();
+    // Cleanup lives in SessionCleanupCoordinator (invoked by AuthService.logout)
+    // so the logout and 401 paths can never drift apart.
     this.auth.logout();
     this.router.navigate(['/login']);
   }

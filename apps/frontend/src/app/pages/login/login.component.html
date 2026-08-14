@@ -80,6 +80,11 @@
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
         }
+        @if (bootstrapFailed()) {
+          <button type="button" class="link-btn" data-testid="bootstrap-retry" (click)="continueAfterAuth()">
+            {{ 'login.bootstrapRetry' | t:lang() }}
+          </button>
+        }
         <button type="submit" class="submit-btn" [disabled]="isLoading()" [class.loading]="isLoading()">
           @if (isLoading()) { {{ 'login.submitting' | t:lang() }} } @else { {{ 'login.submit' | t:lang() }} }
         </button>
@@ -114,15 +119,24 @@
         <div class="field">
           <label class="field-label" for="reg-password">{{ 'login.password' | t:lang() }}</label>
           <div class="input-wrap" [class.invalid]="registerForm.controls.password.invalid && registerForm.controls.password.touched">
-            <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" autocomplete="new-password" />
+            <input id="reg-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" class="field-input" autocomplete="new-password" minlength="8" />
           </div>
-          <span class="field-help">{{ 'login.passwordHashHint' | t:lang() }}</span>
+          @if (registerForm.controls.password.hasError('commonPassword') && registerForm.controls.password.touched) {
+            <span class="field-error">{{ 'login.passwordTooCommon' | t:lang() }}</span>
+          } @else if (registerForm.controls.password.invalid && registerForm.controls.password.touched) {
+            <span class="field-error">{{ 'login.passwordError' | t:lang() }}</span>
+          } @else {
+            <span class="field-help">{{ 'login.passwordPolicy' | t:lang() }}</span>
+          }
         </div>
         <div class="field">
-          <label class="field-label" for="genre">{{ 'login.favoriteGenre' | t:lang() }}</label>
-          <div class="input-wrap">
-            <input id="genre" type="text" formControlName="favoriteGenre" placeholder="Pop, Rock, Latin..." class="field-input" />
+          <label class="field-label" for="reg-password-confirm">{{ 'login.passwordConfirm' | t:lang() }}</label>
+          <div class="input-wrap" [class.invalid]="registerForm.hasError('passwordMismatch') && registerForm.controls.passwordConfirm.touched">
+            <input id="reg-password-confirm" [type]="showPassword() ? 'text' : 'password'" formControlName="passwordConfirm" class="field-input" autocomplete="new-password" />
           </div>
+          @if (registerForm.hasError('passwordMismatch') && registerForm.controls.passwordConfirm.touched) {
+            <span class="field-error">{{ 'login.passwordMismatch' | t:lang() }}</span>
+          }
         </div>
         @if (errorMessage()) {
           <div class="error-banner" role="alert">{{ errorMessage() }}</div>
@@ -148,7 +162,7 @@
             <span class="field-error">{{ 'verify.codeError' | t:lang() }}</span>
           }
         </div>
-        @if (devCode()) {
+        @if (showDevChannel && devCode()) {
           <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() }:lang() }}</div>
         }
         @if (infoMessage()) {
@@ -215,10 +229,26 @@
         <div class="field">
           <label class="field-label" for="reset-pw">{{ 'reset.newPassword' | t:lang() }}</label>
           <div class="input-wrap">
-            <input id="reset-pw" type="password" formControlName="newPassword" class="field-input" autocomplete="new-password" />
+            <input id="reset-pw" type="password" formControlName="newPassword" class="field-input" autocomplete="new-password" minlength="8" />
           </div>
+          @if (resetForm.controls.newPassword.hasError('commonPassword') && resetForm.controls.newPassword.touched) {
+            <span class="field-error">{{ 'login.passwordTooCommon' | t:lang() }}</span>
+          } @else if (resetForm.controls.newPassword.invalid && resetForm.controls.newPassword.touched) {
+            <span class="field-error">{{ 'login.passwordError' | t:lang() }}</span>
+          } @else {
+            <span class="field-help">{{ 'login.passwordPolicy' | t:lang() }}</span>
+          }
         </div>
-        @if (devCode()) {
+        <div class="field">
+          <label class="field-label" for="reset-pw-confirm">{{ 'login.passwordConfirm' | t:lang() }}</label>
+          <div class="input-wrap" [class.invalid]="resetForm.hasError('passwordMismatch') && resetForm.controls.passwordConfirm.touched">
+            <input id="reset-pw-confirm" type="password" formControlName="passwordConfirm" class="field-input" autocomplete="new-password" />
+          </div>
+          @if (resetForm.hasError('passwordMismatch') && resetForm.controls.passwordConfirm.touched) {
+            <span class="field-error">{{ 'login.passwordMismatch' | t:lang() }}</span>
+          }
+        </div>
+        @if (showDevChannel && devCode()) {
           <div class="dev-code-banner" role="status">{{ 'verify.devCode' | t: { code: devCode() }:lang() }}</div>
         }
         @if (infoMessage()) {

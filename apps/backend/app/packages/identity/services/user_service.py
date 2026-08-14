@@ -17,7 +17,13 @@ from app.packages.engagement.services.playlist_service import list_playlists
 
 from .email_service import generate_code, send_verification_email
 from .google_auth_service import verify_google_id_token
-from .password_security import hash_password, needs_rehash, verify_password
+from .password_security import (
+    PasswordPolicyError,
+    hash_password,
+    needs_rehash,
+    validate_account_password,
+    verify_password,
+)
 from .user_storage import (
     create_session,
     delete_email_code,
@@ -140,14 +146,9 @@ def login(
     if not user["email_verified"]:
         # Caller maps this to a 403 so the UI can prompt for the code.
         return {"verification_required": True, "email": user["email"]}
-    try:
-        from app.packages.personal_subscriptions.application.use_cases import (
-            ensure_free_subscription,
-        )
+    from .session_bootstrap import provision_free_personal_plan  # circular: bootstrap → _fetch_user
 
-        ensure_free_subscription(conn, user_id)
-    except Exception:  # noqa: BLE001
-        pass
+    provision_free_personal_plan(conn, user_id)
     if needs_rehash(row[3]):
         conn.execute(
             "UPDATE app_user SET password_hash = ? WHERE id = ?",
@@ -210,10 +211,10 @@ def register(
         raise ValueError("username must be at most 64 characters")
     if not is_valid_email_format(email):
         raise ValueError("invalid email format")
-    if len(password) < 4:
-        raise ValueError("password must be at least 4 characters")
-    if len(password) > 128:
-        raise ValueError("password must be at most 128 characters")
+    try:
+        validate_account_password(password)
+    except PasswordPolicyError as exc:
+        raise ValueError(str(exc)) from exc
 
     existing = conn.execute(
         f"SELECT {_USER_COLUMNS} FROM app_user WHERE LOWER(email) = ? OR LOWER(username) = ?",
@@ -272,14 +273,9 @@ def verify_email(
     if not row:
         raise ValueError("user not found")
     user = _user_row_to_dict(row)
-    try:
-        from app.packages.personal_subscriptions.application.use_cases import (
-            ensure_free_subscription,
-        )
+    from .session_bootstrap import provision_free_personal_plan  # circular: bootstrap → _fetch_user
 
-        ensure_free_subscription(conn, int(user["id"]))
-    except Exception:  # noqa: BLE001 — Free assign must not block login
-        pass
+    provision_free_personal_plan(conn, int(user["id"]))
     token = create_session(conn, int(row[0]), days=90)
     return {"token": token, "user": user}
 
@@ -397,8 +393,10 @@ def reset_password(
     ensure_user_tables(conn)
     email = email.strip().lower()
     code = (code or "").strip()
-    if len(new_password or "") < 4:
-        raise ValueError("password must be at least 4 characters")
+    try:
+        validate_account_password(new_password)
+    except PasswordPolicyError as exc:
+        raise ValueError(str(exc)) from exc
 
     # Phase 1: commit defensive validation side-effects, then raise outside.
     client_error: Optional[str] = None
@@ -528,6 +526,9 @@ def google_login(conn: duckdb.DuckDBPyConnection, credential: str) -> Optional[D
             auth_provider="google",
         )
         user = _fetch_user(conn, user_id)
+    from .session_bootstrap import provision_free_personal_plan  # circular: bootstrap → _fetch_user
+
+    provision_free_personal_plan(conn, user_id)
     token = create_session(conn, user_id, days=90)
     return {"token": token, "user": user}
 

@@ -1,10 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AppUser, AuthResponse, AuthConfig } from '../../shared/models/api.models';
 import { UiPreferencesService } from './ui-preferences.service';
-import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
+import { SessionCleanupCoordinator } from '../spaces/session-cleanup.coordinator';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -26,12 +26,22 @@ export interface RegisterResult {
   error?: string;
 }
 
+function unverifiedLoginFromError(e: unknown): LoginResult | null {
+  if (!(e instanceof HttpErrorResponse) || e.status !== 403) return null;
+  const body = e.error as Record<string, unknown> | null | undefined;
+  const nested = body?.['details'] ?? body?.['detail'];
+  if (!nested || typeof nested !== 'object') return null;
+  const details = nested as Record<string, unknown>;
+  if (details['reason'] !== 'email_not_verified') return null;
+  return { ok: false, verificationRequired: true, email: String(details['email'] ?? '') };
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly ui = inject(UiPreferencesService);
-  /** Optional to avoid hard circular DI with org context during early bootstrap. */
-  private readonly orgCtx = inject(OrganizationContextService, { optional: true });
+  /** Optional so auth keeps working in tests that do not provide product-space collaborators. */
+  private readonly cleanup = inject(SessionCleanupCoordinator, { optional: true });
   private readonly API = `${environment.apiUrl}/users`;
   private readonly AUTH_KEY = 'voxmetrik_auth_token';
   private readonly USER_KEY = 'voxmetrik_user';
@@ -86,11 +96,8 @@ export class AuthService {
       this.persistSession(res, remember);
       return { ok: true };
     } catch (e: unknown) {
-      const err = e as { status?: number; error?: { detail?: { reason?: string; email?: string } | string } };
-      const detail = err?.error?.detail;
-      if (err?.status === 403 && typeof detail === 'object' && detail?.reason === 'email_not_verified') {
-        return { ok: false, verificationRequired: true, email: detail.email };
-      }
+      const unverified = unverifiedLoginFromError(e);
+      if (unverified) return unverified;
       return { ok: false };
     }
   }
@@ -99,13 +106,12 @@ export class AuthService {
     username: string,
     email: string,
     password: string,
-    favoriteGenre?: string,
   ): Promise<RegisterResult> {
     try {
       const res = await firstValueFrom(
         this.http.post<{ verification_required?: boolean; email?: string; dev_code?: string }>(
           `${this.API}/register`,
-          { username, email, password, favorite_genre: favoriteGenre },
+          { username, email, password },
         )
       );
       return {
@@ -214,25 +220,8 @@ export class AuthService {
     localStorage.removeItem(this.USER_KEY);
     sessionStorage.removeItem(this.AUTH_KEY);
     sessionStorage.removeItem(this.USER_KEY);
-    // New auth session should re-evaluate “Who’s listening?” (unless remember-profile).
-    try {
-      sessionStorage.removeItem('voxmetriks_profile_session_selected');
-    } catch {
-      /* ignore */
-    }
     this.authState.set({ isAuthenticated: false, user: null, token: null });
-    // Spec 043 hotfix: clear org signals so the next account cannot reuse them.
-    try {
-      this.orgCtx?.clearOrganizationScopedState();
-    } catch {
-      /* optional / circular-safe */
-    }
-    // Spec 045: clear product space selection with the session.
-    try {
-      localStorage.removeItem('voxmetriks_active_space_v1');
-    } catch {
-      /* ignore */
-    }
+    this.cleanup?.clearPrivateClientState();
   }
 
   /** Apply a fresh auth session (e.g. after PIN unlock switch). */

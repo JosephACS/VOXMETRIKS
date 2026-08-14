@@ -8,6 +8,7 @@ import {
   WorkpanelResponse,
 } from '../services/workpanel-api.service';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { RelatedReportsPanelComponent } from '../../reporting/components/related-reports-panel.component';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 import { I18nService } from '../../../core/services/i18n.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -33,7 +34,13 @@ interface ShortcutItem {
 @Component({
   selector: 'app-workpanel-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ...ENTERPRISE_UI_IMPORTS],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RelatedReportsPanelComponent,
+    ...ENTERPRISE_UI_IMPORTS,
+  ],
   template: `
     <div class="vx-enterprise vx-enterprise--wide workpanel-page" [class.workpanel-page--engineer]="isEngineerView()">
       <header class="wp-head">
@@ -181,7 +188,7 @@ interface ShortcutItem {
           <div class="wp-split">
             <section class="wp-panel" aria-label="Prioridades">
               <h2 class="wp-panel__title">Prioridades</h2>
-              @if (!adminPriorities.length) {
+              @if (!adminHasPriorities) {
                 <p class="wp-empty">Sin prioridades críticas en este periodo.</p>
               } @else {
                 <ul class="wp-priority">
@@ -222,6 +229,12 @@ interface ShortcutItem {
             </section>
           </div>
         }
+
+        <app-related-reports-panel
+          moduleId="control_decision"
+          moduleLabel="Control y decisión"
+          [limit]="5"
+        />
       }
     </div>
   `,
@@ -594,9 +607,65 @@ export class WorkpanelPage implements OnInit {
       : 'Resumen del periodo, prioridades y acciones de la organización.';
   }
 
+  /**
+   * Honest data disclosure: says exactly which classifications apply, and never
+   * repeats a disclosure the backend note already carries.
+   */
   get dataNotice(): string | null {
-    // Product presentation: do not surface demo/synthetic disclaimers in the UI.
-    return null;
+    if (!this.data) return null;
+    const synthetic =
+      this.data.includes_synthetic_events ||
+      this.data.data_classification === 'synthetic' ||
+      this.data.data_classification === 'mixed';
+    const simulated = this.data.monetary_classification === 'simulated';
+    if (!synthetic && !simulated) return null;
+
+    const note = (this.data.classification_note || '').trim();
+    const syntheticFallback = this.i18n.t('workpanel.notice.syntheticFallback');
+    const simulatedAmounts = this.i18n.t('workpanel.notice.simulatedAmounts');
+
+    if (synthetic && simulated) {
+      if (!note) {
+        return this.i18n.t('workpanel.notice.combinedCompact');
+      }
+      const hasSynthetic = WorkpanelPage.mentionsSynthetic(note);
+      const hasSimulated = WorkpanelPage.mentionsSimulated(note);
+      if (hasSynthetic && hasSimulated) {
+        return note;
+      }
+      let text = note;
+      if (!hasSynthetic) {
+        text = WorkpanelPage.appendUniqueNotice(text, syntheticFallback);
+      }
+      if (!hasSimulated) {
+        text = WorkpanelPage.appendUniqueNotice(text, simulatedAmounts);
+      }
+      return text;
+    }
+
+    if (synthetic) {
+      return note || syntheticFallback;
+    }
+    return simulatedAmounts;
+  }
+
+  /** Detects synthetic / warehouse disclosure already present in a note. */
+  private static mentionsSynthetic(text: string): boolean {
+    return /sintét|synthetic/i.test(text);
+  }
+
+  /** Detects academic / simulated monetary disclosure already present in a note. */
+  private static mentionsSimulated(text: string): boolean {
+    return /simulad|académic|academic/i.test(text);
+  }
+
+  private static appendUniqueNotice(base: string, extra: string): string {
+    const b = base.trim();
+    const e = extra.trim();
+    if (!e) return b;
+    if (!b) return e;
+    if (b.toLowerCase().includes(e.toLowerCase())) return b;
+    return `${b} ${e}`;
   }
 
   get dataNoticeDetail(): string | null {

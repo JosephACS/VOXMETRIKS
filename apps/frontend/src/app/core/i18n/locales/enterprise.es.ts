@@ -501,6 +501,23 @@ export const ENTERPRISE_ES = {
   'organizations.create.title': 'Crear organización',
   'organizations.create.name': 'Nombre visible',
   'organizations.create.submitting': 'Creando…',
+  'organizations.create.lede':
+    'Completa el perfil básico. No se solicita información fiscal en esta etapa.',
+  'organizations.create.success': 'Organización creada. Redirigiendo al onboarding…',
+  'organizations.create.legalName': 'Nombre legal (opcional)',
+  'organizations.create.identifier': 'Identificador',
+  'organizations.create.type': 'Tipo',
+  'organizations.create.country': 'País',
+  'organizations.create.timezone': 'Zona horaria',
+  'organizations.create.currency': 'Moneda por defecto',
+  'organizations.create.activate': 'Activar como organización actual',
+  'organizations.create.cancel': 'Cancelar',
+  'organizations.create.advanced': 'Opciones avanzadas',
+  'organizations.create.slugLabel': 'Identificador (slug)',
+  'organizations.create.slugHelp':
+    'Se genera desde el nombre visible. Edítalo si ya está en uso; solo minúsculas, números y guiones.',
+  'organizations.create.slugConflict': 'Conflicto de slug: {{message}}',
+  'organizations.create.error': 'No se pudo crear la organización',
   'organizations.onboarding.title': 'Onboarding inicial',
   'organizations.onboarding.lede':
     'Tu organización está creada. Completa el perfil básico y elige un plan empresarial o una prueba gratuita para activar las herramientas de gestión. Sin plan no verás CRM, campañas ni cobros.',

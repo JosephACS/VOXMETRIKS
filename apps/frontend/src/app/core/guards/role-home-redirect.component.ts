@@ -1,19 +1,21 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { homePathForRole } from '../navigation/nav-access.policy';
-import { AuthService } from '../services/auth.service';
+import { PostAuthOrchestrator } from '../spaces/post-auth.orchestrator';
 
-/** Tiny landing for authenticated `/` — navigates to role home. */
+/** Authenticated `/` — navigates through the same post-auth orchestrator as login. */
 @Component({
   selector: 'app-role-home-redirect',
   standalone: true,
   template: '',
 })
 export class RoleHomeRedirectComponent implements OnInit {
-  private readonly auth = inject(AuthService);
+  private readonly orchestrator = inject(PostAuthOrchestrator);
   private readonly router = inject(Router);
 
   ngOnInit(): void {
-    void this.router.navigateByUrl(homePathForRole(this.auth.role()), { replaceUrl: true });
+    void this.orchestrator.goAfterAuthenticated().catch(() => {
+      // Bootstrap failed — login owns the retry surface.
+      void this.router.navigateByUrl('/login');
+    });
   }
 }

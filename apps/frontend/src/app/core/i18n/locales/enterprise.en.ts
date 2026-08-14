@@ -497,6 +497,23 @@ export const ENTERPRISE_EN = {
   'organizations.create.title': 'Create organization',
   'organizations.create.name': 'Display name',
   'organizations.create.submitting': 'Creating…',
+  'organizations.create.lede':
+    'Complete the basic profile. Tax information is not requested at this stage.',
+  'organizations.create.success': 'Organization created. Redirecting to onboarding…',
+  'organizations.create.legalName': 'Legal name (optional)',
+  'organizations.create.identifier': 'Identifier',
+  'organizations.create.type': 'Type',
+  'organizations.create.country': 'Country',
+  'organizations.create.timezone': 'Time zone',
+  'organizations.create.currency': 'Default currency',
+  'organizations.create.activate': 'Set as current organization',
+  'organizations.create.cancel': 'Cancel',
+  'organizations.create.advanced': 'Advanced options',
+  'organizations.create.slugLabel': 'Identifier (slug)',
+  'organizations.create.slugHelp':
+    'Derived from the display name. Edit it when it is already taken; lowercase letters, numbers and hyphens only.',
+  'organizations.create.slugConflict': 'Slug conflict: {{message}}',
+  'organizations.create.error': 'Could not create the organization',
   'organizations.onboarding.title': 'Initial onboarding',
   'organizations.onboarding.lede':
     'Your organization is created. Complete the basic profile and choose a business plan or free trial to activate management tools. Without a plan you will not see CRM, campaigns, or collections.',

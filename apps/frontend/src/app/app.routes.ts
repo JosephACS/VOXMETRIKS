@@ -77,6 +77,20 @@ export const APP_ROUTES: Routes = [
         pathMatch: 'full',
       },
       {
+        path: 'welcome',
+        title: 'firstAccess.title',
+        loadComponent: () =>
+          import('./packages/personal-account/pages/first-access.page').then(
+            (m) => m.FirstAccessPage,
+          ),
+      },
+      {
+        path: 'welcome/spaces',
+        title: 'spaceChooser.title',
+        loadComponent: () =>
+          import('./core/spaces/pages/space-chooser.page').then((m) => m.SpaceChooserPage),
+      },
+      {
         path: 'discover',
         title: 'nav.home',
         loadComponent: () =>

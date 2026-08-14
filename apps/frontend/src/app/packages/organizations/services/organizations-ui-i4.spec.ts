@@ -136,8 +136,7 @@ describe('OrgCreatePageComponent (I4)', () => {
     const fixture = TestBed.createComponent(OrgCreatePageComponent);
     const http = TestBed.inject(HttpTestingController);
     const cmp = fixture.componentInstance;
-    cmp.displayName = 'Dup';
-    cmp.slug = 'dup';
+    cmp.form.patchValue({ display_name: 'Dup', slug: 'dup' });
     fixture.detectChanges();
     const p1 = cmp.submit();
     const p2 = cmp.submit();

@@ -30,7 +30,8 @@ describe('Phase C route stability (spec 014)', () => {
     expect(child('insights/analytics')?.redirectTo).toBe('workpanel');
     expect(child('insights/tracks')?.redirectTo).toBe('complex-reports');
     expect(child('analytics')?.redirectTo).toBe('workpanel');
-    expect(child('trending')?.redirectTo).toBe('complex-reports');
+    // Trending is a listener-facing surface, so it folds into Discover, not reports.
+    expect(child('trending')?.redirectTo).toBe('discover');
     expect(child('comparatives')?.redirectTo).toBe('complex-reports');
     expect(child('tracks')?.loadComponent).toBeTypeOf('function');
     expect(child('tracks/:id')?.loadComponent).toBeTypeOf('function');

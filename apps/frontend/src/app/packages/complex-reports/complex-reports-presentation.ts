@@ -157,10 +157,11 @@ export function summaryStatLabels(reportId: string): {
 
 export function classificationLabelEs(code?: string | null): string {
   switch ((code || '').toLowerCase()) {
+    // 'demo' is a legacy backend code for the same synthetic warehouse rows.
     case 'demo':
-      return 'Datos de catálogo';
+      return 'Datos sintéticos';
     case 'synthetic':
-      return 'Datos de ejemplo';
+      return 'Datos sintéticos';
     case 'operational':
       return 'Datos operacionales';
     case 'mixed':
