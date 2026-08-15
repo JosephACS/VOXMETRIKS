@@ -1,9 +1,7 @@
 import {
   buildAvailableSpaces,
   findSpaceById,
-  isOrganizationSpaceCommercialPath,
   isPersistedSpaceStillValid,
-  spaceAllowsProductPath,
   toPersistedRef,
 } from './space-access.policy';
 import { organizationSpace, personalSpace, SPACE_STORAGE_KEY } from './space.models';
@@ -131,21 +129,6 @@ describe('space-access.policy (045)', () => {
       organizationId: 7,
       artistProfileId: undefined,
     });
-  });
-
-  it('allows org commercial paths only in organization space', () => {
-    expect(isOrganizationSpaceCommercialPath('/campaigns/1')).toBe(true);
-    expect(spaceAllowsProductPath('/business-analytics', 'organization')).toBe(true);
-    expect(spaceAllowsProductPath('/reports', 'organization')).toBe(true);
-    expect(spaceAllowsProductPath('/business-decisions/7', 'organization')).toBe(true);
-    expect(spaceAllowsProductPath('/billing/invoices', 'organization')).toBe(true);
-    expect(spaceAllowsProductPath('/crm/dashboard', 'organization')).toBe(true);
-    expect(spaceAllowsProductPath('/billing/invoices', 'personal')).toBe(false);
-    expect(spaceAllowsProductPath('/crm/dashboard', 'personal')).toBe(false);
-    expect(spaceAllowsProductPath('/platform-ops', 'platform_admin')).toBe(true);
-    expect(spaceAllowsProductPath('/subscriptions/plans', 'platform_admin')).toBe(true);
-    expect(spaceAllowsProductPath('/elt-pipeline', 'data_ops')).toBe(true);
-    expect(spaceAllowsProductPath('/elt-pipeline', 'personal')).toBe(false);
   });
 
   it('storage key is stable', () => {

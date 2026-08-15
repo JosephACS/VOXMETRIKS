@@ -119,6 +119,9 @@ describe('OrgNonePageComponent (I4)', () => {
       permissions: ['organization.view'],
     });
     await init;
+    for (const req of http.match((r) => r.method === 'GET' && /\/subscriptions(\?|$)/.test(r.url))) {
+      req.flush({ items: [], page: 1, limit: 20, total: 0 });
+    }
     expect(nav).toHaveBeenCalledWith(['/organizations', 1, 'settings'], { replaceUrl: true });
     http.verify();
   });

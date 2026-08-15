@@ -270,7 +270,11 @@ export class CsDashboardPage implements OnInit {
     this.busy = true;
     this.error = '';
     this.success = '';
-    this.api.calculateHealth(this.orgId).subscribe({
+    const canCalculate = this.orgCtx.hasPermission('customer_health.calculate');
+    const health$ = canCalculate
+      ? this.api.calculateHealth(this.orgId)
+      : this.api.latestHealth(this.orgId);
+    health$.subscribe({
       next: (h) => {
         this.health = h as typeof this.health;
         this.api.dashboard(this.orgId!).subscribe({
@@ -279,7 +283,9 @@ export class CsDashboardPage implements OnInit {
             this.loadLists(this.orgId!);
             this.loading = false;
             this.busy = false;
-            this.success = this.i18n.t('customerSuccess.dashboard.healthRefreshed');
+            if (canCalculate) {
+              this.success = this.i18n.t('customerSuccess.dashboard.healthRefreshed');
+            }
           },
           error: (e) => {
             this.error = e?.error?.detail?.message || this.i18n.t('customerSuccess.dashboard.dashboardFailed');

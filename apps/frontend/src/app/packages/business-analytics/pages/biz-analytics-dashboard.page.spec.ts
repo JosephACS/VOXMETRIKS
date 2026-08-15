@@ -90,7 +90,10 @@ describe('BizAnalyticsDashboardPage strategic AGG', () => {
         },
         {
           provide: OrganizationContextService,
-          useValue: { organizationId: () => 1 },
+          useValue: {
+            organizationId: () => 1,
+            hasPermission: () => false,
+          },
         },
         { provide: BillingApiService, useValue: { listInvoices: () => of({ items: [] }) } },
         { provide: CrmApiService, useValue: { listOpportunities: () => of({ items: [] }) } },

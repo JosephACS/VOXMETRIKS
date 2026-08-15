@@ -1,4 +1,5 @@
-import { buildAvailableSpaces, spaceAllowsProductPath } from '../../core/spaces/space-access.policy';
+import { buildAvailableSpaces } from '../../core/spaces/space-access.policy';
+import { evaluateProductPathAccess, emptyProductSurfaceContext } from '../../core/product-surface';
 
 describe('space policy artist memberships (046)', () => {
   it('never invents artist spaces without memberships', () => {
@@ -27,9 +28,14 @@ describe('space policy artist memberships (046)', () => {
     expect(artist?.artistProfileId).toBe(12);
   });
 
-  it('allows artist-space paths in artist product surface', () => {
-    expect(spaceAllowsProductPath('/artist-space', 'artist')).toBe(true);
-    expect(spaceAllowsProductPath('/artist-space/team', 'artist')).toBe(true);
-    expect(spaceAllowsProductPath('/royalties', 'artist')).toBe(false);
+  it('allows artist-space paths in artist product surface via registry', () => {
+    const ctx = {
+      ...emptyProductSurfaceContext('artist'),
+      ready: true,
+      artistCapabilities: new Set(['artist_space.view']),
+    };
+    expect(evaluateProductPathAccess('/artist-space', ctx)).toBe('allow');
+    expect(evaluateProductPathAccess('/artist-space/team', ctx)).toBe('allow');
+    expect(evaluateProductPathAccess('/royalties', ctx)).toBe('unavailable');
   });
 });

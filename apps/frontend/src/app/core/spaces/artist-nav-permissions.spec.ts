@@ -1,18 +1,22 @@
 import { filterSpaceNavSections, spaceNavSectionsFor } from './space-nav.config';
+import type { ProductSurfaceContext } from '../product-surface';
 
 /**
- * 051 · T004 — Artist Space nav mirrors the server permission manifest
- * (GET /artist-space/mine) instead of showing every surface to every role.
+ * 051 / 054 — Artist Space nav mirrors the server permission manifest.
  */
-describe('artist space nav permissions (051)', () => {
+describe('artist space nav permissions (051/054)', () => {
   function paths(permissions: string[] | null): string[] {
     const raw = spaceNavSectionsFor('artist');
+    const access: ProductSurfaceContext = {
+      ready: true,
+      activeSpace: 'artist',
+      permissions: new Set(),
+      artistCapabilities: new Set(permissions ?? []),
+      staffCapabilities: new Set(),
+      platformRoles: new Set(),
+    };
     return filterSpaceNavSections(raw, {
-      hasStaffAccess: false,
-      canAccessOrgModule: () => true,
-      canAccessArtistPermission: permissions
-        ? (permission) => permissions.includes(permission)
-        : undefined,
+      productSurfaceContext: access,
     }).flatMap((section) => section.items.map((item) => item.path));
   }
 

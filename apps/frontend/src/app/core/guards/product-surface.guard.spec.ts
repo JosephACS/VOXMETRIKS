@@ -4,11 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  decideProductSurfaceAccess,
-  presentationModeFromUser,
-} from './product-surface.policy';
+import { vi } from 'vitest';
 import { productSurfaceGuard } from './product-surface.guard';
+import { evaluateProductPathAccess } from '../product-surface/product-surface.evaluator';
 import { AuthService } from '../services/auth.service';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
 import { SpaceContextService } from '../spaces/space-context.service';
@@ -70,71 +68,68 @@ describe('app.routes.ts product-surface attachment (source contract)', () => {
   });
 });
 
-describe('decideProductSurfaceAccess (045)', () => {
-  const listener = { identityRole: 'user' as const, presentationMode: false };
-  const admin = { identityRole: 'admin' as const, presentationMode: false };
-  const presentation = {
-    identityRole: 'user' as const,
-    presentationMode: true,
-  };
+describe('evaluateProductPathAccess (054)', () => {
+  function ctx(partial: Record<string, unknown> = {}) {
+    return {
+      ready: true,
+      activeSpace: 'organization' as const,
+      organizationId: 1,
+      organizationTier: 'operational' as const,
+      permissions: new Set<string>(),
+      artistCapabilities: new Set<string>(),
+      staffCapabilities: new Set<string>(),
+      platformRoles: new Set<string>(),
+      ...partial,
+    };
+  }
 
   it('blocks personal deep link to CRM with unavailable', () => {
-    expect(decideProductSurfaceAccess('/crm/dashboard', listener, 'personal')).toBe(
-      'unavailable',
-    );
+    expect(
+      evaluateProductPathAccess('/crm/dashboard', ctx({ activeSpace: 'personal' })),
+    ).toBe('unavailable');
   });
 
-  it('allows organization space commercial campaigns/billing/royalties', () => {
-    expect(decideProductSurfaceAccess('/campaigns', listener, 'organization')).toBe('allow');
-    expect(decideProductSurfaceAccess('/business-analytics', listener, 'organization')).toBe(
-      'allow',
-    );
-    expect(decideProductSurfaceAccess('/billing/invoices', listener, 'organization')).toBe(
-      'allow',
-    );
-    expect(decideProductSurfaceAccess('/royalties', listener, 'organization')).toBe('allow');
-    expect(decideProductSurfaceAccess('/subscriptions/overview', listener, 'organization')).toBe(
-      'allow',
-    );
-    expect(decideProductSurfaceAccess('/reports', listener, 'organization')).toBe('allow');
-    expect(decideProductSurfaceAccess('/business-decisions', listener, 'organization')).toBe(
-      'allow',
-    );
+  it('permission-denied when org space lacks capability', () => {
+    expect(evaluateProductPathAccess('/campaigns', ctx())).toBe('permission-denied');
+    expect(
+      evaluateProductPathAccess(
+        '/campaigns',
+        ctx({ permissions: new Set(['campaign.view']) }),
+      ),
+    ).toBe('allow');
   });
 
-  it('allows CRM in organization and platform_admin spaces', () => {
-    expect(decideProductSurfaceAccess('/crm/prospects', listener, 'organization')).toBe('allow');
-    expect(decideProductSurfaceAccess('/crm/dashboard', admin, 'platform_admin')).toBe('allow');
+  it('unavailable for wrong tier even with permission', () => {
+    expect(
+      evaluateProductPathAccess(
+        '/campaigns',
+        ctx({
+          organizationTier: 'onboarding',
+          permissions: new Set(['campaign.view']),
+        }),
+      ),
+    ).toBe('unavailable');
   });
 
-  it('blocks listener workpanel even in data_ops space exception', () => {
-    expect(decideProductSurfaceAccess('/workpanel', listener, 'data_ops')).toBe('staff-block');
-    expect(decideProductSurfaceAccess('/workpanel', admin, 'data_ops')).toBe('allow');
+  it('allows staff workpanel in data_ops; denies listener', () => {
+    expect(
+      evaluateProductPathAccess('/workpanel', ctx({ activeSpace: 'data_ops' })),
+    ).toBe('permission-denied');
+    expect(
+      evaluateProductPathAccess(
+        '/workpanel',
+        ctx({
+          activeSpace: 'data_ops',
+          staffCapabilities: new Set(['identity.staff']),
+        }),
+      ),
+    ).toBe('allow');
   });
 
-  it('allows presentation demos to out-of-product paths', () => {
-    expect(decideProductSurfaceAccess('/crm/dashboard', presentation, 'personal')).toBe(
-      'allow',
-    );
-  });
-
-  it('allows engineer data ops tool paths', () => {
-    const engineer = { identityRole: 'engineer' as const, presentationMode: false };
-    expect(decideProductSurfaceAccess('/elt-pipeline', engineer, 'data_ops')).toBe('allow');
-  });
-
-  it('blocks compliance and business-decisions for personal', () => {
-    expect(decideProductSurfaceAccess('/compliance', listener, 'personal')).toBe('unavailable');
-    expect(decideProductSurfaceAccess('/business-decisions', listener, 'personal')).toBe(
-      'unavailable',
-    );
-  });
-});
-
-describe('presentationModeFromUser', () => {
-  it('detects demo.business username', () => {
-    expect(presentationModeFromUser({ username: 'demo.business' })).toBe(true);
-    expect(presentationModeFromUser({ username: 'alice' })).toBe(false);
+  it('blocks compliance for personal space', () => {
+    expect(
+      evaluateProductPathAccess('/compliance', ctx({ activeSpace: 'personal' })),
+    ).toBe('unavailable');
   });
 });
 
@@ -161,6 +156,16 @@ describe('productSurfaceGuard organization deep links', () => {
             activeSpaceKind: () => activeSpace()?.kind ?? null,
             selectSpace,
             bootstrapFromSession: vi.fn().mockResolvedValue({}),
+            productSurfaceContext: () => ({
+              ready: true,
+              activeSpace: 'organization',
+              organizationId: 9,
+              organizationTier: 'operational',
+              permissions: new Set(['subscription.view', 'organization.view']),
+              artistCapabilities: new Set(),
+              staffCapabilities: new Set(),
+              platformRoles: new Set(),
+            }),
           },
         },
         {

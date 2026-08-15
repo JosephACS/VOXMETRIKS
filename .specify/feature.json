@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/053-organization-professional-journey",
-  "previous_feature_directory": ".specify/history/052-professional-checkout-journey",
+  "feature_directory": ".specify/features/054-permission-driven-product-navigation",
+  "previous_feature_directory": ".specify/history/053-organization-professional-journey",
   "status": "active",
-  "feature_id": "053",
-  "short_name": "organization-professional-journey",
-  "note": "Active: canonical Organization creation, invitation, onboarding, plan/checkout handoff, team setup and workspace entry. Reuses Organizations, RBAC, Subscriptions, Billing and Spec 052 checkout."
+  "feature_id": "054",
+  "short_name": "permission-driven-product-navigation",
+  "note": "Active: one permission-driven product-surface registry for sidebar, contextual tabs and route presentation across Personal, Artist, Organization, Data Ops and Platform Admin spaces."
 }

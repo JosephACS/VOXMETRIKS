@@ -122,15 +122,19 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   orgHydrateFailed = signal(false);
   private orgHydrateTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Spec 043 hotfix — contextual chrome for consolidated module surfaces. */
-  moduleContext = toSignal(
+  private moduleContextUrl = toSignal(
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      map((e) => resolveModuleContext(e.urlAfterRedirects || e.url)),
-      startWith(resolveModuleContext(this.router.url)),
+      map((e) => e.urlAfterRedirects || e.url),
+      startWith(this.router.url),
     ),
-    { initialValue: resolveModuleContext(this.router.url) as ModuleContextView | null },
+    { initialValue: this.router.url },
   );
+
+  /** Spec 043/054 — contextual chrome filtered by product-surface registry. */
+  moduleContext = computed((): ModuleContextView | null => {
+    return resolveModuleContext(this.moduleContextUrl(), this.spaceCtx.productSurfaceContext());
+  });
   userMenuOpen = signal(false);
   householdOwner = signal(false);
   private resizeHandler = () => this.checkScreenSize();
@@ -1135,51 +1139,35 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   visibleNavGroups = computed((): NavGroupView[] => {
     this.i18n.tick();
-    // Spec 045 — contextual nav by product space (skip presentation demo shells).
-    // Keep role-allowed structure stable while spaces bootstrap (no menu remount flicker).
-    if (
-      !this.isPresentationDemo() &&
-      !this.isArtistPortalDemo() &&
-      !this.isFinancePresentationDemo()
-    ) {
-      const active = this.spaceCtx.activeSpace();
-      if (this.spaceCtx.status() === 'ready' && active) {
-        return this.buildSpaceNavGroups();
-      }
-      const predicted = this.predictSpaceNavKind();
-      if (predicted) {
-        return this.buildSpaceNavGroupsFromSections(
-          spaceNavSectionsFor(predicted.kind, { organizationId: predicted.organizationId }),
-        );
-      }
+    // Spec 054 — single space-nav authority (no presentation / username shell bypass).
+    const active = this.spaceCtx.activeSpace();
+    if (this.spaceCtx.status() === 'ready' && active) {
+      return this.buildSpaceNavGroups();
     }
-    const sections = this.visibleNavSections();
-    const byId = new Map(sections.map((s) => [s.id, s]));
-    const role = this.userRole();
-    const groups = this.isArtistPortalDemo()
-      ? this.presentationArtistNavGroupConfig
-      : this.isFinancePresentationDemo()
-        ? this.presentationFinanceNavGroupConfig
-        : this.isPresentationDemo()
-          ? this.presentationNavGroupConfig
-          : role === 'admin'
-            ? this.adminNavGroupConfig
-            : role === 'engineer'
-              ? this.engineerNavGroupConfig
-              : this.listenerNavGroupConfig;
-    return groups
-      .map((group) => ({
-        id: group.id,
-        title: this.i18n.t(group.titleKey),
-        sections: group.sectionIds
-          .map((id) => byId.get(id))
-          .filter((s): s is NavSection => !!s && s.items.length > 0),
-      }))
-      .filter((g) => g.sections.length > 0);
+    const predicted = this.predictSpaceNavKind();
+    if (predicted) {
+      const access = {
+        ...this.spaceCtx.productSurfaceContext(),
+        ready: false,
+        activeSpace: predicted.kind,
+        organizationId: predicted.organizationId ?? undefined,
+      };
+      return this.buildSpaceNavGroupsFromSections(
+        spaceNavSectionsFor(predicted.kind, {
+          organizationId: predicted.organizationId,
+          access,
+        }),
+      );
+    }
+    // Stable empty shell while identity is unknown — never flash privileged links.
+    return [];
   });
 
   /** Predict space kind for stable sidebar before bootstrap completes. */
-  private predictSpaceNavKind(): { kind: 'personal' | 'organization' | 'data_ops' | 'platform_admin'; organizationId: number | null } | null {
+  private predictSpaceNavKind(): {
+    kind: 'personal' | 'organization' | 'data_ops' | 'platform_admin';
+    organizationId: number | null;
+  } | null {
     const role = normalizeIdentityRole(this.userRole());
     if (role === 'engineer') {
       return { kind: 'data_ops', organizationId: null };

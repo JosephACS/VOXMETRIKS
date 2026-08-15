@@ -65,6 +65,8 @@ automation/playwright/playwright-report-052/
 automation/playwright/test-results-052/
 automation/playwright/playwright-report-053/
 automation/playwright/test-results-053/
+automation/playwright/playwright-report-054/
+automation/playwright/test-results-054/
 apps/backend/tests/**/*.duckdb
 .ruff_cache/
 .coverage

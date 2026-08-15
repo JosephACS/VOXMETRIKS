@@ -12,6 +12,7 @@ import {
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { BillingApiService } from '../../billing/services/billing-api.service';
 import { CrmApiService } from '../../crm/services/crm-api.service';
+import { CrmContextService } from '../../crm/services/crm-context.service';
 import { SubscriptionsApiService } from '../../subscriptions/services/subscriptions-api.service';
 import { CustomerSuccessApiService } from '../../customer-success/services/customer-success-api.service';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -163,6 +164,7 @@ export class BizAnalyticsDashboardPage implements OnInit {
   private api = inject(BusinessAnalyticsApiService);
   private billing = inject(BillingApiService);
   private crm = inject(CrmApiService);
+  private crmCtx = inject(CrmContextService);
   private subs = inject(SubscriptionsApiService);
   private cs = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
@@ -575,13 +577,26 @@ export class BizAnalyticsDashboardPage implements OnInit {
     this.loading = true;
     this.error = null;
 
+    const canInvoice = this.orgCtx.hasPermission('invoice.view');
+    const canSubs = this.orgCtx.hasPermission('subscription.view');
+    const canCs = this.orgCtx.hasPermission('customer_success.view');
+    const canCrm = this.crmCtx.hasCrmAccess();
+
     forkJoin({
       strategic: this.api.getStrategicOverview(orgId).pipe(catchError(() => of(null))),
       dash: this.api.getDashboard(orgId).pipe(catchError(() => of(null))),
-      opps: this.crm.listOpportunities(1, 50).pipe(catchError(() => of(null))),
-      invoices: this.billing.listInvoices(orgId, {}).pipe(catchError(() => of(null))),
-      subscriptions: this.subs.listSubscriptions(orgId, { page: 1, limit: 50 }).pipe(catchError(() => of(null))),
-      risks: this.cs.listRisks(orgId).pipe(catchError(() => of(null))),
+      opps: canCrm
+        ? this.crm.listOpportunities(1, 50).pipe(catchError(() => of(null)))
+        : of(null),
+      invoices: canInvoice
+        ? this.billing.listInvoices(orgId, {}).pipe(catchError(() => of(null)))
+        : of(null),
+      subscriptions: canSubs
+        ? this.subs.listSubscriptions(orgId, { page: 1, limit: 50 }).pipe(catchError(() => of(null)))
+        : of(null),
+      risks: canCs
+        ? this.cs.listRisks(orgId).pipe(catchError(() => of(null)))
+        : of(null),
     }).subscribe({
       next: (res) => {
         this.strategic = res.strategic;

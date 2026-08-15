@@ -1,7 +1,14 @@
 /**
- * Spec 043 hotfix — resolve module context chrome from the current URL.
+ * Spec 043 hotfix + Spec 054 — resolve module context chrome from the current URL.
  * Pure helpers (no DI) for breadcrumb / back / secondary tabs.
+ * Tabs are filtered by the product-surface registry when access context is provided.
  */
+
+import {
+  listVisibleContextTabs,
+  resolveSurfacePath,
+  type ProductSurfaceContext,
+} from '../../core/product-surface';
 
 export interface ModuleTab {
   label: string;
@@ -31,6 +38,22 @@ export interface ModuleContextView {
   activeTabPath: string | null;
   /** Optional secondary return (e.g. Workpanel). */
   secondaryBack?: { label: string; path: string; queryParams?: Record<string, string> };
+}
+
+function registryTabs(
+  contextGroup: string,
+  access: ProductSurfaceContext | undefined,
+  organizationId?: number,
+): ModuleTab[] | null {
+  if (!access) return null;
+  return listVisibleContextTabs(contextGroup, access).map((surface) => ({
+    label: surface.tabLabel || surface.labelKey,
+    path: resolveSurfacePath(surface, organizationId ?? access.organizationId),
+    exact: surface.exact,
+    matchPrefixes: surface.matchPrefixes?.map((p) =>
+      organizationId != null ? p.replace(/:id/g, String(organizationId)) : p,
+    ),
+  }));
 }
 
 const CATALOG_TABS: ModuleTab[] = [
@@ -77,7 +100,6 @@ function matchesTab(path: string, tab: ModuleTab): boolean {
     return path === tab.path;
   }
   if (tab.matchPrefixes?.length) {
-    // Prefer more specific tabs (e.g. /artist/releases/new over /artist/releases)
     return tab.matchPrefixes.some(
       (p) => path === p || path.startsWith(p + '/') || (p === tab.path && path.startsWith(p)),
     );
@@ -85,19 +107,17 @@ function matchesTab(path: string, tab: ModuleTab): boolean {
   return path === tab.path || path.startsWith(tab.path + '/');
 }
 
-function activeCatalogTab(path: string): ModuleTab | null {
-  // Prefer longest / most specific match first
-  const ordered = [...CATALOG_TABS].sort((a, b) => {
+function activeCatalogTab(path: string, tabs: ModuleTab[]): ModuleTab | null {
+  const ordered = [...tabs].sort((a, b) => {
     const la = (a.matchPrefixes?.[0] || a.path).length;
     const lb = (b.matchPrefixes?.[0] || b.path).length;
     return lb - la;
   });
-  // Special-case: new release is Publicar, not Lanzamientos
   if (path === '/artist/releases/new' || path.startsWith('/artist/releases/new/')) {
-    return CATALOG_TABS.find((t) => t.path === '/artist/releases/new') || null;
+    return tabs.find((t) => t.path === '/artist/releases/new') || null;
   }
   if (path.startsWith('/artist/releases/') && path !== '/artist/releases') {
-    return CATALOG_TABS.find((t) => t.path === '/artist/releases') || null;
+    return tabs.find((t) => t.path === '/artist/releases') || null;
   }
   for (const tab of ordered) {
     if (tab.path === '/artist/releases/new') continue;
@@ -106,7 +126,10 @@ function activeCatalogTab(path: string): ModuleTab | null {
   return null;
 }
 
-function catalogContext(path: string): ModuleContextView | null {
+function catalogContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
   const isCatalogSurface =
     path === '/catalog' ||
     path.startsWith('/artist-profiles') ||
@@ -118,7 +141,8 @@ function catalogContext(path: string): ModuleContextView | null {
 
   if (!isCatalogSurface) return null;
 
-  const tab = activeCatalogTab(path);
+  const tabs = registryTabs('catalog', access) ?? CATALOG_TABS;
+  const tab = activeCatalogTab(path, tabs);
   const isHub = path === '/catalog';
   const crumbs: BreadcrumbCrumb[] = [{ label: 'Catálogo y publicación', path: '/catalog' }];
 
@@ -129,7 +153,6 @@ function catalogContext(path: string): ModuleContextView | null {
     });
   }
 
-  // Detail layers
   if (path.match(/^\/artist\/releases\/[^/]+$/) && path !== '/artist/releases/new') {
     if (crumbs.length === 1) {
       crumbs.push({ label: 'Lanzamientos', path: '/artist/releases' });
@@ -141,9 +164,6 @@ function catalogContext(path: string): ModuleContextView | null {
     }
     crumbs.push({ label: 'Detalle' });
   } else if (path.startsWith('/catalog-rights/assets')) {
-    if (tab && crumbs[crumbs.length - 1]?.label !== tab.label) {
-      /* already */
-    }
     if (path !== '/catalog-rights/assets' && path.startsWith('/catalog-rights/assets/')) {
       crumbs.push({ label: 'Activo' });
     }
@@ -154,7 +174,10 @@ function catalogContext(path: string): ModuleContextView | null {
     crumbs[crumbs.length - 1] = { label: 'Conflictos', path: '/catalog-rights/conflicts' };
     if (path !== '/catalog-rights/conflicts') crumbs.push({ label: 'Detalle' });
   } else if (path.startsWith('/catalog-rights/releases')) {
-    crumbs[crumbs.length - 1] = { label: 'Lanzamientos (derechos)', path: '/catalog-rights/releases' };
+    crumbs[crumbs.length - 1] = {
+      label: 'Lanzamientos (derechos)',
+      path: '/catalog-rights/releases',
+    };
   } else if (path.startsWith('/artist-profiles/') && path !== '/artist-profiles') {
     crumbs.push({ label: 'Perfil' });
   }
@@ -166,19 +189,22 @@ function catalogContext(path: string): ModuleContextView | null {
     backLabel: 'Catálogo y publicación',
     showBack: false,
     crumbs,
-    tabs: CATALOG_TABS,
+    tabs,
     activeTabPath: tab?.path ?? (isHub ? '/catalog' : null),
   };
 }
 
-function orgContext(path: string): ModuleContextView | null {
+function orgContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
   const m = path.match(/^\/organizations\/(\d+)(\/.*)?$/);
   if (!m) return null;
-  const id = m[1];
+  const id = Number(m[1]);
   const rest = m[2] || '';
   const hubPath = `/organizations/${id}`;
 
-  const tabs: ModuleTab[] = [
+  const defaultTabs: ModuleTab[] = [
     { label: 'Resumen', path: hubPath, exact: true },
     { label: 'Perfil', path: `${hubPath}/settings`, matchPrefixes: [`${hubPath}/settings`] },
     { label: 'Miembros', path: `${hubPath}/members`, matchPrefixes: [`${hubPath}/members`] },
@@ -195,6 +221,10 @@ function orgContext(path: string): ModuleContextView | null {
       matchPrefixes: ['/subscriptions', '/billing'],
     },
   ];
+
+  const tabs =
+    registryTabs('organization', access ? { ...access, organizationId: id } : undefined, id) ??
+    defaultTabs;
 
   const isHub = rest === '';
   let sectionLabel = 'Resumen';
@@ -236,6 +266,7 @@ function orgContext(path: string): ModuleContextView | null {
 function reportsContext(
   path: string,
   query: Record<string, string>,
+  access?: ProductSurfaceContext,
 ): ModuleContextView | null {
   const isReports =
     path === '/reports' ||
@@ -248,10 +279,10 @@ function reportsContext(
   const isHub = path === '/reports' && !query['type'];
 
   const viewingReport = !!(query['report'] || '').trim();
-  // Hub / list: keep simples|complejos tabs. Detail: breadcrumb + back only (badge on page).
+  const filtered = registryTabs('reports', access);
   const tabs: ModuleTab[] = viewingReport
     ? []
-    : [
+    : filtered ?? [
         { label: 'Informes simples', path: '/simple-reports' },
         { label: 'Informes complejos', path: '/complex-reports' },
       ];
@@ -272,7 +303,6 @@ function reportsContext(
     ? { label: 'Workpanel', path: '/workpanel' }
     : undefined;
 
-  // Detail views own their header (back + quiet badge). Suppress chrome duplication.
   if (viewingReport) {
     return {
       moduleId: 'reports',
@@ -300,10 +330,13 @@ function reportsContext(
   };
 }
 
-function platformOpsContext(path: string): ModuleContextView | null {
+function platformOpsContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
   if (!path.startsWith('/platform-ops')) return null;
 
-  const tabs: ModuleTab[] = [
+  const defaultTabs: ModuleTab[] = [
     {
       label: 'Panel de Ops',
       path: '/platform-ops',
@@ -321,6 +354,7 @@ function platformOpsContext(path: string): ModuleContextView | null {
       matchPrefixes: ['/platform-ops/artist-requests'],
     },
   ];
+  const tabs = registryTabs('platformOps', access) ?? defaultTabs;
 
   const isAudio = path.includes('audio');
   const isArtistReq = path.includes('artist-requests');
@@ -347,13 +381,14 @@ function platformOpsContext(path: string): ModuleContextView | null {
   };
 }
 
-function engineeringContext(path: string): ModuleContextView | null {
-  const isEng =
-    path.startsWith('/elt-pipeline') ||
-    path.startsWith('/explorer');
+function engineeringContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
+  const isEng = path.startsWith('/elt-pipeline') || path.startsWith('/explorer');
   if (!isEng) return null;
 
-  const tabs: ModuleTab[] = [
+  const defaultTabs: ModuleTab[] = [
     {
       label: 'Ingeniería de datos',
       path: '/elt-pipeline',
@@ -365,6 +400,7 @@ function engineeringContext(path: string): ModuleContextView | null {
       matchPrefixes: ['/explorer'],
     },
   ];
+  const tabs = registryTabs('engineering', access) ?? defaultTabs;
 
   const isElt = path.startsWith('/elt-pipeline');
   const isExplorer = path.startsWith('/explorer');
@@ -403,17 +439,20 @@ export function parseQueryParams(url: string): Record<string, string> {
 
 /**
  * Resolve module chrome for the current router URL (path + query).
- * Returns null when the page is outside consolidated hubs.
+ * When `access` is provided, tabs are filtered by the Spec 054 registry.
  */
-export function resolveModuleContext(url: string): ModuleContextView | null {
+export function resolveModuleContext(
+  url: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
   const path = pathOnly(url);
   const query = parseQueryParams(url);
 
   return (
-    catalogContext(path) ||
-    orgContext(path) ||
-    reportsContext(path, query) ||
-    platformOpsContext(path) ||
-    engineeringContext(path)
+    catalogContext(path, access) ||
+    orgContext(path, access) ||
+    reportsContext(path, query, access) ||
+    platformOpsContext(path, access) ||
+    engineeringContext(path, access)
   );
 }

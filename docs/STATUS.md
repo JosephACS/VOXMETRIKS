@@ -9,7 +9,7 @@
 | Área | Evidencia en repo |
 |------|-------------------|
 | Identidad / sesiones / preferencias | `apps/backend` identity; login SPA |
-| Organizaciones + membresías + RBAC | packages organizations; recorrido profesional en consolidación (053) |
+| Organizaciones + membresías + RBAC | recorrido profesional implementado (053); navegación por permisos en consolidación (054) |
 | Suscripciones org + planes | subscriptions; checkout profesional con pago simulado (052) |
 | Billing (invoices, payments, refunds, credit notes, manual transfer) | billing; idempotencia org-scoped; orquestación checkout 052 |
 | Suscripciones personales B2C + household profiles | personal_subscriptions; profile security; checkout profesional 052 |

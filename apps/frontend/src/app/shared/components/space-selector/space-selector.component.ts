@@ -49,6 +49,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
                 type="button"
                 class="space-selector-item"
                 role="option"
+                [attr.data-testid]="'space-selector-item-' + space.kind"
                 [class.space-selector-item--active]="space.id === active()?.id"
                 [attr.aria-selected]="space.id === active()?.id"
                 (click)="choose(space)"

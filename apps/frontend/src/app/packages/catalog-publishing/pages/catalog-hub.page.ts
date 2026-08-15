@@ -18,7 +18,6 @@ import {
   publishingUiBucket,
 } from '../models/catalog-publishing.models';
 import { AuthService } from '../../../core/services/auth.service';
-import { catalogPublishingAccess } from '../catalog-publishing-access';
 import { productArtistDisplayName } from '../../../shared/utils/product-presentation.util';
 
 type ViewFilter = 'all' | 'releases' | 'tracks' | 'artists' | 'attention';
@@ -79,11 +78,16 @@ interface TrackPreview {
             @if (canCreate) {
               <a class="primary" routerLink="/artist/releases/new">Publicar música</a>
             }
-            <a routerLink="/catalog-review">Revisiones</a>
+            @if (canReview) {
+              <a routerLink="/catalog-review">Revisiones</a>
+            }
+            @if (canRights) {
+              <a routerLink="/catalog-rights/conflicts">Derechos</a>
+            }
           </div>
         </div>
 
-        @if (showReleases()) {
+        @if (canPublishing && showReleases()) {
           <section class="cat-section" aria-label="Lanzamientos">
             <div class="cat-section__head">
               <h2 class="cat-section__title">Lanzamientos</h2>
@@ -132,7 +136,7 @@ interface TrackPreview {
           </section>
         }
 
-        @if (showTracks()) {
+        @if (canPublishing && showTracks()) {
           <section class="cat-section" aria-label="Canciones">
             <div class="cat-section__head">
               <h2 class="cat-section__title">Canciones</h2>
@@ -181,7 +185,7 @@ interface TrackPreview {
           </section>
         }
 
-        @if (showArtists()) {
+        @if (canArtists && showArtists()) {
           <section class="cat-section" aria-label="Artistas">
             <div class="cat-section__head">
               <h2 class="cat-section__title">Artistas</h2>
@@ -225,10 +229,13 @@ export class CatalogHubPage implements OnInit {
   private readonly api = inject(CatalogPublishingApiService);
   private readonly artistsApi = inject(ArtistsApiService);
   private readonly auth = inject(AuthService);
-  private readonly access = catalogPublishingAccess();
 
   orgId: number | null = null;
   canCreate = false;
+  canReview = false;
+  canRights = false;
+  canArtists = false;
+  canPublishing = false;
   query = '';
   filter: ViewFilter = 'all';
 
@@ -242,7 +249,11 @@ export class CatalogHubPage implements OnInit {
 
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
-    this.canCreate = this.access.canCreate();
+    this.canArtists = this.orgCtx.hasPermission('artist.view');
+    this.canPublishing = this.orgCtx.hasPermission('publishing.view');
+    this.canCreate = this.orgCtx.hasPermission('publishing.create');
+    this.canReview = this.orgCtx.hasPermission('publishing.review');
+    this.canRights = this.orgCtx.hasPermission('rights.view');
     if (this.orgId) this.load();
     else this.loading.set(false);
   }
@@ -422,29 +433,48 @@ export class CatalogHubPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
+    const releases$ = this.canPublishing
+      ? this.api
+          .listPortalReleases(orgId, { limit: 40 })
+          .pipe(catchError(() => this.api.listReleases(orgId, { limit: 40 })))
+      : of([] as ReleaseSubmission[]);
+    const artists$ = this.canArtists
+      ? this.artistsApi.list(orgId, { page: 1, page_size: 24 }).pipe(
+          map((page) => page.items ?? []),
+          catchError(() => of([] as ArtistProfile[])),
+        )
+      : of([] as ArtistProfile[]);
+    const summary$ = this.canPublishing
+      ? this.api.portalSummary(orgId).pipe(catchError(() => of(null)))
+      : of(null);
+
     forkJoin({
-      summary: this.api.portalSummary(orgId),
-      releases: this.api
-        .listPortalReleases(orgId, { limit: 40 })
-        .pipe(catchError(() => this.api.listReleases(orgId, { limit: 40 }))),
-      artists: this.artistsApi.list(orgId, { page: 1, page_size: 24 }),
+      summary: summary$,
+      releases: releases$,
+      artists: artists$,
     })
       .pipe(
         switchMap((res) => {
           this.summary.set(res.summary);
           const releases = res.releases ?? [];
           this.releases.set(releases);
-          this.artists.set(res.artists.items ?? []);
+          this.artists.set(res.artists ?? []);
 
-          const sample = releases.slice(0, 8);
+          const sample = this.canPublishing ? releases.slice(0, 8) : [];
           if (!sample.length) {
             return of([] as TrackPreview[]);
           }
           return forkJoin(
             sample.map((r) =>
               this.api.getRelease(orgId, r.id).pipe(
+                catchError(() => of(null)),
                 map((detail) =>
-                  (detail.tracks || []).map((t) => ({ track: t, release: detail.submission || r })),
+                  detail
+                    ? (detail.tracks || []).map((t) => ({
+                        track: t,
+                        release: detail.submission || r,
+                      }))
+                    : [],
                 ),
               ),
             ),

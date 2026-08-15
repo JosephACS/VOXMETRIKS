@@ -16,28 +16,28 @@ import {
 export const ARTIST_PROFILES_ROUTES: Routes = [
   {
     path: 'artist-profiles',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'artist.view')],
     loadComponent: () =>
       import('./pages/artist-profiles-list.page').then((m) => m.ArtistProfilesListPage),
     title: 'Perfiles de artista',
   },
   {
     path: 'artist-profiles/:id',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'artist.view')],
     loadComponent: () =>
       import('./pages/artist-profile-detail.page').then((m) => m.ArtistProfileDetailPage),
     title: 'Perfil de artista',
   },
   {
     path: 'artist-profiles/:id/team',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'artist.view')],
     loadComponent: () =>
       import('./pages/artist-profile-team.page').then((m) => m.ArtistProfileTeamPage),
     title: 'Equipo del artista',
   },
   {
     path: 'artist-profiles/:id/history',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational', 'artist.view')],
     loadComponent: () =>
       import('./pages/artist-profile-history.page').then((m) => m.ArtistProfileHistoryPage),
     title: 'Historial del artista',

@@ -10,7 +10,9 @@ import { OrganizationContextService } from '../../packages/organizations/service
 
 /**
  * Blocks pure listeners from staff Workpanel / reports / analytics hubs.
+ * Organization members with report.view / decision.view may open reporting hubs.
  * Authenticated users without permission go to /error/403 (not login).
+ * Spec 054: no username / presentation bypass.
  */
 export const staffCapabilityGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService);
@@ -20,7 +22,12 @@ export const staffCapabilityGuard: CanActivateFn = async (_route, state) => {
 
   const path = (state.url || '').split('?')[0];
   const organizationPermission =
-    path === '/reports' || path.startsWith('/reports/')
+    path === '/reports' ||
+    path.startsWith('/reports/') ||
+    path === '/simple-reports' ||
+    path.startsWith('/simple-reports/') ||
+    path === '/complex-reports' ||
+    path.startsWith('/complex-reports/')
       ? 'report.view'
       : path === '/business-decisions' || path.startsWith('/business-decisions/')
         ? 'decision.view'
@@ -30,25 +37,23 @@ export const staffCapabilityGuard: CanActivateFn = async (_route, state) => {
     if (organization.canAccessModule('operational', organizationPermission)) {
       return true;
     }
+    // Spec 054: membership may already hold the permission while subscription
+    // enrichment is still catching up after space activation.
+    if (
+      organization.hasPermission(organizationPermission) &&
+      organization.accessTier() === 'operational'
+    ) {
+      return true;
+    }
+    await organization.refreshSubscriptionSnapshot(undefined, { soft: true });
+    if (organization.canAccessModule('operational', organizationPermission)) {
+      return true;
+    }
   }
-
-  const user = auth.getUser();
-  const username = (user?.username || '').toLowerCase();
-  const prefs = user?.preferences as
-    | { presentation_nav?: boolean; presentation_role?: string }
-    | undefined;
-  const presentationMode = !!(
-    prefs?.presentation_nav ||
-    prefs?.presentation_role ||
-    username === 'demo.business' ||
-    username === 'demo.artist' ||
-    username === 'finance.manager'
-  );
 
   const ctx = {
     identityRole: normalizeIdentityRole(auth.role()),
     platformAdmin: crm.roles().includes('platform_admin'),
-    presentationMode,
   };
 
   if (canActivateStaffPath(state.url, ctx)) return true;
