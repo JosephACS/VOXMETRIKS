@@ -8,6 +8,7 @@ import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-crm-approvals-page',
@@ -26,6 +27,30 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
       }
       @if (success()) {
         <div class="alert alert--success" role="status">{{ success() }}</div>
+      }
+
+      @if (pendingReview()) {
+        <app-enterprise-section-card [title]="'common.confirm' | t:lang()">
+          <form class="form-grid" (ngSubmit)="confirmReview()">
+            <app-enterprise-form-field [label]="'common.notes' | t:lang()">
+              <textarea
+                class="input"
+                rows="2"
+                [(ngModel)]="reviewNote"
+                name="reviewNote"
+                [disabled]="saving()"
+              ></textarea>
+            </app-enterprise-form-field>
+            <app-enterprise-action-bar>
+              <button type="button" class="btn btn--ghost" (click)="cancelReview()" [disabled]="saving()">
+                {{ 'common.cancel' | t:lang() }}
+              </button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                {{ (saving() ? 'common.saving' : 'common.confirm') | t:lang() }}
+              </button>
+            </app-enterprise-action-bar>
+          </form>
+        </app-enterprise-section-card>
       }
 
       @if (loading()) {
@@ -100,16 +125,21 @@ export class CrmApprovalsPageComponent implements OnInit {
   readonly lang = this.i18n.lang;
 
   private readonly api = inject(CrmApiService);
+  private readonly notifications = inject(NotificationService);
 
   page = 1;
   limit = 25;
   total = 0;
+  reviewNote = '';
+  private pendingId: number | null = null;
+  private pendingAction: 'approve' | 'reject' | null = null;
 
   readonly items = signal<ApprovalRequest[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly pendingReview = signal(false);
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -136,21 +166,47 @@ export class CrmApprovalsPageComponent implements OnInit {
     }
   }
 
-  async review(id: number, action: 'approve' | 'reject'): Promise<void> {
-    const note = prompt(`Nota de ${action === 'approve' ? 'aprobación' : 'rechazo'} (opcional):`) ?? '';
+  review(id: number, action: 'approve' | 'reject'): void {
+    if (this.saving()) return;
+    this.pendingId = id;
+    this.pendingAction = action;
+    this.reviewNote = '';
+    this.pendingReview.set(true);
+  }
+
+  cancelReview(): void {
+    this.pendingReview.set(false);
+    this.pendingId = null;
+    this.pendingAction = null;
+    this.reviewNote = '';
+  }
+
+  async confirmReview(): Promise<void> {
+    const id = this.pendingId;
+    const action = this.pendingAction;
+    if (id == null || !action || this.saving()) return;
+    const note = this.reviewNote.trim();
     this.saving.set(true);
     this.error.set(null);
     try {
       if (action === 'approve') {
         await firstValueFrom(this.api.approveRequest(id, note || undefined));
         this.success.set(`Solicitud #${id} aprobada.`);
+        this.notifications.success(this.i18n.t('common.approve'));
       } else {
         await firstValueFrom(this.api.rejectRequest(id, note || undefined));
         this.success.set(`Solicitud #${id} rechazada.`);
+        this.notifications.success(this.i18n.t('common.reject'));
       }
+      this.cancelReview();
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : `Error al ${action === 'approve' ? 'aprobar' : 'rechazar'}`);
+      const msg =
+        e instanceof CrmApiError
+          ? e.message
+          : `Error al ${action === 'approve' ? 'aprobar' : 'rechazar'}`;
+      this.error.set(msg);
+      this.notifications.error(this.i18n.t('crm.approvals.title'), msg);
     } finally {
       this.saving.set(false);
     }

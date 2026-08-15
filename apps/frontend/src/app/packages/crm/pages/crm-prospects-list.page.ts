@@ -10,8 +10,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { NotificationService } from '../../../core/services/notification.service';
 
 const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
+const PROSPECT_SOURCES = ['referral', 'web', 'event', 'outbound', 'partner', 'other'];
 
 @Component({
   selector: 'app-crm-prospects-list-page',
@@ -88,12 +90,12 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
               />
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'crm.prospects.source' | t:lang()">
-              <input
-                class="input"
-                [(ngModel)]="form.source"
-                name="source"
-                [placeholder]="'crm.prospects.sourcePlaceholder' | t:lang()"
-              />
+              <select class="select" [(ngModel)]="form.source" name="source" data-testid="crm-prospect-source">
+                <option value="">{{ 'common.select' | t:lang() }}</option>
+                @for (src of sources; track src) {
+                  <option [value]="src">{{ ('crm.prospects.source.' + src) | t:lang() }}</option>
+                }
+              </select>
             </app-enterprise-form-field>
             <app-enterprise-form-field [label]="'common.notes' | t:lang()">
               <textarea class="input" [(ngModel)]="form.notes" name="notes" rows="2"></textarea>
@@ -120,20 +122,17 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
           <table class="data-table">
             <thead>
               <tr>
-                <th>{{ 'common.id' | t:lang() }}</th>
                 <th>{{ 'common.name' | t:lang() }}</th>
                 <th>{{ 'crm.prospects.company' | t:lang() }}</th>
                 <th>{{ 'common.email' | t:lang() }}</th>
                 <th>{{ 'common.status' | t:lang() }}</th>
                 <th>{{ 'common.created' | t:lang() }}</th>
+                <th class="muted">{{ 'common.id' | t:lang() }}</th>
               </tr>
             </thead>
             <tbody>
               @for (p of items(); track p.id) {
                 <tr>
-                  <td>
-                    <a class="btn btn--ghost btn--sm" [routerLink]="['/crm/prospects', p.id]">{{ p.id }}</a>
-                  </td>
                   <td>
                     <a [routerLink]="['/crm/prospects', p.id]">{{ p.display_name }}</a>
                   </td>
@@ -141,6 +140,7 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
                   <td>{{ p.email || ('common.notAvailable' | t:lang()) }}</td>
                   <td><app-enterprise-status-badge [status]="p.status" /></td>
                   <td class="muted">{{ p.created_at | localeDate }}</td>
+                  <td class="muted">{{ p.id }}</td>
                 </tr>
               }
             </tbody>
@@ -164,8 +164,10 @@ export class CrmProspectsListPageComponent implements OnInit {
   readonly lang = this.i18n.lang;
 
   private readonly api = inject(CrmApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly statuses = PROSPECT_STATUSES;
+  readonly sources = PROSPECT_SOURCES;
 
   statusFilter = '';
   showCreate = false;
@@ -214,7 +216,7 @@ export class CrmProspectsListPageComponent implements OnInit {
   }
 
   async create(): Promise<void> {
-    if (!this.form.display_name) return;
+    if (!this.form.display_name || this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
     try {
@@ -222,9 +224,12 @@ export class CrmProspectsListPageComponent implements OnInit {
       this.form = { display_name: '' };
       this.showCreate = false;
       this.success.set(this.i18n.t('crm.prospects.createdMsg'));
+      this.notifications.success(this.i18n.t('crm.prospects.createdMsg'));
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear prospecto');
+      const msg = e instanceof CrmApiError ? e.message : 'Error al crear prospecto';
+      this.error.set(msg);
+      this.notifications.error(this.i18n.t('crm.prospects.create'), msg);
     } finally {
       this.saving.set(false);
     }

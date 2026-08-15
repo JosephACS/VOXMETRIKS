@@ -88,8 +88,28 @@ function isPrivileged(surface: ProductSurfaceDefinition): boolean {
     !!(surface.capabilitiesAll?.length) ||
     !!surface.staffCapability ||
     !!surface.platformRole ||
+    !!(surface.platformRolesAny?.length) ||
     surface.path.includes(':id')
   );
+}
+
+function staffOrPlatformRoleOk(
+  surface: ProductSurfaceDefinition,
+  ctx: ProductSurfaceContext,
+): boolean {
+  const hasStaff = surface.staffCapability
+    ? ctx.staffCapabilities.has(surface.staffCapability)
+    : false;
+  const hasAnyRole = surface.platformRolesAny?.length
+    ? surface.platformRolesAny.some((r) => ctx.platformRoles.has(r))
+    : false;
+
+  if (surface.staffCapability && surface.platformRolesAny?.length) {
+    return hasStaff || hasAnyRole;
+  }
+  if (surface.staffCapability) return hasStaff;
+  if (surface.platformRolesAny?.length) return hasAnyRole;
+  return true;
 }
 
 type SurfaceDenyReason = 'space' | 'bootstrap' | 'tier' | 'permission';
@@ -115,8 +135,8 @@ export function evaluateProductSurfaceReason(
     return 'tier';
   }
 
-  if (surface.staffCapability) {
-    if (!ctx.staffCapabilities.has(surface.staffCapability)) return 'permission';
+  if (surface.staffCapability || surface.platformRolesAny?.length) {
+    if (!staffOrPlatformRoleOk(surface, ctx)) return 'permission';
   }
 
   if (surface.platformRole) {
@@ -150,29 +170,41 @@ export function listVisibleSurfaces(ctx: ProductSurfaceContext): ProductSurfaceD
   return productSurfacesForSpace(ctx.activeSpace).filter((s) => isProductSurfaceAllowed(s, ctx));
 }
 
+/** Sidebar hubs with contextGroup (children appear as module tabs only). */
+const SIDEBAR_CONTEXT_HUB_IDS = new Set([
+  'org.catalog',
+  'org.hub',
+  'org.reports',
+  'org.subscriptions.overview',
+  'org.crm.dashboard',
+  'org.campaigns',
+  'org.customer_success',
+  'org.compliance',
+  'data_ops.reports',
+  'data_ops.elt',
+  'data_ops.explorer',
+]);
+
+const TAB_ONLY_SECTION_IDS = new Set([
+  'space-org-admin-tabs',
+  'space-catalog-tabs',
+  'space-report-tabs',
+  'space-crm-tabs',
+  'space-cs-tabs',
+  'space-compliance-tabs',
+]);
+
+/** Whether a registry row may appear in the space sidebar (not module tabs). */
+export function isSidebarEligibleSurface(surface: ProductSurfaceDefinition): boolean {
+  if (TAB_ONLY_SECTION_IDS.has(surface.sectionId)) return false;
+  if (!surface.contextGroup) return true;
+  if (SIDEBAR_CONTEXT_HUB_IDS.has(surface.id)) return true;
+  return surface.id.startsWith('platform.ops.');
+}
+
 /** Sidebar-eligible surfaces (exclude tab-only admin/catalog extras). */
 export function listVisibleSidebarSurfaces(ctx: ProductSurfaceContext): ProductSurfaceDefinition[] {
-  return listVisibleSurfaces(ctx)
-    .filter((s) => {
-      if (!s.contextGroup) return true;
-      return (
-        s.id === 'org.catalog' ||
-        s.id === 'org.hub' ||
-        s.id === 'org.reports' ||
-        s.id === 'org.subscriptions.overview' ||
-        s.id === 'data_ops.reports' ||
-        s.id === 'data_ops.elt' ||
-        s.id === 'data_ops.explorer' ||
-        s.id.startsWith('platform.ops.')
-      );
-    })
-    .filter((s) => {
-      if (s.sectionId === 'space-org-admin-tabs' || s.sectionId === 'space-catalog-tabs') {
-        return false;
-      }
-      if (s.sectionId === 'space-report-tabs') return false;
-      return true;
-    });
+  return listVisibleSurfaces(ctx).filter(isSidebarEligibleSurface);
 }
 
 export interface ProductNavSection {
@@ -239,8 +271,12 @@ export function findSurfacesByPath(
   return PRODUCT_SURFACE_REGISTRY.filter((s) => {
     if (space && !s.spaces.includes(space)) return false;
     const staticPath = s.path.includes(':id') ? null : s.path;
-    if (staticPath && (normalized === staticPath || normalized.startsWith(staticPath + '/'))) {
-      return true;
+    if (staticPath) {
+      if (s.exact) {
+        if (normalized === staticPath) return true;
+      } else if (normalized === staticPath || normalized.startsWith(staticPath + '/')) {
+        return true;
+      }
     }
     if (s.path.includes(':id')) {
       const pattern = s.path.replace(/:id/g, '\\d+');

@@ -28,6 +28,11 @@ export interface ProductSurfaceDefinition {
   staffCapability?: string;
   /** Platform CRM role required (e.g. platform_admin). */
   platformRole?: string;
+  /**
+   * At least one platform CRM role must be present.
+   * When combined with staffCapability, either staff OR a listed role grants access.
+   */
+  platformRolesAny?: readonly string[];
   /** Module-context tab group id. */
   contextGroup?: string;
   /** Sidebar section grouping. */
@@ -65,3 +70,11 @@ export const STAFF_CAPABILITY = {
   shell: 'identity.staff',
   engineering: 'identity.engineering',
 } as const;
+
+/** Platform CRM roles that unlock staff-operated CRM surfaces. */
+export const CRM_PLATFORM_ROLES = [
+  'sales_agent',
+  'sales_manager',
+  'platform_admin',
+  'auditor',
+] as const;

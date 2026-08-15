@@ -7,6 +7,7 @@ import { RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { I18nService } from '../../../core/services/i18n.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import {
   UiPreferencesService,
@@ -19,8 +20,13 @@ import { TranslationKey } from '../../../core/i18n/translations';
 import { StatsService } from '../../analytics/services/stats.service';
 import { UserService } from '../../users/services/user.service';
 import { HealthResponse, UserPreferencesUpdate } from '../../../shared/models/api.models';
+import {
+  SecurityApiService,
+  TrustedDevice,
+} from '../../personal-account/services/security-api.service';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
-type SettingsTab = 'general' | 'api' | 'warehouse' | 'pipeline';
+type SettingsTab = 'profile' | 'preferences' | 'security' | 'api' | 'warehouse' | 'pipeline';
 
 @Component({
   selector: 'app-settings',
@@ -36,9 +42,12 @@ export class SettingsComponent implements OnInit {
   private i18n = inject(I18nService);
   private stats = inject(StatsService);
   private userSvc = inject(UserService);
+  private securityApi = inject(SecurityApiService);
+  private notifications = inject(NotificationService);
+  private confirmDlg = inject(ConfirmDialogService);
   ui = inject(UiPreferencesService);
 
-  activeTab = signal<SettingsTab>('general');
+  activeTab = signal<SettingsTab>('profile');
   healthLoading = signal(false);
   healthError = signal(false);
   health = signal<HealthResponse | null>(null);
@@ -50,17 +59,37 @@ export class SettingsComponent implements OnInit {
   audioQuality = signal('high');
   favoriteGenre = signal('');
 
+  passwordCurrent = signal('');
+  passwordNew = signal('');
+  passwordConfirm = signal('');
+  passwordRevokeOthers = signal(true);
+  passwordSaving = signal(false);
+
+  devices = signal<TrustedDevice[]>([]);
+  devicesLoading = signal(false);
+  devicesBusy = signal(false);
+  sessionsBusy = signal(false);
+
   apiUrl = environment.apiUrl;
+  /** Engineer-only warehouse path hint (not shown to normal users). */
   warehousePath = 'data/warehouse/voxmetrik.duckdb';
 
   goldTables = [
-    'dim_usuario', 'dim_artista', 'dim_genero', 'dim_album',
-    'dim_track', 'dim_playlist', 'dim_tiempo', 'fact_streaming',
+    'dim_usuario',
+    'dim_artista',
+    'dim_genero',
+    'dim_album',
+    'dim_track',
+    'dim_playlist',
+    'dim_tiempo',
+    'fact_streaming',
   ];
 
   aggregations = [
-    'agg_top_artistas', 'agg_genero_popularidad',
-    'agg_distribucion_energia', 'agg_tracks_populares',
+    'agg_top_artistas',
+    'agg_genero_popularidad',
+    'agg_distribucion_energia',
+    'agg_tracks_populares',
   ];
 
   audioQualityOptions = computed(() => {
@@ -139,13 +168,13 @@ export class SettingsComponent implements OnInit {
       : this.i18n.t('settings.health.public');
   });
 
-  private readonly engineerTabs: SettingsTab[] = ['warehouse', 'pipeline'];
-  /** Nested under Technical tools; API stays in the main user nav. */
-  private readonly technicalTabIds: SettingsTab[] = ['warehouse', 'pipeline'];
+  private readonly technicalTabIds: SettingsTab[] = ['api', 'warehouse', 'pipeline'];
   technicalToolsExpanded = signal(false);
 
   private readonly allTabs: { id: SettingsTab; labelKey: TranslationKey; iconKey: string }[] = [
-    { id: 'general', labelKey: 'settings.tab.general', iconKey: 'settings' },
+    { id: 'profile', labelKey: 'settings.tab.profile', iconKey: 'user' },
+    { id: 'preferences', labelKey: 'settings.tab.preferences', iconKey: 'settings' },
+    { id: 'security', labelKey: 'settings.tab.security', iconKey: 'lock' },
     { id: 'api', labelKey: 'settings.tab.api', iconKey: 'link' },
     { id: 'warehouse', labelKey: 'settings.tab.warehouse', iconKey: 'database' },
     { id: 'pipeline', labelKey: 'settings.tab.pipeline', iconKey: 'zap' },
@@ -176,7 +205,6 @@ export class SettingsComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.refreshHealth();
     this.loadBusinessPreferences();
   }
 
@@ -184,6 +212,7 @@ export class SettingsComponent implements OnInit {
     this.activeTab.set(tab);
     if (this.technicalTabIds.includes(tab)) this.technicalToolsExpanded.set(true);
     if (tab === 'api') this.refreshHealth();
+    if (tab === 'security') this.loadDevices();
   }
 
   onThemeChange(theme: AppTheme) {
@@ -227,6 +256,7 @@ export class SettingsComponent implements OnInit {
   }
 
   private patchBusinessPreferences(body: UserPreferencesUpdate) {
+    if (this.prefsSaving()) return;
     this.prefsSaving.set(true);
     this.prefsFeedback.set(null);
     this.userSvc.updatePreferences(body).subscribe({
@@ -239,11 +269,132 @@ export class SettingsComponent implements OnInit {
         if (body.favorite_genre !== undefined) {
           this.favoriteGenre.set(u.favorite_genre ?? '');
         }
+        this.notifications.success(
+          this.i18n.t('settings.business.saved'),
+          this.i18n.t('settings.feedback.savedBody'),
+        );
         setTimeout(() => this.prefsFeedback.set(null), 2500);
       },
       error: () => {
         this.prefsSaving.set(false);
         this.prefsFeedback.set('error');
+        this.notifications.error(
+          this.i18n.t('settings.business.error'),
+          this.i18n.t('settings.feedback.errorBody'),
+        );
+      },
+    });
+  }
+
+  loadDevices(): void {
+    this.devicesLoading.set(true);
+    this.securityApi.listDevices().subscribe({
+      next: (res) => {
+        this.devices.set(res.items ?? []);
+        this.devicesLoading.set(false);
+      },
+      error: () => {
+        this.devices.set([]);
+        this.devicesLoading.set(false);
+      },
+    });
+  }
+
+  submitPasswordChange(): void {
+    if (this.passwordSaving()) return;
+    const current = this.passwordCurrent().trim();
+    const next = this.passwordNew().trim();
+    const confirm = this.passwordConfirm().trim();
+    if (!current || !next || !confirm) {
+      this.notifications.error(
+        this.i18n.t('settings.security.passwordTitle'),
+        this.i18n.t('settings.security.passwordIncomplete'),
+      );
+      return;
+    }
+    if (next !== confirm) {
+      this.notifications.error(
+        this.i18n.t('settings.security.passwordTitle'),
+        this.i18n.t('settings.security.passwordMismatch'),
+      );
+      return;
+    }
+    this.passwordSaving.set(true);
+    this.securityApi
+      .changePassword({
+        current_password: current,
+        new_password: next,
+        confirm_password: confirm,
+        revoke_other_sessions: this.passwordRevokeOthers(),
+      })
+      .subscribe({
+        next: () => {
+          this.passwordSaving.set(false);
+          this.passwordCurrent.set('');
+          this.passwordNew.set('');
+          this.passwordConfirm.set('');
+          this.notifications.success(
+            this.i18n.t('settings.security.passwordUpdated'),
+            this.i18n.t('settings.feedback.savedBody'),
+          );
+        },
+        error: (err) => {
+          this.passwordSaving.set(false);
+          this.notifications.error(
+            this.i18n.t('settings.security.passwordTitle'),
+            SecurityApiService.errorMessage(err) || this.i18n.t('settings.feedback.errorBody'),
+          );
+        },
+      });
+  }
+
+  async revokeDevice(deviceId: number): Promise<void> {
+    if (this.devicesBusy()) return;
+    const ok = await this.confirmDlg.open({
+      title: this.i18n.t('settings.security.revokeDevice'),
+      message: this.i18n.t('settings.security.revokeDeviceConfirm'),
+      confirmLabel: this.i18n.t('settings.security.revokeDevice'),
+      danger: true,
+    });
+    if (!ok) return;
+    this.devicesBusy.set(true);
+    this.securityApi.revokeDevice(deviceId).subscribe({
+      next: () => {
+        this.devicesBusy.set(false);
+        this.notifications.success(this.i18n.t('settings.security.deviceRevoked'));
+        this.loadDevices();
+      },
+      error: (err) => {
+        this.devicesBusy.set(false);
+        this.notifications.error(
+          this.i18n.t('settings.security.revokeDevice'),
+          SecurityApiService.errorMessage(err) || this.i18n.t('settings.feedback.errorBody'),
+        );
+      },
+    });
+  }
+
+  async revokeOtherSessions(): Promise<void> {
+    if (this.sessionsBusy()) return;
+    const ok = await this.confirmDlg.open({
+      title: this.i18n.t('settings.security.revokeOtherSessions'),
+      message: this.i18n.t('settings.security.revokeSessionsConfirm'),
+      confirmLabel: this.i18n.t('settings.security.revokeOtherSessions'),
+      danger: true,
+    });
+    if (!ok) return;
+    this.sessionsBusy.set(true);
+    this.securityApi.revokeOtherSessions().subscribe({
+      next: () => {
+        this.sessionsBusy.set(false);
+        this.notifications.success(this.i18n.t('settings.security.sessionsRevoked'));
+      },
+      error: (err) => {
+        this.sessionsBusy.set(false);
+        this.notifications.error(
+          this.i18n.t('settings.security.revokeOtherSessions'),
+          SecurityApiService.errorMessage(err) || this.i18n.t('settings.feedback.errorBody'),
+        );
       },
     });
   }

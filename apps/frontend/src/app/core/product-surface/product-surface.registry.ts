@@ -4,7 +4,7 @@
  */
 
 import type { ProductSurfaceDefinition } from './product-surface.models';
-import { STAFF_CAPABILITY } from './product-surface.models';
+import { CRM_PLATFORM_ROLES, STAFF_CAPABILITY } from './product-surface.models';
 
 const personalMain: ProductSurfaceDefinition[] = [
   {
@@ -290,7 +290,7 @@ const orgPlanBilling: ProductSurfaceDefinition[] = [
   },
 ];
 
-/** Staff-operated commercial demos — capability = staff shell (no invented org CRM codes). */
+/** Staff / CRM-role commercial surfaces — hub in sidebar; children as module tabs. */
 const orgCrm: ProductSurfaceDefinition[] = [
   {
     id: 'org.crm.dashboard',
@@ -299,9 +299,14 @@ const orgCrm: ProductSurfaceDefinition[] = [
     path: '/crm/dashboard',
     spaces: ['organization'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: CRM_PLATFORM_ROLES,
     sectionId: 'space-org-crm',
     sectionTitleKey: 'nav.section.crm',
     order: 90,
+    contextGroup: 'crm',
+    tabLabel: 'Resumen',
+    exact: true,
+    matchPrefixes: ['/crm/dashboard'],
   },
   {
     id: 'org.crm.prospects',
@@ -310,9 +315,28 @@ const orgCrm: ProductSurfaceDefinition[] = [
     path: '/crm/prospects',
     spaces: ['organization'],
     staffCapability: STAFF_CAPABILITY.shell,
-    sectionId: 'space-org-crm',
+    platformRolesAny: CRM_PLATFORM_ROLES,
+    sectionId: 'space-crm-tabs',
     sectionTitleKey: 'nav.section.crm',
     order: 100,
+    contextGroup: 'crm',
+    tabLabel: 'Prospectos',
+    matchPrefixes: ['/crm/prospects'],
+  },
+  {
+    id: 'org.crm.contacts',
+    labelKey: 'nav.crm.contacts',
+    iconId: 'team',
+    path: '/crm/contacts',
+    spaces: ['organization'],
+    staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: CRM_PLATFORM_ROLES,
+    sectionId: 'space-crm-tabs',
+    sectionTitleKey: 'nav.section.crm',
+    order: 105,
+    contextGroup: 'crm',
+    tabLabel: 'Contactos',
+    matchPrefixes: ['/crm/contacts'],
   },
   {
     id: 'org.crm.opportunities',
@@ -321,9 +345,43 @@ const orgCrm: ProductSurfaceDefinition[] = [
     path: '/crm/opportunities',
     spaces: ['organization'],
     staffCapability: STAFF_CAPABILITY.shell,
-    sectionId: 'space-org-crm',
+    platformRolesAny: CRM_PLATFORM_ROLES,
+    sectionId: 'space-crm-tabs',
     sectionTitleKey: 'nav.section.crm',
     order: 110,
+    contextGroup: 'crm',
+    tabLabel: 'Oportunidades',
+    matchPrefixes: ['/crm/opportunities'],
+  },
+  {
+    id: 'org.crm.approvals',
+    labelKey: 'nav.crm.approvals',
+    iconId: 'contracts',
+    path: '/crm/approvals',
+    spaces: ['organization'],
+    staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: CRM_PLATFORM_ROLES,
+    sectionId: 'space-crm-tabs',
+    sectionTitleKey: 'nav.section.crm',
+    order: 115,
+    contextGroup: 'crm',
+    tabLabel: 'Aprobaciones',
+    matchPrefixes: ['/crm/approvals'],
+  },
+  {
+    id: 'org.crm.audit',
+    labelKey: 'nav.crm.audit',
+    iconId: 'activity',
+    path: '/crm/audit',
+    spaces: ['organization'],
+    staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: CRM_PLATFORM_ROLES,
+    sectionId: 'space-crm-tabs',
+    sectionTitleKey: 'nav.section.crm',
+    order: 118,
+    contextGroup: 'crm',
+    tabLabel: 'Auditoría',
+    matchPrefixes: ['/crm/audit'],
   },
 ];
 
@@ -339,6 +397,9 @@ const orgGrowth: ProductSurfaceDefinition[] = [
     sectionId: 'space-org-growth',
     sectionTitleKey: 'nav.section.campaigns',
     order: 120,
+    contextGroup: 'campaigns',
+    tabLabel: 'Campañas',
+    matchPrefixes: ['/campaigns'],
   },
   {
     id: 'org.business_analytics',
@@ -393,6 +454,10 @@ const orgCs: ProductSurfaceDefinition[] = [
     sectionId: 'space-org-cs',
     sectionTitleKey: 'nav.section.customerSuccess',
     order: 160,
+    contextGroup: 'customerSuccess',
+    tabLabel: 'Resumen',
+    exact: true,
+    matchPrefixes: ['/customer-success'],
   },
   {
     id: 'org.support',
@@ -402,9 +467,12 @@ const orgCs: ProductSurfaceDefinition[] = [
     spaces: ['organization'],
     organizationTier: 'operational',
     capability: 'support.view',
-    sectionId: 'space-org-cs',
+    sectionId: 'space-cs-tabs',
     sectionTitleKey: 'nav.section.customerSuccess',
     order: 170,
+    contextGroup: 'customerSuccess',
+    tabLabel: 'Soporte',
+    matchPrefixes: ['/support'],
   },
 ];
 
@@ -421,6 +489,8 @@ const orgCompliance: ProductSurfaceDefinition[] = [
     sectionTitleKey: 'nav.section.compliance',
     order: 175,
     exact: true,
+    contextGroup: 'compliance',
+    tabLabel: 'Privacidad',
   },
   {
     id: 'org.compliance.admin',
@@ -430,10 +500,12 @@ const orgCompliance: ProductSurfaceDefinition[] = [
     spaces: ['organization'],
     organizationTier: 'operational',
     capability: 'compliance.manage',
-    sectionId: 'space-org-compliance',
+    sectionId: 'space-compliance-tabs',
     sectionTitleKey: 'nav.section.compliance',
     order: 176,
     exact: true,
+    contextGroup: 'compliance',
+    tabLabel: 'Administración',
   },
 ];
 

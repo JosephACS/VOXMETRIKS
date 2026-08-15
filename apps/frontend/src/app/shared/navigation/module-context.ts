@@ -26,7 +26,16 @@ export interface BreadcrumbCrumb {
 }
 
 export interface ModuleContextView {
-  moduleId: 'catalog' | 'organization' | 'reports' | 'engineering' | 'platformOps';
+  moduleId:
+    | 'catalog'
+    | 'organization'
+    | 'reports'
+    | 'engineering'
+    | 'platformOps'
+    | 'crm'
+    | 'campaigns'
+    | 'customerSuccess'
+    | 'compliance';
   hubLabel: string;
   hubPath: string;
   hubQueryParams?: Record<string, string>;
@@ -471,6 +480,121 @@ export function resolveModuleContext(
     orgContext(path, access) ||
     reportsContext(path, query, access) ||
     platformOpsContext(path, access) ||
-    engineeringContext(path, access)
+    engineeringContext(path, access) ||
+    crmContext(path, access) ||
+    campaignsContext(path, access) ||
+    customerSuccessContext(path, access) ||
+    complianceContext(path, access)
   );
+}
+
+const CRM_DEFAULT_TABS: ModuleTab[] = [
+  { label: 'Resumen', path: '/crm/dashboard', exact: true },
+  { label: 'Prospectos', path: '/crm/prospects', matchPrefixes: ['/crm/prospects'] },
+  { label: 'Contactos', path: '/crm/contacts', matchPrefixes: ['/crm/contacts'] },
+  {
+    label: 'Oportunidades',
+    path: '/crm/opportunities',
+    matchPrefixes: ['/crm/opportunities', '/crm/quotations', '/crm/contracts', '/crm/conversions'],
+  },
+  { label: 'Aprobaciones', path: '/crm/approvals', matchPrefixes: ['/crm/approvals'] },
+  { label: 'Auditoría', path: '/crm/audit', matchPrefixes: ['/crm/audit'] },
+];
+
+function crmContext(path: string, access?: ProductSurfaceContext): ModuleContextView | null {
+  if (!path.startsWith('/crm') || path.startsWith('/crm/access-denied')) return null;
+  const tabs = registryTabs('crm', access) ?? CRM_DEFAULT_TABS;
+  const active = tabs.find((t) => matchesTab(path, t)) ?? null;
+  return {
+    moduleId: 'crm',
+    hubLabel: 'Clientes',
+    hubPath: '/crm/dashboard',
+    backLabel: 'Clientes',
+    showBack: path !== '/crm/dashboard',
+    crumbs: [
+      { label: 'Clientes', path: '/crm/dashboard' },
+      ...(active && active.path !== '/crm/dashboard' ? [{ label: active.label }] : []),
+    ],
+    tabs,
+    activeTabPath: active?.path ?? null,
+  };
+}
+
+function campaignsContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
+  if (!path.startsWith('/campaigns')) return null;
+  const tabs =
+    registryTabs('campaigns', access) ??
+    [{ label: 'Campañas', path: '/campaigns', matchPrefixes: ['/campaigns'] }];
+  return {
+    moduleId: 'campaigns',
+    hubLabel: 'Campañas',
+    hubPath: '/campaigns',
+    backLabel: 'Campañas',
+    showBack: path !== '/campaigns',
+    crumbs: [
+      { label: 'Campañas', path: '/campaigns' },
+      ...(path !== '/campaigns' ? [{ label: 'Detalle' }] : []),
+    ],
+    tabs,
+    activeTabPath: '/campaigns',
+  };
+}
+
+const CS_DEFAULT_TABS: ModuleTab[] = [
+  { label: 'Resumen', path: '/customer-success', exact: true },
+  { label: 'Soporte', path: '/support', matchPrefixes: ['/support'] },
+];
+
+function customerSuccessContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
+  if (path !== '/customer-success' && !path.startsWith('/customer-success/') && !path.startsWith('/support')) {
+    return null;
+  }
+  const tabs = registryTabs('customerSuccess', access) ?? CS_DEFAULT_TABS;
+  const active = tabs.find((t) => matchesTab(path, t)) ?? null;
+  return {
+    moduleId: 'customerSuccess',
+    hubLabel: 'Clientes y soporte',
+    hubPath: '/customer-success',
+    backLabel: 'Clientes y soporte',
+    showBack: path !== '/customer-success',
+    crumbs: [
+      { label: 'Clientes y soporte', path: '/customer-success' },
+      ...(active && active.path !== '/customer-success' ? [{ label: active.label }] : []),
+    ],
+    tabs,
+    activeTabPath: active?.path ?? null,
+  };
+}
+
+const COMPLIANCE_DEFAULT_TABS: ModuleTab[] = [
+  { label: 'Privacidad', path: '/compliance', exact: true },
+  { label: 'Administración', path: '/compliance/admin', exact: true },
+];
+
+function complianceContext(
+  path: string,
+  access?: ProductSurfaceContext,
+): ModuleContextView | null {
+  if (path !== '/compliance' && path !== '/compliance/admin') return null;
+  const tabs = registryTabs('compliance', access) ?? COMPLIANCE_DEFAULT_TABS;
+  const active = tabs.find((t) => matchesTab(path, t)) ?? null;
+  return {
+    moduleId: 'compliance',
+    hubLabel: 'Privacidad y cumplimiento',
+    hubPath: '/compliance',
+    backLabel: 'Privacidad y cumplimiento',
+    showBack: path !== '/compliance',
+    crumbs: [
+      { label: 'Privacidad y cumplimiento', path: '/compliance' },
+      ...(active && active.path !== '/compliance' ? [{ label: active.label }] : []),
+    ],
+    tabs,
+    activeTabPath: active?.path ?? null,
+  };
 }

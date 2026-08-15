@@ -73,10 +73,14 @@ describe('space models & nav (054 product-surface)', () => {
     expect(paths).toContain('/royalties');
     expect(paths).toContain('/payouts');
     expect(paths).toContain('/customer-success');
-    expect(paths).toContain('/support');
+    expect(paths).not.toContain('/support');
     expect(paths).toContain('/compliance');
+    expect(paths).not.toContain('/compliance/admin');
     expect(paths).toContain('/account/plans');
     expect(paths).toContain('/account/subscription');
+    expect(paths.filter((p) => p.startsWith('/crm')).length).toBe(1);
+    expect(paths).toContain('/crm/dashboard');
+    expect(paths).not.toContain('/crm/prospects');
   });
 
   it('filters org items by permissions and tier via product-surface context', () => {

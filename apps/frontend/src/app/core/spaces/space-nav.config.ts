@@ -7,6 +7,7 @@ import type { SpaceNavIconId } from './space-nav.icons';
 import {
   buildProductNavSections,
   isProductSurfaceAllowed,
+  isSidebarEligibleSurface,
   listVisibleSidebarSurfaces,
   resolveSurfacePath,
   type ProductSurfaceContext,
@@ -32,11 +33,7 @@ export interface SpaceNavFilterContext {
 }
 
 function isSidebarSurface(s: ProductSurfaceDefinition): boolean {
-  if (s.sectionId === 'space-org-admin-tabs' || s.sectionId === 'space-catalog-tabs') {
-    return false;
-  }
-  if (s.sectionId === 'space-report-tabs') return false;
-  return true;
+  return isSidebarEligibleSurface(s);
 }
 
 function sectionsFromSurfaces(
