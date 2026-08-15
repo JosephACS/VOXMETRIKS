@@ -115,7 +115,7 @@ describe('Spec 056 final professional product closure', () => {
       'settings.profile.desc',
     ] as const;
     for (const key of keys) {
-      const value = LOCALE_ES[key as keyof typeof LOCALE_ES] ?? ENTERPRISE_ES[key];
+      const value = LOCALE_ES[key];
       expect(value, key).toBeTruthy();
       expect(String(value).toLowerCase()).not.toMatch(/demo|académic|academic|desarrollo|development/);
     }
