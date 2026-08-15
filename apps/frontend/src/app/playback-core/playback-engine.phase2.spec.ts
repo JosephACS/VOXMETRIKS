@@ -202,6 +202,16 @@ describe('Playback Engine Phase 2', () => {
     expect(session?.queueIndex).toBe(0);
   });
 
+  it('cancels pending session persistence when playback stops', async () => {
+    vi.useFakeTimers();
+    controller.setQueue([sampleTrack({ id: 1 }), sampleTrack({ id: 2 })], 0);
+
+    controller.stopPlayback();
+    await vi.advanceTimersByTimeAsync(350);
+
+    expect(restorePlaybackSession()).toBeNull();
+  });
+
   it('9. player state survives simulated navigation (singleton)', async () => {
     const track = sampleTrack({ id: 99, title: 'Persistent' });
     controller.playTrack(track);

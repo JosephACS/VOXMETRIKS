@@ -368,6 +368,7 @@ export class MusicPlayerService {
   }
 
   stopPlayback() {
+    this.cancelScheduledPersist();
     this.history.completeCurrent(this.currentTime() || undefined);
     this.playbackToken++;
     this.audioResolver.cancel();
@@ -429,8 +430,17 @@ export class MusicPlayerService {
   }
 
   private schedulePersist() {
-    if (this.persistTimer) clearTimeout(this.persistTimer);
-    this.persistTimer = setTimeout(() => this.persistSession(), 300);
+    this.cancelScheduledPersist();
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      this.persistSession();
+    }, 300);
+  }
+
+  private cancelScheduledPersist() {
+    if (this.persistTimer === null) return;
+    clearTimeout(this.persistTimer);
+    this.persistTimer = null;
   }
 
   private persistSession() {
