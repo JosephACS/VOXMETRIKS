@@ -199,6 +199,7 @@ function newIdempotencyKey(prefix: string): string {
                     <button
                       type="button"
                       class="btn btn--secondary"
+                      data-testid="checkout-retry"
                       [disabled]="ui().submitting"
                       (click)="retryPayment()"
                     >
@@ -243,7 +244,12 @@ function newIdempotencyKey(prefix: string): string {
                   'checkout.result.continue' | t:lang()
                 }}</a>
                 @if (canRetry()) {
-                  <button type="button" class="btn btn--secondary" (click)="retryPayment()">
+                  <button
+                    type="button"
+                    class="btn btn--secondary"
+                    data-testid="checkout-retry"
+                    (click)="retryPayment()"
+                  >
                     {{ 'checkout.retry' | t:lang() }}
                   </button>
                 }
@@ -325,8 +331,35 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     const dataScope = this.route.snapshot.data['checkoutScope'] as CheckoutScope | undefined;
     this.scope.set(dataScope === 'organization' ? 'organization' : 'personal');
+    void this.bootstrapWithContext();
+  }
+
+  private async bootstrapWithContext(): Promise<void> {
     const qOrg = Number(this.route.snapshot.queryParamMap.get('organization_id') || 0);
-    this.orgId.set(qOrg > 0 ? qOrg : this.orgCtx.organizationId());
+    if (this.scope() === 'organization') {
+      if (qOrg > 0) {
+        try {
+          await this.orgCtx.activate(qOrg);
+        } catch {
+          this.orgId.set(null);
+          this.fatalError.set(this.i18n.t('checkout.error.orgRequired'));
+          this.bootLoading.set(false);
+          return;
+        }
+        const org = this.orgCtx.activeOrganization();
+        if (!org || org.id !== qOrg) {
+          this.orgId.set(null);
+          this.fatalError.set(this.i18n.t('checkout.error.orgRequired'));
+          this.bootLoading.set(false);
+          return;
+        }
+        this.orgId.set(org.id);
+      } else {
+        this.orgId.set(this.orgCtx.organizationId());
+      }
+    } else {
+      this.orgId.set(null);
+    }
     this.bootstrap();
   }
 
@@ -614,13 +647,19 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
   }
 
   private async afterSuccess(): Promise<void> {
-    if (this.scope() === 'organization') {
-      try {
-        await this.orgCtx.bootstrap({ force: true });
-      } catch {
-        /* non-blocking */
-      }
+    if (this.scope() !== 'organization') return;
+    const orgId = this.orgId();
+    if (!orgId) return;
+    try {
+      await this.orgCtx.bootstrap({ force: true });
+      await this.orgCtx.activate(orgId);
+    } catch {
+      this.fatalError.set(this.i18n.t('checkout.error.generic'));
+      return;
     }
+    await this.router.navigate(['/organizations/onboarding'], {
+      queryParams: { organization_id: orgId },
+    });
   }
 
   /** Exposed for unit tests — clears in-memory card fields. */

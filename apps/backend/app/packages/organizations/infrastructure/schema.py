@@ -33,6 +33,8 @@ ORG_TABLES = (
     "app_member_role",
     "app_user_organization_preference",
     "app_audit_log",
+    "app_organization_onboarding",
+    "app_organization_create_intent",
 )
 
 
@@ -42,6 +44,8 @@ def ensure_organization_tables(conn: duckdb.DuckDBPyConnection) -> None:
         # Additive migrations must still run (e.g. is_test) even when schema_ready.
         if table_exists(conn, "app_organization"):
             _apply_additive_columns(conn)
+        _create_organization_onboarding(conn)
+        _create_organization_create_intent(conn)
         # Additive: keep catalogs current only when org tables already exist
         # (isolated temp DBs may share process-level schema_ready without tables).
         if table_exists(conn, "app_business_role") and table_exists(conn, "app_permission"):
@@ -57,6 +61,8 @@ def ensure_organization_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_member_role(conn)
     _create_user_organization_preference(conn)
     _create_audit_log(conn)
+    _create_organization_onboarding(conn)
+    _create_organization_create_intent(conn)
     _apply_additive_columns(conn)
     ensure_organization_role_catalogs(conn)
     logger.info("Organization schema ensured (%s tables)", len(ORG_TABLES))
@@ -352,6 +358,38 @@ def _create_audit_log(conn: duckdb.DuckDBPyConnection) -> None:
     )
 
 
+def _create_organization_onboarding(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_organization_onboarding (
+            organization_id       INTEGER PRIMARY KEY,
+            status                VARCHAR NOT NULL,
+            team_step_skipped_at  TIMESTAMP,
+            completed_by          INTEGER,
+            completed_at          TIMESTAMP,
+            created_at            TIMESTAMP NOT NULL,
+            updated_at            TIMESTAMP NOT NULL,
+            CHECK (status IN ('in_progress', 'completed'))
+        )
+        """
+    )
+
+
+def _create_organization_create_intent(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_organization_create_intent (
+            user_id            INTEGER NOT NULL,
+            client_intent_id   VARCHAR NOT NULL,
+            organization_id    INTEGER NOT NULL,
+            payload_fingerprint VARCHAR,
+            created_at         TIMESTAMP NOT NULL,
+            PRIMARY KEY (user_id, client_intent_id)
+        )
+        """
+    )
+
+
 def _apply_additive_columns(conn: duckdb.DuckDBPyConnection) -> None:
     """Additive ALTER only — never DROP tables/columns with data."""
     if table_exists(conn, "app_organization"):
@@ -363,6 +401,15 @@ def _apply_additive_columns(conn: duckdb.DuckDBPyConnection) -> None:
         if "is_test" not in cols:
             conn.execute(
                 "ALTER TABLE app_organization ADD COLUMN is_test BOOLEAN DEFAULT FALSE"
+            )
+    _create_organization_onboarding(conn)
+    _create_organization_create_intent(conn)
+    if table_exists(conn, "app_organization_create_intent"):
+        cols = get_table_columns(conn, "app_organization_create_intent")
+        if "payload_fingerprint" not in cols:
+            conn.execute(
+                "ALTER TABLE app_organization_create_intent "
+                "ADD COLUMN payload_fingerprint VARCHAR"
             )
     # Drop mutable-column ART indexes created by earlier I1 drafts (UPDATE-safe).
     for index_name in (

@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { Invitation } from '../models/organization.models';
+import { Invitation, InvitationRoleOption } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+
 @Component({
   selector: 'app-org-invitations-page',
   standalone: true,
@@ -17,19 +17,16 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <section class="org-page" data-testid="org-invitations-page">
       <h1>{{ 'organizations.invitations.title' | t:lang() }}</h1>
-      <p class="lede">
-        Modo académico: el email no se envía. El token returned-once solo se muestra una vez y nunca se guarda en localStorage.
-      </p>
+      <p class="lede">Invita personas al equipo. El correo se entrega cuando el canal esté configurado.</p>
 
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
       }
       @if (tokenOnce()) {
         <div class="org-alert org-alert--warn" role="status" data-testid="invite-token-banner">
-          <strong>Token disponible una sola vez.</strong> Cópialo ahora; no aparecerá en el listado ni en auditoría.
+          Enlace de prueba disponible una sola vez (entorno de verificación).
           <div class="org-token-box">{{ tokenOnce() }}</div>
-          <p class="org-muted">Enlace sugerido: /invitations/accept?token=…</p>
-          <button type="button" class="org-btn org-btn--ghost" (click)="copyToken()">Copiar token</button>
+          <button type="button" class="org-btn org-btn--ghost" (click)="copyToken()">Copiar</button>
           <button type="button" class="org-btn org-btn--ghost" (click)="tokenOnce.set(null)">Ocultar</button>
         </div>
       }
@@ -44,15 +41,13 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <label>
             Rol inicial *
             <select name="role" [(ngModel)]="roleCode" [disabled]="busy()">
-              <option value="viewer">viewer</option>
-              <option value="analyst">analyst</option>
-              <option value="administrator">administrator</option>
-              <option value="artist_manager">artist_manager</option>
-              <option value="marketing_manager">marketing_manager</option>
+              @for (r of roleOptions(); track r.code) {
+                <option [value]="r.code">{{ r.label }}</option>
+              }
             </select>
           </label>
           <label>
-            Expiración (días, 1–30)
+            Validez (días)
             <input type="number" name="ttl" [(ngModel)]="ttlDays" min="1" max="30" [disabled]="busy()" />
           </label>
           <button class="org-btn" type="submit" [disabled]="busy() || !email.trim()">
@@ -64,7 +59,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       @if (loading()) {
         <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
       } @else {
-        <div class="org-card" style="overflow-x:auto">
+        <div class="org-card" style="overflow-x: auto">
           <table class="org-table">
             <thead>
               <tr>
@@ -79,8 +74,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               @for (inv of items(); track inv.id) {
                 <tr>
                   <td>{{ inv.email_normalized }}</td>
-                  <td>{{ inv.initial_role_code }}</td>
-                  <td>{{ inv.status }}</td>
+                  <td>{{ roleLabel(inv.initial_role_code) }}</td>
+                  <td>{{ statusLabel(inv.status) }}</td>
                   <td>{{ inv.expires_at | date: 'short' }}</td>
                   <td>
                     <div class="org-actions">
@@ -94,7 +89,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="5" class="org-muted">Sin invitaciones</td></tr>
+                <tr>
+                  <td colspan="5" class="org-muted">Sin invitaciones</td>
+                </tr>
               }
             </tbody>
           </table>
@@ -121,6 +118,7 @@ export class OrgInvitationsPageComponent implements OnInit {
   ttlDays = 7;
 
   readonly items = signal<Invitation[]>([]);
+  readonly roleOptions = signal<InvitationRoleOption[]>([]);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
@@ -130,9 +128,36 @@ export class OrgInvitationsPageComponent implements OnInit {
     return this.ctx.hasPermission('invitation.revoke');
   }
 
+  statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'Pendiente',
+      accepted: 'Aceptada',
+      expired: 'Expirada',
+      revoked: 'Revocada',
+    };
+    return map[status] || status;
+  }
+
+  roleLabel(code: string): string {
+    return this.roleOptions().find((r) => r.code === code)?.label || code;
+  }
+
   async ngOnInit(): Promise<void> {
     this.orgId = Number(this.route.snapshot.paramMap.get('id'));
-    await this.load();
+    await Promise.all([this.loadRoles(), this.load()]);
+  }
+
+  async loadRoles(): Promise<void> {
+    if (!this.ctx.hasPermission('member.invite')) return;
+    try {
+      const res = await firstValueFrom(this.api.invitationRoles(this.orgId));
+      this.roleOptions.set(res.items);
+      if (res.items.length && !res.items.some((r) => r.code === this.roleCode)) {
+        this.roleCode = res.items[0].code;
+      }
+    } catch {
+      this.roleOptions.set([{ code: 'viewer', label: 'Solo lectura' }]);
+    }
   }
 
   async load(): Promise<void> {

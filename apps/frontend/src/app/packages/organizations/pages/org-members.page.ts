@@ -48,11 +48,16 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             @for (m of items(); track m.id) {
               <li class="org-member-row">
                 <div>
-                  <strong>Usuario {{ m.user_id }}</strong>
+                  <strong>{{ memberDisplayName(m) }}</strong>
                   @if (m.user_id === currentUserId) {
                     <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
                   }
-                  <div class="org-muted">{{ humanMemberStatus(m.status) }}</div>
+                  <div class="org-muted">
+                    {{ m.status_label || humanMemberStatus(m.status) }}
+                    @if (m.roles?.length) {
+                      · {{ roleLabels(m) }}
+                    }
+                  </div>
                 </div>
                 <div class="org-actions">
                   @if (canSuspend() && m.status === 'active' && m.user_id !== currentUserId) {
@@ -147,6 +152,14 @@ export class OrgMembersPageComponent implements OnInit {
     if (s === 'removed') return 'Eliminado';
     if (s === 'left') return 'Salió';
     return status || 'Sin datos';
+  }
+
+  memberDisplayName(m: Membership): string {
+    return m.user?.display_name?.trim() || 'Miembro';
+  }
+
+  roleLabels(m: Membership): string {
+    return (m.roles || []).map((r) => r.label).join(', ');
   }
 
   async ngOnInit(): Promise<void> {

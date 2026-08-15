@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/052-professional-checkout-journey",
-  "previous_feature_directory": ".specify/history/051-artist-professional-journey",
+  "feature_directory": ".specify/features/053-organization-professional-journey",
+  "previous_feature_directory": ".specify/history/052-professional-checkout-journey",
   "status": "active",
-  "feature_id": "052",
-  "short_name": "professional-checkout-journey",
-  "note": "Active: Personal and Organization subscription checkout with safe simulated payment orchestration. No real gateway, PAN/CVV storage, royalties, AI or dashboard scope."
+  "feature_id": "053",
+  "short_name": "organization-professional-journey",
+  "note": "Active: canonical Organization creation, invitation, onboarding, plan/checkout handoff, team setup and workspace entry. Reuses Organizations, RBAC, Subscriptions, Billing and Spec 052 checkout."
 }

@@ -143,20 +143,27 @@ export class SubscriptionSelectPlanPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const qOrg = Number(this.route.snapshot.queryParamMap.get('organizationId') || 0);
+    const qOrg = Number(this.route.snapshot.queryParamMap.get('organization_id') || 0);
     const qPlan = Number(this.route.snapshot.queryParamMap.get('planId') || 0);
     this.preferredPeriod = this.route.snapshot.queryParamMap.get('period');
     this.conversionId = Number(this.route.snapshot.queryParamMap.get('conversionId') || 0) || null;
-    if (qOrg) {
-      try {
-        await this.orgCtx.activate(qOrg);
-      } catch {
-        /* fall through */
+
+    if (qOrg > 0) {
+      await this.orgCtx.activate(qOrg);
+      const org = this.orgCtx.activeOrganization();
+      if (!org || org.id !== qOrg) {
+        this.orgId = null;
+        this.error = 'No se pudo activar la organización solicitada.';
+        return;
       }
+      this.orgId = org.id;
+      this.orgName = org.display_name ?? null;
+    } else {
+      const org = this.orgCtx.activeOrganization();
+      this.orgId = org?.id ?? null;
+      this.orgName = org?.display_name ?? null;
     }
-    const org = this.orgCtx.activeOrganization();
-    this.orgId = org?.id ?? (qOrg || null);
-    this.orgName = org?.display_name ?? null;
+
     if (!this.orgId) {
       this.error = 'Activa una organización primero.';
       return;
@@ -213,6 +220,19 @@ export class SubscriptionSelectPlanPage implements OnInit {
     return `${this.money.formatMoney(pr.amount, pr.currency || 'USD')} / ${period}`;
   }
 
+  private async returnToOnboarding(orgId: number): Promise<void> {
+    try {
+      await this.orgCtx.bootstrap({ force: true });
+      await this.orgCtx.activate(orgId);
+    } catch {
+      this.error = 'El plan se aplicó, pero no se pudo refrescar el contexto.';
+      return;
+    }
+    await this.router.navigate(['/organizations/onboarding'], {
+      queryParams: { organization_id: orgId },
+    });
+  }
+
   submit(): void {
     const orgId = this.orgId;
     if (!orgId || this.form.invalid) return;
@@ -227,11 +247,6 @@ export class SubscriptionSelectPlanPage implements OnInit {
     this.error = null;
     this.success = null;
 
-    const done = () => {
-      this.saving = false;
-      this.success = this.i18n.t('subscriptions.selectPlan.success');
-      this.router.navigate(['/subscriptions/overview']);
-    };
     const fail = (e: { error?: { detail?: { message?: string } } }) => {
       this.error = e?.error?.detail?.message || this.i18n.t('subscriptions.selectPlan.failed');
       this.saving = false;
@@ -244,7 +259,14 @@ export class SubscriptionSelectPlanPage implements OnInit {
         plan_price_id: v.planPriceId ?? undefined,
         billing_currency: currency,
         activation_source: this.conversionId ? 'crm_conversion' : 'manual_select_plan',
-      }).subscribe({ next: done, error: fail });
+      }).subscribe({
+        next: () => {
+          this.saving = false;
+          this.success = this.i18n.t('subscriptions.selectPlan.success');
+          void this.returnToOnboarding(orgId);
+        },
+        error: fail,
+      });
       return;
     }
 
@@ -252,6 +274,7 @@ export class SubscriptionSelectPlanPage implements OnInit {
     this.saving = false;
     void this.router.navigate(['/subscriptions/checkout'], {
       queryParams: {
+        organization_id: orgId,
         plan_id: v.planId,
         plan_price_id: v.planPriceId,
         billing_period: selected?.billing_period || this.preferredPeriod || 'monthly',

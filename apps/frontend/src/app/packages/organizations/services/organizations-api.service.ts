@@ -10,10 +10,13 @@ import {
   CurrentOrganizationResponse,
   Invitation,
   InvitationCreateResponse,
+  InvitationRoleOption,
   Membership,
   Organization,
+  OrganizationCatalogs,
   OrganizationCreateRequest,
   OrganizationCreateResponse,
+  OrganizationJourney,
   Paginated,
   Permission,
 } from '../models/organization.models';
@@ -63,6 +66,41 @@ export class OrganizationsApiService {
   create(body: OrganizationCreateRequest): Observable<OrganizationCreateResponse> {
     return this.http
       .post<OrganizationCreateResponse>(`${this.base}/organizations`, body)
+      .pipe(catchError(this.handle));
+  }
+
+  catalogs(): Observable<OrganizationCatalogs> {
+    return this.http
+      .get<OrganizationCatalogs>(`${this.base}/organizations/catalogs`)
+      .pipe(catchError(this.handle));
+  }
+
+  getJourney(orgId: number): Observable<OrganizationJourney> {
+    return this.http
+      .get<OrganizationJourney>(`${this.base}/organizations/${orgId}/journey`)
+      .pipe(catchError(this.handle));
+  }
+
+  completeJourney(
+    orgId: number,
+    body: { idempotency_key: string; team_step_skipped?: boolean },
+  ): Observable<OrganizationJourney> {
+    return this.http
+      .post<OrganizationJourney>(`${this.base}/organizations/${orgId}/journey/complete`, body)
+      .pipe(catchError(this.handle));
+  }
+
+  skipJourneyTeam(orgId: number): Observable<OrganizationJourney> {
+    return this.http
+      .post<OrganizationJourney>(`${this.base}/organizations/${orgId}/journey/skip-team`, {})
+      .pipe(catchError(this.handle));
+  }
+
+  invitationRoles(orgId: number): Observable<{ items: InvitationRoleOption[] }> {
+    return this.http
+      .get<{ items: InvitationRoleOption[] }>(
+        `${this.base}/organizations/${orgId}/invitation-roles`,
+      )
       .pipe(catchError(this.handle));
   }
 

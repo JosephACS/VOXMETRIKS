@@ -140,6 +140,13 @@ describe('OrgCreatePageComponent (I4)', () => {
     const fixture = TestBed.createComponent(OrgCreatePageComponent);
     const http = TestBed.inject(HttpTestingController);
     const cmp = fixture.componentInstance;
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiUrl}/organizations/catalogs`).flush({
+      organization_types: [{ code: 'label', label: 'Sello' }],
+      countries: [{ code: 'EC', label: 'Ecuador' }],
+      timezones: [{ code: 'UTC', label: 'UTC' }],
+      currencies: [{ code: 'USD', label: 'USD' }],
+    });
     cmp.form.patchValue({ display_name: 'Dup', slug: 'dup' });
     fixture.detectChanges();
     const p1 = cmp.submit();

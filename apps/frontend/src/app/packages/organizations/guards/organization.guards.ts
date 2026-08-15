@@ -9,14 +9,20 @@ export const organizationRequiredGuard: CanActivateFn = async (route) => {
   const router = inject(Router);
   await ctx.ensureReady();
   const qOrg = Number(route.queryParamMap.get('organization_id') || 0);
-  if (qOrg > 0 && ctx.organizationId() !== qOrg) {
-    const listed = ctx.organizations().find((o) => o.id === qOrg);
-    if (listed) {
+  if (qOrg > 0) {
+    if (ctx.organizationId() !== qOrg) {
+      const listed = ctx.organizations().find((o) => o.id === qOrg);
+      if (!listed) {
+        return router.createUrlTree(['/access-denied']);
+      }
       try {
         await ctx.activate(qOrg);
       } catch {
-        /* fall through to standard redirects */
+        return router.createUrlTree(['/access-denied']);
       }
+    }
+    if (ctx.organizationId() !== qOrg) {
+      return router.createUrlTree(['/access-denied']);
     }
   }
   if (ctx.hasOrganization()) return true;
@@ -47,14 +53,20 @@ export function organizationModuleGuard(
     const router = inject(Router);
     await ctx.ensureReady();
     const qOrg = Number(route.queryParamMap.get('organization_id') || 0);
-    if (qOrg > 0 && ctx.organizationId() !== qOrg) {
-      const listed = ctx.organizations().find((o) => o.id === qOrg);
-      if (listed) {
+    if (qOrg > 0) {
+      if (ctx.organizationId() !== qOrg) {
+        const listed = ctx.organizations().find((o) => o.id === qOrg);
+        if (!listed) {
+          return router.createUrlTree(['/access-denied']);
+        }
         try {
           await ctx.activate(qOrg);
         } catch {
-          /* fall through */
+          return router.createUrlTree(['/access-denied']);
         }
+      }
+      if (ctx.organizationId() !== qOrg) {
+        return router.createUrlTree(['/access-denied']);
       }
     }
     if (!ctx.hasOrganization()) {
@@ -68,10 +80,14 @@ export function organizationModuleGuard(
     }
     const tier = ctx.accessTier();
     if (tier === 'onboarding') {
-      return router.createUrlTree(['/organizations/onboarding']);
+      return router.createUrlTree(['/organizations/onboarding'], {
+        queryParams: qOrg > 0 ? { organization_id: qOrg } : undefined,
+      });
     }
     if (tier === 'recovery') {
-      return router.createUrlTree(['/subscriptions/overview']);
+      return router.createUrlTree(['/subscriptions/overview'], {
+        queryParams: qOrg > 0 ? { organization_id: qOrg } : undefined,
+      });
     }
     return router.createUrlTree(['/access-denied']);
   };
@@ -109,7 +125,7 @@ export const organizationPathContextGuard: CanActivateFn = async (route) => {
       return router.createUrlTree(['/access-denied']);
     }
   }
-  if (ctx.organizationId() == null) {
+  if (ctx.organizationId() == null || ctx.organizationId() !== id) {
     return router.createUrlTree(['/organizations/none']);
   }
   return true;

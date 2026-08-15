@@ -34,6 +34,8 @@ os.environ.setdefault("GLOBAL_RATE_LIMIT", "0")
 os.environ.setdefault("LOG_TO_FILES", "false")
 # Never send real email during pytest (user .env may set smtp/resend).
 os.environ["EMAIL_PROVIDER"] = "console"
+# Spec 053 — tests may assert invite_token once; production default remains email_only.
+os.environ.setdefault("ORGANIZATION_INVITATION_DELIVERY_MODE", "local_once")
 # Defense-in-depth: org creates under pytest are tagged is_test.
 os.environ["VOXMETRIKS_TEST_ISOLATION"] = "1"
 # Demo orgs stay hidden in list APIs during tests unless a test opts in.

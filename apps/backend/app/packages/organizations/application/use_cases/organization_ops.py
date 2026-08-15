@@ -24,6 +24,12 @@ from app.packages.organizations.domain.errors import (
     ValidationError,
 )
 from app.packages.organizations.domain.rules import assert_org_transition
+from app.packages.organizations.infrastructure.org_profile_catalogs import (
+    validate_country_code,
+    validate_currency,
+    validate_organization_type,
+    validate_timezone,
+)
 from app.packages.organizations.infrastructure.repositories.audit_repository import (
     AuditRepository,
 )
@@ -66,6 +72,17 @@ class UpdateOrganizationProfile:
         require_permission(
             self._auth, member_id=membership.id, permission_code="organization.update"
         )
+        try:
+            if organization_type is not None:
+                organization_type = validate_organization_type(organization_type)
+            if country_code is not None:
+                country_code = validate_country_code(country_code)
+            if timezone is not None:
+                timezone = validate_timezone(timezone)
+            if default_currency is not None:
+                default_currency = validate_currency(default_currency)
+        except ValueError as exc:
+            raise ValidationError("invalid_catalog_value") from exc
         previous = {
             "display_name": org.display_name,
             "legal_name": org.legal_name,

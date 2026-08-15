@@ -100,6 +100,12 @@ class Settings(BaseSettings):
     global_rate_window_sec: int = 60
     # Set E2E=1 only in Playwright/pytest runs (.env.e2e, npm run e2e:backend).
     e2e_mode: bool = Field(default=False, validation_alias="E2E")
+    # Spec 053 — invitation plaintext delivery. Fail-closed default: never return tokens.
+    # local_once | email_only. E2E mode also allows a one-time plaintext token.
+    organization_invitation_delivery_mode: str = Field(
+        default="email_only",
+        validation_alias="ORGANIZATION_INVITATION_DELIVERY_MODE",
+    )
 
     # Cache TTL (seconds) — in-process, configurable per domain
     cache_enabled: bool = True

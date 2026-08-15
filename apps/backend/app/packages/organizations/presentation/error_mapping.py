@@ -21,6 +21,7 @@ from app.packages.organizations.domain.errors import (
     NotFoundError,
     OrganizationNotFound,
     OrganizationNotOperational,
+    CreateIntentConflict,
     OrganizationSlugConflict,
     OrganizationsError,
     PermissionDenied,
@@ -63,6 +64,7 @@ def raise_domain_http(exc: Exception) -> NoReturn:
         exc,
         (
             OrganizationSlugConflict,
+            CreateIntentConflict,
             MembershipConflict,
             InvitationConflict,
             LastOwnerViolation,
@@ -71,8 +73,10 @@ def raise_domain_http(exc: Exception) -> NoReturn:
         ),
     ):
         code = "conflict"
-        if isinstance(exc, OrganizationSlugConflict):
-            code = "slug_taken"
+        if isinstance(exc, CreateIntentConflict):
+            code = "intent_payload_mismatch"
+        elif isinstance(exc, OrganizationSlugConflict):
+            code = "create_conflict"
         elif isinstance(exc, LastOwnerViolation):
             code = "last_owner"
         elif isinstance(exc, MembershipConflict):
@@ -86,7 +90,14 @@ def raise_domain_http(exc: Exception) -> NoReturn:
             code = "invite_used"
         raise http_error(410, str(exc) or "Gone", code=code) from exc
     if isinstance(exc, ValidationError):
-        raise http_error(422, str(exc) or "Validation failed", code="validation_error") from exc
+        msg = str(exc) or "Validation failed"
+        if "invalid_catalog_value" in msg:
+            raise http_error(400, "Invalid catalog value", code="invalid_catalog_value") from exc
+        if "journey_prerequisite_missing" in msg:
+            raise http_error(
+                409, "Journey prerequisites are not met", code="journey_prerequisite_missing"
+            ) from exc
+        raise http_error(422, msg, code="validation_error") from exc
     if isinstance(exc, PersistenceError):
         raise http_error(503, "Persistence error", code="database_error") from exc
     if isinstance(exc, OrganizationsError):

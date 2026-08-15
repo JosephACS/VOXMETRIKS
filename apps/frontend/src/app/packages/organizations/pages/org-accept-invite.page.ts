@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     <section class="org-page" data-testid="org-accept-invite-page">
       <h1>{{ 'organizations.acceptInvite.title' | t:lang() }}</h1>
       <p class="lede">
-        Debes estar autenticado. El token solo se conserva en memoria durante este flujo y no se guarda en localStorage.
+        Acepta una invitación con el enlace que recibiste. Debes iniciar sesión con el mismo correo.
       </p>
 
       @if (!auth.isAuthenticated()) {
@@ -32,22 +32,21 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         }
         @if (success()) {
           <div class="org-alert org-alert--ok" role="status">
-            Invitación aceptada. Organización: {{ successOrg() }}
+            Te uniste a {{ successOrg() }}.
           </div>
           <div class="org-actions">
-            <button type="button" class="org-btn" (click)="activate()" [disabled]="!successOrgId() || activating()">
-              Activar organización
+            <button type="button" class="org-btn" (click)="activate()" [disabled]="!successOrgId() || activating()" data-testid="invite-activate">
+              Entrar al espacio
             </button>
-            <a class="org-btn org-btn--ghost" routerLink="/discover">Continuar</a>
           </div>
         } @else {
           <form class="org-card org-form" (ngSubmit)="accept()">
             <label>
-              Token de invitación
-              <input name="token" [(ngModel)]="token" autocomplete="off" required [disabled]="busy()" />
+              Código de invitación
+              <input name="token" [(ngModel)]="token" autocomplete="off" required [disabled]="busy()" data-testid="invite-token-input" />
             </label>
-            <button class="org-btn" type="submit" [disabled]="busy() || !token.trim()">
-              {{ busy() ? 'Aceptando…' : 'Aceptar' }}
+            <button class="org-btn" type="submit" [disabled]="busy() || !token.trim()" data-testid="invite-accept-submit">
+              {{ busy() ? 'Aceptando…' : 'Aceptar invitación' }}
             </button>
           </form>
         }
@@ -132,7 +131,9 @@ export class OrgAcceptInvitePageComponent implements OnInit {
     this.activating.set(true);
     try {
       await this.ctx.activate(id);
-      await this.router.navigate(['/organizations', id, 'settings']);
+      await this.router.navigate(['/organizations/onboarding'], {
+        queryParams: { organization_id: id },
+      });
     } catch (e) {
       this.error.set(e instanceof OrganizationsApiError ? e.message : 'No se pudo activar');
     } finally {

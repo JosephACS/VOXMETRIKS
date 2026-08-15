@@ -51,6 +51,7 @@ from app.packages.organizations.domain.rules import (
     is_platform_role_code,
     normalize_email,
 )
+from app.packages.organizations.application.journey import assert_invitation_role_assignable
 from app.packages.organizations.infrastructure.repositories.audit_repository import (
     AuditRepository,
 )
@@ -98,6 +99,12 @@ class InvitationUseCases:
         role_code = initial_role_code.strip().lower()
         if is_platform_role_code(role_code):
             raise ValidationError("platform roles cannot be invitation roles")
+        role_code = assert_invitation_role_assignable(
+            self._conn,
+            actor_user_id=actor.user_id,
+            organization_id=organization_id,
+            role_code=role_code,
+        )
         if self._auth.get_role_id_by_code(role_code) is None:
             raise RoleNotFound(f"role code={role_code}")
         if ttl_days < 1 or ttl_days > MAX_INVITE_TTL_DAYS:

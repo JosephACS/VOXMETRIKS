@@ -5,20 +5,23 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.email_format import is_valid_email_format
 
 
 class OrganizationCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     display_name: str = Field(min_length=1, max_length=200)
     slug: Optional[str] = None
     organization_type: str = "label"
     legal_name: Optional[str] = None
     country_code: Optional[str] = None
-    timezone: str = "UTC"
-    default_currency: str = "USD"
+    timezone: Optional[str] = None
+    default_currency: Optional[str] = None
     activate: bool = True
+    client_intent_id: Optional[str] = Field(default=None, max_length=128)
 
 
 class OrganizationUpdateRequest(BaseModel):
@@ -48,17 +51,118 @@ class OrganizationOut(BaseModel):
     is_test: bool = False
 
 
+class MemberUserOut(BaseModel):
+    display_name: str
+    email: Optional[str] = None
+
+
+class MemberRoleOut(BaseModel):
+    code: str
+    label: str
+
+
 class MembershipOut(BaseModel):
     id: int
     organization_id: int
     user_id: int
     status: str
+    status_label: Optional[str] = None
     joined_at: Optional[datetime] = None
     suspended_at: Optional[datetime] = None
     left_at: Optional[datetime] = None
     removed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+    user: Optional[MemberUserOut] = None
+    roles: list[MemberRoleOut] = Field(default_factory=list)
+
+
+class JourneyCapabilitiesOut(BaseModel):
+    update_profile: bool = False
+    choose_plan: bool = False
+    resume_checkout: bool = False
+    invite_team: bool = False
+    view_members: bool = False
+    enter_workspace: bool = False
+    complete_journey: bool = False
+
+
+class JourneyCheckoutOut(BaseModel):
+    id: int
+    status: str
+    plan_code: str
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    failure_code: Optional[str] = None
+    checkout_url: str
+
+
+class JourneyOrganizationOut(BaseModel):
+    id: int
+    display_name: str
+    slug: str
+    organization_type: str
+    legal_name: Optional[str] = None
+    country_code: Optional[str] = None
+    timezone: Optional[str] = None
+    default_currency: Optional[str] = None
+    status: str
+
+
+class JourneyMembershipOut(BaseModel):
+    id: int
+    status: str
+    status_label: Optional[str] = None
+
+
+class JourneySubscriptionOut(BaseModel):
+    status: Optional[str] = None
+    plan_name: Optional[str] = None
+    trial: bool = False
+
+
+class JourneyTeamOut(BaseModel):
+    active_members: int = 0
+    pending_invitations: int = 0
+
+
+class OrganizationJourneyOut(BaseModel):
+    organization: JourneyOrganizationOut
+    membership: Optional[JourneyMembershipOut] = None
+    access_tier: str
+    completed_steps: list[str]
+    next_action: str
+    capabilities: JourneyCapabilitiesOut
+    subscription: JourneySubscriptionOut
+    checkout: Optional[JourneyCheckoutOut] = None
+    team: JourneyTeamOut
+    allowed_destinations: list[str]
+    onboarding_status: str = "in_progress"
+    journey_url: Optional[str] = None
+
+
+class JourneyCompleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    idempotency_key: str = Field(min_length=1, max_length=128)
+    team_step_skipped: bool = False
+
+
+class InvitationRoleOut(BaseModel):
+    code: str
+    label: str
+    description: str = ""
+
+
+class InvitationRolesResponse(BaseModel):
+    items: list[InvitationRoleOut]
+
+
+class OrganizationCatalogsOut(BaseModel):
+    organization_types: list[dict[str, str]]
+    countries: list[dict[str, str]]
+    timezones: list[dict[str, str]]
+    currencies: list[dict[str, str]]
 
 
 class OrganizationCreateResponse(BaseModel):
@@ -67,6 +171,9 @@ class OrganizationCreateResponse(BaseModel):
     roles: list[str]
     reused_existing: bool = False
     idempotency_mode: str = "slug_deterministic"
+    next_action: Optional[str] = None
+    journey_url: Optional[str] = None
+    journey: Optional[OrganizationJourneyOut] = None
 
 
 class CurrentOrganizationResponse(BaseModel):
@@ -83,6 +190,8 @@ class MemberActionRequest(BaseModel):
 
 
 class InvitationCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: str = Field(max_length=254)
     role_codes: list[str] = Field(min_length=1)
     ttl_days: int = Field(default=7, ge=1, le=30)

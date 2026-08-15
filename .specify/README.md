@@ -23,14 +23,14 @@ Correcciones locales, copy, tests y docs menores **no** abren Spec automáticame
 
 - Prefijo de **tres dígitos** obligatorio (`001`…`999`).
 - **IDs históricos inmutables** — no renumerar, no reutilizar.
-- **Spec activa:** `052-professional-checkout-journey`. El siguiente ID disponible será `053` después de su cierre.
+- **Spec activa:** `053-organization-professional-journey`. El siguiente ID disponible será `054` después de su cierre.
 
 ## Carpetas canónicas
 
 | Ruta | Contenido |
 |------|-----------|
-| [`.specify/features/`](features/) | **Solo features activas** de implementación. Hoy: 052. |
-| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–051). |
+| [`.specify/features/`](features/) | **Solo features activas** de implementación. Hoy: 053. |
+| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–052). |
 | [`.specify/CAPABILITY_MAP.md`](CAPABILITY_MAP.md) | Mapa de familias → Specs/packages → STATUS (sin duplicar runtime). |
 | [`.specify/feature.json`](feature.json) | Puntero de compatibilidad Spec Kit (idle/closed). |
 
