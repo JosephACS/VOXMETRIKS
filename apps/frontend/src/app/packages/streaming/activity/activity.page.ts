@@ -17,6 +17,7 @@ import {
 import { PlayerController } from '../../../playback-core/player.controller';
 import { toPlayableFromHistory } from '../../../playback-core/adapters/track.adapter';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TrackCoverService } from '../../../shared/services/track-cover.service';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
@@ -27,7 +28,7 @@ import { HistoryEntry } from '../../../shared/models/api.models';
 @Component({
   selector: 'app-activity-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, TranslatePipe, LocaleDatePipe],
   templateUrl: './activity.page.html',
   styleUrls: ['./activity.page.css'],
 })

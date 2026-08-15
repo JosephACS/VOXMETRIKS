@@ -11,10 +11,16 @@ import { SpaceContextService } from '../../../core/spaces/space-context.service'
 import { ArtistSpaceApiService } from '../services/artist-space-api.service';
 import { ArtistClaimWizardPage } from './artist-claim-wizard.page';
 
-describe('ArtistClaimWizardPage empty search (047)', () => {
+describe('ArtistClaimWizardPage discovery (047 + 051)', () => {
   let pageFixture: ComponentFixture<ArtistClaimWizardPage>;
   let http: HttpTestingController;
   const base = environment.apiUrl;
+
+  function discoverRequest(query: string) {
+    return http.expectOne(
+      (r) => r.url === `${base}/artist-access/discover` && r.params.get('search') === query,
+    );
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -36,7 +42,9 @@ describe('ArtistClaimWizardPage empty search (047)', () => {
           // Avoid enterprise required signal-inputs under plain Vitest JIT.
           imports: [CommonModule, ReactiveFormsModule],
           template: `
-            @if (searched() && !results().length) {
+            @if (searchError()) {
+              <p data-testid="claim-search-error">{{ searchError() }}</p>
+            } @else if (searched() && !results().length) {
               <div class="empty-state ent-empty" role="status" data-testid="claim-empty">
                 <div class="ent-empty__title">{{ emptyTitle }}</div>
                 <p class="ent-empty__description">{{ emptyBody }}</p>
@@ -88,18 +96,11 @@ describe('ArtistClaimWizardPage empty search (047)', () => {
     expect(LOCALE_EN['artistSpace.claim.noResultsBody']).toBe(
       'Try another name or request a new artist profile.',
     );
-    expect(LOCALE_EN['artistSpace.claim.noResultsTitle']).not.toBe('Texto no disponible');
 
     const page = pageFixture.componentInstance;
     page.searchForm.setValue({ q: 'Artista Inexistente XYZ' });
     page.search();
-    http
-      .expectOne(
-        (r) =>
-          r.url.includes('/catalog/artists') &&
-          r.params.get('search') === 'Artista Inexistente XYZ',
-      )
-      .flush({ items: [], total: 0 });
+    discoverRequest('Artista Inexistente XYZ').flush({ items: [], total: 0 });
     pageFixture.detectChanges();
 
     expect(page.searched()).toBe(true);
@@ -113,12 +114,120 @@ describe('ArtistClaimWizardPage empty search (047)', () => {
     expect(emptyText).toContain('No encontramos ese artista');
     expect(emptyText).toContain('Prueba con otro nombre o solicita un perfil nuevo.');
     expect(emptyText).not.toContain('Texto no disponible');
-    expect(emptyText).toContain('Solicitar nuevo artista');
 
     const cta = empty!.querySelector('button.btn--primary') as HTMLButtonElement | null;
-    expect(cta).toBeTruthy();
     cta!.click();
     pageFixture.detectChanges();
     expect(page.createForm.value.name).toBe('Artista Inexistente XYZ');
+    expect(page.mode()).toBe('create');
+  });
+
+  it('lets the server allowed_action drive the CTA instead of guessing', () => {
+    const page = pageFixture.componentInstance;
+    page.searchForm.setValue({ q: 'Nova' });
+    page.search();
+    discoverRequest('Nova').flush({
+      items: [
+        {
+          warehouse_artist_id: 11,
+          display_name: 'Nova Claim',
+          artist_profile_id: null,
+          management_state: 'unclaimed',
+          allowed_action: 'claim_ownership',
+        },
+        {
+          warehouse_artist_id: 12,
+          display_name: 'Nova Managed',
+          artist_profile_id: 5,
+          management_state: 'managed',
+          allowed_action: 'request_access',
+        },
+        {
+          warehouse_artist_id: 13,
+          display_name: 'Nova Pending',
+          artist_profile_id: 6,
+          management_state: 'managed',
+          allowed_action: 'view_request',
+        },
+      ],
+      total: 3,
+    });
+
+    const [claimable, managed, pending] = page.results();
+    expect(page.actionLabelKey(claimable)).toBe('artistSpace.discovery.action.claimOwnership');
+    expect(page.actionLabelKey(managed)).toBe('artistSpace.discovery.action.requestAccess');
+
+    page.runAllowedAction(claimable);
+    expect(page.pendingForm()).toBe('claim');
+
+    page.runAllowedAction(managed);
+    expect(page.pendingForm()).toBe('access');
+
+    page.runAllowedAction(pending);
+    expect(page.pendingForm()).toBeNull();
+  });
+
+  it('requires evidence for a claim and surfaces backend failures as errors', () => {
+    const page = pageFixture.componentInstance;
+    page.searchForm.setValue({ q: 'Nova' });
+    page.search();
+    discoverRequest('Nova').flush({
+      items: [
+        {
+          warehouse_artist_id: 11,
+          display_name: 'Nova Claim',
+          artist_profile_id: null,
+          management_state: 'unclaimed',
+          allowed_action: 'claim_ownership',
+        },
+      ],
+      total: 1,
+    });
+
+    page.runAllowedAction(page.results()[0]);
+    page.submitClaim();
+    http.expectNone(`${base}/artist-access/requests`);
+    expect(page.error()).toBe(
+      TestBed.inject(I18nService).t('artistSpace.claim.evidenceRequired'),
+    );
+
+    page.claimForm.patchValue({ evidence_url: 'https://example.com/nova' });
+    page.submitClaim();
+    const created = http.expectOne(`${base}/artist-access/requests`);
+    expect(created.request.body).toMatchObject({
+      request_type: 'claim_ownership',
+      warehouse_artist_id: 11,
+      evidence_url: 'https://example.com/nova',
+      accuracy_attested: true,
+    });
+
+    created.flush(
+      { detail: { code: 'artist_request_conflict' } },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    // A failed request must never read as success.
+    expect(page.message()).toBeNull();
+    expect(page.error()).toBe(
+      TestBed.inject(I18nService).t('artistSpace.error.requestConflict'),
+    );
+    expect(page.submitting()).toBe(false);
+  });
+
+  it('shows a retryable error instead of an empty result set when discovery fails', () => {
+    const page = pageFixture.componentInstance;
+    page.searchForm.setValue({ q: 'Nova' });
+    page.search();
+    discoverRequest('Nova').flush(
+      { detail: 'boom' },
+      { status: 500, statusText: 'Server Error' },
+    );
+    pageFixture.detectChanges();
+
+    expect(page.searchError()).toBeTruthy();
+    expect(page.results().length).toBe(0);
+    expect(
+      pageFixture.nativeElement.querySelector('[data-testid="claim-empty"]'),
+    ).toBeNull();
   });
 });

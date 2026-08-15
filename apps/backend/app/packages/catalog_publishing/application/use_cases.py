@@ -116,6 +116,12 @@ class CatalogPublishingUseCases:
             raise NotFoundError(f"Submission {submission_id} not found")
         return d
 
+    def get_submission(
+        self, *, submission_id: int, organization_id: Optional[int] = None
+    ) -> dict[str, Any]:
+        """Single submission row scoped to an organization (404 when out of scope)."""
+        return self._get_submission(submission_id, org_id=organization_id)
+
     def _assert_editable(self, sub: dict[str, Any]) -> None:
         if sub["status"] not in ("draft", "changes_requested"):
             raise ValidationError(
@@ -702,6 +708,15 @@ class CatalogPublishingUseCases:
                 asset_id = tr["catalog_asset_id"]
 
         if not contract_id:
+            if sub.get("is_demo"):
+                issues.append(
+                    {
+                        "severity": "warn",
+                        "code": "missing_rights_contract_demo",
+                        "message": "rights_contract_id missing; demo/independent draft allowed with WARN",
+                    }
+                )
+                return issues
             issues.append(
                 {
                     "severity": "block",
@@ -914,6 +929,9 @@ class CatalogPublishingUseCases:
         actor_user_id: int,
         notes: str,
     ) -> dict[str, Any]:
+        note = (notes or "").strip()
+        if not note:
+            raise ValidationError("Human review notes are required to request changes")
         sub = self._get_submission(submission_id, org_id=organization_id)
         if sub["status"] not in ("submitted", "under_review"):
             # Allow from submitted via under_review first
@@ -930,7 +948,7 @@ class CatalogPublishingUseCases:
             sub,
             "changes_requested",
             actor_user_id=actor_user_id,
-            reason=notes,
+            reason=note,
         )
         rid = _next_id(self._conn, "app_release_review")
         self._conn.execute(
@@ -939,7 +957,7 @@ class CatalogPublishingUseCases:
                 (id, submission_id, reviewer_id, decision, notes, created_at)
             VALUES (?, ?, ?, 'changes_requested', ?, ?)
             """,
-            [rid, submission_id, actor_user_id, notes, _now()],
+            [rid, submission_id, actor_user_id, note, _now()],
         )
         self._conn.execute(
             "UPDATE app_release_submission SET reviewer_id = ?, updated_at = ? WHERE id = ?",

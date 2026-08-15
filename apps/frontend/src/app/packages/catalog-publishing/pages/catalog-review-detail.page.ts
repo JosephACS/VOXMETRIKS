@@ -268,21 +268,25 @@ export class CatalogReviewDetailPage implements OnInit {
 
   requestChanges(): void {
     if (!this.orgId || !this.submissionId) return;
+    const notes = this.notes.trim();
+    if (!notes) {
+      this.actionError = this.i18n.t('publishing.review.notesRequired');
+      this.info = null;
+      return;
+    }
     this.busy = true;
     this.actionError = null;
-    this.api
-      .reviewRequestChanges(this.orgId, this.submissionId, this.notes || 'changes requested')
-      .subscribe({
-        next: () => {
-          this.info = this.i18n.t('publishing.review.changesRequested');
-          this.busy = false;
-          this.load();
-        },
-        error: (e) => {
-          this.actionError = userFacingHttpError(this.i18n, e);
-          this.busy = false;
-        },
-      });
+    this.api.reviewRequestChanges(this.orgId, this.submissionId, notes).subscribe({
+      next: () => {
+        this.info = this.i18n.t('publishing.review.changesRequested');
+        this.busy = false;
+        this.load();
+      },
+      error: (e) => {
+        this.actionError = userFacingHttpError(this.i18n, e);
+        this.busy = false;
+      },
+    });
   }
 
   displayTitle(submission: { title: string; status: string }): string {

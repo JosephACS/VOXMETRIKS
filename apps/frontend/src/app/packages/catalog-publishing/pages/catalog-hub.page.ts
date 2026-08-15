@@ -423,15 +423,11 @@ export class CatalogHubPage implements OnInit {
     this.error.set(null);
 
     forkJoin({
-      summary: this.api.portalSummary(orgId).pipe(catchError(() => of(null))),
-      releases: this.api.listPortalReleases(orgId, { limit: 40 }).pipe(
-        catchError(() =>
-          this.api.listReleases(orgId, { limit: 40 }).pipe(catchError(() => of([] as ReleaseSubmission[]))),
-        ),
-      ),
-      artists: this.artistsApi.list(orgId, { page: 1, page_size: 24 }).pipe(
-        catchError(() => of({ items: [] as ArtistProfile[], total: 0, page: 1, page_size: 24 })),
-      ),
+      summary: this.api.portalSummary(orgId),
+      releases: this.api
+        .listPortalReleases(orgId, { limit: 40 })
+        .pipe(catchError(() => this.api.listReleases(orgId, { limit: 40 }))),
+      artists: this.artistsApi.list(orgId, { page: 1, page_size: 24 }),
     })
       .pipe(
         switchMap((res) => {
@@ -450,7 +446,6 @@ export class CatalogHubPage implements OnInit {
                 map((detail) =>
                   (detail.tracks || []).map((t) => ({ track: t, release: detail.submission || r })),
                 ),
-                catchError(() => of([] as TrackPreview[])),
               ),
             ),
           ).pipe(map((chunks) => chunks.flat()));

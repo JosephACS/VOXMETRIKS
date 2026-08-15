@@ -9,6 +9,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.time_util import utc_now
+from app.packages.artists.identity_access import (
+    ARTIST_WORKSPACE_TYPE,
+    INDEPENDENT_ORG_ID,
+)
 from app.packages.artists.identity_access.errors import (
     InvitationAlreadyUsed,
     InvitationExpired,
@@ -113,6 +117,27 @@ def _uid_email(conn: duckdb.DuckDBPyConnection, email: str) -> int:
     return int(row[0])
 
 
+def _claim(conn, *, user_id: int, warehouse_artist_id: int = 101):
+    """Spec 051 requires relationship + evidence on every ownership claim."""
+    return ArtistAccessRequestUseCases(conn).create(
+        user_id=user_id,
+        request_type="claim_ownership",
+        warehouse_artist_id=warehouse_artist_id,
+        relationship_type="artist_self",
+        evidence_url="https://evidence.test/046",
+    )
+
+
+def _create_new(conn, *, user_id: int, display_name: str):
+    return ArtistAccessRequestUseCases(conn).create(
+        user_id=user_id,
+        request_type="create_new",
+        proposed_display_name=display_name,
+        relationship_type="artist_self",
+        accuracy_attested=True,
+    )
+
+
 def _profile_with_owner(conn, *, owner_id: int, warehouse_id=101, org_id=0):
     profile = _create_profile(
         conn,
@@ -139,7 +164,9 @@ def test_B_mine_one(identity_conn):
     assert items[0]["artist_profile_id"] == profile["id"]
     assert items[0]["membership_role"] == "owner"
     assert "artist_space.view" in items[0]["permissions"]
-    assert items[0]["organization_id"] == 0
+    # Spec 051: touching a sentinel-backed profile migrates it onto a hidden
+    # artist workspace, so organization_id is never 0 once listed.
+    assert items[0]["organization_id"] != INDEPENDENT_ORG_ID
 
 
 def test_C_mine_many(identity_conn):
@@ -185,9 +212,7 @@ def test_E_user_a_isolation_from_b(identity_conn):
 
 def test_F_pending_claim_no_membership(identity_conn):
     demo = _uid(identity_conn, "demo")
-    req = ArtistAccessRequestUseCases(identity_conn).create(
-        user_id=demo, request_type="claim_ownership", warehouse_artist_id=101
-    )
+    req = _claim(identity_conn, user_id=demo)
     assert req["status"] == "pending"
     assert ArtistSpaceUseCases(identity_conn).list_mine(demo) == []
 
@@ -195,9 +220,7 @@ def test_F_pending_claim_no_membership(identity_conn):
 def test_G_approve_creates_membership(identity_conn):
     demo = _uid(identity_conn, "demo")
     admin = _uid(identity_conn, "admin")
-    req = ArtistAccessRequestUseCases(identity_conn).create(
-        user_id=demo, request_type="claim_ownership", warehouse_artist_id=101
-    )
+    req = _claim(identity_conn, user_id=demo)
     result = PlatformArtistRequestUseCases(identity_conn).approve(
         user_id=admin, request_id=req["id"]
     )
@@ -215,9 +238,7 @@ def test_G_approve_creates_membership(identity_conn):
 def test_H_reject_no_membership(identity_conn):
     demo = _uid(identity_conn, "demo")
     admin = _uid(identity_conn, "admin")
-    req = ArtistAccessRequestUseCases(identity_conn).create(
-        user_id=demo, request_type="claim_ownership", warehouse_artist_id=101
-    )
+    req = _claim(identity_conn, user_id=demo)
     PlatformArtistRequestUseCases(identity_conn).reject(
         user_id=admin, request_id=req["id"], reason="nope"
     )
@@ -589,11 +610,7 @@ def test_K_engineer_identity_no_artist_access(identity_conn):
 def test_L_platform_admin_review_without_becoming_member(identity_conn):
     demo = _uid(identity_conn, "demo")
     admin = _uid(identity_conn, "admin")
-    req = ArtistAccessRequestUseCases(identity_conn).create(
-        user_id=demo,
-        request_type="create_new",
-        proposed_display_name="Brand New Act",
-    )
+    req = _create_new(identity_conn, user_id=demo, display_name="Brand New Act")
     result = PlatformArtistRequestUseCases(identity_conn).approve(
         user_id=admin, request_id=req["id"]
     )
@@ -602,17 +619,19 @@ def test_L_platform_admin_review_without_becoming_member(identity_conn):
     assert len(ArtistSpaceUseCases(identity_conn).list_mine(demo)) == 1
 
 
-def test_create_new_independent_org_id_zero(identity_conn):
+def test_create_new_gets_hidden_artist_workspace(identity_conn):
+    """Spec 051 replaced the organization_id = 0 sentinel with a hidden tenant."""
     other = _uid_email(identity_conn, "other046@example.com")
     admin = _uid(identity_conn, "admin")
-    req = ArtistAccessRequestUseCases(identity_conn).create(
-        user_id=other,
-        request_type="create_new",
-        proposed_display_name="Indie Solo",
-    )
+    req = _create_new(identity_conn, user_id=other, display_name="Indie Solo")
     PlatformArtistRequestUseCases(identity_conn).approve(user_id=admin, request_id=req["id"])
     items = ArtistSpaceUseCases(identity_conn).list_mine(other)
-    assert items[0]["organization_id"] == 0
+    organization_id = items[0]["organization_id"]
+    assert organization_id != INDEPENDENT_ORG_ID
+    row = identity_conn.execute(
+        "SELECT organization_type FROM app_organization WHERE id = ?", [organization_id]
+    ).fetchone()
+    assert row and row[0] == ARTIST_WORKSPACE_TYPE
 
 
 def test_request_access_owner_approves(identity_conn):

@@ -33,6 +33,7 @@ export class LikedComponent implements OnInit {
 
   private favStore = inject(FavoritesStore);
   private destroyRef = inject(DestroyRef);
+  private readonly favoriteIds$ = toObservable(this.favStore.favoriteIds);
 
   tracks = signal<FavoriteTrack[]>([]);
   isLoading = signal(true);
@@ -42,7 +43,7 @@ export class LikedComponent implements OnInit {
 
   ngOnInit() {
     this.loadFavorites();
-    toObservable(this.favStore.favoriteIds)
+    this.favoriteIds$
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadFavorites());
   }

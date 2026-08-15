@@ -1,7 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { catchError, of } from 'rxjs';
 import { CatalogPublishingApiService } from '../services/catalog-publishing.api';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { PortalSummary, publishingUiBucket } from '../models/catalog-publishing.models';
@@ -121,25 +120,26 @@ export class ArtistProfilePage implements OnInit {
     if (!this.orgId) return;
     this.loading = true;
     this.error = null;
-    this.api
-      .portalSummary(this.orgId)
-      .pipe(catchError(() => of(null)))
-      .subscribe({
-        next: (s) => {
-          this.summary = s;
-          const counts = s?.status_counts ?? {};
-          this.countDraft = counts['draft'] ?? 0;
-          this.countPublished = counts['published'] ?? 0;
-          this.countReview = Object.entries(counts).reduce((acc, [k, v]) => {
-            if (publishingUiBucket(k) === 'in_review') return acc + v;
-            return acc;
-          }, 0);
-          this.loading = false;
-        },
-        error: () => {
-          this.summary = null;
-          this.loading = false;
-        },
-      });
+    this.api.portalSummary(this.orgId).subscribe({
+      next: (s) => {
+        this.summary = s;
+        const counts = s?.status_counts ?? {};
+        this.countDraft = counts['draft'] ?? 0;
+        this.countPublished = counts['published'] ?? 0;
+        this.countReview = Object.entries(counts).reduce((acc, [k, v]) => {
+          if (publishingUiBucket(k) === 'in_review') return acc + v;
+          return acc;
+        }, 0);
+        this.loading = false;
+      },
+      error: () => {
+        this.summary = null;
+        this.countDraft = 0;
+        this.countPublished = 0;
+        this.countReview = 0;
+        this.loading = false;
+        this.error = 'No se pudo cargar el resumen del catálogo.';
+      },
+    });
   }
 }

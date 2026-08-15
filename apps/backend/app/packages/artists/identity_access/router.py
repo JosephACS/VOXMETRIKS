@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 import duckdb
 
@@ -41,9 +41,24 @@ def _ctx(
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 
+class ExternalIdentifierBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    system_code: str = Field(min_length=1, max_length=40)
+    external_value: str = Field(min_length=1, max_length=200)
+
+
 class PatchProfileBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     display_name: Optional[str] = None
     legal_name: Optional[str] = None
+    bio: Optional[str] = None
+    country_code: Optional[str] = None
+    primary_genre: Optional[str] = None
+    website_url: Optional[str] = None
+    image_url: Optional[str] = None
+    external_identifiers: Optional[list[ExternalIdentifierBody]] = None
 
 
 class InviteBody(BaseModel):
@@ -56,11 +71,17 @@ class ChangeRoleBody(BaseModel):
 
 
 class AccessRequestCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     request_type: str
     warehouse_artist_id: Optional[int] = None
     target_artist_profile_id: Optional[int] = None
     proposed_display_name: Optional[str] = None
     proposed_role: Optional[str] = "member"
+    relationship_type: Optional[str] = None
+    evidence_url: Optional[str] = None
+    evidence_note: Optional[str] = None
+    accuracy_attested: bool = False
 
 
 class RejectBody(BaseModel):
@@ -109,6 +130,16 @@ def patch_artist_space_profile(
             user_id=ctx["user_id"],
             display_name=body.display_name,
             legal_name=body.legal_name,
+            bio=body.bio,
+            country_code=body.country_code,
+            primary_genre=body.primary_genre,
+            website_url=body.website_url,
+            image_url=body.image_url,
+            external_identifiers=(
+                [e.model_dump() for e in body.external_identifiers]
+                if body.external_identifiers is not None
+                else None
+            ),
         )
     except ArtistIdentityError as e:
         raise_identity_http(e)
@@ -298,6 +329,20 @@ def reject_artist_access_request(
 # ── Access requests (applicant) ───────────────────────────────────────────────
 
 
+@artist_access_router.get("/discover")
+def discover_artists(
+    search: Optional[str] = Query(default=None, max_length=120),
+    limit: int = Query(20, ge=1, le=100),
+    ctx: dict = Depends(_ctx),
+) -> dict[str, Any]:
+    try:
+        return ArtistAccessRequestUseCases(ctx["conn"]).discover(
+            user_id=ctx["user_id"], search=search, limit=limit
+        )
+    except ArtistIdentityError as e:
+        raise_identity_http(e)
+
+
 @artist_access_router.post("/requests", status_code=201)
 def create_access_request(
     body: AccessRequestCreateBody, ctx: dict = Depends(_ctx)
@@ -310,6 +355,10 @@ def create_access_request(
             target_artist_profile_id=body.target_artist_profile_id,
             proposed_display_name=body.proposed_display_name,
             proposed_role=body.proposed_role,
+            relationship_type=body.relationship_type,
+            evidence_url=body.evidence_url,
+            evidence_note=body.evidence_note,
+            accuracy_attested=body.accuracy_attested,
         )
     except ArtistIdentityError as e:
         raise_identity_http(e)

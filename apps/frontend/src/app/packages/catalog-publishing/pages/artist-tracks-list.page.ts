@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { catchError, forkJoin, map, of } from 'rxjs';
+import { catchError, forkJoin, map } from 'rxjs';
 import { CatalogPublishingApiService } from '../services/catalog-publishing.api';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import {
@@ -133,47 +133,49 @@ export class ArtistTracksListPage implements OnInit {
     this.api
       .listPortalReleases(orgId)
       .pipe(
-        catchError(() =>
-          this.api.listReleases(orgId).pipe(catchError(() => of([] as ReleaseSubmission[]))),
-        ),
+        catchError(() => this.api.listReleases(orgId)),
         map((releases) => releases ?? []),
       )
-      .subscribe((releases) => {
-        if (!releases.length) {
-          this.rows = [];
-          this.loading = false;
-          return;
-        }
-        const limited = releases.slice(0, 25);
-        forkJoin(
-          limited.map((r) =>
-            this.api.getRelease(orgId, r.id).pipe(
-              catchError(() => of(null)),
-              map((detail) => ({ release: r, detail })),
-            ),
-          ),
-        ).subscribe({
-          next: (packs) => {
-            const rows: TrackRow[] = [];
-            for (const p of packs) {
-              if (!p.detail) continue;
-              const privateRel = hasPrivateMedia(p.detail.submission, p.detail.tracks);
-              for (const t of p.detail.tracks) {
-                rows.push({
-                  track: t,
-                  release: p.detail.submission,
-                  privateAudio: privateRel && !!t.audio_media_id,
-                });
-              }
-            }
-            this.rows = rows;
-            this.loading = false;
-          },
-          error: () => {
+      .subscribe({
+        next: (releases) => {
+          if (!releases.length) {
             this.rows = [];
             this.loading = false;
-          },
-        });
+            return;
+          }
+          const limited = releases.slice(0, 25);
+          forkJoin(
+            limited.map((r) =>
+              this.api.getRelease(orgId, r.id).pipe(map((detail) => ({ release: r, detail }))),
+            ),
+          ).subscribe({
+            next: (packs) => {
+              const rows: TrackRow[] = [];
+              for (const p of packs) {
+                const privateRel = hasPrivateMedia(p.detail.submission, p.detail.tracks);
+                for (const t of p.detail.tracks) {
+                  rows.push({
+                    track: t,
+                    release: p.detail.submission,
+                    privateAudio: privateRel && !!t.audio_media_id,
+                  });
+                }
+              }
+              this.rows = rows;
+              this.loading = false;
+            },
+            error: () => {
+              this.rows = [];
+              this.loading = false;
+              this.error = 'No se pudieron cargar las pistas.';
+            },
+          });
+        },
+        error: () => {
+          this.rows = [];
+          this.loading = false;
+          this.error = 'No se pudieron cargar los lanzamientos.';
+        },
       });
   }
 

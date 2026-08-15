@@ -28,6 +28,7 @@ export const CATALOG_PUBLISHING_ROUTES: Routes = [
   {
     path: 'artist/releases/new',
     canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    data: { releaseContext: 'organization' },
     loadComponent: () =>
       import('./pages/artist-release-wizard.page').then((m) => m.ArtistReleaseWizardPage),
     title: 'publishing.wizard.title',

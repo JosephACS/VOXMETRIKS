@@ -80,7 +80,7 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 043 | [043-professional-ux-visual-redesign](043-professional-ux-visual-redesign/) |
 | 044 | [044-product-consolidation-data-clarity](044-product-consolidation-data-clarity/) |
 
-## 045–048 (cerradas; movidas desde features/)
+## 045–050 (cerradas; movidas desde features/)
 
 | ID | Carpeta | Estado |
 |----|---------|--------|
@@ -89,9 +89,10 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 047 | [047-repository-recovery-hardening](047-repository-recovery-hardening/) | cerrado |
 | 048 | [048-airflow-elt-orchestration](048-airflow-elt-orchestration/) | cerrado; smoke Docker/Airflow verificado |
 | 049 | [049-taf14-strategic-agg-closure](049-taf14-strategic-agg-closure/) | cerrado; TAF14 Estratégico AGG OE-01…OE-08; smoke desktop/móvil |
+| 050 | [050-identity-first-access](050-identity-first-access/) | cerrado; bootstrap de sesión, primer acceso e invitaciones durables |
 
 Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-**050** — aún no creada; solo bajo `.specify/features/` cuando se abra.
+**051** está activa bajo `.specify/features/`; el siguiente ID disponible será **052** tras su cierre.

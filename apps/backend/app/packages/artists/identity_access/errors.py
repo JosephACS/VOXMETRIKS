@@ -27,6 +27,12 @@ class ConflictError(ArtistIdentityError):
     code = "conflict"
 
 
+class EvidenceRequired(ValidationError):
+    """Spec 051 — claim/create requests need relationship + evidence/attestation."""
+
+    code = "artist_evidence_required"
+
+
 class InvitationError(ArtistIdentityError):
     code = "invitation_error"
 

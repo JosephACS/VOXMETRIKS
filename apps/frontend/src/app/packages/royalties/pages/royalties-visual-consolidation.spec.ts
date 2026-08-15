@@ -116,6 +116,7 @@ async function configureDashboard(opts: { canPayout: boolean; canView: boolean }
       },
     ],
   }).compileComponents();
+  await TestBed.inject(I18nService).ensureEnterpriseEs();
 }
 
 function payoutLinks(root: HTMLElement): HTMLAnchorElement[] {
@@ -187,6 +188,7 @@ describe('Royalties visual consolidation', () => {
         { provide: OrganizationContextService, useValue: { organizationId: () => 1 } },
       ],
     }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
 
     const fixture = TestBed.createComponent(PayoutsListPage);
     fixture.detectChanges();

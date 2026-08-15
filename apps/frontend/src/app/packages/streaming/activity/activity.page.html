@@ -148,7 +148,7 @@
           <li class="rank-item">
             <div class="meta">
               <div class="title">{{ titleOf(t) }}</div>
-              <div class="sub">{{ artistOf(t) }} · {{ t.played_at }}</div>
+              <div class="sub">{{ artistOf(t) }} · {{ t.played_at | localeDate:true }}</div>
               @if (t.source_unavailable) {
                 <span class="badge-unavail">{{ 'activity.unavailable' | t:lang() }}</span>
               }

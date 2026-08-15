@@ -93,6 +93,7 @@ export class SpaceContextService {
       hasStaffAccess,
       canAccessOrgModule: (moduleKind, requiredPermission) =>
         this.orgCtx.canAccessModule(moduleKind, requiredPermission ?? null),
+      canAccessArtistPermission: (permission) => this.artistCtx.can(permission),
       productSurface: {
         activeSpaceKind: kind,
         navCtx: {

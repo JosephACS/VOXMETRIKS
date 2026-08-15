@@ -66,6 +66,10 @@ htmlcov/
 automation/playwright/e2e/.auth/
 **/test-results/
 **/playwright-report/
+**/test-results-051/
+**/playwright-report-051/
+automation/playwright/test-results-051/
+automation/playwright/playwright-report-051/
 docs/uml/_rendered/
 pytest-*.txt
 

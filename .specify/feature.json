@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/050-identity-first-access",
-  "previous_feature_directory": ".specify/history/049-taf14-strategic-agg-closure",
+  "feature_directory": ".specify/features/051-artist-professional-journey",
+  "previous_feature_directory": ".specify/history/050-identity-first-access",
   "status": "active",
-  "feature_id": "050",
-  "short_name": "identity-first-access",
-  "note": "Active: consolidate identity, session bootstrap, first-run intent and product-space activation. No checkout, publishing or dashboard scope."
+  "feature_id": "051",
+  "short_name": "artist-professional-journey",
+  "note": "Active: canonical artist claim/create/access, editable Artist Space, team, publishing and independent review. Payments, royalties, AI and dashboards are excluded."
 }

@@ -29,18 +29,40 @@ export const ARTIST_SPACE_ROUTES: Routes = [
     title: 'artistSpace.profile.title',
   },
   {
-    path: 'artist-space/tracks',
-    canActivate: [authGuard, artistRequiredGuard],
+    path: 'artist-space/music',
+    canActivate: [
+      authGuard,
+      artistRequiredGuard,
+      artistPermissionGuard('artist_space.catalog.view'),
+    ],
     loadComponent: () =>
-      import('./pages/artist-space-tracks.page').then((m) => m.ArtistSpaceTracksPage),
-    title: 'artistSpace.tracks.title',
+      import('./pages/artist-space-music.page').then((m) => m.ArtistSpaceMusicPage),
+    title: 'artistSpace.music.title',
+  },
+  {
+    path: 'artist-space/releases/new',
+    canActivate: [
+      authGuard,
+      artistRequiredGuard,
+      artistPermissionGuard('artist_space.release.create'),
+    ],
+    data: { releaseContext: 'artist' },
+    loadComponent: () =>
+      import('../catalog-publishing/pages/artist-release-wizard.page').then(
+        (m) => m.ArtistReleaseWizardPage,
+      ),
+    title: 'publishing.wizard.title',
+  },
+  // Legacy split surfaces now live inside the single Music page (051).
+  {
+    path: 'artist-space/tracks',
+    pathMatch: 'full',
+    redirectTo: 'artist-space/music',
   },
   {
     path: 'artist-space/releases',
-    canActivate: [authGuard, artistRequiredGuard],
-    loadComponent: () =>
-      import('./pages/artist-space-releases.page').then((m) => m.ArtistSpaceReleasesPage),
-    title: 'artistSpace.releases.title',
+    pathMatch: 'full',
+    redirectTo: 'artist-space/music',
   },
   {
     path: 'artist-space/team',

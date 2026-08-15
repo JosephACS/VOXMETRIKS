@@ -5,6 +5,7 @@
  */
 
 import { OrgModuleKind } from '../../packages/organizations/organization-access';
+import type { ArtistSpacePermission } from '../../packages/artist-space/models/artist-space.models';
 import { decideProductSurfaceAccess } from '../guards/product-surface.policy';
 import type { NavAccessContext } from '../navigation/nav-access.policy';
 import { SpaceKind } from './space.models';
@@ -23,6 +24,11 @@ export interface SpaceNavItem {
   orgModule?: OrgModuleKind;
   /** Optional permission code — must exist in backend/FE catalogs; never invent. */
   orgPermission?: string;
+  /**
+   * Artist Space permission from the membership manifest (051).
+   * Mirrors artistPermissionGuard; hidden when the manifest lacks the code.
+   */
+  artistPermission?: ArtistSpacePermission | string;
   /** When true, hide unless identity staff (admin|engineer) or platform_admin. */
   requireStaff?: boolean;
 }
@@ -39,6 +45,11 @@ export interface SpaceNavFilterContext {
     requiredPermission?: string | null,
   ) => boolean;
   hasStaffAccess: boolean;
+  /**
+   * Artist Space permissions from `artist-space/mine` (server manifest).
+   * Absent callback means "no artist manifest loaded" — artist-gated items stay hidden.
+   */
+  canAccessArtistPermission?: (permission: string) => boolean;
   /**
    * Same product-surface decision used by productSurfaceGuard.
    * Required for org commercial paths that are OUT_OF_PRODUCT outside organization space.
@@ -58,6 +69,9 @@ export function canAnnounceSpaceNavItem(
   ctx: SpaceNavFilterContext,
 ): boolean {
   if (item.requireStaff && !ctx.hasStaffAccess) return false;
+  if (item.artistPermission && !ctx.canAccessArtistPermission?.(item.artistPermission)) {
+    return false;
+  }
   if (item.orgModule) {
     if (!ctx.canAccessOrgModule(item.orgModule, item.orgPermission ?? null)) {
       return false;
@@ -395,6 +409,13 @@ export function spaceNavSectionsFor(
               requireStaff: true,
             },
             {
+              path: '/platform-ops/catalog-reviews',
+              labelKey: 'nav.platformOps.catalogReviews',
+              iconId: 'catalog',
+              exact: false,
+              requireStaff: true,
+            },
+            {
               path: '/platform-ops/audio-unresolved',
               labelKey: 'nav.platformOps.audioUnresolved',
               iconId: 'unresolved_audio',
@@ -424,24 +445,21 @@ export function spaceNavSectionsFor(
               labelKey: 'spaces.nav.artist.profile',
               iconId: 'artist',
               exact: true,
+              artistPermission: 'artist_space.view',
             },
             {
-              path: '/artist-space/tracks',
-              labelKey: 'spaces.nav.artist.tracks',
+              path: '/artist-space/music',
+              labelKey: 'spaces.nav.artist.music',
               iconId: 'catalog',
               exact: false,
-            },
-            {
-              path: '/artist-space/releases',
-              labelKey: 'spaces.nav.artist.releases',
-              iconId: 'playlists',
-              exact: false,
+              artistPermission: 'artist_space.catalog.view',
             },
             {
               path: '/artist-space/team',
               labelKey: 'spaces.nav.artist.team',
               iconId: 'team',
               exact: true,
+              artistPermission: 'artist_space.view',
             },
           ],
         },

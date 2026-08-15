@@ -18,7 +18,10 @@ from app.core.logging import get_logger
 from app.packages.artists.identity_access.use_cases import ArtistSpaceUseCases
 from app.packages.identity.services.profile_security import get_pin_status
 from app.packages.identity.services.user_storage import ensure_user_tables, parse_preferences
-from app.packages.organizations.domain.enums import OrganizationStatus
+from app.packages.organizations.domain.enums import (
+    HIDDEN_ORGANIZATION_TYPES,
+    OrganizationStatus,
+)
 from app.packages.organizations.infrastructure.repositories.organization_repository import (
     OrganizationRepository,
 )
@@ -139,6 +142,9 @@ def _discover_spaces(
     try:
         orgs = OrganizationRepository(conn).list_for_user(user_id)
         for org in orgs:
+            if org.organization_type in HIDDEN_ORGANIZATION_TYPES:
+                # Hidden artist-workspace tenants are reachable only as artist spaces.
+                continue
             allowed = org.status not in _ORG_BLOCKED
             spaces.append(
                 _space(

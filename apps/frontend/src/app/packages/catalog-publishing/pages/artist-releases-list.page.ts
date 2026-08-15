@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { catchError, of } from 'rxjs';
+import { catchError } from 'rxjs';
 import { CatalogPublishingApiService } from '../services/catalog-publishing.api';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import {
@@ -144,21 +144,21 @@ export class ArtistReleasesListPage implements OnInit {
     this.loading = true;
     this.error = null;
 
-    this.api
-      .portalSummary(this.orgId)
-      .pipe(catchError(() => of(null)))
-      .subscribe((s) => {
+    this.api.portalSummary(this.orgId).subscribe({
+      next: (s) => {
         this.summary = s;
         this.recomputeCounts();
-      });
+      },
+      error: () => {
+        // Summary is secondary to the release list; keep counts at zero on failure.
+        this.summary = null;
+        this.recomputeCounts();
+      },
+    });
 
     this.api
       .listPortalReleases(this.orgId)
-      .pipe(
-        catchError(() =>
-          this.api.listReleases(this.orgId!).pipe(catchError(() => of([] as ReleaseSubmission[]))),
-        ),
-      )
+      .pipe(catchError(() => this.api.listReleases(this.orgId!)))
       .subscribe({
         next: (rows) => {
           this.rows = rows ?? [];
@@ -168,7 +168,7 @@ export class ArtistReleasesListPage implements OnInit {
         error: () => {
           this.rows = [];
           this.loading = false;
-          this.error = null;
+          this.error = 'No se pudieron cargar los lanzamientos.';
         },
       });
   }
