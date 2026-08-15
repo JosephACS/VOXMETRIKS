@@ -23,6 +23,12 @@ export class CustomerSuccessApiService {
     });
   }
 
+  latestHealth(orgId: number): Observable<unknown> {
+    return this.http.get(`${base}/customer-success/health/latest`, {
+      headers: this.orgHeaders(orgId),
+    });
+  }
+
   createOnboarding(orgId: number): Observable<unknown> {
     return this.http.post(`${base}/customer-success/onboarding`, null, {
       headers: this.orgHeaders(orgId),

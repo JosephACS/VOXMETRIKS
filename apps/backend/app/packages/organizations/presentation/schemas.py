@@ -176,6 +176,15 @@ class OrganizationCreateResponse(BaseModel):
     journey: Optional[OrganizationJourneyOut] = None
 
 
+class SubscriptionAccessOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    has_subscription: bool = False
+    status: Optional[str] = None
+    access_state: Optional[str] = None
+    tier: Optional[str] = None
+
+
 class CurrentOrganizationResponse(BaseModel):
     context: Literal["none", "active", "invalid", "access_revoked"]
     organization: Optional[OrganizationOut] = None
@@ -183,6 +192,7 @@ class CurrentOrganizationResponse(BaseModel):
     roles: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
     source: Optional[str] = None
+    subscription_access: Optional[SubscriptionAccessOut] = None
 
 
 class MemberActionRequest(BaseModel):

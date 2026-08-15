@@ -140,9 +140,15 @@ describe('OrganizationContextService (I4)', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // Drain soft subscription enrichment fired after bootstrap/activate.
+    for (const req of http.match((r) => r.method === 'GET' && /\/subscriptions(\?|$)/.test(r.url))) {
+      req.flush({ items: [], page: 1, limit: 20, total: 0 });
+    }
+    http.verify();
+  });
 
-  function flushBootstrap(list: object[], current: object): void {
+  async function flushBootstrap(list: object[], current: object): Promise<void> {
     const listReq = http.expectOne(`${base}/organizations`);
     const curReq = http.expectOne(`${base}/organizations/current`);
     listReq.flush(list);
@@ -151,7 +157,7 @@ describe('OrganizationContextService (I4)', () => {
 
   it('bootstraps none state without organization', async () => {
     const p = ctx.bootstrap();
-    flushBootstrap([], { context: 'none' });
+    await flushBootstrap([], { context: 'none' });
     await p;
     expect(ctx.contextKind()).toBe('none');
     expect(ctx.hasOrganization()).toBe(false);
@@ -160,7 +166,7 @@ describe('OrganizationContextService (I4)', () => {
 
   it('bootstraps active context with permissions', async () => {
     const p = ctx.bootstrap();
-    flushBootstrap(
+    await flushBootstrap(
       [{ id: 1, display_name: 'A', slug: 'a', organization_type: 'label', timezone: 'UTC', default_currency: 'USD', status: 'active', created_by: 1, created_at: '', updated_at: '' }],
       {
         context: 'active',
@@ -178,7 +184,7 @@ describe('OrganizationContextService (I4)', () => {
 
   it('clears previous permissions when switching organization', async () => {
     const boot = ctx.bootstrap();
-    flushBootstrap(
+    await flushBootstrap(
       [
         { id: 1, display_name: 'A', slug: 'a', organization_type: 'label', timezone: 'UTC', default_currency: 'USD', status: 'active', created_by: 1, created_at: '', updated_at: '' },
         { id: 2, display_name: 'B', slug: 'b', organization_type: 'label', timezone: 'UTC', default_currency: 'USD', status: 'active', created_by: 1, created_at: '', updated_at: '' },
@@ -220,16 +226,15 @@ describe('OrganizationContextService (I4)', () => {
   it('ensureReady shares in-flight bootstrap across concurrent callers', async () => {
     const p1 = ctx.ensureReady();
     const p2 = ctx.ensureReady();
-    flushBootstrap([], { context: 'none' });
+    await flushBootstrap([], { context: 'none' });
     await Promise.all([p1, p2]);
     expect(ctx.hasOrganization()).toBe(false);
     expect(ctx.organizationId()).toBeNull();
-    http.verify();
   });
 
   it('enterPersonalMode clears active org so selector cannot disagree with null id', async () => {
     const boot = ctx.bootstrap();
-    flushBootstrap(
+    await flushBootstrap(
       [
         {
           id: 1,

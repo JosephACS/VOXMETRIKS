@@ -173,9 +173,9 @@ export class OrganizationContextService {
         this._roles.set(current.roles ?? []);
         this._permissions.set(current.permissions ?? []);
         this.applySubscriptionAccess(current.subscription_access);
-        // Await enrichment so ensureReady()/guards see the canonical tier (soft keeps /current on failure).
+        // Soft enrichment only when the member can list subscriptions (avoid predictable 403).
         if (this.hasPermission('subscription.view')) {
-          await this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
+          void this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
         }
       } else if (
         (current.context === 'none' || current.context === 'invalid') &&
@@ -222,10 +222,22 @@ export class OrganizationContextService {
       });
       return;
     }
+    // Spec 054: /current may return tier without status for members who cannot
+    // list subscriptions — map tier so nav gates match backend module access.
+    let status = access.status ?? null;
+    let accessState = access.access_state ?? null;
+    const tier = String(access.tier || '').toLowerCase();
+    if (!status && tier === 'operational') {
+      status = 'trialing';
+      accessState = accessState ?? 'full';
+    } else if (!status && tier === 'recovery') {
+      status = 'past_due';
+      accessState = accessState ?? 'limited';
+    }
     this._subscription.set({
-      has_subscription: !!access.has_subscription,
-      status: access.status ?? null,
-      access_state: access.access_state ?? null,
+      has_subscription: !!access.has_subscription || !!status,
+      status,
+      access_state: accessState,
       entitlements: this._subscription()?.entitlements ?? null,
     });
   }
@@ -246,6 +258,10 @@ export class OrganizationContextService {
       );
       const items = page?.items ?? [];
       if (!items.length) {
+        // Soft refresh must not downgrade a tier already known from /current|/activate.
+        if (options?.soft && this._subscription()?.has_subscription) {
+          return;
+        }
         this._subscription.set({
           has_subscription: false,
           status: null,
@@ -317,7 +333,7 @@ export class OrganizationContextService {
           this._permissions.set(current.permissions ?? []);
           this.applySubscriptionAccess(current.subscription_access);
           if (this.hasPermission('subscription.view')) {
-            await this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
+            void this.refreshSubscriptionSnapshot(current.organization.id, { soft: true });
           }
         } else {
           this.clearOrganizationScopedState();

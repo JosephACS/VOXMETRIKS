@@ -64,17 +64,22 @@ export function homePathForSpace(space: AppSpace): string {
     case 'personal':
       return '/discover';
     case 'organization':
-      // Staff org space lands on Workpanel (org hub stays in nav).
-      return '/workpanel';
+      // Spec 054: org space lands on the org hub — never staff Workpanel (403 for members).
+      return space.organizationId != null
+        ? `/organizations/${space.organizationId}`
+        : '/organizations';
     case 'artist':
       return '/artist-space';
     case 'data_ops':
       // Estado técnico canónico (Workpanel). /elt-pipeline = Ingeniería de datos.
       return '/workpanel';
     case 'platform_admin':
-      // Platform Ops stays deep-linkable; primary landing is Workpanel.
+      // Platform Ops stays deep-linkable; primary landing is Workpanel for staff.
       return '/workpanel';
-    default:
+    default: {
+      const _exhaustive: never = space.kind;
+      void _exhaustive;
       return '/discover';
+    }
   }
 }

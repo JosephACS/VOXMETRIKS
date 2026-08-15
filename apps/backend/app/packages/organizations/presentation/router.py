@@ -11,6 +11,9 @@ from fastapi import APIRouter, Depends, Query
 from app.core.database import get_write_conn
 from app.core.config import get_settings
 from app.packages.organizations.application.context import OrganizationContext
+from app.packages.organizations.application.module_access import (
+    get_org_subscription_snapshot,
+)
 from app.packages.organizations.application.dto import (
     ActorContext,
     CreateOrganizationCommand,
@@ -73,6 +76,7 @@ from app.packages.organizations.presentation.schemas import (
     AuditEntryOut,
     CloseOrganizationRequest,
     CurrentOrganizationResponse,
+    SubscriptionAccessOut,
     InvitationCreateRequest,
     InvitationCreateResponse,
     InvitationOut,
@@ -315,6 +319,7 @@ def get_current_organization(
         return CurrentOrganizationResponse(context=state)  # type: ignore[arg-type]
     org = OrganizationRepository(conn).get_by_id(ctx.organization_id)
     member = MembershipRepository(conn).get_by_id(ctx.membership_id)
+    snap = get_org_subscription_snapshot(conn, ctx.organization_id)
     return CurrentOrganizationResponse(
         context="active",
         organization=_org_out(org),
@@ -322,6 +327,12 @@ def get_current_organization(
         roles=list(ctx.role_codes),
         permissions=sorted(ctx.permission_codes),
         source=ctx.source,
+        subscription_access=SubscriptionAccessOut(
+            has_subscription=bool(snap.get("has_subscription")),
+            status=snap.get("status"),
+            access_state=snap.get("access_state"),
+            tier=snap.get("tier"),
+        ),
     )
 
 
@@ -515,6 +526,7 @@ def activate_organization(
                 role_codes.append(str(row[0]))
             perms.update(auth.list_role_permissions(mr.role_id))
         _ = result
+        snap = get_org_subscription_snapshot(conn, organization_id)
         return CurrentOrganizationResponse(
             context="active",
             organization=_org_out(org),
@@ -522,6 +534,12 @@ def activate_organization(
             roles=role_codes,
             permissions=sorted(perms),
             source="path",
+            subscription_access=SubscriptionAccessOut(
+                has_subscription=bool(snap.get("has_subscription")),
+                status=snap.get("status"),
+                access_state=snap.get("access_state"),
+                tier=snap.get("tier"),
+            ),
         )
     except Exception as exc:
         raise_domain_http(exc)

@@ -40,6 +40,9 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
   });
 
   afterEach(() => {
+    for (const req of http.match(() => true)) {
+      req.flush({});
+    }
     http.verify();
     TestBed.resetTestingModule();
   });
@@ -47,9 +50,15 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
   async function flushOrgBootstrap(current: object): Promise<void> {
     http.expectOne(`${base}/organizations`).flush([orgRow]);
     http.expectOne(`${base}/organizations/current`).flush(current);
-    // Let runBootstrap apply /current and start subscription enrichment.
     await Promise.resolve();
-    await Promise.resolve();
+  }
+
+  function drainSoftSubscriptions(): void {
+    for (const req of http.match(
+      (r) => r.method === 'GET' && /\/subscriptions(\?|$)/.test(r.url),
+    )) {
+      req.flush({ items: [], page: 1, limit: 20, total: 0 });
+    }
   }
 
   async function flushActiveSubscriptionEnrichment(opts?: {
@@ -57,6 +66,7 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
     access_state?: string;
     empty?: boolean;
   }): Promise<void> {
+    await Promise.resolve();
     const listReq = http.expectOne(
       (r) => r.url === `${base}/subscriptions` && r.headers.get('X-Organization-Id') === '1',
     );
@@ -87,12 +97,9 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
     await Promise.resolve();
   }
 
-  it('1–5: incomplete /current + active listSubscriptions → ready only after enrichment, operational deep link allowed', async () => {
-    let ensureReadySettled = false;
+  it('054: /current tier makes operational ready without blocking on soft enrichment', async () => {
     const boot = ctx.bootstrap();
-    const readyProbe = ctx.ensureReady().then(() => {
-      ensureReadySettled = true;
-    });
+    const readyProbe = ctx.ensureReady();
 
     await flushOrgBootstrap({
       context: 'active',
@@ -107,29 +114,21 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
       },
       roles: ['owner'],
       permissions: ['organization.view', 'subscription.view', 'member.view', 'royalty.view'],
-      // Incomplete gate from /current (missing status) — would resolve as onboarding alone.
       subscription_access: {
         has_subscription: true,
         status: null,
         access_state: null,
+        tier: 'operational',
       },
     });
 
-    // Bootstrap / ensureReady must not finish before subscription enrichment.
-    expect(ensureReadySettled).toBe(false);
-    expect(ctx.status()).toBe('loading');
-    expect(ctx.hasOrganization()).toBe(true);
-    expect(ctx.accessTier()).toBe('onboarding');
-    expect(ctx.canAccessModule('operational')).toBe(false);
-
-    await flushActiveSubscriptionEnrichment();
     await Promise.all([boot, readyProbe]);
-
-    expect(ensureReadySettled).toBe(true);
     expect(ctx.status()).toBe('ready');
     expect(ctx.accessTier()).toBe('operational');
-    expect(ctx.canAccessModule('operational')).toBe(true);
     expect(ctx.canAccessModule('operational', 'royalty.view')).toBe(true);
+
+    await flushActiveSubscriptionEnrichment();
+    expect(ctx.accessTier()).toBe('operational');
   });
 
   it('6: soft enrichment failure keeps /current gate (no network downgrade)', async () => {
@@ -154,19 +153,22 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
       },
     });
 
+    await boot;
+    expect(ctx.status()).toBe('ready');
+    expect(ctx.accessTier()).toBe('operational');
+
     http
       .expectOne(
         (r) => r.url === `${base}/subscriptions` && r.headers.get('X-Organization-Id') === '1',
       )
       .flush({ detail: 'boom' }, { status: 500, statusText: 'Server Error' });
 
-    await boot;
-    expect(ctx.status()).toBe('ready');
+    await Promise.resolve();
     expect(ctx.accessTier()).toBe('operational');
     expect(ctx.canAccessModule('operational')).toBe(true);
   });
 
-  it('7: concurrent ensureReady callers share one bootstrap including enrichment', async () => {
+  it('7: concurrent ensureReady callers share one bootstrap', async () => {
     const p1 = ctx.ensureReady();
     const p2 = ctx.ensureReady();
     await flushOrgBootstrap({
@@ -182,12 +184,16 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
       },
       roles: ['owner'],
       permissions: ['organization.view', 'subscription.view'],
-      subscription_access: { has_subscription: false, status: null, access_state: null },
+      subscription_access: {
+        has_subscription: true,
+        status: 'active',
+        access_state: 'full',
+        tier: 'operational',
+      },
     });
-    await flushActiveSubscriptionEnrichment();
     await Promise.all([p1, p2]);
     expect(ctx.accessTier()).toBe('operational');
-    http.verify();
+    drainSoftSubscriptions();
   });
 
   it('8: real onboarding (no subscription) still blocks operational modules', async () => {
@@ -207,14 +213,14 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
       permissions: ['organization.view', 'subscription.view'],
       subscription_access: { has_subscription: false, status: null, access_state: null },
     });
-    await flushActiveSubscriptionEnrichment({ empty: true });
     await boot;
     expect(ctx.accessTier()).toBe('onboarding');
     expect(ctx.canAccessModule('operational')).toBe(false);
     expect(ctx.canAccessModule('onboarding', 'subscription.view')).toBe(true);
+    await flushActiveSubscriptionEnrichment({ empty: true });
   });
 
-  it('activate also awaits subscription enrichment before ready', async () => {
+  it('activate becomes ready from /activate subscription_access; soft enrichment is non-blocking', async () => {
     const boot = ctx.bootstrap();
     http.expectOne(`${base}/organizations`).flush([]);
     http.expectOne(`${base}/organizations/current`).flush({ context: 'none' });
@@ -235,17 +241,19 @@ describe('OrganizationContextService subscription bootstrap (deep-link parity)',
       },
       roles: ['owner'],
       permissions: ['organization.view', 'subscription.view'],
-      subscription_access: { has_subscription: true, status: null, access_state: null },
+      subscription_access: {
+        has_subscription: true,
+        status: null,
+        access_state: null,
+        tier: 'operational',
+      },
     });
     await Promise.resolve();
     http.expectOne(`${base}/organizations`).flush([orgRow]);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(ctx.status()).toBe('loading');
-    await flushActiveSubscriptionEnrichment();
     await act;
     expect(ctx.status()).toBe('ready');
     expect(ctx.accessTier()).toBe('operational');
+    drainSoftSubscriptions();
   });
 });
 

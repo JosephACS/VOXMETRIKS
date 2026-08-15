@@ -11,11 +11,28 @@ import {
   artistSpace,
   platformAdminSpace,
 } from './space.models';
+import {
+  STAFF_CAPABILITY,
+  type ProductSurfaceContext,
+} from '../product-surface';
 
-describe('space models & nav (043 product)', () => {
+function access(
+  partial: Partial<ProductSurfaceContext> & Pick<ProductSurfaceContext, 'activeSpace'>,
+): ProductSurfaceContext {
+  return {
+    ready: true,
+    permissions: new Set(),
+    artistCapabilities: new Set(),
+    staffCapabilities: new Set(),
+    platformRoles: new Set(),
+    ...partial,
+  };
+}
+
+describe('space models & nav (054 product-surface)', () => {
   it('maps home paths per space kind', () => {
     expect(homePathForSpace(personalSpace())).toBe('/discover');
-    expect(homePathForSpace(organizationSpace(3, 'Org'))).toBe('/workpanel');
+    expect(homePathForSpace(organizationSpace(3, 'Org'))).toBe('/organizations/3');
     expect(homePathForSpace(dataOpsSpace())).toBe('/workpanel');
     expect(homePathForSpace(artistSpace(7, 'Act'))).toBe('/artist-space');
     expect(homePathForSpace(platformAdminSpace())).toBe('/workpanel');
@@ -41,7 +58,7 @@ describe('space models & nav (043 product)', () => {
     ]);
   });
 
-  it('organization nav keeps principal hubs plus admin commercial modules', () => {
+  it('organization structural nav keeps principal hubs plus commercial modules', () => {
     const items = spaceNavSectionsFor('organization', { organizationId: 5 }).flatMap(
       (s) => s.items,
     );
@@ -57,16 +74,20 @@ describe('space models & nav (043 product)', () => {
     expect(paths).toContain('/payouts');
     expect(paths).toContain('/customer-success');
     expect(paths).toContain('/support');
+    expect(paths).toContain('/compliance');
     expect(paths).toContain('/account/plans');
     expect(paths).toContain('/account/subscription');
   });
 
-  it('hides org items when canAccessOrgModule returns false', () => {
+  it('filters org items by permissions and tier via product-surface context', () => {
     const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
     const filtered = filterSpaceNavSections(raw, {
-      hasStaffAccess: false,
-      canAccessOrgModule: (module, perm) =>
-        module === 'org_admin_basic' && perm === 'organization.view',
+      productSurfaceContext: access({
+        activeSpace: 'organization',
+        organizationId: 1,
+        organizationTier: 'onboarding',
+        permissions: new Set(['organization.view']),
+      }),
     });
     const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
     expect(paths).toContain('/organizations/1');
@@ -78,33 +99,43 @@ describe('space models & nav (043 product)', () => {
   it('hides operational catalog during onboarding-tier org access', () => {
     const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
     const filtered = filterSpaceNavSections(raw, {
-      hasStaffAccess: true,
-      canAccessOrgModule: (module) => module === 'onboarding' || module === 'org_admin_basic',
-      productSurface: {
-        activeSpaceKind: 'organization',
-        navCtx: { identityRole: 'admin', presentationMode: false },
-      },
+      productSurfaceContext: access({
+        activeSpace: 'organization',
+        organizationId: 1,
+        organizationTier: 'onboarding',
+        permissions: new Set(['organization.view', 'report.view', 'subscription.view']),
+        staffCapabilities: new Set([STAFF_CAPABILITY.shell]),
+      }),
     });
     const paths = filtered.flatMap((s) => s.items.map((i) => i.path));
     expect(paths).toContain('/organizations/1');
     expect(paths).toContain('/workpanel');
-    expect(paths).toContain('/reports');
     expect(paths).not.toContain('/catalog');
+    // report.view alone is not enough without operational tier
+    expect(paths).not.toContain('/reports');
   });
 
-  it('shows reports only for staff in organization space', () => {
+  it('shows reports for report.view members without staff shell', () => {
     const raw = spaceNavSectionsFor('organization', { organizationId: 1 });
     const asMember = filterSpaceNavSections(raw, {
-      hasStaffAccess: false,
-      canAccessOrgModule: () => true,
+      productSurfaceContext: access({
+        activeSpace: 'organization',
+        organizationId: 1,
+        organizationTier: 'operational',
+        permissions: new Set(['organization.view', 'report.view']),
+      }),
     });
-    expect(asMember.flatMap((s) => s.items.map((i) => i.path))).not.toContain('/reports');
+    expect(asMember.flatMap((s) => s.items.map((i) => i.path))).toContain('/reports');
 
-    const asStaff = filterSpaceNavSections(raw, {
-      hasStaffAccess: true,
-      canAccessOrgModule: () => true,
+    const withoutReport = filterSpaceNavSections(raw, {
+      productSurfaceContext: access({
+        activeSpace: 'organization',
+        organizationId: 1,
+        organizationTier: 'operational',
+        permissions: new Set(['organization.view']),
+      }),
     });
-    expect(asStaff.flatMap((s) => s.items.map((i) => i.path))).toContain('/reports');
+    expect(withoutReport.flatMap((s) => s.items.map((i) => i.path))).not.toContain('/reports');
   });
 
   it('engineer nav keeps Estado técnico and Ingeniería de datos on distinct paths', () => {
@@ -126,27 +157,34 @@ describe('space models & nav (043 product)', () => {
     expect(paths).toContain('/reports');
   });
 
-  it('platform admin nav includes commercial modules and Platform Ops entries', () => {
+  it('platform admin nav is platform ops only — no contextless org commercial', () => {
     const paths = spaceNavSectionsFor('platform_admin').flatMap((s) =>
       s.items.map((i) => i.path),
     );
-    expect(paths.slice(0, 4)).toEqual(['/workpanel', '/catalog', '/reports', '/settings']);
+    expect(paths).toContain('/workpanel');
+    expect(paths).toContain('/reports');
+    expect(paths).toContain('/settings');
+    expect(paths).toContain('/platform-ops');
     expect(paths).toContain('/platform-ops/artist-requests');
     expect(paths).toContain('/platform-ops/audio-unresolved');
-    expect(paths).toContain('/subscriptions/plans');
-    expect(paths).toContain('/billing/invoices');
-    expect(paths).toContain('/crm/dashboard');
-    expect(paths).toContain('/campaigns');
+    expect(paths).not.toContain('/catalog');
+    expect(paths).not.toContain('/subscriptions/plans');
+    expect(paths).not.toContain('/billing/invoices');
+    expect(paths).not.toContain('/crm/dashboard');
+    expect(paths).not.toContain('/campaigns');
     expect(paths).toContain('/account/plans');
   });
 
-  it('hides Platform Ops entries from non-staff nav contexts', () => {
+  it('hides Platform Ops entries without staff shell capability', () => {
     const raw = spaceNavSectionsFor('platform_admin');
     const paths = filterSpaceNavSections(raw, {
-      hasStaffAccess: false,
-      canAccessOrgModule: () => true,
+      productSurfaceContext: access({
+        activeSpace: 'platform_admin',
+        staffCapabilities: new Set(),
+      }),
     }).flatMap((s) => s.items.map((i) => i.path));
     expect(paths.some((p) => p.startsWith('/platform-ops'))).toBe(false);
+    expect(paths).not.toContain('/workpanel');
   });
 
   it('every nav item has a registered icon', () => {

@@ -9,7 +9,8 @@
     "e2e:frontend": "npm start --prefix ../../apps/frontend -- --host 127.0.0.1 --port 4200",
     "e2e:051": "node e2e/harness/051-run.mjs",
     "e2e:052": "node e2e/harness/052-run.mjs",
-    "e2e:053": "node e2e/harness/053-run.mjs"
+    "e2e:053": "node e2e/harness/053-run.mjs",
+    "e2e:054": "node e2e/harness/054-run.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",

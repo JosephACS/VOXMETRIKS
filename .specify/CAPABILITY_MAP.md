@@ -7,7 +7,7 @@ Mapa de **11 familias** → Specs históricas relacionadas → packages actuales
 | # | Familia | Specs relacionadas (history) | Packages / áreas de código | Estado (STATUS) | Deudas / diferidos conocidos |
 |---|---------|------------------------------|----------------------------|-----------------|------------------------------|
 | 1 | Identidad y seguridad | 001, 006, 016, 037, 046, 050 | `identity`, `users`, `platform_rbac` | Implementado (sesión, bootstrap, primer acceso y preferencias); hardening parcial | Auth formal externa / IdP no afirmado |
-| 2 | Organizaciones / RBAC | 016, 037, 045; activa 053 | `organizations`, `platform_rbac` | Núcleo implementado; recorrido profesional de creación, invitación, onboarding y entrada en consolidación | Paridad global de módulos fuera del alcance 053 |
+| 2 | Organizaciones / RBAC | 016, 037, 045, 053; activa 054 | `organizations`, `platform_rbac`, navegación frontend | Recorrido profesional implementado; paridad de superficies por permiso en consolidación | El backend continúa siendo autoridad de acceso |
 | 3 | Experiencia musical del oyente | 002–005, 033, 035, 043, 044 | `streaming`, `apps/frontend/src/app/playback-core`, frontend home/search/player | Implementado (catálogo/favoritos/playlists/reproducción); music-search núcleo implementado | Smoke API key real; alcance avanzado music-search diferido |
 | 4 | Suscripciones personales / household | 029, 037, 052 | `personal_subscriptions` | Suscripciones y checkout simulado profesional implementados | Pasarela real / precios finales diferidos |
 | 5 | Artist Space | 020, 031, 045, 046, 051 | `apps/backend/app/packages/artists/identity_access`, `catalog_publishing`, `apps/frontend/src/app/packages/artist-space` | Implementado: acceso, perfil, equipo, música y publicación profesional | Pagos y monetización de artista diferidos |
@@ -21,6 +21,6 @@ Mapa de **11 familias** → Specs históricas relacionadas → packages actuales
 ## Notas
 
 - Specs **032–044** son `HISTORICAL_RECONSTRUCTED`; no afirman completitud por sí solas.
-- Feature activa: **053 Professional Organization Journey** — ver [`.specify/features/README.md`](features/README.md).
+- Feature activa: **054 Permission-Driven Product Navigation** — ver [`.specify/features/README.md`](features/README.md).
 - Índice histórico: [`.specify/history/README.md`](history/README.md).
-- Specs **050–052** están cerradas en history. **053** está activa; no crear otra Spec hasta su cierre.
+- Specs **050–053** están cerradas en history. **054** está activa; no crear otra Spec hasta su cierre.

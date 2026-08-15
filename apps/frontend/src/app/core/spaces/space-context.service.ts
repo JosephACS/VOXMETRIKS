@@ -30,9 +30,13 @@ import {
   isPersistedSpaceStillValid,
   toPersistedRef,
 } from './space-access.policy';
-import { SpaceNavSection, spaceNavSectionsFor, filterSpaceNavSections } from './space-nav.config';
+import { SpaceNavSection, spaceNavSectionsFor } from './space-nav.config';
 import { isPersonalSurfacePath, normalizeIdentityRole } from '../navigation/nav-access.policy';
-import { presentationModeFromUser } from '../guards/product-surface.policy';
+import {
+  STAFF_CAPABILITY,
+  type ProductOrganizationTier,
+  type ProductSurfaceContext,
+} from '../product-surface';
 
 /** Bootstrap rejected by the backend — the interceptor already dropped the session. */
 const UNAUTHORIZED_REASON = 'session_unauthorized';
@@ -77,31 +81,41 @@ export class SpaceContextService {
     () => this.auth.isAuthenticated() && this._available().length > 1,
   );
 
+  /** Spec 054 — hydrated facts for the product-surface evaluator (no username / presentation). */
+  readonly productSurfaceContext = computed((): ProductSurfaceContext => {
+    const space = this._active();
+    const kind = space?.kind ?? 'personal';
+    const ready = this._status() === 'ready';
+    const role = (this.auth.role() || 'user').toLowerCase();
+    const staffCapabilities = new Set<string>();
+    if (role === 'admin' || role === 'engineer') {
+      staffCapabilities.add(STAFF_CAPABILITY.shell);
+      staffCapabilities.add(STAFF_CAPABILITY.engineering);
+    }
+    const tier = this.orgCtx.accessTier();
+    const organizationTier: ProductOrganizationTier | undefined =
+      tier === 'onboarding' || tier === 'recovery' || tier === 'operational'
+        ? tier
+        : undefined;
+    return {
+      ready,
+      activeSpace: kind,
+      organizationId: space?.organizationId ?? this.orgCtx.organizationId() ?? undefined,
+      organizationTier,
+      permissions: new Set(this.orgCtx.hasMembership() ? this.orgCtx.permissions() : []),
+      artistCapabilities: new Set(this.artistCtx.permissions()),
+      staffCapabilities,
+      platformRoles: new Set(this.crmCtx.roles()),
+    };
+  });
+
   readonly navSections = computed((): SpaceNavSection[] => {
     this.i18n.tick();
     const space = this._active();
     const kind = space?.kind ?? 'personal';
-    const raw = spaceNavSectionsFor(kind, {
+    return spaceNavSectionsFor(kind, {
       organizationId: space?.organizationId ?? null,
-    });
-    const role = this.auth.role();
-    const hasStaffAccess =
-      role === 'admin' ||
-      role === 'engineer' ||
-      this.crmCtx.roles().includes('platform_admin');
-    return filterSpaceNavSections(raw, {
-      hasStaffAccess,
-      canAccessOrgModule: (moduleKind, requiredPermission) =>
-        this.orgCtx.canAccessModule(moduleKind, requiredPermission ?? null),
-      canAccessArtistPermission: (permission) => this.artistCtx.can(permission),
-      productSurface: {
-        activeSpaceKind: kind,
-        navCtx: {
-          identityRole: normalizeIdentityRole(role),
-          platformAdmin: this.crmCtx.roles().includes('platform_admin'),
-          presentationMode: presentationModeFromUser(this.auth.getUser()),
-        },
-      },
+      access: this.productSurfaceContext(),
     });
   });
 

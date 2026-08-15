@@ -35,23 +35,8 @@ export const ENGINEERING_PATH_PREFIXES: readonly string[] = [
 ];
 
 /**
- * Enterprise demos outside MVP product surface (036/038).
- * Keep backends; hide menu; deep-link → module unavailable (unless presentationMode).
+ * Enterprise module gating lives in the product-surface registry (054).
  */
-export const OUT_OF_PRODUCT_PATH_PREFIXES: readonly string[] = [
-  '/crm',
-  '/billing',
-  '/royalties',
-  '/payouts',
-  '/campaigns',
-  '/business-analytics',
-  '/customer-success',
-  '/support',
-  '/subscriptions',
-  '/compliance',
-  // Spec 043: `/reports` is the product hub (simples + complejos). Keep decisions demo-blocked.
-  '/business-decisions',
-];
 
 /** Nav section ids kept in the product-final shell (038). */
 export const PRODUCT_FINAL_SECTION_IDS: ReadonlySet<string> = new Set([
@@ -66,22 +51,6 @@ export const PRODUCT_FINAL_SECTION_IDS: ReadonlySet<string> = new Set([
   'catalogRights',
   'reporting',
   'platformOps',
-]);
-
-/** Nav section ids treated as demos / out of product final. */
-export const DEMO_SECTION_IDS: ReadonlySet<string> = new Set([
-  'crm',
-  'billing',
-  'royalties',
-  'campaigns',
-  'businessAnalytics',
-  'customerSuccess',
-  'subscriptions',
-  'compliance',
-  'analytics',
-  'recommendations',
-  'artistContracts',
-  'artistPublishing',
 ]);
 
 /** Legacy path → canonical product path (038). Query string preserved by router. */
@@ -163,7 +132,9 @@ export interface NavAccessContext {
   identityRole: IdentityRole;
   /** Platform CRM role platform_admin */
   platformAdmin?: boolean;
-  /** Presentation / artist / finance demo modes bypass some filters in layout */
+  /**
+   * @deprecated Spec 054 — ignored. Kept optional for call-site compatibility.
+   */
   presentationMode?: boolean;
 }
 
@@ -189,8 +160,9 @@ export function pathMatchesPrefixes(path: string, prefixes: readonly string[]): 
   return prefixes.some((prefix) => p === prefix || p.startsWith(prefix + '/'));
 }
 
-export function isOutOfProductPath(path: string): boolean {
-  return pathMatchesPrefixes(path, OUT_OF_PRODUCT_PATH_PREFIXES);
+export function isOutOfProductPath(_path: string): boolean {
+  // Spec 054: enterprise module gating lives in the product-surface registry/guard.
+  return false;
 }
 
 export function resolveCanonicalRedirect(path: string): string | null {
@@ -203,9 +175,6 @@ export function resolveCanonicalRedirect(path: string): string | null {
 
 /** Whether the user may open this path via deep link (route guard). */
 export function canActivateStaffPath(path: string, ctx: NavAccessContext): boolean {
-  if (ctx.presentationMode) {
-    return true;
-  }
   if (pathMatchesPrefixes(path, ENGINEERING_PATH_PREFIXES)) {
     return hasEngineeringNavAccess(ctx);
   }
@@ -219,15 +188,12 @@ export function canActivateStaffPath(path: string, ctx: NavAccessContext): boole
 }
 
 /**
- * Product-final deep links: demos blocked unless presentationMode.
- * Returns 'allow' | 'staff-block' | 'unavailable'.
+ * Staff vs allow for identity-scoped paths. Enterprise modules use product-surface registry.
  */
 export function classifyProductDeepLink(
   path: string,
   ctx: NavAccessContext,
 ): 'allow' | 'staff-block' | 'unavailable' {
-  if (ctx.presentationMode) return 'allow';
-  if (isOutOfProductPath(path)) return 'unavailable';
   if (!canActivateStaffPath(path, ctx)) return 'staff-block';
   return 'allow';
 }
@@ -246,7 +212,6 @@ export function filterMainNavItems<T extends NavItemLike>(
   items: T[],
   ctx: NavAccessContext,
 ): T[] {
-  if (ctx.presentationMode) return items;
   const role = normalizeIdentityRole(ctx.identityRole);
   if (role === 'engineer') {
     return items.filter((item) => item.path.split('?')[0] === '/workpanel');
@@ -264,7 +229,7 @@ export function filterMusicNavItems<T extends NavItemLike>(
   items: T[],
   ctx: NavAccessContext,
 ): T[] {
-  if (ctx.presentationMode || isStaffIdentity(ctx.identityRole)) return items;
+  if (isStaffIdentity(ctx.identityRole)) return items;
   return items.filter((item) => !LISTENER_HIDDEN_MUSIC_PATHS.has(item.path.split('?')[0]));
 }
 
@@ -273,9 +238,7 @@ export function filterReportingNavItems<T extends NavItemLike>(
   items: T[],
   ctx: NavAccessContext,
 ): T[] {
-  if (ctx.presentationMode) return items;
   if (!hasStaffReportsNavAccess(ctx)) return [];
-  // Prefer single hub entry; keep legacy paths if present for presentation demos.
   const hub = items.filter((item) => item.path.split('?')[0] === '/reports');
   if (hub.length) return hub;
   return items.filter((item) => PRODUCT_REPORTING_PATHS.has(item.path.split('?')[0]));
@@ -292,15 +255,12 @@ export function filterListenerAccountItems<T extends NavItemLike>(items: T[]): T
 }
 
 /** Whether platform ops belong in primary sidebar (043: never). */
-export function showPlatformOpsInPrimaryNav(ctx: NavAccessContext): boolean {
-  if (ctx.presentationMode) return true;
+export function showPlatformOpsInPrimaryNav(_ctx: NavAccessContext): boolean {
   return false;
 }
 
 /** Whether the analytics sidebar section should appear (038: never in product final). */
-export function showAnalyticsSection(ctx: NavAccessContext): boolean {
-  if (ctx.presentationMode) return false;
-  // Legacy analytics hubs redirected; do not show duplicate section.
+export function showAnalyticsSection(_ctx: NavAccessContext): boolean {
   return false;
 }
 
@@ -310,15 +270,12 @@ export function showReportingSection(ctx: NavAccessContext): boolean {
 }
 
 /** Whether a nav section id belongs in the product-final shell. */
-export function isProductFinalSection(sectionId: string, ctx: NavAccessContext): boolean {
-  if (ctx.presentationMode) return true;
-  if (DEMO_SECTION_IDS.has(sectionId)) return false;
+export function isProductFinalSection(sectionId: string, _ctx: NavAccessContext): boolean {
   return PRODUCT_FINAL_SECTION_IDS.has(sectionId);
 }
 
 /**
- * Engineer-focused: hide commercial org demos already covered by DEMO_SECTION_IDS;
- * data tools remain via section filter in layout.
+ * Engineer-focused: hide commercial org sections from legacy role shells.
  */
 export function isEngineerCommercialSection(sectionId: string): boolean {
   return (

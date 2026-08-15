@@ -134,9 +134,9 @@ describe('nav-access.policy', () => {
     expect(showReportingSection(engineer)).toBe(true);
   });
 
-  it('hides platform ops from primary product nav (043)', () => {
+  it('hides platform ops from primary product nav (043/054)', () => {
     expect(showPlatformOpsInPrimaryNav(admin)).toBe(false);
-    expect(showPlatformOpsInPrimaryNav({ ...admin, presentationMode: true })).toBe(true);
+    expect(showPlatformOpsInPrimaryNav({ ...admin, presentationMode: true })).toBe(false);
   });
 
   it('keeps activity visible for listeners', () => {
@@ -151,16 +151,16 @@ describe('nav-access.policy', () => {
     ]);
   });
 
-  it('marks demo enterprise paths as out of product', () => {
-    expect(isOutOfProductPath('/crm/prospects')).toBe(true);
-    expect(isOutOfProductPath('/billing/invoices')).toBe(true);
+  it('no longer marks enterprise paths via OUT_OF_PRODUCT (054 registry owns that)', () => {
+    expect(isOutOfProductPath('/crm/prospects')).toBe(false);
+    expect(isOutOfProductPath('/billing/invoices')).toBe(false);
     expect(isOutOfProductPath('/simple-reports')).toBe(false);
     expect(isOutOfProductPath('/reports')).toBe(false);
     expect(isOutOfProductPath('/workpanel')).toBe(false);
   });
 
-  it('classifies demo deep links as unavailable for product users', () => {
-    expect(classifyProductDeepLink('/crm/dashboard', admin)).toBe('unavailable');
+  it('classifies staff deep links without presentation bypass', () => {
+    expect(classifyProductDeepLink('/crm/dashboard', admin)).toBe('allow');
     expect(classifyProductDeepLink('/workpanel', listener)).toBe('staff-block');
     expect(classifyProductDeepLink('/workpanel', admin)).toBe('allow');
     expect(

@@ -20,14 +20,20 @@ export const CATALOG_PUBLISHING_ROUTES: Routes = [
   },
   {
     path: 'artist/profile',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('operational', 'artist.view'),
+    ],
     loadComponent: () =>
       import('./pages/artist-profile.page').then((m) => m.ArtistProfilePage),
     title: 'publishing.profile.title',
   },
   {
     path: 'artist/releases/new',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('operational', 'publishing.create'),
+    ],
     data: { releaseContext: 'organization' },
     loadComponent: () =>
       import('./pages/artist-release-wizard.page').then((m) => m.ArtistReleaseWizardPage),
@@ -35,21 +41,30 @@ export const CATALOG_PUBLISHING_ROUTES: Routes = [
   },
   {
     path: 'artist/releases/:id',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('operational', 'publishing.view'),
+    ],
     loadComponent: () =>
       import('./pages/artist-release-detail.page').then((m) => m.ArtistReleaseDetailPage),
     title: 'publishing.detail.title',
   },
   {
     path: 'artist/releases',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('operational', 'publishing.view'),
+    ],
     loadComponent: () =>
       import('./pages/artist-releases-list.page').then((m) => m.ArtistReleasesListPage),
     title: 'publishing.releases.title',
   },
   {
     path: 'artist/tracks',
-    canActivate: [organizationRequiredGuard, organizationModuleGuard('operational')],
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('operational', 'publishing.view'),
+    ],
     loadComponent: () =>
       import('./pages/artist-tracks-list.page').then((m) => m.ArtistTracksListPage),
     title: 'publishing.tracks.title',
