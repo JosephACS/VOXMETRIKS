@@ -194,7 +194,9 @@ describe('Playback Engine Phase 2', () => {
     const a = sampleTrack({ id: 1 });
     const b = sampleTrack({ id: 2 });
     controller.setQueue([a, b], 0);
-    await vi.runAllTimersAsync();
+    // Advance only the 300 ms persistence debounce. Running every timer also
+    // executes the audio resolver timeouts and can legitimately drain the queue.
+    await vi.advanceTimersByTimeAsync(350);
     const session = restorePlaybackSession();
     expect(session?.queue.length).toBe(2);
     expect(session?.queueIndex).toBe(0);
