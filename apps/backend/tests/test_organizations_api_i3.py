@@ -70,16 +70,37 @@ def test_create_list_get_update_close(client: TestClient, demo_headers: dict):
     assert closed.json()["status"] == "closed"
 
 
-def test_slug_conflict(client: TestClient, demo_headers: dict):
-    _create_org(client, demo_headers, slug="dup-slug")
-    # same user deterministic reuse → 201 with reused_existing
+def test_create_intent_replay_and_explicit_slug_conflict(
+    client: TestClient, demo_headers: dict
+):
+    payload = {
+        "display_name": "Dup",
+        "slug": "dup-slug",
+        "client_intent_id": "dup-slug-intent",
+    }
+    first = client.post(
+        "/api/v1/organizations",
+        headers=demo_headers,
+        json=payload,
+    )
+    assert first.status_code == 201
+
+    # The same client intent and payload is the only supported replay contract.
     again = client.post(
         "/api/v1/organizations",
         headers=demo_headers,
-        json={"display_name": "Dup", "slug": "dup-slug"},
+        json=payload,
     )
     assert again.status_code == 201
     assert again.json()["reused_existing"] is True
+
+    # A different creation intent cannot silently reuse an explicit slug.
+    conflict = client.post(
+        "/api/v1/organizations",
+        headers=demo_headers,
+        json={**payload, "client_intent_id": "dup-slug-other-intent"},
+    )
+    assert conflict.status_code == 409
 
 
 def test_cross_tenant_org_404(
