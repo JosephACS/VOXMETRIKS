@@ -25,4 +25,11 @@ export const PERSONAL_ACCOUNT_ROUTES: Routes = [
     loadComponent: () =>
       import('./pages/personal-billing.page').then((m) => m.PersonalBillingPage),
   },
+  {
+    path: 'account/checkout',
+    title: 'checkout.title',
+    data: { checkoutScope: 'personal' },
+    loadComponent: () =>
+      import('../checkout/pages/checkout-journey.page').then((m) => m.CheckoutJourneyPage),
+  },
 ];

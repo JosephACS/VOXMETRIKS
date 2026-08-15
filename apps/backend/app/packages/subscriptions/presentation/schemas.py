@@ -6,7 +6,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.packages.subscriptions.application import checkout as checkout_uc
 
 
 # ── Plan schemas ───────────────────────────────────────────────────────────────
@@ -318,3 +320,54 @@ class AccessStateOut(BaseModel):
     access_state: str
     reason: Optional[str]
     updated_at: datetime
+
+
+# ── Checkout schemas (Spec 052) ────────────────────────────────────────────────
+
+
+class CheckoutSessionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: int
+    plan_price_id: int
+    billing_period: Optional[str] = Field(default=None, pattern="^(monthly|annual)$")
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data
+
+
+class CheckoutPaymentMethodRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    brand: str = Field(min_length=2, max_length=32)
+    last4: str = Field(pattern=r"^\d{4}$")
+    exp_month: int = Field(ge=1, le=12)
+    exp_year: int = Field(ge=2024, le=2100)
+    display_label: str = Field(default="", max_length=120)
+    simulation_token: str = Field(min_length=8, max_length=64)
+    is_default: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data
+
+
+class CheckoutConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data

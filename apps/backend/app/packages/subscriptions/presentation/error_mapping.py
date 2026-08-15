@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from app.packages.subscriptions.domain.errors import (
     ActiveSubscriptionExists,
+    CheckoutError,
     ConflictError,
     InvalidTransitionError,
     NotFoundError,
@@ -31,6 +32,24 @@ def raise_sub_http(exc: Exception) -> NoReturn:
     """Translate subscriptions domain errors to HTTP. Never expose stack traces."""
     if isinstance(exc, HTTPException):
         raise exc
+    if isinstance(exc, CheckoutError):
+        code = getattr(exc, "code", "checkout_error") or "checkout_error"
+        status = 400
+        if code in ("checkout_not_found",):
+            status = 404
+        elif code in ("checkout_forbidden",):
+            status = 403
+        elif code in (
+            "checkout_state_conflict",
+            "checkout_idempotency_conflict",
+            "payment_confirmation_failed",
+        ):
+            status = 409
+        elif code in ("payment_declined",):
+            status = 402
+        elif code in ("card_data_forbidden",):
+            status = 422
+        raise http_error(status, str(exc) or "Checkout error", code=code) from exc
     if isinstance(exc, PermissionDenied):
         raise http_error(403, str(exc) or "Forbidden", code="permission_denied") from exc
     if isinstance(exc, NotFoundError):

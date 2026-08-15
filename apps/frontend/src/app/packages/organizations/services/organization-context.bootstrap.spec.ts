@@ -258,6 +258,7 @@ describe('SUBSCRIPTIONS_ROUTES titles (no embedded brand)', () => {
       'Mi suscripción',
       'Iniciar prueba',
       'Seleccionar plan',
+      'checkout.title',
       'Cancelar suscripción',
       'Complementos',
       'Uso',

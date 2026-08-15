@@ -45,11 +45,13 @@ def ensure_personal_subscription_tables(conn: duckdb.DuckDBPyConnection) -> None
     _create_personal_payment_attempt(conn)
     _create_personal_entitlement(conn)
     _create_personal_subscription_event(conn)
+    _create_personal_payment_method_reference(conn)
+    _create_personal_checkout_session(conn)
 
     if not schema_ready():
         logger.info(
             "Personal subscriptions schema ensured (%s tables)",
-            len(PERSONAL_SUBSCRIPTION_TABLES),
+            len(PERSONAL_SUBSCRIPTION_TABLES) + 2,
         )
 
     try:
@@ -331,4 +333,69 @@ def _create_personal_subscription_event(conn: duckdb.DuckDBPyConnection) -> None
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_personal_sub_event_user
         ON personal_subscription_event(user_id)
+    """)
+
+
+def _create_personal_payment_method_reference(conn: duckdb.DuckDBPyConnection) -> None:
+    """Safe tokenized refs only — NO PAN/CVV columns (Spec 052)."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS personal_payment_method_reference (
+            id                  INTEGER PRIMARY KEY,
+            user_id             INTEGER NOT NULL,
+            provider_code       VARCHAR NOT NULL DEFAULT 'mock',
+            brand               VARCHAR NOT NULL,
+            last4               VARCHAR NOT NULL,
+            exp_month           INTEGER NOT NULL,
+            exp_year            INTEGER NOT NULL,
+            display_label       VARCHAR NOT NULL,
+            token_ref           VARCHAR NOT NULL,
+            simulation_token    VARCHAR NOT NULL,
+            is_default          BOOLEAN NOT NULL DEFAULT FALSE,
+            status              VARCHAR NOT NULL DEFAULT 'active',
+            created_at          TIMESTAMP NOT NULL,
+            updated_at          TIMESTAMP NOT NULL,
+            CHECK (status IN ('active', 'removed')),
+            CHECK (length(last4) = 4)
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_personal_pm_user
+        ON personal_payment_method_reference(user_id)
+    """)
+
+
+def _create_personal_checkout_session(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS personal_checkout_session (
+            id                      INTEGER PRIMARY KEY,
+            user_id                 INTEGER NOT NULL,
+            actor_user_id           INTEGER NOT NULL,
+            plan_code               VARCHAR NOT NULL,
+            plan_id                 INTEGER NOT NULL,
+            plan_price_id           INTEGER NOT NULL,
+            billing_period          VARCHAR NOT NULL,
+            amount                  DECIMAL(18,4) NOT NULL,
+            currency                VARCHAR(3) NOT NULL DEFAULT 'USD',
+            status                  VARCHAR NOT NULL DEFAULT 'draft',
+            subscription_id         INTEGER,
+            invoice_id              INTEGER,
+            payment_attempt_id      INTEGER,
+            payment_method_id       INTEGER,
+            idempotency_key         VARCHAR NOT NULL,
+            failure_code            VARCHAR,
+            created_at              TIMESTAMP NOT NULL,
+            updated_at              TIMESTAMP NOT NULL,
+            expires_at              TIMESTAMP,
+            completed_at            TIMESTAMP,
+            CHECK (billing_period IN ('monthly', 'annual')),
+            CHECK (status IN (
+                'draft', 'awaiting_method', 'ready', 'processing',
+                'succeeded', 'failed', 'canceled', 'expired'
+            )),
+            UNIQUE (user_id, idempotency_key)
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_personal_checkout_user
+        ON personal_checkout_session(user_id)
     """)

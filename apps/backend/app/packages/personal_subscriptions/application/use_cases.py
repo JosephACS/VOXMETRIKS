@@ -304,24 +304,37 @@ def list_personal_plans(conn: duckdb.DuckDBPyConnection) -> List[Dict[str, Any]]
 
 
 def _cancel_active_non_free(conn: duckdb.DuckDBPyConnection, user_id: int) -> None:
+    _cancel_active_non_free_except(conn, user_id, except_subscription_id=None)
+
+
+def _cancel_active_non_free_except(
+    conn: duckdb.DuckDBPyConnection,
+    user_id: int,
+    *,
+    except_subscription_id: Optional[int],
+) -> None:
+    """Cancel active/past_due non-free subscriptions, optionally keeping one id."""
     now = utc_now()
     rows = conn.execute(
         """
         SELECT s.id FROM personal_subscription s
         JOIN personal_plan p ON p.id = s.plan_id
         WHERE s.user_id = ? AND p.is_free = FALSE
-          AND s.status IN ('active', 'past_due', 'processing')
+          AND s.status IN ('active', 'past_due')
         """,
         [user_id],
     ).fetchall()
     for r in rows:
+        sid = int(r[0])
+        if except_subscription_id is not None and sid == int(except_subscription_id):
+            continue
         conn.execute(
             """
             UPDATE personal_subscription
             SET status = 'canceled', canceled_at = ?, updated_at = ?
             WHERE id = ?
             """,
-            [now, now, int(r[0])],
+            [now, now, sid],
         )
 
 
@@ -418,8 +431,8 @@ def start_checkout(
         ],
     )
 
-    # Placeholder subscription in processing until payment succeeds
-    _cancel_active_non_free(conn, user_id)
+    # Placeholder subscription in processing until payment succeeds.
+    # Spec 052: never cancel the currently active plan before payment succeeds.
     sub_id = _next_id(conn, "personal_subscription")
     conn.execute(
         """
@@ -589,6 +602,8 @@ def simulate_payment(
     ).fetchone()
     sub_id = int(inv[0]) if inv and inv[0] else None
     if sub_id:
+        # Spec 052: supersede prior paid plans only after successful payment.
+        _cancel_active_non_free_except(conn, user_id, except_subscription_id=sub_id)
         # Cancel Free while premium active
         conn.execute(
             """

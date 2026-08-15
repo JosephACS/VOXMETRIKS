@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
@@ -126,6 +126,7 @@ import {
 export class PersonalPlansPage implements OnInit {
   private api = inject(PersonalAccountApiService);
   private i18n = inject(I18nService);
+  private router = inject(Router);
   readonly lang = this.i18n.lang;
 
   plans = signal<PersonalPlan[]>([]);
@@ -210,26 +211,27 @@ export class PersonalPlansPage implements OnInit {
 
   checkout(p: PersonalPlan): void {
     if (!this.canManageBilling()) return;
-    this.busy.set(true);
     this.success.set(null);
-    const period = p.is_free ? 'monthly' : this.period();
-    this.api.checkout(p.code, period).subscribe({
-      next: (c) => {
-        this.api.simulatePayment(c.attempt_id, 'succeeded').subscribe({
-          next: () => {
-            this.success.set(this.i18n.t('personal.plans.activated'));
-            this.busy.set(false);
-            this.load();
-          },
-          error: () => {
-            this.error.set(this.i18n.t('common.actionFailed'));
-            this.busy.set(false);
-          },
-        });
-      },
-      error: () => {
-        this.error.set(this.i18n.t('common.actionFailed'));
-        this.busy.set(false);
+    // Free plans stay on the ensure/legacy path when exposed; paid plans use Spec 052 journey.
+    if (p.is_free) {
+      this.busy.set(true);
+      this.api.checkout(p.code, 'monthly').subscribe({
+        next: () => {
+          this.success.set(this.i18n.t('personal.plans.activated'));
+          this.busy.set(false);
+          this.load();
+        },
+        error: () => {
+          this.error.set(this.i18n.t('common.actionFailed'));
+          this.busy.set(false);
+        },
+      });
+      return;
+    }
+    void this.router.navigate(['/account/checkout'], {
+      queryParams: {
+        plan_code: p.code,
+        billing_period: this.period(),
       },
     });
   }

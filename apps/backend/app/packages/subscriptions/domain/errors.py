@@ -41,3 +41,11 @@ class InvalidTransitionError(SubscriptionError):
 
 class PersistenceError(SubscriptionError):
     """Unexpected database error."""
+
+
+class CheckoutError(SubscriptionError):
+    """Organization checkout state / validation error (Spec 052)."""
+
+    def __init__(self, message: str, *, code: str = "checkout_error") -> None:
+        super().__init__(message)
+        self.code = code

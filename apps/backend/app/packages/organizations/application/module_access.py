@@ -33,7 +33,8 @@ def get_org_subscription_snapshot(
             WHEN 'past_due' THEN 2
             WHEN 'canceled' THEN 3
             WHEN 'expired' THEN 4
-            ELSE 5
+            WHEN 'pending' THEN 5
+            ELSE 6
           END,
           id DESC
         LIMIT 1
@@ -51,6 +52,17 @@ def get_org_subscription_snapshot(
     status = str(row[1] or "").lower()
     access = str(row[2] or "full").lower()
     tier = resolve_org_access_tier(status, access)
+    # Abandoned checkout: canceled/blocked with no entitlements never granted → onboarding.
+    if tier == "recovery" and status == "canceled" and access == "blocked":
+        entitled = conn.execute(
+            """
+            SELECT 1 FROM app_subscription_entitlement
+            WHERE subscription_id = ? LIMIT 1
+            """,
+            [int(row[0])],
+        ).fetchone()
+        if not entitled:
+            tier = "onboarding"
     return {
         "has_subscription": True,
         "subscription_id": int(row[0]),
@@ -71,6 +83,9 @@ def resolve_org_access_tier(status: Optional[str], access_state: Optional[str]) 
         return "operational"
     if st in _RECOVERY_STATUSES:
         return "recovery"
+    # ELSE: pending and any other non-active status → onboarding (no operational access)
+    if st == "pending":
+        return "onboarding"
     return "onboarding"
 
 

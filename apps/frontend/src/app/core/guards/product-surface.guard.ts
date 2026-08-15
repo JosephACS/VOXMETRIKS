@@ -22,7 +22,7 @@ export { presentationModeFromUser as presentationModeFromAuth } from './product-
  * Awaits space bootstrap so menu announce and guard see the same activeSpaceKind.
  */
 export const productSurfaceGuard: CanActivateFn = async (
-  _route,
+  route,
   state,
 ): Promise<boolean | UrlTree> => {
   const auth = inject(AuthService);
@@ -31,6 +31,24 @@ export const productSurfaceGuard: CanActivateFn = async (
   const spaces = inject(SpaceContextService);
 
   await spaces.ensureReady();
+
+  // Organization deep links may be opened while the persisted space is Personal.
+  // Resolve the requested tenant through the authoritative session-context API
+  // before evaluating the product surface; downstream org guards still enforce
+  // membership, lifecycle, subscription tier and the concrete permission.
+  const requestedOrganizationId = Number(
+    route.queryParamMap.get('organization_id') ||
+      route.queryParamMap.get('organizationId') ||
+      0,
+  );
+  const activeSpace = spaces.activeSpace();
+  if (
+    requestedOrganizationId > 0 &&
+    (activeSpace?.kind !== 'organization' ||
+      activeSpace.organizationId !== requestedOrganizationId)
+  ) {
+    await spaces.selectSpace(`org:${requestedOrganizationId}`, { navigate: false });
+  }
 
   const ctx: NavAccessContext = {
     identityRole: normalizeIdentityRole(auth.role()),
