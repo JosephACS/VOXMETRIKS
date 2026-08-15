@@ -63,6 +63,8 @@ apps/backend/.pytest-052/
 apps/backend/.pytest-codex-052-*/
 automation/playwright/playwright-report-052/
 automation/playwright/test-results-052/
+automation/playwright/playwright-report-053/
+automation/playwright/test-results-053/
 apps/backend/tests/**/*.duckdb
 .ruff_cache/
 .coverage

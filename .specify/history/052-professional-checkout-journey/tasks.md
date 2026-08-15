@@ -37,7 +37,7 @@
 - [x] T022 Add directed frontend tests for reducer, validation, memory clearing, failure/retry, navigation and capability parity.
 - [x] T021 Add directed backend tests for state transitions, active-plan preservation, rollback, concurrency, replay and tenant/RBAC isolation.
 - [x] T023 Run isolated Playwright Personal + Organization success/decline/processing at 1366×768 and 390×844. (10/10 passed against dedicated frontend :4201 and isolated DuckDB/API :8011.)
-- [~] T024 Run `create_app()`, frontend lint/test/build locally; defer the full backend suite to the PR CI gate to avoid a duplicate 10–15 minute run.
+- [x] T024 Run `create_app()`, frontend lint/test/build locally; validate the full backend suite once through the PR CI gate. PR #12 passed backend and frontend before merge.
 - [x] T025 Run `git diff --check`, OpenAPI contract checks, changed-file PAN/secret scan and canonical DB fingerprint comparison.
 - [x] T026 Deliver exact results and pending risks with 0 staged, 0 commit and 0 push; stop for direct audit.
 

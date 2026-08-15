@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { SubscriptionsApiService } from '../services/subscriptions-api.service';
@@ -178,6 +178,7 @@ export class TrialStartPageComponent implements OnInit {
   private readonly orgCtx = inject(OrganizationContextService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   organizationId: number | null = null;
   saving = false;
@@ -197,8 +198,26 @@ export class TrialStartPageComponent implements OnInit {
     billingCurrency: ['USD', [Validators.required, Validators.minLength(3), Validators.maxLength(3)]],
   });
 
-  ngOnInit(): void {
-    this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
+  async ngOnInit(): Promise<void> {
+    const qOrg = Number(this.route.snapshot.queryParamMap.get('organization_id') || 0);
+    if (qOrg > 0) {
+      try {
+        await this.orgCtx.activate(qOrg);
+      } catch {
+        this.organizationId = null;
+        this.error = 'No se pudo activar la organización solicitada.';
+        return;
+      }
+      const org = this.orgCtx.activeOrganization();
+      if (!org || org.id !== qOrg) {
+        this.organizationId = null;
+        this.error = 'No se pudo activar la organización solicitada.';
+        return;
+      }
+      this.organizationId = org.id;
+    } else {
+      this.organizationId = this.orgCtx.activeOrganization()?.id ?? null;
+    }
     this.form.controls.planPriceId.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((priceId) => {
@@ -307,10 +326,11 @@ export class TrialStartPageComponent implements OnInit {
     if (!this.organizationId || this.form.invalid || !this.selectedPlanId()) return;
     this.saving = true;
     this.error = null;
+    const orgId = this.organizationId;
     const v = this.form.getRawValue();
     this.api
-      .startTrial(this.organizationId, {
-        organization_id: this.organizationId,
+      .startTrial(orgId, {
+        organization_id: orgId,
         plan_id: Number(v.planId),
         plan_price_id: v.planPriceId ?? undefined,
         billing_currency: (v.billingCurrency || 'USD').toUpperCase(),
@@ -318,12 +338,25 @@ export class TrialStartPageComponent implements OnInit {
       .subscribe({
         next: () => {
           this.saving = false;
-          void this.router.navigate(['/subscriptions/overview']);
+          void this.returnToOnboarding(orgId);
         },
         error: (e) => {
           this.saving = false;
           this.error = e?.error?.detail?.message ?? this.i18n.t('common.actionFailed');
         },
       });
+  }
+
+  private async returnToOnboarding(orgId: number): Promise<void> {
+    try {
+      await this.orgCtx.bootstrap({ force: true });
+      await this.orgCtx.activate(orgId);
+    } catch {
+      this.error = 'El trial se inició, pero no se pudo refrescar el contexto.';
+      return;
+    }
+    await this.router.navigate(['/organizations/onboarding'], {
+      queryParams: { organization_id: orgId },
+    });
   }
 }

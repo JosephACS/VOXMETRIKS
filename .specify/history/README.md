@@ -80,7 +80,7 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 043 | [043-professional-ux-visual-redesign](043-professional-ux-visual-redesign/) |
 | 044 | [044-product-consolidation-data-clarity](044-product-consolidation-data-clarity/) |
 
-## 045–051 (cerradas; movidas desde features/)
+## 045–052 (cerradas; movidas desde features/)
 
 | ID | Carpeta | Estado |
 |----|---------|--------|
@@ -91,9 +91,10 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 049 | [049-taf14-strategic-agg-closure](049-taf14-strategic-agg-closure/) | cerrado; TAF14 Estratégico AGG OE-01…OE-08; smoke desktop/móvil |
 | 050 | [050-identity-first-access](050-identity-first-access/) | cerrado; bootstrap de sesión, primer acceso e invitaciones durables |
 | 051 | [051-artist-professional-journey](051-artist-professional-journey/) | cerrado; acceso, Artist Space, equipo, publicación y revisión independiente |
+| 052 | [052-professional-checkout-journey](052-professional-checkout-journey/) | cerrado; checkout personal y empresarial con pago simulado profesional |
 
 Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-La Spec **052** está activa bajo `.specify/features/052-professional-checkout-journey/`. El siguiente ID disponible será **053** después de su cierre.
+La Spec **053** está activa bajo `.specify/features/053-organization-professional-journey/`. El siguiente ID disponible será **054** después de su cierre.

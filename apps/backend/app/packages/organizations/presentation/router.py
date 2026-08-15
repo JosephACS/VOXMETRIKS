@@ -9,10 +9,18 @@ import duckdb
 from fastapi import APIRouter, Depends, Query
 
 from app.core.database import get_write_conn
+from app.core.config import get_settings
 from app.packages.organizations.application.context import OrganizationContext
 from app.packages.organizations.application.dto import (
     ActorContext,
     CreateOrganizationCommand,
+)
+from app.packages.organizations.application.journey import (
+    complete_journey,
+    enrich_member_presentation,
+    get_journey,
+    list_invitation_roles,
+    skip_team_step,
 )
 from app.packages.organizations.application.use_cases.create_organization import (
     CreateOrganization,
@@ -68,11 +76,22 @@ from app.packages.organizations.presentation.schemas import (
     InvitationCreateRequest,
     InvitationCreateResponse,
     InvitationOut,
+    InvitationRoleOut,
+    InvitationRolesResponse,
+    JourneyCapabilitiesOut,
+    JourneyCheckoutOut,
+    JourneyCompleteRequest,
+    JourneyMembershipOut,
+    JourneyOrganizationOut,
+    JourneySubscriptionOut,
+    JourneyTeamOut,
     MemberActionRequest,
     MemberRolesPutRequest,
     MembershipOut,
+    OrganizationCatalogsOut,
     OrganizationCreateRequest,
     OrganizationCreateResponse,
+    OrganizationJourneyOut,
     OrganizationOut,
     OrganizationUpdateRequest,
     PaginatedAudit,
@@ -120,6 +139,55 @@ def _member_out(m: OrganizationMember) -> MembershipOut:
     )
 
 
+def _member_out_enriched(row: dict[str, Any]) -> MembershipOut:
+    return MembershipOut(**row)
+
+
+def _journey_out(payload: dict[str, Any]) -> OrganizationJourneyOut:
+    checkout = payload.get("checkout")
+    org = payload["organization"]
+    membership = payload.get("membership")
+    sub = payload.get("subscription") or {}
+    team = payload.get("team") or {}
+    caps = payload.get("capabilities") or {}
+    return OrganizationJourneyOut(
+        organization=JourneyOrganizationOut(**org),
+        membership=JourneyMembershipOut(**membership) if membership else None,
+        access_tier=payload["access_tier"],
+        completed_steps=list(payload.get("completed_steps") or []),
+        next_action=payload["next_action"],
+        capabilities=JourneyCapabilitiesOut(**caps),
+        subscription=JourneySubscriptionOut(
+            status=sub.get("status"),
+            plan_name=sub.get("plan_name"),
+            trial=bool(sub.get("trial")),
+        ),
+        checkout=JourneyCheckoutOut(**checkout) if checkout else None,
+        team=JourneyTeamOut(
+            active_members=int(team.get("active_members") or 0),
+            pending_invitations=int(team.get("pending_invitations") or 0),
+        ),
+        allowed_destinations=list(payload.get("allowed_destinations") or []),
+        onboarding_status=str(payload.get("onboarding_status") or "in_progress"),
+        journey_url=payload.get("journey_url"),
+    )
+
+
+def _invite_token_for_response(plaintext: Optional[str]) -> Optional[str]:
+    """Fail-closed token disclosure.
+
+    Default ORGANIZATION_INVITATION_DELIVERY_MODE=email_only omits plaintext.
+    Only local_once or isolated E2E (E2E=1) may return the token once.
+    """
+    if not plaintext:
+        return None
+    settings = get_settings()
+    mode = (settings.organization_invitation_delivery_mode or "email_only").strip().lower()
+    if settings.e2e_mode or mode == "local_once":
+        return plaintext
+    return None
+
+
 def _invite_out(i: OrganizationInvitation) -> InvitationOut:
     return InvitationOut(
         id=i.id,
@@ -145,7 +213,24 @@ def _page_bounds(page: int, limit: int) -> tuple[int, int, int]:
     return page, lim, offset
 
 
+def _permissions_for_member(auth: AuthorizationRepository, member_id: int) -> set[str]:
+    permissions: set[str] = set()
+    for mr in auth.list_member_roles(member_id, active_only=True):
+        for code in auth.list_role_permissions(mr.role_id):
+            permissions.add(code)
+    return permissions
+
+
 # ── Organizations ───────────────────────────────────────────────────────────
+
+
+@router.get("/organizations/catalogs", response_model=OrganizationCatalogsOut)
+def organization_catalogs():
+    from app.packages.organizations.infrastructure.org_profile_catalogs import (
+        catalogs_payload,
+    )
+
+    return OrganizationCatalogsOut(**catalogs_payload())
 
 
 @router.post("/organizations", status_code=201, response_model=OrganizationCreateResponse)
@@ -155,7 +240,8 @@ def create_organization(
     conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
 ):
     try:
-        slug = body.slug.strip() if body.slug else normalize_slug(body.display_name)
+        slug_explicit = bool((body.slug or "").strip())
+        slug = body.slug.strip() if slug_explicit else normalize_slug(body.display_name)
         result = CreateOrganization(conn).execute(
             CreateOrganizationCommand(
                 actor=actor,
@@ -167,6 +253,8 @@ def create_organization(
                 default_currency=body.default_currency,
                 legal_name=body.legal_name,
                 make_active=body.activate,
+                client_intent_id=body.client_intent_id,
+                slug_explicit=slug_explicit,
             )
         )
         auth = AuthorizationRepository(conn)
@@ -184,13 +272,22 @@ def create_organization(
             )
             for r in [str(r[0])]
         ]
-        _ = auth
+        permissions = _permissions_for_member(auth, result.membership.id)
+        journey = get_journey(
+            conn,
+            actor_user_id=actor.user_id,
+            organization_id=result.organization.id,
+            permissions=permissions,
+        )
         return OrganizationCreateResponse(
             organization=_org_out(result.organization),
             membership=_member_out(result.membership),
             roles=roles,
             reused_existing=result.reused_existing,
             idempotency_mode=result.idempotency_mode,
+            next_action=journey.get("next_action"),
+            journey_url=journey.get("journey_url"),
+            journey=_journey_out(journey),
         )
     except Exception as exc:
         raise_domain_http(exc)
@@ -239,6 +336,105 @@ def get_organization(
     _ = ctx
     try:
         return _org_out(OrganizationRepository(conn).get_by_id(organization_id))
+    except Exception as exc:
+        raise_domain_http(exc)
+
+
+@router.get(
+    "/organizations/{organization_id}/journey",
+    response_model=OrganizationJourneyOut,
+)
+def get_organization_journey(
+    organization_id: int,
+    ctx: OrganizationContext = Depends(
+        require_organization_permission("organization.view")
+    ),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        payload = get_journey(
+            conn,
+            actor_user_id=ctx.user_id,
+            organization_id=organization_id,
+            permissions=set(ctx.permission_codes),
+        )
+        return _journey_out(payload)
+    except Exception as exc:
+        raise_domain_http(exc)
+
+
+@router.post(
+    "/organizations/{organization_id}/journey/complete",
+    response_model=OrganizationJourneyOut,
+)
+def complete_organization_journey(
+    organization_id: int,
+    body: JourneyCompleteRequest,
+    ctx: OrganizationContext = Depends(
+        require_organization_permission("organization.update")
+    ),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        payload = complete_journey(
+            conn,
+            actor_user_id=ctx.user_id,
+            organization_id=organization_id,
+            permissions=set(ctx.permission_codes),
+            idempotency_key=body.idempotency_key,
+            team_step_skipped=body.team_step_skipped,
+            request_id=ctx.request_id,
+        )
+        return _journey_out(payload)
+    except Exception as exc:
+        raise_domain_http(exc)
+
+
+@router.post(
+    "/organizations/{organization_id}/journey/skip-team",
+    response_model=OrganizationJourneyOut,
+)
+def skip_organization_journey_team(
+    organization_id: int,
+    ctx: OrganizationContext = Depends(
+        require_organization_permission("member.invite")
+    ),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        payload = skip_team_step(
+            conn,
+            actor_user_id=ctx.user_id,
+            organization_id=organization_id,
+            permissions=set(ctx.permission_codes),
+            request_id=ctx.request_id,
+        )
+        return _journey_out(payload)
+    except Exception as exc:
+        raise_domain_http(exc)
+
+
+@router.get(
+    "/organizations/{organization_id}/invitation-roles",
+    response_model=InvitationRolesResponse,
+)
+def get_invitation_roles(
+    organization_id: int,
+    ctx: OrganizationContext = Depends(
+        require_organization_permission("member.invite")
+    ),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        items = list_invitation_roles(
+            conn,
+            actor_user_id=ctx.user_id,
+            organization_id=organization_id,
+            permissions=set(ctx.permission_codes),
+        )
+        return InvitationRolesResponse(
+            items=[InvitationRoleOut(**item) for item in items]
+        )
     except Exception as exc:
         raise_domain_http(exc)
 
@@ -356,8 +552,9 @@ def list_members(
             offset=offset,
         )
         total = uc.count_by_organization(organization_id)
+        enriched = enrich_member_presentation(conn, items)
         return PaginatedMembers(
-            items=[_member_out(m) for m in items],
+            items=[_member_out_enriched(m) for m in enriched],
             page=page,
             limit=lim,
             total=total,
@@ -476,11 +673,12 @@ def create_invitation(
             role,
             ttl_days=body.ttl_days,
         )
+        token = _invite_token_for_response(result.invite_token)
         return InvitationCreateResponse(
             invitation_id=result.invitation.id,
             expires_at=result.invitation.expires_at,
-            invite_token=result.invite_token,
-            returned_once=result.returned_once,
+            invite_token=token,
+            returned_once=bool(token),
             delivery_status=result.email_delivery_status,
             invitation=_invite_out(result.invitation),
         )
@@ -584,11 +782,12 @@ def resend_invitation(
             invitation_id, organization_id
         )
         result = InvitationUseCases(conn).resend(actor, organization_id, invitation_id)
+        token = _invite_token_for_response(result.invite_token)
         return InvitationCreateResponse(
             invitation_id=result.invitation.id,
             expires_at=result.invitation.expires_at,
-            invite_token=result.invite_token,
-            returned_once=True,
+            invite_token=token,
+            returned_once=bool(token),
             delivery_status=result.email_delivery_status,
             invitation=_invite_out(result.invitation),
         )

@@ -1,62 +1,25 @@
-import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
-
+import { OrganizationCatalogs } from '../models/organization.models';
+import { SpaceContextService } from '../../../core/spaces/space-context.service';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
-export const ORG_TYPE_CATALOG = [
-  { value: 'label', label: 'Sello' },
-  { value: 'distributor', label: 'Distribuidor' },
-  { value: 'publisher', label: 'Editora' },
-  { value: 'management', label: 'Management' },
-  { value: 'other', label: 'Otra' },
-] as const;
-
-export const ORG_COUNTRY_CATALOG = [
-  { value: 'EC', label: 'Ecuador' },
-  { value: 'MX', label: 'México' },
-  { value: 'CO', label: 'Colombia' },
-  { value: 'PE', label: 'Perú' },
-  { value: 'CL', label: 'Chile' },
-  { value: 'AR', label: 'Argentina' },
-  { value: 'ES', label: 'España' },
-  { value: 'US', label: 'Estados Unidos' },
-] as const;
-
-export const ORG_TIMEZONE_CATALOG = [
-  { value: 'America/Guayaquil', label: 'America/Guayaquil' },
-  { value: 'America/Bogota', label: 'America/Bogota' },
-  { value: 'America/Mexico_City', label: 'America/Mexico_City' },
-  { value: 'America/Lima', label: 'America/Lima' },
-  { value: 'America/Santiago', label: 'America/Santiago' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'America/Argentina/Buenos_Aires' },
-  { value: 'Europe/Madrid', label: 'Europe/Madrid' },
-  { value: 'UTC', label: 'UTC' },
-] as const;
-
-export const ORG_CURRENCY_CATALOG = [
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'MXN', label: 'MXN' },
-  { value: 'COP', label: 'COP' },
-  { value: 'PEN', label: 'PEN' },
-  { value: 'CLP', label: 'CLP' },
-  { value: 'ARS', label: 'ARS' },
-] as const;
-
 export function slugFromDisplayName(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'org';
+  return (
+    name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'org'
+  );
 }
 
 @Component({
@@ -87,14 +50,11 @@ export function slugFromDisplayName(name: string): string {
           {{ 'organizations.create.legalName' | t:lang() }}
           <input formControlName="legal_name" maxlength="200" />
         </label>
-        <p class="org-muted" data-testid="org-generated-slug">
-          {{ 'organizations.create.identifier' | t:lang() }}: {{ form.controls.slug.value }}
-        </p>
         <label>
           {{ 'organizations.create.type' | t:lang() }} *
           <select formControlName="organization_type">
-            @for (opt of types; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
+            @for (opt of catalogs()?.organization_types || []; track opt.code) {
+              <option [value]="opt.code">{{ opt.label }}</option>
             }
           </select>
         </label>
@@ -102,24 +62,8 @@ export function slugFromDisplayName(name: string): string {
           {{ 'organizations.create.country' | t:lang() }}
           <select formControlName="country_code">
             <option value="">—</option>
-            @for (opt of countries; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          {{ 'organizations.create.timezone' | t:lang() }} *
-          <select formControlName="timezone">
-            @for (opt of timezones; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          {{ 'organizations.create.currency' | t:lang() }} *
-          <select formControlName="default_currency">
-            @for (opt of currencies; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
+            @for (opt of catalogs()?.countries || []; track opt.code) {
+              <option [value]="opt.code">{{ opt.label }}</option>
             }
           </select>
         </label>
@@ -143,11 +87,33 @@ export function slugFromDisplayName(name: string): string {
             />
           </label>
           <p class="org-muted">{{ 'organizations.create.slugHelp' | t:lang() }}</p>
+          <label>
+            {{ 'organizations.create.timezone' | t:lang() }}
+            <select formControlName="timezone">
+              <option value="">Automático</option>
+              @for (opt of catalogs()?.timezones || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            {{ 'organizations.create.currency' | t:lang() }}
+            <select formControlName="default_currency">
+              <option value="">Automático</option>
+              @for (opt of catalogs()?.currencies || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
+          </label>
         </details>
 
         <div class="org-actions">
           <button class="org-btn" type="submit" [disabled]="form.invalid || submitting() || success()">
-            {{ submitting() ? ('organizations.create.submitting' | t:lang()) : ('organizations.create.title' | t:lang()) }}
+            {{
+              submitting()
+                ? ('organizations.create.submitting' | t:lang())
+                : ('organizations.create.title' | t:lang())
+            }}
           </button>
           <a class="org-btn org-btn--ghost" routerLink="/business">
             {{ 'organizations.create.cancel' | t:lang() }}
@@ -157,31 +123,29 @@ export function slugFromDisplayName(name: string): string {
     </section>
   `,
 })
-export class OrgCreatePageComponent {
+export class OrgCreatePageComponent implements OnInit {
   private i18n = inject(I18nService);
   readonly lang = this.i18n.lang;
 
   private readonly api = inject(OrganizationsApiService);
   private readonly ctx = inject(OrganizationContextService);
+  private readonly spaces = inject(SpaceContextService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 
   @ViewChild('errorBox') errorBox?: ElementRef<HTMLElement>;
   @ViewChild('slugInput') slugInput?: ElementRef<HTMLInputElement>;
 
-  readonly types = ORG_TYPE_CATALOG;
-  readonly countries = ORG_COUNTRY_CATALOG;
-  readonly timezones = ORG_TIMEZONE_CATALOG;
-  readonly currencies = ORG_CURRENCY_CATALOG;
+  readonly catalogs = signal<OrganizationCatalogs | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     display_name: ['', [Validators.required, Validators.maxLength(200)]],
     legal_name: [''],
-    slug: ['org', Validators.required],
+    slug: [''],
     organization_type: ['label', Validators.required],
     country_code: [''],
-    timezone: ['America/Guayaquil', Validators.required],
-    default_currency: ['USD', Validators.required],
+    timezone: [''],
+    default_currency: [''],
     activate: [true],
   });
 
@@ -190,14 +154,42 @@ export class OrgCreatePageComponent {
   readonly success = signal(false);
   readonly advancedOpen = signal(false);
 
-  /** Once the user edits the slug we stop deriving it from the display name. */
   private slugEdited = false;
+  private clientIntentId = `org-create-${crypto.randomUUID?.() || Date.now()}`;
 
   constructor() {
     this.form.controls.display_name.valueChanges.subscribe((name) => {
       if (this.slugEdited) return;
       this.form.controls.slug.setValue(slugFromDisplayName(name), { emitEvent: false });
     });
+  }
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.catalogs.set(await firstValueFrom(this.api.catalogs()));
+    } catch {
+      this.catalogs.set({
+        organization_types: [
+          { code: 'label', label: 'Sello' },
+          { code: 'distributor', label: 'Distribuidor' },
+          { code: 'publisher', label: 'Editora' },
+          { code: 'management', label: 'Management' },
+          { code: 'other', label: 'Otra' },
+        ],
+        countries: [
+          { code: 'EC', label: 'Ecuador' },
+          { code: 'MX', label: 'México' },
+          { code: 'CO', label: 'Colombia' },
+          { code: 'PE', label: 'Perú' },
+          { code: 'CL', label: 'Chile' },
+          { code: 'AR', label: 'Argentina' },
+          { code: 'ES', label: 'España' },
+          { code: 'US', label: 'Estados Unidos' },
+        ],
+        timezones: [{ code: 'UTC', label: 'UTC' }],
+        currencies: [{ code: 'USD', label: 'USD' }],
+      });
+    }
   }
 
   markSlugEdited(): void {
@@ -218,24 +210,34 @@ export class OrgCreatePageComponent {
     this.error.set(null);
     const value = this.form.getRawValue();
     try {
-      await firstValueFrom(
+      const created = await firstValueFrom(
         this.api.create({
           display_name: value.display_name.trim(),
           legal_name: value.legal_name.trim() || undefined,
-          slug: value.slug.trim().toLowerCase(),
+          slug: value.slug.trim() ? value.slug.trim().toLowerCase() : undefined,
           organization_type: value.organization_type,
           country_code: value.country_code.trim().toUpperCase() || undefined,
-          timezone: value.timezone.trim() || 'UTC',
-          default_currency: value.default_currency.trim().toUpperCase() || 'USD',
+          timezone: value.timezone.trim() || undefined,
+          default_currency: value.default_currency.trim().toUpperCase() || undefined,
           activate: value.activate,
+          client_intent_id: this.clientIntentId,
         }),
       );
       this.success.set(true);
+      const orgId = created.organization.id;
       await this.ctx.afterCreate();
-      await this.router.navigate(['/organizations/onboarding']);
-    } catch (e) {
+      try {
+        await this.spaces.bootstrapFromSession();
+        await this.spaces.selectSpace(`org:${orgId}`, { navigate: false });
+      } catch {
+        /* space refresh is best-effort; onboarding + productSurfaceGuard retry */
+      }
+      await this.router.navigate(['/organizations/onboarding'], {
+        queryParams: { organization_id: orgId },
+      });    } catch (e) {
       const slugConflict =
-        e instanceof OrganizationsApiError && (e.code === 'slug_conflict' || e.status === 409);
+        e instanceof OrganizationsApiError &&
+        (e.code === 'create_conflict' || e.code === 'slug_taken' || e.status === 409);
       const msg = slugConflict
         ? this.i18n.t('organizations.create.slugConflict', {
             message: (e as OrganizationsApiError).message,
@@ -245,7 +247,6 @@ export class OrgCreatePageComponent {
           : this.i18n.t('organizations.create.error');
       this.error.set(msg);
       if (slugConflict) {
-        // Form values are preserved (reactive form); surface the field that must change.
         this.advancedOpen.set(true);
       }
       queueMicrotask(() => {

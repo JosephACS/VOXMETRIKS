@@ -87,7 +87,7 @@ def uc(tmp_path: Path):
     schema_bootstrap._schema_ready = previous
 
 
-def _create_org(uc, *, slug="acme", actor=None, make_active=True):
+def _create_org(uc, *, slug="acme", actor=None, make_active=True, client_intent_id=None):
     actor = actor or uc["actor_a"]
     return CreateOrganization(uc["conn"]).execute(
         CreateOrganizationCommand(
@@ -96,6 +96,8 @@ def _create_org(uc, *, slug="acme", actor=None, make_active=True):
             slug=slug,
             organization_type="label",
             make_active=make_active,
+            client_intent_id=client_intent_id,
+            slug_explicit=True,
         )
     )
 
@@ -121,13 +123,29 @@ def test_create_organization_success(uc):
 
 
 def test_create_slug_conflict_and_deterministic_retry(uc):
-    first = _create_org(uc, slug="same-slug")
-    again = _create_org(uc, slug="same-slug", actor=uc["actor_a"])
+    from app.packages.organizations.domain.errors import CreateIntentConflict
+
+    first = _create_org(uc, slug="same-slug", client_intent_id="intent-same-slug")
+    # Explicit slug collision never silently reuses (Spec 053).
+    with pytest.raises(OrganizationSlugConflict):
+        _create_org(uc, slug="same-slug", actor=uc["actor_a"], client_intent_id="other-intent")
+    with pytest.raises(OrganizationSlugConflict):
+        _create_org(uc, slug="same-slug", actor=uc["actor_b"], client_intent_id="actor-b-intent")
+    # Same client_intent_id + same payload reuses exactly one org.
+    again = _create_org(uc, slug="same-slug", client_intent_id="intent-same-slug")
     assert again.reused_existing is True
     assert again.organization.id == first.organization.id
-    with pytest.raises(OrganizationSlugConflict):
-        _create_org(uc, slug="same-slug", actor=uc["actor_b"])
-
+    with pytest.raises(CreateIntentConflict):
+        CreateOrganization(uc["conn"]).execute(
+            CreateOrganizationCommand(
+                actor=uc["actor_a"],
+                display_name="Different Name",
+                slug="same-slug",
+                organization_type="label",
+                client_intent_id="intent-same-slug",
+                slug_explicit=True,
+            )
+        )
 
 def test_create_unknown_user(uc):
     with pytest.raises(UserNotFound):

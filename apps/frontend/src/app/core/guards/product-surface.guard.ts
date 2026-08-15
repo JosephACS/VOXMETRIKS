@@ -3,6 +3,7 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { normalizeIdentityRole, type NavAccessContext } from '../navigation/nav-access.policy';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
+import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 import { SpaceContextService } from '../spaces/space-context.service';
 import {
   decideProductSurfaceAccess,
@@ -29,6 +30,7 @@ export const productSurfaceGuard: CanActivateFn = async (
   const router = inject(Router);
   const crm = inject(CrmContextService);
   const spaces = inject(SpaceContextService);
+  const orgCtx = inject(OrganizationContextService);
 
   await spaces.ensureReady();
 
@@ -36,18 +38,35 @@ export const productSurfaceGuard: CanActivateFn = async (
   // Resolve the requested tenant through the authoritative session-context API
   // before evaluating the product surface; downstream org guards still enforce
   // membership, lifecycle, subscription tier and the concrete permission.
-  const requestedOrganizationId = Number(
-    route.queryParamMap.get('organization_id') ||
-      route.queryParamMap.get('organizationId') ||
-      0,
-  );
+  const requestedOrganizationId = Number(route.queryParamMap.get('organization_id') || 0);
   const activeSpace = spaces.activeSpace();
   if (
     requestedOrganizationId > 0 &&
     (activeSpace?.kind !== 'organization' ||
       activeSpace.organizationId !== requestedOrganizationId)
   ) {
-    await spaces.selectSpace(`org:${requestedOrganizationId}`, { navigate: false });
+    let ok = await spaces.selectSpace(`org:${requestedOrganizationId}`, { navigate: false });
+    if (!ok) {
+      // Newly created orgs may be missing from a stale space list — refresh once.
+      try {
+        await spaces.bootstrapFromSession();
+        ok = await spaces.selectSpace(`org:${requestedOrganizationId}`, { navigate: false });
+      } catch {
+        ok = false;
+      }
+    }
+    if (!ok) {
+      try {
+        await orgCtx.activate(requestedOrganizationId);
+        await spaces.bootstrapFromSession();
+        ok = await spaces.selectSpace(`org:${requestedOrganizationId}`, { navigate: false });
+      } catch {
+        ok = false;
+      }
+    }
+    if (!ok || spaces.activeSpace()?.organizationId !== requestedOrganizationId) {
+      return router.createUrlTree(['/error/module-unavailable']);
+    }
   }
 
   const ctx: NavAccessContext = {

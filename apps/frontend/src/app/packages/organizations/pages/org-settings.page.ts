@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { Organization } from '../models/organization.models';
+import { Organization, OrganizationCatalogs } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 
@@ -18,7 +18,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
   template: `
     <section class="org-page" data-testid="org-settings-page">
       <h1>{{ 'organizations.settings.title' | t:lang() }}</h1>
-      <p class="lede">Consulta y actualiza campos autorizados. El slug no es editable.</p>
+      <p class="lede">Consulta y actualiza campos autorizados. El identificador interno no es editable.</p>
 
       @if (loading()) {
         <p class="org-muted">{{ 'common.loading' | t:lang() }}</p>
@@ -39,7 +39,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
               [class.org-badge--suspended]="o.status === 'suspended_by_platform'">{{ o.status | statusLabel }}</span>
           </p>
           <label>
-            Slug (no editable)
+            Identificador (no editable)
             <input [value]="o.slug" disabled />
           </label>
           <label>
@@ -52,19 +52,36 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
           </label>
           <label>
             Tipo
-            <input name="organization_type" [(ngModel)]="organizationType" [disabled]="!canUpdate() || saving()" />
+            <select name="organization_type" [(ngModel)]="organizationType" [disabled]="!canUpdate() || saving()">
+              @for (opt of catalogs()?.organization_types || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
           </label>
           <label>
             País
-            <input name="country_code" [(ngModel)]="countryCode" [disabled]="!canUpdate() || saving()" />
+            <select name="country_code" [(ngModel)]="countryCode" [disabled]="!canUpdate() || saving()">
+              <option value="">—</option>
+              @for (opt of catalogs()?.countries || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
           </label>
           <label>
             Zona horaria
-            <input name="timezone" [(ngModel)]="timezone" [disabled]="!canUpdate() || saving()" />
+            <select name="timezone" [(ngModel)]="timezone" [disabled]="!canUpdate() || saving()">
+              @for (opt of catalogs()?.timezones || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
           </label>
           <label>
             Moneda
-            <input name="default_currency" [(ngModel)]="defaultCurrency" [disabled]="!canUpdate() || saving()" />
+            <select name="default_currency" [(ngModel)]="defaultCurrency" [disabled]="!canUpdate() || saving()">
+              @for (opt of catalogs()?.currencies || []; track opt.code) {
+                <option [value]="opt.code">{{ opt.label }}</option>
+              }
+            </select>
           </label>
           <div class="org-actions">
             @if (canUpdate()) {
@@ -110,6 +127,7 @@ export class OrgSettingsPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly org = signal<Organization | null>(null);
+  readonly catalogs = signal<OrganizationCatalogs | null>(null);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly closing = signal(false);
@@ -139,6 +157,11 @@ export class OrgSettingsPageComponent implements OnInit {
     this.error.set(null);
     try {
       if (this.ctx.status() === 'idle') await this.ctx.bootstrap();
+      try {
+        this.catalogs.set(await firstValueFrom(this.api.catalogs()));
+      } catch {
+        this.catalogs.set(null);
+      }
       const o = await firstValueFrom(this.api.get(id));
       this.org.set(o);
       this.displayName = o.display_name;

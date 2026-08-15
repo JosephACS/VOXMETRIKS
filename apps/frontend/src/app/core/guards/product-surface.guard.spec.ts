@@ -12,6 +12,7 @@ import { productSurfaceGuard } from './product-surface.guard';
 import { AuthService } from '../services/auth.service';
 import { CrmContextService } from '../../packages/crm/services/crm-context.service';
 import { SpaceContextService } from '../spaces/space-context.service';
+import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 import {
   PRODUCT_SURFACE_WRAPPED_PACKAGES,
   prependRouteGuard,
@@ -159,6 +160,13 @@ describe('productSurfaceGuard organization deep links', () => {
             activeSpace,
             activeSpaceKind: () => activeSpace()?.kind ?? null,
             selectSpace,
+            bootstrapFromSession: vi.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: OrganizationContextService,
+          useValue: {
+            activate: vi.fn().mockResolvedValue(undefined),
           },
         },
         {

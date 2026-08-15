@@ -43,12 +43,14 @@ class CreateOrganizationCommand:
     slug: str
     organization_type: str
     country_code: Optional[str] = None
-    timezone: str = "UTC"
-    default_currency: str = "USD"
+    timezone: Optional[str] = None
+    default_currency: Optional[str] = None
     legal_name: Optional[str] = None
     make_active: bool = True
     # Documented debt: no persistent idempotency_key column in I1 schema.
     idempotency_key: Optional[str] = None
+    client_intent_id: Optional[str] = None
+    slug_explicit: bool = False
 
 
 @dataclass(frozen=True)

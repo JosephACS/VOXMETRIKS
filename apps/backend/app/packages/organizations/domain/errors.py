@@ -31,6 +31,10 @@ class OrganizationSlugConflict(DuplicateError):
     pass
 
 
+class CreateIntentConflict(DuplicateError):
+    """Same client_intent_id with a different create payload."""
+
+
 class InvalidOrganizationTransition(ValidationError):
     pass
 
