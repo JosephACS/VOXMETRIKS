@@ -28,7 +28,7 @@ export default defineConfig({
   projects: [
     {
       name: 'auth',
-      testMatch: /(auth|identity-first-access|release-candidate-final|final-technical-release)\.spec\.ts/,
+      testMatch: /(auth|identity-first-access|artist-professional-journey|release-candidate-final|final-technical-release)\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: { cookies: [], origins: [] },
@@ -40,6 +40,7 @@ export default defineConfig({
       testIgnore: [
         '**/auth.spec.ts',
         '**/identity-first-access.spec.ts',
+        '**/artist-professional-journey.spec.ts',
         '**/release-candidate-final.spec.ts',
         '**/final-technical-release.spec.ts',
       ],

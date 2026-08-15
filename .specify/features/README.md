@@ -1,11 +1,9 @@
 # Features activas
 
-**Estado actual:** no hay feature Spec Kit de implementación activa.
+**Estado actual:** Spec **051** está activa.
 
-- Las Specs **045–049** están **cerradas** y viven en [`.specify/history/`](../history/).
-- El siguiente identificador **reservado** es **`050`**.
-- **No** crear `.specify/features/050-…` hasta abrir formalmente esa Spec.
+- [051 — Professional Artist Journey](051-artist-professional-journey/)
+- Spec **050** está cerrada en [history](../history/050-identity-first-access/).
+- El siguiente identificador disponible es **052**; no debe crearse mientras 051 siga activa.
 
-Herramientas Spec Kit: ver [`.specify/feature.json`](../feature.json) (`status: closed/idle`) y DryRun de `create-new-feature.ps1` (debe proponer `050-…` bajo esta carpeta sin crear archivos en `-DryRun`).
-
-Verdad de producto: [`docs/STATUS.md`](../../docs/STATUS.md).
+Verdad de producto implementado: [`docs/STATUS.md`](../../docs/STATUS.md). Una Spec activa describe alcance aprobado, no prueba de implementación.

@@ -12,6 +12,7 @@ import { OrgAuditPageComponent } from '../pages/org-audit.page';
 import { OrganizationContextService } from './organization-context.service';
 import { OrganizationsApiService } from './organizations-api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 describe('OrgSelectorComponent (I4)', () => {
   let fixture: ComponentFixture<OrgSelectorComponent>;
@@ -29,6 +30,7 @@ describe('OrgSelectorComponent (I4)', () => {
         OrganizationContextService,
       ],
     }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
     fixture = TestBed.createComponent(OrgSelectorComponent);
     http = TestBed.inject(HttpTestingController);
   });
@@ -65,6 +67,7 @@ describe('OrgNonePageComponent (I4)', () => {
         OrganizationContextService,
       ],
     }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
     const fixture = TestBed.createComponent(OrgNonePageComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
@@ -133,6 +136,7 @@ describe('OrgCreatePageComponent (I4)', () => {
         OrganizationContextService,
       ],
     }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
     const fixture = TestBed.createComponent(OrgCreatePageComponent);
     const http = TestBed.inject(HttpTestingController);
     const cmp = fixture.componentInstance;

@@ -1768,6 +1768,7 @@ export const ENTERPRISE_ES = {
   'publishing.review.rightsAlerts': 'Alertas de derechos',
   'publishing.review.actions': 'Decisión',
   'publishing.review.notes': 'Notas / motivo',
+  'publishing.review.notesRequired': 'Se requiere una nota para pedir cambios.',
   'publishing.review.approve': 'Aprobar',
   'publishing.review.reject': 'Rechazar',
   'publishing.review.requestChanges': 'Pedir cambios',

@@ -15,11 +15,12 @@ import {
 describe('I18nService', () => {
   const STORAGE_KEY = 'voxmetrik_ui_prefs';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.removeItem(STORAGE_KEY);
     TestBed.configureTestingModule({
       providers: [UiPreferencesService, I18nService, LocaleFormatService],
     });
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
   });
 
   afterEach(() => {

@@ -9,6 +9,7 @@ import { ProfileSwitchService } from '../services/profile-switch.service';
 import { SecurityApiService } from '../services/security-api.service';
 import { TrustedDeviceService } from '../services/trusted-device.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { MusicPlayerService } from '../../../shared/services/music-player.service';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
 import { HistoryService } from '../../streaming/services/history.service';
@@ -61,6 +62,7 @@ describe('ProfileSelectorPage', () => {
         },
       ],
     }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
     fixture = TestBed.createComponent(ProfileSelectorPage);
     http = TestBed.inject(HttpTestingController);
   });

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import duckdb
 
@@ -14,12 +16,14 @@ from app.packages.artists.identity_access import (
     ALL_ROLES,
     INDEPENDENT_ORG_ID,
     INVITE_ROLES,
+    RELATIONSHIP_TYPES,
     REQUEST_TYPES,
     permissions_for_role,
     role_has_permission,
 )
 from app.packages.artists.identity_access.errors import (
     ConflictError,
+    EvidenceRequired,
     InvitationAlreadyUsed,
     InvitationExpired,
     InvitationRevoked,
@@ -27,6 +31,14 @@ from app.packages.artists.identity_access.errors import (
     PermissionDenied,
     ValidationError,
 )
+from app.packages.artists.identity_access.workspace_provisioning import (
+    WorkspaceProvisionError,
+    WorkspaceProvisionResult,
+    compensate_created_workspace,
+    migrate_zero_backed_profile,
+    provision_artist_workspace,
+)
+from app.packages.artists.application.use_cases import _update_profile_row
 from app.packages.identity.services.user_service import _fetch_user
 from app.packages.organizations.domain.invitation_token import (
     generate_invitation_token,
@@ -62,28 +74,68 @@ def is_platform_admin(conn: duckdb.DuckDBPyConnection, user_id: int) -> bool:
     return "platform_admin" in roles
 
 
+_PROFILE_COLS = (
+    "id",
+    "organization_id",
+    "display_name",
+    "legal_name",
+    "normalized_name",
+    "status",
+    "warehouse_artist_id",
+    "created_by",
+    "created_at",
+    "updated_at",
+    # Spec 051 additive public metadata
+    "bio",
+    "country_code",
+    "primary_genre",
+    "website_url",
+    "image_url",
+)
+
+_REQUEST_COLS = (
+    "id",
+    "applicant_user_id",
+    "request_type",
+    "target_artist_profile_id",
+    "warehouse_artist_id",
+    "proposed_display_name",
+    "proposed_role",
+    "status",
+    "created_at",
+    "reviewed_at",
+    "reviewer_user_id",
+    "rejection_reason",
+    # Spec 051 additive evidence
+    "relationship_type",
+    "evidence_url",
+    "evidence_note",
+)
+
+_REQUEST_SELECT = ", ".join(_REQUEST_COLS)
+
+
 def _get_profile(conn: duckdb.DuckDBPyConnection, artist_profile_id: int) -> dict[str, Any]:
     row = conn.execute(
-        """
-        SELECT id, organization_id, display_name, legal_name, normalized_name,
-               status, warehouse_artist_id, created_by, created_at, updated_at
-        FROM app_artist_profile WHERE id = ?
-        """,
+        f"SELECT {', '.join(_PROFILE_COLS)} FROM app_artist_profile WHERE id = ?",
         [artist_profile_id],
     ).fetchone()
     if not row:
         raise NotFoundError(f"Artist profile {artist_profile_id} not found")
+    data = dict(zip(_PROFILE_COLS, row))
     return {
-        "id": int(row[0]),
-        "organization_id": int(row[1]),
-        "display_name": str(row[2]),
-        "legal_name": row[3],
-        "normalized_name": str(row[4]),
-        "status": str(row[5]),
-        "warehouse_artist_id": int(row[6]) if row[6] is not None else None,
-        "created_by": int(row[7]) if row[7] is not None else None,
-        "created_at": row[8],
-        "updated_at": row[9],
+        **data,
+        "id": int(data["id"]),
+        "organization_id": int(data["organization_id"]),
+        "display_name": str(data["display_name"]),
+        "normalized_name": str(data["normalized_name"]),
+        "status": str(data["status"]),
+        "warehouse_artist_id": (
+            int(data["warehouse_artist_id"])
+            if data["warehouse_artist_id"] is not None
+            else None
+        ),
+        "created_by": int(data["created_by"]) if data["created_by"] is not None else None,
     }
 
 
@@ -155,26 +207,200 @@ def _find_profile_by_warehouse(
     return _get_profile(conn, int(row[0]))
 
 
+def _table_exists(conn: duckdb.DuckDBPyConnection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = ? LIMIT 1",
+        [table],
+    ).fetchone()
+    return row is not None
+
+
 def _warehouse_exists(conn: duckdb.DuckDBPyConnection, warehouse_artist_id: int) -> bool:
-    try:
-        row = conn.execute(
-            "SELECT 1 FROM dim_artista WHERE id_artista = ? LIMIT 1",
-            [warehouse_artist_id],
-        ).fetchone()
-        return row is not None
-    except Exception:
+    if not _table_exists(conn, "dim_artista"):
         return False
+    row = conn.execute(
+        "SELECT 1 FROM dim_artista WHERE id_artista = ? LIMIT 1",
+        [warehouse_artist_id],
+    ).fetchone()
+    return row is not None
 
 
 def _warehouse_name(conn: duckdb.DuckDBPyConnection, warehouse_artist_id: int) -> Optional[str]:
-    try:
-        row = conn.execute(
-            "SELECT nombre_artista FROM dim_artista WHERE id_artista = ?",
-            [warehouse_artist_id],
-        ).fetchone()
-        return str(row[0]) if row else None
-    except Exception:
+    if not _table_exists(conn, "dim_artista"):
         return None
+    row = conn.execute(
+        "SELECT nombre_artista FROM dim_artista WHERE id_artista = ?",
+        [warehouse_artist_id],
+    ).fetchone()
+    return str(row[0]) if row else None
+
+
+def _validate_http_url(value: str, *, field: str) -> str:
+    parsed = urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValidationError(f"{field} must be an absolute http(s) URL")
+    if len(value) > 500:
+        raise ValidationError(f"{field} must be at most 500 characters")
+    return value
+
+
+def _list_external_identifiers(
+    conn: duckdb.DuckDBPyConnection, artist_profile_id: int
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT id, system_code, external_value
+        FROM app_artist_external_identifier
+        WHERE artist_id = ?
+        ORDER BY system_code
+        """,
+        [artist_profile_id],
+    ).fetchall()
+    return [
+        {"id": int(r[0]), "system_code": str(r[1]), "external_value": str(r[2])}
+        for r in rows
+    ]
+
+
+def _normalize_external_identifiers(entries: list[dict[str, Any]]) -> dict[str, str]:
+    """Validate the requested set before anything is written."""
+    normalized: dict[str, str] = {}
+    for entry in entries:
+        system_code = str(entry.get("system_code") or "").strip().lower()
+        external_value = str(entry.get("external_value") or "").strip()
+        if not system_code or not external_value:
+            raise ValidationError(
+                "external identifiers require system_code and external_value"
+            )
+        if len(system_code) > 40 or len(external_value) > 200:
+            raise ValidationError("external identifier value is too long")
+        if system_code in normalized:
+            raise ConflictError(f"Duplicate external identifier system: {system_code}")
+        normalized[system_code] = external_value
+    return normalized
+
+
+def _replace_external_identifiers(
+    conn: duckdb.DuckDBPyConnection,
+    artist_profile_id: int,
+    normalized: dict[str, str],
+) -> None:
+    """Replace the whole set for one profile (autocommit, see DuckDB note)."""
+    now = _now()
+    conn.execute(
+        "DELETE FROM app_artist_external_identifier WHERE artist_id = ?",
+        [artist_profile_id],
+    )
+    for system_code, external_value in normalized.items():
+        eid = _next_id(conn, "app_artist_external_identifier")
+        conn.execute(
+            """
+            INSERT INTO app_artist_external_identifier
+                (id, artist_id, system_code, external_value, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [eid, artist_profile_id, system_code, external_value, now, now],
+        )
+
+
+def _search_warehouse_artists(
+    conn: duckdb.DuckDBPyConnection, *, search: Optional[str], limit: int
+) -> list[tuple[int, str]]:
+    """Warehouse candidates. Returns [] when the warehouse table is unavailable."""
+    if not _table_exists(conn, "dim_artista"):
+        return []
+    term = (search or "").strip()
+    if term:
+        rows = conn.execute(
+            """
+            SELECT id_artista, nombre_artista
+            FROM dim_artista
+            WHERE nombre_artista IS NOT NULL
+              AND LOWER(nombre_artista) LIKE LOWER(?)
+            ORDER BY LENGTH(nombre_artista), id_artista
+            LIMIT ?
+            """,
+            [f"%{term}%", limit],
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT id_artista, nombre_artista
+            FROM dim_artista
+            WHERE nombre_artista IS NOT NULL
+            ORDER BY id_artista
+            LIMIT ?
+            """,
+            [limit],
+        ).fetchall()
+    return [(int(r[0]), str(r[1])) for r in rows]
+
+
+def _pending_request_for(
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    user_id: int,
+    warehouse_artist_id: int,
+    artist_profile_id: Optional[int],
+) -> Optional[dict[str, Any]]:
+    row = conn.execute(
+        f"""
+        SELECT {_REQUEST_SELECT}
+        FROM app_artist_access_request
+        WHERE applicant_user_id = ? AND status = 'pending'
+          AND (warehouse_artist_id = ?
+               OR (? IS NOT NULL AND target_artist_profile_id = ?))
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        [user_id, warehouse_artist_id, artist_profile_id, artist_profile_id],
+    ).fetchone()
+    return _request_dict(row) if row else None
+
+
+def _discovery_item(
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    user_id: int,
+    warehouse_artist_id: int,
+    name: str,
+) -> dict[str, Any]:
+    """Resolve management state and the single action the caller may take."""
+    profile = _find_profile_by_warehouse(conn, warehouse_artist_id)
+    profile_id = profile["id"] if profile else None
+    pending = _pending_request_for(
+        conn,
+        user_id=user_id,
+        warehouse_artist_id=warehouse_artist_id,
+        artist_profile_id=profile_id,
+    )
+
+    membership = (
+        _active_membership(conn, artist_profile_id=profile_id, user_id=user_id)
+        if profile_id is not None
+        else None
+    )
+    owners = _count_active_owners(conn, profile_id) if profile_id is not None else 0
+
+    if membership is not None:
+        state, action = "member", "open_space"
+    elif pending is not None:
+        state, action = "pending", "view_request"
+    elif profile_id is None or owners == 0:
+        state, action = "unmanaged", "claim_ownership"
+    else:
+        state, action = "managed", "request_access"
+
+    return {
+        "warehouse_artist_id": warehouse_artist_id,
+        "display_name": name,
+        "image_url": (profile or {}).get("image_url"),
+        "management_state": state,
+        "allowed_action": action,
+        "artist_profile_id": profile_id,
+        "request_id": (pending or {}).get("id"),
+        "request_status": (pending or {}).get("status"),
+    }
 
 
 def _invitation_row(conn: duckdb.DuckDBPyConnection, invitation_id: int) -> tuple:
@@ -320,11 +546,9 @@ def _create_profile(
     aid = _next_id(conn, "app_artist_profile")
     normalized = _normalize_name(name)
     conn.execute(
-        """
-        INSERT INTO app_artist_profile
-            (id, organization_id, display_name, legal_name, normalized_name,
-             status, warehouse_artist_id, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+        f"""
+        INSERT INTO app_artist_profile ({', '.join(_PROFILE_COLS)})
+        VALUES ({', '.join('?' for _ in _PROFILE_COLS)})
         """,
         [
             aid,
@@ -332,10 +556,16 @@ def _create_profile(
             name,
             legal_name,
             normalized,
+            "active",
             warehouse_artist_id,
             created_by,
             now,
             now,
+            None,
+            None,
+            None,
+            None,
+            None,
         ],
     )
     return _get_profile(conn, aid)
@@ -348,7 +578,7 @@ def _mine_item(
         "artist_profile_id": profile["id"],
         "warehouse_artist_id": profile["warehouse_artist_id"],
         "display_name": profile["display_name"],
-        "image_url": None,
+        "image_url": profile.get("image_url"),
         "membership_role": membership["role"],
         "membership_status": membership["status"],
         "permissions": permissions_for_role(membership["role"]),
@@ -377,11 +607,19 @@ class ArtistSpaceUseCases:
         for row in rows:
             m = _membership_dict(row)
             try:
-                profile = _get_profile(self._conn, m["artist_profile_id"])
+                profile = self._migrated_profile(m["artist_profile_id"])
             except NotFoundError:
                 continue
             items.append(_mine_item(self._conn, m, profile))
         return items
+
+    def _migrated_profile(self, artist_profile_id: int) -> dict[str, Any]:
+        """Read a profile, moving legacy sentinel-backed rows onto a real workspace."""
+        profile = _get_profile(self._conn, artist_profile_id)
+        if profile["organization_id"] != INDEPENDENT_ORG_ID:
+            return profile
+        migrate_zero_backed_profile(self._conn, artist_profile_id)
+        return _get_profile(self._conn, artist_profile_id)
 
     def summary(self, *, artist_profile_id: int, user_id: int) -> dict[str, Any]:
         m = _require_membership(
@@ -390,7 +628,7 @@ class ArtistSpaceUseCases:
             user_id=user_id,
             permission="artist_space.view",
         )
-        profile = _get_profile(self._conn, artist_profile_id)
+        profile = self._migrated_profile(artist_profile_id)
         team_size = int(
             self._conn.execute(
                 """
@@ -414,16 +652,13 @@ class ArtistSpaceUseCases:
             )
         track_count = 0
         wid = profile["warehouse_artist_id"]
-        if wid is not None:
-            try:
-                track_count = int(
-                    self._conn.execute(
-                        "SELECT COUNT(*) FROM dim_track WHERE id_artista = ?",
-                        [wid],
-                    ).fetchone()[0]
-                )
-            except Exception:
-                track_count = 0
+        if wid is not None and _table_exists(self._conn, "dim_track"):
+            track_count = int(
+                self._conn.execute(
+                    "SELECT COUNT(*) FROM dim_track WHERE id_artista = ?",
+                    [wid],
+                ).fetchone()[0]
+            )
         return {
             "artist_profile_id": artist_profile_id,
             "display_name": profile["display_name"],
@@ -436,20 +671,23 @@ class ArtistSpaceUseCases:
         }
 
     def get_profile(self, *, artist_profile_id: int, user_id: int) -> dict[str, Any]:
-        _require_membership(
+        m = _require_membership(
             self._conn,
             artist_profile_id=artist_profile_id,
             user_id=user_id,
             permission="artist_space.view",
         )
         profile = _get_profile(self._conn, artist_profile_id)
-        m = _active_membership(
-            self._conn, artist_profile_id=artist_profile_id, user_id=user_id
-        )
+        if not role_has_permission(m["role"], "artist_space.profile.update"):
+            # legal_name is non-public: owner/administrator only.
+            profile = {**profile, "legal_name": None}
         return {
             **profile,
-            "membership_role": m["role"] if m else None,
-            "permissions": permissions_for_role(m["role"]) if m else [],
+            "membership_role": m["role"],
+            "permissions": permissions_for_role(m["role"]),
+            "external_identifiers": _list_external_identifiers(
+                self._conn, artist_profile_id
+            ),
         }
 
     def patch_profile(
@@ -459,6 +697,12 @@ class ArtistSpaceUseCases:
         user_id: int,
         display_name: Optional[str] = None,
         legal_name: Optional[str] = None,
+        bio: Optional[str] = None,
+        country_code: Optional[str] = None,
+        primary_genre: Optional[str] = None,
+        website_url: Optional[str] = None,
+        image_url: Optional[str] = None,
+        external_identifiers: Optional[list[dict[str, Any]]] = None,
     ) -> dict[str, Any]:
         _require_membership(
             self._conn,
@@ -466,20 +710,55 @@ class ArtistSpaceUseCases:
             user_id=user_id,
             permission="artist_space.profile.update",
         )
-        profile = _get_profile(self._conn, artist_profile_id)
+        _get_profile(self._conn, artist_profile_id)
         changes: dict[str, Any] = {"updated_at": _now()}
         if display_name is not None:
             name = display_name.strip()
             if not name:
                 raise ValidationError("display_name cannot be empty")
+            if len(name) > 200:
+                raise ValidationError("display_name must be at most 200 characters")
             changes["display_name"] = name
             changes["normalized_name"] = _normalize_name(name)
         if legal_name is not None:
             changes["legal_name"] = legal_name.strip() or None
-        # DuckDB-safe profile mutate (same pattern as Spec 020)
-        from app.packages.artists.application.use_cases import _update_profile_row
+        if bio is not None:
+            text = bio.strip()
+            if len(text) > 2000:
+                raise ValidationError("bio must be at most 2000 characters")
+            changes["bio"] = text or None
+        if country_code is not None:
+            code = country_code.strip().upper()
+            if code and not re.fullmatch(r"[A-Z]{2}", code):
+                raise ValidationError("country_code must be a 2-letter ISO code")
+            changes["country_code"] = code or None
+        if primary_genre is not None:
+            genre = primary_genre.strip()
+            if len(genre) > 80:
+                raise ValidationError("primary_genre must be at most 80 characters")
+            changes["primary_genre"] = genre or None
+        if website_url is not None:
+            url = website_url.strip()
+            changes["website_url"] = (
+                _validate_http_url(url, field="website_url") if url else None
+            )
+        if image_url is not None:
+            url = image_url.strip()
+            changes["image_url"] = (
+                _validate_http_url(url, field="image_url") if url else None
+            )
 
+        # Both writes validate up front, then run in autocommit: DuckDB rejects
+        # rewriting a pre-existing indexed row inside an explicit transaction.
+        identifiers = (
+            _normalize_external_identifiers(external_identifiers)
+            if external_identifiers is not None
+            else None
+        )
+        # DuckDB-safe profile mutate (same pattern as Spec 020)
         _update_profile_row(self._conn, artist_profile_id, **changes)
+        if identifiers is not None:
+            _replace_external_identifiers(self._conn, artist_profile_id, identifiers)
         return self.get_profile(artist_profile_id=artist_profile_id, user_id=user_id)
 
     def list_tracks(
@@ -979,10 +1258,8 @@ class ArtistSpaceUseCases:
             permission="artist_space.access.review",
         )
         rows = self._conn.execute(
-            """
-            SELECT id, applicant_user_id, request_type, target_artist_profile_id,
-                   warehouse_artist_id, proposed_display_name, proposed_role, status,
-                   created_at, reviewed_at, reviewer_user_id, rejection_reason
+            f"""
+            SELECT {_REQUEST_SELECT}
             FROM app_artist_access_request
             WHERE target_artist_profile_id = ? AND status = 'pending'
               AND request_type = 'request_access'
@@ -1052,30 +1329,33 @@ class ArtistSpaceUseCases:
 
 
 def _request_dict(row: tuple) -> dict[str, Any]:
+    data = dict(zip(_REQUEST_COLS, row))
     return {
-        "id": int(row[0]),
-        "applicant_user_id": int(row[1]),
-        "request_type": str(row[2]),
-        "target_artist_profile_id": int(row[3]) if row[3] is not None else None,
-        "warehouse_artist_id": int(row[4]) if row[4] is not None else None,
-        "proposed_display_name": row[5],
-        "proposed_role": row[6] or "member",
-        "status": str(row[7]),
-        "created_at": row[8],
-        "reviewed_at": row[9],
-        "reviewer_user_id": int(row[10]) if row[10] is not None else None,
-        "rejection_reason": row[11],
+        **data,
+        "id": int(data["id"]),
+        "applicant_user_id": int(data["applicant_user_id"]),
+        "request_type": str(data["request_type"]),
+        "target_artist_profile_id": (
+            int(data["target_artist_profile_id"])
+            if data["target_artist_profile_id"] is not None
+            else None
+        ),
+        "warehouse_artist_id": (
+            int(data["warehouse_artist_id"])
+            if data["warehouse_artist_id"] is not None
+            else None
+        ),
+        "proposed_role": data["proposed_role"] or "member",
+        "status": str(data["status"]),
+        "reviewer_user_id": (
+            int(data["reviewer_user_id"]) if data["reviewer_user_id"] is not None else None
+        ),
     }
 
 
 def _get_request(conn: duckdb.DuckDBPyConnection, request_id: int) -> dict[str, Any]:
     row = conn.execute(
-        """
-        SELECT id, applicant_user_id, request_type, target_artist_profile_id,
-               warehouse_artist_id, proposed_display_name, proposed_role, status,
-               created_at, reviewed_at, reviewer_user_id, rejection_reason
-        FROM app_artist_access_request WHERE id = ?
-        """,
+        f"SELECT {_REQUEST_SELECT} FROM app_artist_access_request WHERE id = ?",
         [request_id],
     ).fetchone()
     if not row:
@@ -1091,31 +1371,27 @@ def _set_request_status(
     reviewer_user_id: Optional[int] = None,
     rejection_reason: Optional[str] = None,
 ) -> None:
+    """Record a review decision, preserving the request id.
+
+    Same DuckDB constraint as ``_update_profile_row``: must run in autocommit,
+    never inside an open ``transactional()`` block.
+    """
     req = _get_request(conn, request_id)
-    now = _now()
+    req.update(
+        {
+            "status": status,
+            "reviewed_at": _now(),
+            "reviewer_user_id": reviewer_user_id,
+            "rejection_reason": rejection_reason,
+        }
+    )
     conn.execute("DELETE FROM app_artist_access_request WHERE id = ?", [request_id])
     conn.execute(
-        """
-        INSERT INTO app_artist_access_request
-            (id, applicant_user_id, request_type, target_artist_profile_id,
-             warehouse_artist_id, proposed_display_name, proposed_role, status,
-             created_at, reviewed_at, reviewer_user_id, rejection_reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        f"""
+        INSERT INTO app_artist_access_request ({_REQUEST_SELECT})
+        VALUES ({', '.join('?' for _ in _REQUEST_COLS)})
         """,
-        [
-            req["id"],
-            req["applicant_user_id"],
-            req["request_type"],
-            req["target_artist_profile_id"],
-            req["warehouse_artist_id"],
-            req["proposed_display_name"],
-            req["proposed_role"],
-            status,
-            req["created_at"],
-            now,
-            reviewer_user_id,
-            rejection_reason,
-        ],
+        [req[c] for c in _REQUEST_COLS],
     )
 
 
@@ -1132,12 +1408,33 @@ class ArtistAccessRequestUseCases:
         target_artist_profile_id: Optional[int] = None,
         proposed_display_name: Optional[str] = None,
         proposed_role: Optional[str] = None,
+        relationship_type: Optional[str] = None,
+        evidence_url: Optional[str] = None,
+        evidence_note: Optional[str] = None,
+        accuracy_attested: bool = False,
     ) -> dict[str, Any]:
         rt = (request_type or "").strip().lower()
         if rt not in REQUEST_TYPES:
             raise ValidationError(f"Invalid request_type: {request_type}")
 
+        relationship = (relationship_type or "").strip().lower() or None
+        evidence_url = (evidence_url or "").strip() or None
+        evidence_note = (evidence_note or "").strip() or None
+        if relationship is not None and relationship not in RELATIONSHIP_TYPES:
+            raise ValidationError(
+                "relationship_type must be one of: "
+                + ", ".join(sorted(RELATIONSHIP_TYPES))
+            )
+        if evidence_url is not None:
+            _validate_http_url(evidence_url, field="evidence_url")
+
         if rt == "claim_ownership":
+            if relationship is None:
+                raise EvidenceRequired("relationship_type is required for claim_ownership")
+            if evidence_url is None and evidence_note is None:
+                raise EvidenceRequired(
+                    "evidence_url or evidence_note is required for claim_ownership"
+                )
             if warehouse_artist_id is None:
                 raise ValidationError("warehouse_artist_id is required for claim_ownership")
             if not _warehouse_exists(self._conn, warehouse_artist_id):
@@ -1177,6 +1474,12 @@ class ArtistAccessRequestUseCases:
             name = (proposed_display_name or "").strip()
             if not name:
                 raise ValidationError("proposed_display_name is required for create_new")
+            if relationship is None:
+                raise EvidenceRequired("relationship_type is required for create_new")
+            if not accuracy_attested:
+                raise EvidenceRequired(
+                    "accuracy_attested must be true to request a new artist"
+                )
             proposed_display_name = name
 
         # pending duplicate check (same applicant + type + target)
@@ -1208,12 +1511,9 @@ class ArtistAccessRequestUseCases:
         now = _now()
         rid = _next_id(self._conn, "app_artist_access_request")
         self._conn.execute(
-            """
-            INSERT INTO app_artist_access_request
-                (id, applicant_user_id, request_type, target_artist_profile_id,
-                 warehouse_artist_id, proposed_display_name, proposed_role, status,
-                 created_at, reviewed_at, reviewer_user_id, rejection_reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NULL, NULL, NULL)
+            f"""
+            INSERT INTO app_artist_access_request ({_REQUEST_SELECT})
+            VALUES ({', '.join('?' for _ in _REQUEST_COLS)})
             """,
             [
                 rid,
@@ -1223,17 +1523,38 @@ class ArtistAccessRequestUseCases:
                 warehouse_artist_id,
                 proposed_display_name,
                 proposed_role or "member",
+                "pending",
                 now,
+                None,
+                None,
+                None,
+                relationship,
+                evidence_url,
+                evidence_note,
             ],
         )
         return _get_request(self._conn, rid)
 
+    def discover(
+        self,
+        *,
+        user_id: int,
+        search: Optional[str] = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Warehouse artist candidates enriched with a single server-chosen action."""
+        limit = max(1, min(int(limit), 100))
+        rows = _search_warehouse_artists(self._conn, search=search, limit=limit)
+        items = [
+            _discovery_item(self._conn, user_id=user_id, warehouse_artist_id=wid, name=name)
+            for wid, name in rows
+        ]
+        return {"items": items, "total": len(items)}
+
     def list_mine(self, user_id: int) -> list[dict[str, Any]]:
         rows = self._conn.execute(
-            """
-            SELECT id, applicant_user_id, request_type, target_artist_profile_id,
-                   warehouse_artist_id, proposed_display_name, proposed_role, status,
-                   created_at, reviewed_at, reviewer_user_id, rejection_reason
+            f"""
+            SELECT {_REQUEST_SELECT}
             FROM app_artist_access_request
             WHERE applicant_user_id = ?
             ORDER BY id DESC
@@ -1264,10 +1585,8 @@ class PlatformArtistRequestUseCases:
         self, *, user_id: int, status: Optional[str] = "pending"
     ) -> list[dict[str, Any]]:
         self._require_admin(user_id)
-        sql = """
-            SELECT id, applicant_user_id, request_type, target_artist_profile_id,
-                   warehouse_artist_id, proposed_display_name, proposed_role, status,
-                   created_at, reviewed_at, reviewer_user_id, rejection_reason
+        sql = f"""
+            SELECT {_REQUEST_SELECT}
             FROM app_artist_access_request
             WHERE request_type IN ('claim_ownership', 'create_new')
         """
@@ -1295,63 +1614,29 @@ class PlatformArtistRequestUseCases:
             raise ValidationError("Not a platform-reviewable request")
 
         applicant = req["applicant_user_id"]
-        membership = None
-        profile = None
-
-        if req["request_type"] == "claim_ownership":
-            wid = req["warehouse_artist_id"]
-            if wid is None or not _warehouse_exists(self._conn, wid):
-                raise NotFoundError("Warehouse artist not found")
-            profile = _find_profile_by_warehouse(self._conn, wid)
-            if profile is None:
-                wname = _warehouse_name(self._conn, wid) or f"Artist {wid}"
-                profile = _create_profile(
-                    self._conn,
-                    display_name=wname,
-                    organization_id=INDEPENDENT_ORG_ID,
-                    warehouse_artist_id=wid,
-                    created_by=applicant,
-                )
-            elif _count_active_owners(self._conn, profile["id"]) > 0:
-                raise ConflictError("Artist already has an active owner")
-            else:
-                # ensure warehouse link
-                if profile["warehouse_artist_id"] is None:
-                    from app.packages.artists.application.use_cases import _update_profile_row
-
-                    _update_profile_row(
-                        self._conn,
-                        profile["id"],
-                        warehouse_artist_id=wid,
-                        updated_at=_now(),
-                    )
-                    profile = _get_profile(self._conn, profile["id"])
-            membership = _create_membership(
-                self._conn,
-                artist_profile_id=profile["id"],
-                user_id=applicant,
-                role="owner",
+        # DuckDB cannot rewrite pre-existing indexed rows inside an explicit
+        # transaction, so the approval is ordered instead of wrapped: the
+        # workspace comes first, then profile and membership, and only then the
+        # request decision. Progress is tracked as each stage commits so a
+        # mid-flight failure can compensate exactly what THIS call created.
+        progress = _ApprovalProgress()
+        try:
+            profile, membership = self._apply_approval(
+                req,
+                request_id=request_id,
+                applicant=applicant,
+                progress=progress,
             )
-
-        elif req["request_type"] == "create_new":
-            name = req["proposed_display_name"] or "New Artist"
-            profile = _create_profile(
+            progress.status_mutated = True
+            _set_request_status(
                 self._conn,
-                display_name=name,
-                organization_id=INDEPENDENT_ORG_ID,
-                warehouse_artist_id=None,
-                created_by=applicant,
+                request_id,
+                status="approved",
+                reviewer_user_id=user_id,
             )
-            membership = _create_membership(
-                self._conn,
-                artist_profile_id=profile["id"],
-                user_id=applicant,
-                role="owner",
-            )
-
-        _set_request_status(
-            self._conn, request_id, status="approved", reviewer_user_id=user_id
-        )
+        except Exception:
+            self._undo_approval(pending_request=req, progress=progress)
+            raise
         # Platform admin does NOT become a member
         return {
             "request_id": request_id,
@@ -1360,6 +1645,193 @@ class PlatformArtistRequestUseCases:
             "membership": membership,
             "reviewer_became_member": False,
         }
+
+    def _apply_approval(
+        self,
+        req: dict[str, Any],
+        *,
+        request_id: int,
+        applicant: int,
+        progress: "_ApprovalProgress",
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Provision the tenant, materialize the profile and grant ownership.
+
+        Updates ``progress`` as each resource is created so the caller can
+        compensate on failure even when this method raises mid-way.
+        """
+        if req["request_type"] == "claim_ownership":
+            wid = req["warehouse_artist_id"]
+            if wid is None or not _warehouse_exists(self._conn, wid):
+                raise NotFoundError("Warehouse artist not found")
+            profile = _find_profile_by_warehouse(self._conn, wid)
+            if profile is None:
+                display_name = _warehouse_name(self._conn, wid) or f"Artist {wid}"
+                progress.workspace = self._provision_workspace(
+                    display_name=display_name,
+                    owner_user_id=applicant,
+                    seed_key=f"warehouse:{wid}",
+                )
+                profile = _create_profile(
+                    self._conn,
+                    display_name=display_name,
+                    organization_id=progress.workspace.organization_id,
+                    warehouse_artist_id=wid,
+                    created_by=applicant,
+                )
+                progress.created_profile_id = int(profile["id"])
+            elif _count_active_owners(self._conn, profile["id"]) > 0:
+                raise ConflictError("Artist already has an active owner")
+            else:
+                changes: dict[str, Any] = {"updated_at": _now()}
+                if profile["warehouse_artist_id"] is None:
+                    changes["warehouse_artist_id"] = wid
+                if profile["organization_id"] == INDEPENDENT_ORG_ID:
+                    progress.workspace = self._provision_workspace(
+                        display_name=profile["display_name"],
+                        owner_user_id=applicant,
+                        seed_key=f"profile:{profile['id']}",
+                    )
+                    changes["organization_id"] = progress.workspace.organization_id
+                if len(changes) > 1:
+                    # Preexisting profile — snapshot full logical row before mutate.
+                    progress.mutated_profile = dict(profile)
+                    _update_profile_row(self._conn, profile["id"], **changes)
+                    profile = _get_profile(self._conn, profile["id"])
+
+        elif req["request_type"] == "create_new":
+            display_name = req["proposed_display_name"] or "New Artist"
+            progress.workspace = self._provision_workspace(
+                display_name=display_name,
+                owner_user_id=applicant,
+                seed_key=f"request:{request_id}",
+            )
+            profile = _create_profile(
+                self._conn,
+                display_name=display_name,
+                organization_id=progress.workspace.organization_id,
+                warehouse_artist_id=None,
+                created_by=applicant,
+            )
+            progress.created_profile_id = int(profile["id"])
+        else:
+            raise ValidationError("Not a platform-reviewable request")
+
+        membership = _create_membership(
+            self._conn,
+            artist_profile_id=profile["id"],
+            user_id=applicant,
+            role="owner",
+        )
+        progress.membership_id = int(membership["id"])
+        return profile, membership
+
+    def _undo_approval(
+        self,
+        *,
+        pending_request: dict[str, Any],
+        progress: "_ApprovalProgress",
+    ) -> None:
+        """Compensate a partially applied approval so the request stays retryable.
+
+        Deletes only resources this approval call created. Restores preexisting
+        profiles / org memberships / owner roles from snapshots. Never deletes a
+        reused workspace or a preexisting profile/membership/role row.
+        """
+        if progress.membership_id is not None:
+            self._conn.execute(
+                "DELETE FROM app_artist_membership WHERE id = ?",
+                [progress.membership_id],
+            )
+        if progress.mutated_profile is not None:
+            snap = progress.mutated_profile
+            profile_id = int(snap["id"])
+            restore = {
+                k: snap[k]
+                for k in (
+                    "organization_id",
+                    "warehouse_artist_id",
+                    "updated_at",
+                    "display_name",
+                    "legal_name",
+                    "normalized_name",
+                    "status",
+                    "bio",
+                    "country_code",
+                    "primary_genre",
+                    "website_url",
+                    "image_url",
+                )
+                if k in snap
+            }
+            _update_profile_row(self._conn, profile_id, **restore)
+        elif progress.created_profile_id is not None:
+            self._conn.execute(
+                "DELETE FROM app_artist_profile WHERE id = ?",
+                [progress.created_profile_id],
+            )
+        if progress.workspace is not None:
+            ws = progress.workspace
+            compensate_created_workspace(
+                self._conn,
+                organization_id=ws.organization_id,
+                created_organization=ws.created_organization,
+                created_membership_id=ws.created_membership_id,
+                created_role_assignment=ws.created_role_assignment,
+                created_member_role_id=ws.created_member_role_id,
+                mutated_membership=ws.mutated_membership,
+                mutated_member_role=ws.mutated_member_role,
+            )
+        if progress.status_mutated:
+            self._restore_pending_request(pending_request)
+
+    def _restore_pending_request(self, pending_request: dict[str, Any]) -> None:
+        """Ensure the access request is pending again after a failed status write."""
+        request_id = int(pending_request["id"])
+        row = self._conn.execute(
+            "SELECT status FROM app_artist_access_request WHERE id = ?",
+            [request_id],
+        ).fetchone()
+        if row is not None and str(row[0]) == "pending":
+            return
+        restored = dict(pending_request)
+        restored["status"] = "pending"
+        restored["reviewed_at"] = None
+        restored["reviewer_user_id"] = None
+        restored["rejection_reason"] = None
+        if row is not None:
+            self._conn.execute(
+                "DELETE FROM app_artist_access_request WHERE id = ?", [request_id]
+            )
+        self._conn.execute(
+            f"""
+            INSERT INTO app_artist_access_request ({_REQUEST_SELECT})
+            VALUES ({', '.join('?' for _ in _REQUEST_COLS)})
+            """,
+            [restored[c] for c in _REQUEST_COLS],
+        )
+
+    def _provision_workspace(
+        self, *, display_name: str, owner_user_id: int, seed_key: str
+    ) -> WorkspaceProvisionResult:
+        """Provision the hidden tenant before anything else is written.
+
+        Any failure surfaces as ``artist_workspace_provision_failed``. On create
+        failures the provisioner compensates itself; on success the rich result
+        lets approve compensate later stages without deleting reused tenants.
+        """
+        try:
+            return provision_artist_workspace(
+                self._conn,
+                display_name=display_name,
+                owner_user_id=owner_user_id,
+                seed_key=seed_key,
+            )
+        except WorkspaceProvisionError:
+            raise
+        except Exception as exc:
+            raise WorkspaceProvisionError(
+                f"Could not provision the artist workspace: {exc}"
+            ) from exc
 
     def reject(
         self, *, user_id: int, request_id: int, reason: Optional[str] = None
@@ -1378,3 +1850,14 @@ class PlatformArtistRequestUseCases:
             rejection_reason=reason,
         )
         return {"request_id": request_id, "status": "rejected"}
+
+
+@dataclass
+class _ApprovalProgress:
+    """Mutable create/mutate tracking for Spec 051 approval compensation."""
+
+    workspace: Optional[WorkspaceProvisionResult] = None
+    created_profile_id: Optional[int] = None
+    mutated_profile: Optional[dict[str, Any]] = None
+    membership_id: Optional[int] = None
+    status_mutated: bool = False

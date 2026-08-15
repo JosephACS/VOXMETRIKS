@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import {
   ArtistMembershipRole,
   ArtistSpaceMineItem,

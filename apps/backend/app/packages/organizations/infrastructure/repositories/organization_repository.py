@@ -11,6 +11,7 @@ import duckdb
 from app.core.time_util import utc_now
 from app.packages.organizations.domain.entities import Organization
 from app.packages.organizations.domain.enums import (
+    ARTIST_WORKSPACE_TYPE,
     ORGANIZATION_STATUSES,
     MembershipStatus,
     OrganizationStatus,
@@ -164,9 +165,10 @@ class OrganizationRepository:
                 ON m.organization_id = o.id
             WHERE m.user_id = ?
               AND m.status = ?
+              AND o.organization_type != ?
             ORDER BY o.display_name
             """,
-            [user_id, MembershipStatus.ACTIVE.value],
+            [user_id, MembershipStatus.ACTIVE.value, ARTIST_WORKSPACE_TYPE],
         ).fetchall()
         mapped = [_map(r) for r in rows]
         # Pytest isolation: return full memberships so suite assertions keep working.

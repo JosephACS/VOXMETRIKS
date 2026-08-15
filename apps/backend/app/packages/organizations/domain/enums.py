@@ -31,6 +31,10 @@ class MemberRoleStatus(str, Enum):
     REVOKED = "revoked"
 
 
+# Spec 051 — hidden tenant backing an Artist Space. Never an ordinary org space.
+ARTIST_WORKSPACE_TYPE = "artist_workspace"
+HIDDEN_ORGANIZATION_TYPES = frozenset({ARTIST_WORKSPACE_TYPE})
+
 ORGANIZATION_STATUSES = frozenset(s.value for s in OrganizationStatus)
 MEMBERSHIP_STATUSES = frozenset(s.value for s in MembershipStatus)
 INVITATION_STATUSES = frozenset(s.value for s in InvitationStatus)

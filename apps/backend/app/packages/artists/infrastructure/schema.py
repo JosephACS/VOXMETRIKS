@@ -30,6 +30,7 @@ import logging
 
 import duckdb
 
+from app.core.database import get_table_columns
 from app.core.schema_bootstrap import schema_ready
 
 logger = logging.getLogger("voxmetrik.artists.schema")
@@ -48,6 +49,21 @@ ARTISTS_TABLES = (
 )
 
 
+# Spec 051 — nullable columns added on top of already-bootstrapped databases.
+ARTIST_PROFILE_ADDITIVE_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("bio", "VARCHAR"),
+    ("country_code", "VARCHAR"),
+    ("primary_genre", "VARCHAR"),
+    ("website_url", "VARCHAR"),
+    ("image_url", "VARCHAR"),
+)
+ARTIST_ACCESS_REQUEST_ADDITIVE_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("relationship_type", "VARCHAR"),
+    ("evidence_url", "VARCHAR"),
+    ("evidence_note", "VARCHAR"),
+)
+
+
 def ensure_artist_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all artists tables (idempotent)."""
     if schema_ready():
@@ -55,6 +71,7 @@ def ensure_artist_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_artist_membership(conn)
         _create_artist_access_request(conn)
         _create_artist_invitation(conn)
+        _apply_artist_additive_columns(conn)
         return
 
     _create_artist_profile(conn)
@@ -66,8 +83,40 @@ def ensure_artist_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_artist_membership(conn)
     _create_artist_access_request(conn)
     _create_artist_invitation(conn)
+    _apply_artist_additive_columns(conn)
 
     logger.info("Artists schema ensured (%s tables)", len(ARTISTS_TABLES))
+
+
+def _table_exists(conn: duckdb.DuckDBPyConnection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = ? LIMIT 1",
+        [table],
+    ).fetchone()
+    return row is not None
+
+
+def _add_missing_columns(
+    conn: duckdb.DuckDBPyConnection,
+    table: str,
+    columns: tuple[tuple[str, str], ...],
+) -> None:
+    if not _table_exists(conn, table):
+        return
+    existing = {c.lower() for c in get_table_columns(conn, table)}
+    for name, sql_type in columns:
+        if name.lower() in existing:
+            continue
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}")
+        logger.info("Artists schema: added %s.%s", table, name)
+
+
+def _apply_artist_additive_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 051 — idempotent nullable columns for profile metadata and evidence."""
+    _add_missing_columns(conn, "app_artist_profile", ARTIST_PROFILE_ADDITIVE_COLUMNS)
+    _add_missing_columns(
+        conn, "app_artist_access_request", ARTIST_ACCESS_REQUEST_ADDITIVE_COLUMNS
+    )
 
 
 def _create_artist_profile(conn: duckdb.DuckDBPyConnection) -> None:

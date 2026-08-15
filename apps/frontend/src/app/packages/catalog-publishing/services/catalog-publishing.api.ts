@@ -15,6 +15,7 @@ import {
 } from '../models/catalog-publishing.models';
 
 const BASE = environment.apiUrl;
+const PLATFORM_REVIEWS = `${BASE}/platform/catalog-reviews`;
 
 @Injectable({ providedIn: 'root' })
 export class CatalogPublishingApiService {
@@ -233,6 +234,58 @@ export class CatalogPublishingApiService {
       `${BASE}/catalog-review/${submissionId}/request-changes`,
       { notes },
       { headers: this.orgHeaders(orgId) },
+    );
+  }
+
+  // ── Platform independent-submission review (051) ──────────────────────────
+  // Artist workspaces have no organization membership for reviewers, so these
+  // routes are platform-authorized and MUST NOT carry X-Organization-Id.
+
+  platformReviewQueue(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Observable<ReleaseSubmission[]> {
+    let p = new HttpParams();
+    if (params?.status) p = p.set('status', params.status);
+    if (params?.limit != null) p = p.set('limit', String(params.limit));
+    if (params?.offset != null) p = p.set('offset', String(params.offset));
+    return this.http.get<ReleaseSubmission[]>(`${PLATFORM_REVIEWS}`, { params: p });
+  }
+
+  platformReviewDetail(submissionId: number): Observable<ReleaseDetail> {
+    return this.http.get<ReleaseDetail>(`${PLATFORM_REVIEWS}/${submissionId}`);
+  }
+
+  platformRequestChanges(
+    submissionId: number,
+    notes: string,
+  ): Observable<ReleaseSubmission> {
+    return this.http.post<ReleaseSubmission>(
+      `${PLATFORM_REVIEWS}/${submissionId}/request-changes`,
+      { notes },
+    );
+  }
+
+  platformApprove(submissionId: number, notes = ''): Observable<ReleaseSubmission> {
+    return this.http.post<ReleaseSubmission>(`${PLATFORM_REVIEWS}/${submissionId}/approve`, {
+      notes,
+    });
+  }
+
+  platformReject(submissionId: number, reason: string): Observable<ReleaseSubmission> {
+    return this.http.post<ReleaseSubmission>(`${PLATFORM_REVIEWS}/${submissionId}/reject`, {
+      reason,
+    });
+  }
+
+  platformPublish(
+    submissionId: number,
+    idempotencyKey?: string,
+  ): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(
+      `${PLATFORM_REVIEWS}/${submissionId}/publish`,
+      { idempotency_key: idempotencyKey ?? null },
     );
   }
 

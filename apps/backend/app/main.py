@@ -88,6 +88,7 @@ from app.packages.artists.identity_access.router import (
     artist_space_router,
     platform_artist_requests_router,
 )
+from app.packages.artists.identity_access.publishing_router import artist_publishing_router
 from app.packages.catalog_rights.infrastructure.schema import ensure_catalog_rights_tables
 from app.packages.catalog_rights.presentation.router import catalog_rights_router
 from app.packages.royalties.infrastructure.schema import ensure_royalty_tables
@@ -96,6 +97,9 @@ from app.packages.catalog_publishing.infrastructure.schema import (
     ensure_catalog_publishing_tables,
 )
 from app.packages.catalog_publishing.presentation.router import catalog_publishing_router
+from app.packages.catalog_publishing.presentation.platform_reviews_router import (
+    platform_catalog_reviews_router,
+)
 from app.packages.campaigns.infrastructure.schema import ensure_campaign_tables
 from app.packages.campaigns.presentation.router import campaigns_router
 from app.packages.business_analytics.infrastructure.schema import ensure_business_analytics_tables
@@ -304,9 +308,13 @@ def create_app() -> FastAPI:
     application.include_router(artist_access_router, prefix="/api/v1")
     application.include_router(artist_invitations_router, prefix="/api/v1")
     application.include_router(platform_artist_requests_router, prefix="/api/v1")
+    # Spec 051 — artist-scoped publishing (tenant resolved from the profile)
+    application.include_router(artist_publishing_router, prefix="/api/v1")
     application.include_router(catalog_rights_router, prefix="/api/v1")
     application.include_router(royalties_router, prefix="/api/v1")
     application.include_router(catalog_publishing_router, prefix="/api/v1")
+    # Spec 051 — Platform Ops review of independent (artist workspace) submissions
+    application.include_router(platform_catalog_reviews_router, prefix="/api/v1")
     application.include_router(campaigns_router, prefix="/api/v1")
     application.include_router(business_analytics_router, prefix="/api/v1")
     application.include_router(compliance_router, prefix="/api/v1")

@@ -18,6 +18,7 @@ from typing import Any, Optional
 
 import duckdb
 
+from app.core.database import get_table_columns
 from app.core.time_util import utc_now
 from app.packages.artists.domain.entities import (
     ArtistAssignment,
@@ -56,6 +57,15 @@ _PROFILE_ROW_COLS = (
 )
 
 
+def profile_row_columns(conn: duckdb.DuckDBPyConnection) -> tuple[str, ...]:
+    """Physical app_artist_profile columns, so additive fields survive rewrites."""
+    try:
+        columns = tuple(get_table_columns(conn, "app_artist_profile"))
+    except ValueError:
+        return _PROFILE_ROW_COLS
+    return columns or _PROFILE_ROW_COLS
+
+
 def _update_profile_row(conn: duckdb.DuckDBPyConnection, artist_id: int, **changes: Any) -> None:
     """Mutate a single app_artist_profile row via DELETE + re-INSERT (same id).
 
@@ -67,20 +77,30 @@ def _update_profile_row(conn: duckdb.DuckDBPyConnection, artist_id: int, **chang
     profile mutations (status transitions, LinkWarehouseArtist,
     TransferArtistOrganization) are applied as an atomic delete + re-insert
     of the same row (id preserved) instead of UPDATE.
+
+    Must run in autocommit: DuckDB's ART index rejects *both* UPDATE and
+    DELETE + re-INSERT of a pre-existing key while an explicit transaction is
+    open, so callers keep row rewrites outside ``transactional()`` blocks.
     """
+    cols = profile_row_columns(conn)
+    unknown = set(changes) - set(cols)
+    if unknown:
+        raise ValidationError(
+            f"Unknown app_artist_profile columns: {', '.join(sorted(unknown))}"
+        )
     row = conn.execute(
-        f"SELECT {', '.join(_PROFILE_ROW_COLS)} FROM app_artist_profile WHERE id = ?",
+        f"SELECT {', '.join(cols)} FROM app_artist_profile WHERE id = ?",
         [artist_id],
     ).fetchone()
     if row is None:
         raise NotFoundError(f"Artist profile {artist_id} not found")
-    values = dict(zip(_PROFILE_ROW_COLS, row))
+    values = dict(zip(cols, row))
     values.update(changes)
     conn.execute("DELETE FROM app_artist_profile WHERE id = ?", [artist_id])
     conn.execute(
-        f"INSERT INTO app_artist_profile ({', '.join(_PROFILE_ROW_COLS)}) "
-        f"VALUES ({', '.join(['?'] * len(_PROFILE_ROW_COLS))})",
-        [values[c] for c in _PROFILE_ROW_COLS],
+        f"INSERT INTO app_artist_profile ({', '.join(cols)}) "
+        f"VALUES ({', '.join(['?'] * len(cols))})",
+        [values[c] for c in cols],
     )
 
 
