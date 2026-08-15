@@ -9,6 +9,8 @@ import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocaleDatePipe, LocaleMoneyPipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-crm-quotation-editor-page',
@@ -33,6 +35,55 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           <app-enterprise-status-badge [status]="quotation()!.status" />
         }
       </app-enterprise-page-header>
+
+      @if (pendingReason()) {
+        <app-enterprise-section-card [title]="'crm.quotation.approvalReason' | t:lang()">
+          <form class="form-grid" (ngSubmit)="confirmApprovalReason()">
+            <app-enterprise-form-field [label]="'crm.quotation.approvalReason' | t:lang()" [required]="true">
+              <textarea
+                class="input"
+                rows="3"
+                [(ngModel)]="approvalReason"
+                name="approvalReason"
+                required
+                data-testid="crm-approval-reason"
+              ></textarea>
+            </app-enterprise-form-field>
+            <app-enterprise-action-bar>
+              <button type="button" class="btn btn--ghost" (click)="cancelApprovalReason()" [disabled]="saving()">
+                {{ 'common.cancel' | t:lang() }}
+              </button>
+              <button type="submit" class="btn btn--primary" [disabled]="!approvalReason.trim() || saving()">
+                {{ (saving() ? 'common.saving' : 'common.confirm') | t:lang() }}
+              </button>
+            </app-enterprise-action-bar>
+          </form>
+        </app-enterprise-section-card>
+      }
+
+      @if (pendingContract()) {
+        <app-enterprise-section-card [title]="'crm.contract.legalName' | t:lang()">
+          <form class="form-grid" (ngSubmit)="confirmContractCreate()">
+            <app-enterprise-form-field [label]="'crm.contract.legalName' | t:lang()" [required]="true">
+              <input
+                class="input"
+                [(ngModel)]="contractLegalName"
+                name="contractLegalName"
+                required
+                data-testid="crm-contract-legal-name"
+              />
+            </app-enterprise-form-field>
+            <app-enterprise-action-bar>
+              <button type="button" class="btn btn--ghost" (click)="cancelContractCreate()" [disabled]="saving()">
+                {{ 'common.cancel' | t:lang() }}
+              </button>
+              <button type="submit" class="btn btn--primary" [disabled]="!contractLegalName.trim() || saving()">
+                {{ (saving() ? 'common.saving' : 'common.confirm') | t:lang() }}
+              </button>
+            </app-enterprise-action-bar>
+          </form>
+        </app-enterprise-section-card>
+      }
 
       @if (error()) {
         <app-enterprise-error-state [message]="error()!" (retry)="load()" />
@@ -184,10 +235,13 @@ export class CrmQuotationEditorPageComponent implements OnInit {
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly confirmDlg = inject(ConfirmDialogService);
+  private readonly notifications = inject(NotificationService);
 
   quotationId = 0;
   activeItemForm: number | null = null;
   approvalReason = '';
+  private pendingApprovalVersionId: number | null = null;
 
   itemForm: QuotationItemCreateRequest = { description: '', quantity: 1, unit_price: 0 };
 
@@ -198,6 +252,10 @@ export class CrmQuotationEditorPageComponent implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly pendingReason = signal(false);
+  readonly pendingContract = signal(false);
+  contractLegalName = '';
+  private pendingContractVersionId: number | null = null;
 
   async ngOnInit(): Promise<void> {
     this.quotationId = Number(this.route.snapshot.paramMap.get('id'));
@@ -286,31 +344,58 @@ export class CrmQuotationEditorPageComponent implements OnInit {
   }
 
   async requestApproval(versionId: number): Promise<void> {
-    const reason = prompt('Motivo de la solicitud de aprobación de descuento:') ?? '';
-    if (!reason) return;
+    if (this.saving()) return;
+    this.pendingApprovalVersionId = versionId;
+    this.approvalReason = '';
+    this.pendingReason.set(true);
+  }
+
+  cancelApprovalReason(): void {
+    this.pendingReason.set(false);
+    this.pendingApprovalVersionId = null;
+    this.approvalReason = '';
+  }
+
+  async confirmApprovalReason(): Promise<void> {
+    const versionId = this.pendingApprovalVersionId;
+    const reason = this.approvalReason.trim();
+    if (versionId == null || !reason || this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
     try {
       await firstValueFrom(this.api.requestDiscountApproval(versionId, reason));
       this.success.set('Solicitud de aprobación enviada.');
+      this.notifications.success(this.i18n.t('crm.quotation.approvalSent'));
+      this.cancelApprovalReason();
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : 'Error al solicitar aprobación');
+      const msg = e instanceof CrmApiError ? e.message : 'Error al solicitar aprobación';
+      this.error.set(msg);
+      this.notifications.error(this.i18n.t('crm.quotation.requestApproval'), msg);
     } finally {
       this.saving.set(false);
     }
   }
 
   async accept(versionId: number): Promise<void> {
-    if (!confirm(this.i18n.t('crm.quotation.acceptConfirm'))) return;
+    if (this.saving()) return;
+    const ok = await this.confirmDlg.open({
+      title: this.i18n.t('common.confirm'),
+      message: this.i18n.t('crm.quotation.acceptConfirm'),
+      confirmLabel: this.i18n.t('crm.quotation.accept'),
+    });
+    if (!ok) return;
     this.saving.set(true);
     this.error.set(null);
     try {
       await firstValueFrom(this.api.acceptQuotationVersion(versionId));
       this.success.set('Cotización aceptada.');
+      this.notifications.success(this.i18n.t('crm.quotation.accepted'));
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : 'Error al aceptar cotización');
+      const msg = e instanceof CrmApiError ? e.message : 'Error al aceptar cotización';
+      this.error.set(msg);
+      this.notifications.error(this.i18n.t('crm.quotation.accept'), msg);
     } finally {
       this.saving.set(false);
     }
@@ -318,9 +403,23 @@ export class CrmQuotationEditorPageComponent implements OnInit {
 
   async createContractFrom(versionId: number): Promise<void> {
     const q = this.quotation();
-    if (!q) return;
-    const legalName = prompt('Razón social del contrato:')?.trim();
-    if (!legalName) return;
+    if (!q || this.saving()) return;
+    this.pendingContractVersionId = versionId;
+    this.contractLegalName = '';
+    this.pendingContract.set(true);
+  }
+
+  cancelContractCreate(): void {
+    this.pendingContract.set(false);
+    this.pendingContractVersionId = null;
+    this.contractLegalName = '';
+  }
+
+  async confirmContractCreate(): Promise<void> {
+    const q = this.quotation();
+    const versionId = this.pendingContractVersionId;
+    const legalName = this.contractLegalName.trim();
+    if (!q || versionId == null || !legalName || this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
     try {
@@ -329,13 +428,17 @@ export class CrmQuotationEditorPageComponent implements OnInit {
           quotation_version_id: versionId,
           opportunity_id: q.opportunity_id,
           legal_name: legalName,
-          terms_snapshot: { source: 'quotation_ui', synthetic_note: 'created_from_quotation_editor' },
+          terms_snapshot: { source: 'quotation_ui' },
         }),
       );
       this.success.set(`Contrato #${c.id} creado.`);
+      this.notifications.success(this.i18n.t('crm.contract.title'));
+      this.cancelContractCreate();
       await this.router.navigate(['/crm/contracts', c.id]);
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : 'Error al crear contrato');
+      const msg = e instanceof CrmApiError ? e.message : 'Error al crear contrato';
+      this.error.set(msg);
+      this.notifications.error(this.i18n.t('crm.contract.title'), msg);
     } finally {
       this.saving.set(false);
     }

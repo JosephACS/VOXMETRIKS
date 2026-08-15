@@ -108,13 +108,61 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
     ).toContain('/customer-success');
     expect(
       sidebarPaths(persona({ ...base, permissions: new Set(['support.view']) })),
+    ).not.toContain('/support');
+    expect(
+      listVisibleContextTabs(
+        'customerSuccess',
+        persona({ ...base, permissions: new Set(['support.view']) }),
+      ).map((s) => s.path),
     ).toContain('/support');
     expect(
       sidebarPaths(persona({ ...base, permissions: new Set(['compliance.view']) })),
     ).toContain('/compliance');
     expect(
       sidebarPaths(persona({ ...base, permissions: new Set(['compliance.manage']) })),
+    ).not.toContain('/compliance/admin');
+    expect(
+      listVisibleContextTabs(
+        'compliance',
+        persona({ ...base, permissions: new Set(['compliance.manage']) }),
+      ).map((s) => s.path),
     ).toContain('/compliance/admin');
+  });
+
+  it('CRM hub is single sidebar entry; children are tabs', () => {
+    const ctx = persona({
+      activeSpace: 'organization',
+      organizationId: 1,
+      organizationTier: 'operational',
+      staffCapabilities: new Set([STAFF_CAPABILITY.shell]),
+    });
+    const paths = sidebarPaths(ctx);
+    expect(paths.filter((p) => p.startsWith('/crm')).length).toBe(1);
+    expect(paths).toContain('/crm/dashboard');
+    expect(paths).not.toContain('/crm/prospects');
+    expect(paths).not.toContain('/crm/opportunities');
+    const tabs = listVisibleContextTabs('crm', ctx).map((s) => s.path);
+    expect(tabs).toEqual(
+      expect.arrayContaining([
+        '/crm/dashboard',
+        '/crm/prospects',
+        '/crm/contacts',
+        '/crm/opportunities',
+        '/crm/approvals',
+        '/crm/audit',
+      ]),
+    );
+  });
+
+  it('CRM platform role unlocks CRM hub without identity staff', () => {
+    const ctx = persona({
+      activeSpace: 'organization',
+      organizationId: 1,
+      organizationTier: 'operational',
+      platformRoles: new Set(['sales_manager']),
+    });
+    expect(sidebarPaths(ctx)).toContain('/crm/dashboard');
+    expect(evaluateProductPathAccess('/crm/prospects', ctx)).toBe('allow');
   });
 
   it('billing persona sees recovery billing without operational catalog', () => {

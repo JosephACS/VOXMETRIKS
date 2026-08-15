@@ -7,6 +7,7 @@ import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact, Prospect } from '../models/crm.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
@@ -20,6 +21,7 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
     FormsModule,
     RouterLink,
     TranslatePipe,
+    StatusLabelPipe,
     LocaleDatePipe,
     ...ENTERPRISE_UI_IMPORTS,
   ],
@@ -80,7 +82,7 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
             <app-enterprise-form-field [label]="'crm.prospectDetail.newStatus' | t:lang()">
               <select class="select" [(ngModel)]="newStatus" name="newStatus">
                 @for (s of statuses; track s) {
-                  <option [value]="s" [disabled]="s === prospect()!.status">{{ s }}</option>
+                  <option [value]="s" [disabled]="s === prospect()!.status">{{ s | statusLabel }}</option>
                 }
               </select>
             </app-enterprise-form-field>

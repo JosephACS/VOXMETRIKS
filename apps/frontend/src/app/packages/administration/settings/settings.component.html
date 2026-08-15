@@ -78,7 +78,100 @@
 
 
 
-        @case ('general') {
+        @case ('profile') {
+          <section class="settings-section" data-testid="settings-profile">
+            <h2>{{ 'settings.profile.title' | t:lang() }}</h2>
+            <p class="section-desc">{{ 'settings.profile.desc' | t:lang() }}</p>
+            <div class="info-card">
+              <div class="info-row">
+                <span class="info-label">{{ 'settings.profile.username' | t:lang() }}</span>
+                <span class="info-value">{{ currentUser()?.username }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">{{ 'settings.profile.email' | t:lang() }}</span>
+                <span class="info-value">{{ currentUser()?.email }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">{{ 'settings.profile.role' | t:lang() }}</span>
+                <span class="info-value">{{ roleLabel() }}</span>
+              </div>
+            </div>
+            <p class="section-desc" role="status">{{ 'settings.profile.emailReadonly' | t:lang() }}</p>
+            <div class="setting-row">
+              <div class="setting-info">
+                <label class="setting-title" for="settings-favorite-genre">{{ 'settings.business.favoriteGenre' | t:lang() }}</label>
+              </div>
+              <input id="settings-favorite-genre" type="text" class="setting-control text-input"
+                [ngModel]="favoriteGenre()" [disabled]="prefsSaving()"
+                (ngModelChange)="favoriteGenre.set($event)" (blur)="onFavoriteGenreBlur()" autocomplete="off" />
+            </div>
+            @if (prefsFeedback() === 'ok') {
+              <div class="prefs-toast ok" role="status">{{ 'settings.business.saved' | t:lang() }}</div>
+            }
+            @if (prefsFeedback() === 'error') {
+              <div class="prefs-toast error" role="alert">{{ 'settings.business.error' | t:lang() }}</div>
+            }
+          </section>
+        }
+
+        @case ('security') {
+          <section class="settings-section" data-testid="settings-security">
+            <h2>{{ 'settings.security.title' | t:lang() }}</h2>
+            <p class="section-desc">{{ 'settings.security.desc' | t:lang() }}</p>
+            <h3 class="subsection-title">{{ 'settings.security.passwordTitle' | t:lang() }}</h3>
+            <form class="form-grid" (ngSubmit)="submitPasswordChange()" data-testid="settings-password-form">
+              <label for="settings-password-current" class="setting-title">{{ 'settings.security.passwordCurrent' | t:lang() }}</label>
+              <input id="settings-password-current" type="password" class="setting-control text-input"
+                [ngModel]="passwordCurrent()" (ngModelChange)="passwordCurrent.set($event)"
+                name="currentPassword" autocomplete="current-password" [disabled]="passwordSaving()" />
+              <label for="settings-password-new" class="setting-title">{{ 'settings.security.passwordNew' | t:lang() }}</label>
+              <input id="settings-password-new" type="password" class="setting-control text-input"
+                [ngModel]="passwordNew()" (ngModelChange)="passwordNew.set($event)"
+                name="newPassword" autocomplete="new-password" [disabled]="passwordSaving()" />
+              <label for="settings-password-confirm" class="setting-title">{{ 'settings.security.passwordConfirm' | t:lang() }}</label>
+              <input id="settings-password-confirm" type="password" class="setting-control text-input"
+                [ngModel]="passwordConfirm()" (ngModelChange)="passwordConfirm.set($event)"
+                name="confirmPassword" autocomplete="new-password" [disabled]="passwordSaving()" />
+              <label class="toggle">
+                <input type="checkbox" [checked]="passwordRevokeOthers()"
+                  (change)="passwordRevokeOthers.set($any($event.target).checked)" [disabled]="passwordSaving()" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="setting-hint">{{ 'settings.security.revokeOthers' | t:lang() }}</span>
+              <button type="submit" class="refresh-health-btn" data-testid="settings-password-submit" [disabled]="passwordSaving()">
+                {{ passwordSaving() ? ('common.saving' | t:lang()) : ('settings.security.passwordSubmit' | t:lang()) }}
+              </button>
+            </form>
+            <div class="settings-divider"></div>
+            <h3 class="subsection-title">{{ 'settings.security.devicesTitle' | t:lang() }}</h3>
+            <p class="section-desc">{{ 'settings.security.devicesDesc' | t:lang() }}</p>
+            @if (devicesLoading()) {
+              <p class="section-desc" role="status">{{ 'common.loading' | t:lang() }}</p>
+            } @else if (!devices().length) {
+              <p class="section-desc" role="status">{{ 'settings.security.noDevices' | t:lang() }}</p>
+            } @else {
+              <ul class="info-card" style="list-style:none;padding:0;margin:0">
+                @for (d of devices(); track d.id) {
+                  <li class="info-row">
+                    <span class="info-label">{{ d.device_label || d.browser || d.id }}</span>
+                    <button type="button" class="seg-btn" [disabled]="devicesBusy()" (click)="revokeDevice(d.id)">
+                      {{ 'settings.security.revokeDevice' | t:lang() }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="settings-divider"></div>
+            <h3 class="subsection-title">{{ 'settings.security.sessionsTitle' | t:lang() }}</h3>
+            <p class="section-desc">{{ 'settings.security.sessionsDesc' | t:lang() }}</p>
+            <button type="button" class="refresh-health-btn" data-testid="settings-revoke-sessions"
+              [disabled]="sessionsBusy()" (click)="revokeOtherSessions()">
+              {{ 'settings.security.revokeOtherSessions' | t:lang() }}
+            </button>
+          </section>
+        }
+
+        @case ('preferences') {
 
           <section class="settings-section">
 
@@ -87,7 +180,7 @@
             <p class="section-desc">{{ 'settings.general.desc' | t:lang() }}</p>
             <div class="context-banner">
               <span class="context-icon" [innerHTML]="icon('settings', 16)"></span>
-              <span>Apariencia y idioma de tu experiencia personal. El tema usa la misma preferencia que el interruptor del chrome.</span>
+              <span>{{ 'settings.general.banner' | t:lang() }}</span>
             </div>
 
 
