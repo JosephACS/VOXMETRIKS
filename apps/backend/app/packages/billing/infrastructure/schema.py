@@ -47,6 +47,7 @@ def ensure_billing_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_payment_provider_event(conn)
         _create_billing_ledger_entry(conn)
         _create_billing_dunning(conn)
+        _apply_payment_method_additive_columns(conn)
         return
 
     _create_billing_profile(conn)
@@ -61,6 +62,7 @@ def ensure_billing_tables(conn: duckdb.DuckDBPyConnection) -> None:
     _create_payment_provider_event(conn)
     _create_billing_ledger_entry(conn)
     _create_billing_dunning(conn)
+    _apply_payment_method_additive_columns(conn)
 
     logger.info("Billing schema ensured (%s tables)", len(BILLING_TABLES))
 
@@ -145,6 +147,48 @@ def _create_invoice_item(conn: duckdb.DuckDBPyConnection) -> None:
     """)
 
 
+# Spec 052 — safe display/simulation metadata (nullable for legacy rows). Never PAN/CVV.
+PAYMENT_METHOD_ADDITIVE_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("brand", "VARCHAR"),
+    ("last4", "VARCHAR"),
+    ("exp_month", "INTEGER"),
+    ("exp_year", "INTEGER"),
+    ("simulation_token", "VARCHAR"),
+)
+
+
+def _table_exists(conn: duckdb.DuckDBPyConnection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = ? LIMIT 1",
+        [table],
+    ).fetchone()
+    return row is not None
+
+
+def _add_missing_columns(
+    conn: duckdb.DuckDBPyConnection,
+    table: str,
+    columns: tuple[tuple[str, str], ...],
+) -> None:
+    from app.core.database import get_table_columns
+
+    if not _table_exists(conn, table):
+        return
+    existing = {c.lower() for c in get_table_columns(conn, table)}
+    for name, sql_type in columns:
+        if name.lower() in existing:
+            continue
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}")
+        logger.info("Billing schema: added %s.%s", table, name)
+
+
+def _apply_payment_method_additive_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Spec 052 — idempotent nullable safe-card metadata on payment method refs."""
+    _add_missing_columns(
+        conn, "app_payment_method_reference", PAYMENT_METHOD_ADDITIVE_COLUMNS
+    )
+
+
 def _create_payment_method_reference(conn: duckdb.DuckDBPyConnection) -> None:
     """Tokenized refs only — NO PAN/CVV columns."""
     conn.execute("""
@@ -159,6 +203,11 @@ def _create_payment_method_reference(conn: duckdb.DuckDBPyConnection) -> None:
             status           VARCHAR NOT NULL DEFAULT 'active',
             created_at       TIMESTAMP NOT NULL,
             updated_at       TIMESTAMP NOT NULL,
+            brand            VARCHAR,
+            last4            VARCHAR,
+            exp_month        INTEGER,
+            exp_year         INTEGER,
+            simulation_token VARCHAR,
             CHECK (status IN ('active', 'removed')),
             CHECK (method_type IN ('card', 'bank_transfer', 'mock'))
         )

@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.database import get_write_conn
+from app.packages.personal_subscriptions.application import checkout as checkout_uc
 from app.packages.personal_subscriptions.application import entitlements as ent
 from app.packages.personal_subscriptions.application import use_cases as uc
 from app.packages.personal_subscriptions.domain.errors import PersonalSubscriptionError
@@ -20,12 +21,63 @@ personal_router = APIRouter(prefix="/personal", tags=["Personal Subscriptions"])
 
 
 class CheckoutRequest(BaseModel):
+    """Deprecated one-shot checkout — prefer /checkout-sessions."""
+
     plan_code: str
     billing_period: str = Field(pattern="^(monthly|annual)$")
 
 
 class SimulatePaymentRequest(BaseModel):
     scenario: str = "succeeded"
+
+
+class CheckoutSessionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plan_code: str
+    billing_period: str = Field(pattern="^(monthly|annual)$")
+    plan_id: Optional[int] = None
+    plan_price_id: Optional[int] = None
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data
+
+
+class CheckoutPaymentMethodRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    brand: str = Field(min_length=2, max_length=32)
+    last4: str = Field(pattern=r"^\d{4}$")
+    exp_month: int = Field(ge=1, le=12)
+    exp_year: int = Field(ge=2024, le=2100)
+    display_label: str = Field(default="", max_length=120)
+    simulation_token: str = Field(min_length=8, max_length=64)
+    is_default: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data
+
+
+class CheckoutConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_card(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            checkout_uc.reject_raw_card_fields(data)
+        return data
 
 
 class InviteRequest(BaseModel):
@@ -52,14 +104,22 @@ def _raise(exc: PersonalSubscriptionError):
     from fastapi import HTTPException
 
     status = 400
-    if exc.code == "not_found":
+    if exc.code in ("not_found", "checkout_not_found"):
         status = 404
-    elif exc.code == "forbidden":
+    elif exc.code in ("forbidden", "checkout_forbidden"):
         status = 403
     elif exc.code == "rate_limited":
         status = 429
-    elif exc.code == "entitlement_limit":
+    elif exc.code in ("entitlement_limit", "payment_declined"):
         status = 402
+    elif exc.code in (
+        "checkout_state_conflict",
+        "checkout_idempotency_conflict",
+        "payment_confirmation_failed",
+    ):
+        status = 409
+    elif exc.code == "card_data_forbidden":
+        status = 422
     raise HTTPException(
         status_code=status,
         detail={"code": exc.code, "message": str(exc)},
@@ -89,7 +149,11 @@ def my_entitlements(
     return ent.effective_limits(conn, int(user["user_id"]))
 
 
-@personal_router.post("/checkout")
+@personal_router.post(
+    "/checkout",
+    deprecated=True,
+    summary="Deprecated one-shot checkout — use /checkout-sessions",
+)
 def checkout(
     body: CheckoutRequest,
     user: dict = Depends(get_authenticated_user),
@@ -106,7 +170,11 @@ def checkout(
         _raise(e)
 
 
-@personal_router.post("/payment-attempts/{attempt_id}/simulate")
+@personal_router.post(
+    "/payment-attempts/{attempt_id}/simulate",
+    deprecated=True,
+    summary="Deprecated simulate — use checkout-sessions confirm",
+)
 def simulate_payment(
     attempt_id: int,
     body: SimulatePaymentRequest,
@@ -117,6 +185,108 @@ def simulate_payment(
         return uc.simulate_payment(
             conn, int(user["user_id"]), attempt_id=attempt_id, scenario=body.scenario
         )
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/checkout-sessions", status_code=201)
+def create_checkout_session(
+    body: CheckoutSessionCreateRequest,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.create_checkout(
+            conn,
+            int(user["user_id"]),
+            plan_code=body.plan_code,
+            billing_period=body.billing_period,
+            plan_price_id=body.plan_price_id,
+            idempotency_key=body.idempotency_key,
+        )
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.get("/checkout-sessions/{checkout_id}")
+def get_checkout_session(
+    checkout_id: int,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.get_checkout(conn, int(user["user_id"]), checkout_id)
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/checkout-sessions/{checkout_id}/payment-method")
+def attach_checkout_payment_method(
+    checkout_id: int,
+    body: CheckoutPaymentMethodRequest,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.attach_payment_method(
+            conn,
+            int(user["user_id"]),
+            checkout_id,
+            brand=body.brand,
+            last4=body.last4,
+            exp_month=body.exp_month,
+            exp_year=body.exp_year,
+            display_label=body.display_label,
+            simulation_token=body.simulation_token,
+            is_default=body.is_default,
+        )
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/checkout-sessions/{checkout_id}/confirm")
+def confirm_checkout_session(
+    checkout_id: int,
+    body: CheckoutConfirmRequest,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        session = checkout_uc.confirm_checkout(
+            conn,
+            int(user["user_id"]),
+            checkout_id,
+            idempotency_key=body.idempotency_key,
+        )
+        if session.get("status") == "failed":
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": "payment_declined",
+                    "message": "Payment declined",
+                    "checkout": session,
+                },
+            )
+        if session.get("status") == "processing":
+            from fastapi import Response
+
+            # 200 with processing state (contract: payment_processing is a state)
+            return session
+        return session
+    except PersonalSubscriptionError as e:
+        _raise(e)
+
+
+@personal_router.post("/checkout-sessions/{checkout_id}/cancel")
+def cancel_checkout_session(
+    checkout_id: int,
+    user: dict = Depends(get_authenticated_user),
+    conn=Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.cancel_checkout(conn, int(user["user_id"]), checkout_id)
     except PersonalSubscriptionError as e:
         _raise(e)
 

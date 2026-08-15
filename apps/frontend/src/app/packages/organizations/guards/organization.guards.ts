@@ -4,10 +4,21 @@ import { OrganizationContextService } from '../services/organization-context.ser
 import type { OrgModuleKind } from '../organization-access';
 
 /** UX-only: requires an active validated organization context. Backend remains authority. */
-export const organizationRequiredGuard: CanActivateFn = async () => {
+export const organizationRequiredGuard: CanActivateFn = async (route) => {
   const ctx = inject(OrganizationContextService);
   const router = inject(Router);
   await ctx.ensureReady();
+  const qOrg = Number(route.queryParamMap.get('organization_id') || 0);
+  if (qOrg > 0 && ctx.organizationId() !== qOrg) {
+    const listed = ctx.organizations().find((o) => o.id === qOrg);
+    if (listed) {
+      try {
+        await ctx.activate(qOrg);
+      } catch {
+        /* fall through to standard redirects */
+      }
+    }
+  }
   if (ctx.hasOrganization()) return true;
   const kind = ctx.contextKind();
   if (kind === 'access_revoked') {
@@ -31,10 +42,21 @@ export function organizationModuleGuard(
   moduleKind: OrgModuleKind,
   requiredPermission?: string | null,
 ): CanActivateFn {
-  return async () => {
+  return async (route) => {
     const ctx = inject(OrganizationContextService);
     const router = inject(Router);
     await ctx.ensureReady();
+    const qOrg = Number(route.queryParamMap.get('organization_id') || 0);
+    if (qOrg > 0 && ctx.organizationId() !== qOrg) {
+      const listed = ctx.organizations().find((o) => o.id === qOrg);
+      if (listed) {
+        try {
+          await ctx.activate(qOrg);
+        } catch {
+          /* fall through */
+        }
+      }
+    }
     if (!ctx.hasOrganization()) {
       if (!ctx.organizations().length) {
         return router.createUrlTree(['/business']);

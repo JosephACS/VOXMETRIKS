@@ -45,6 +45,17 @@ export const SUBSCRIPTIONS_ROUTES: Routes = [
       import('./pages/subscription-select-plan.page').then((m) => m.SubscriptionSelectPlanPage),
   },
   {
+    path: 'subscriptions/checkout',
+    title: 'checkout.title',
+    data: { checkoutScope: 'organization' },
+    canActivate: [
+      organizationRequiredGuard,
+      organizationModuleGuard('onboarding', 'subscription.create'),
+    ],
+    loadComponent: () =>
+      import('../checkout/pages/checkout-journey.page').then((m) => m.CheckoutJourneyPage),
+  },
+  {
     path: 'subscriptions/:id/cancel',
     title: 'Cancelar suscripción',
     canActivate: [organizationRequiredGuard, organizationModuleGuard('recovery', 'subscription.change')],

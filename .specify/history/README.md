@@ -96,4 +96,4 @@ Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-No hay una Spec activa. El siguiente ID disponible es **052**.
+La Spec **052** está activa bajo `.specify/features/052-professional-checkout-journey/`. El siguiente ID disponible será **053** después de su cierre.

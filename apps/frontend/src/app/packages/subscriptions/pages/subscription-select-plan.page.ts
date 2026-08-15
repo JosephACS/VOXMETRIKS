@@ -245,14 +245,17 @@ export class SubscriptionSelectPlanPage implements OnInit {
         billing_currency: currency,
         activation_source: this.conversionId ? 'crm_conversion' : 'manual_select_plan',
       }).subscribe({ next: done, error: fail });
-    } else {
-      this.api.createSubscription(orgId, {
-        organization_id: orgId,
-        plan_id: v.planId!,
-        plan_price_id: v.planPriceId!,
-        billing_currency: currency,
-        activation_source: this.conversionId ? 'crm_conversion' : 'manual_select_plan',
-      }).subscribe({ next: done, error: fail });
+      return;
     }
+
+    // Paid subscribe → Spec 052 checkout journey (no direct activation).
+    this.saving = false;
+    void this.router.navigate(['/subscriptions/checkout'], {
+      queryParams: {
+        plan_id: v.planId,
+        plan_price_id: v.planPriceId,
+        billing_period: selected?.billing_period || this.preferredPeriod || 'monthly',
+      },
+    });
   }
 }

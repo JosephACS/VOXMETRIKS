@@ -1,4 +1,6 @@
 import { CanActivateFn } from '@angular/router';
+import { convertToParamMap, Router } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +8,10 @@ import {
   decideProductSurfaceAccess,
   presentationModeFromUser,
 } from './product-surface.policy';
+import { productSurfaceGuard } from './product-surface.guard';
+import { AuthService } from '../services/auth.service';
+import { CrmContextService } from '../../packages/crm/services/crm-context.service';
+import { SpaceContextService } from '../spaces/space-context.service';
 import {
   PRODUCT_SURFACE_WRAPPED_PACKAGES,
   prependRouteGuard,
@@ -128,5 +134,50 @@ describe('presentationModeFromUser', () => {
   it('detects demo.business username', () => {
     expect(presentationModeFromUser({ username: 'demo.business' })).toBe(true);
     expect(presentationModeFromUser({ username: 'alice' })).toBe(false);
+  });
+});
+
+describe('productSurfaceGuard organization deep links', () => {
+  it('selects the requested authorized organization before evaluating checkout access', async () => {
+    const selectSpace = vi.fn().mockResolvedValue(true);
+    const activeSpace = vi
+      .fn()
+      .mockReturnValueOnce({ id: 'personal', kind: 'personal' })
+      .mockReturnValue({ id: 'org:9', kind: 'organization', organizationId: 9 });
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: AuthService,
+          useValue: { role: () => 'user', getUser: () => ({ username: 'owner' }) },
+        },
+        { provide: CrmContextService, useValue: { roles: () => [] } },
+        {
+          provide: SpaceContextService,
+          useValue: {
+            ensureReady: vi.fn().mockResolvedValue(undefined),
+            activeSpace,
+            activeSpaceKind: () => activeSpace()?.kind ?? null,
+            selectSpace,
+          },
+        },
+        {
+          provide: Router,
+          useValue: { createUrlTree: vi.fn((commands: string[]) => commands) },
+        },
+      ],
+    });
+
+    const result = await TestBed.runInInjectionContext(() =>
+      productSurfaceGuard(
+        {
+          queryParamMap: convertToParamMap({ organization_id: '9' }),
+        } as never,
+        { url: '/subscriptions/checkout?organization_id=9' } as never,
+      ),
+    );
+
+    expect(selectSpace).toHaveBeenCalledWith('org:9', { navigate: false });
+    expect(result).toBe(true);
   });
 });

@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Any, Optional
 
 import duckdb
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import get_write_conn
 from app.packages.subscriptions.application.use_cases import (
@@ -22,6 +22,7 @@ from app.packages.subscriptions.application.use_cases import (
     SubscriptionUseCases,
     UsageUseCases,
 )
+from app.packages.subscriptions.application import checkout as checkout_uc
 from app.packages.subscriptions.presentation.dependencies import (
     get_authenticated_user,
     require_org_permission,
@@ -33,6 +34,9 @@ from app.packages.subscriptions.presentation.schemas import (
     AddonCreateRequest,
     AddonOut,
     ApplyChangeRequest,
+    CheckoutConfirmRequest,
+    CheckoutPaymentMethodRequest,
+    CheckoutSessionCreateRequest,
     EntitlementOut,
     PaginatedAddons,
     PaginatedPlans,
@@ -416,7 +420,13 @@ def list_subscriptions(
         raise_sub_http(exc)
 
 
-@subscriptions_router.post("", status_code=201, response_model=SubscriptionOut)
+@subscriptions_router.post(
+    "",
+    status_code=201,
+    response_model=SubscriptionOut,
+    deprecated=True,
+    summary="Deprecated direct create — use /checkout-sessions",
+)
 def create_subscription(
     body: SubscriptionCreateRequest,
     actor: dict = Depends(require_org_permission("subscription.create")),
@@ -457,6 +467,116 @@ def start_trial(
             request_id=actor["request_id"],
         )
         return _sub_out(s)
+    except Exception as exc:
+        raise_sub_http(exc)
+
+
+# ── Checkout sessions (Spec 052) — registered before /{subscription_id} ─────────
+
+
+@subscriptions_router.post("/checkout-sessions", status_code=201)
+def create_checkout_session(
+    body: CheckoutSessionCreateRequest,
+    actor: dict = Depends(require_org_permission("subscription.create")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.create_checkout(
+            conn,
+            actor_user_id=int(actor["user_id"]),
+            organization_id=int(actor["organization_id"]),
+            plan_id=body.plan_id,
+            plan_price_id=body.plan_price_id,
+            billing_period=body.billing_period,
+            idempotency_key=body.idempotency_key,
+            request_id=actor.get("request_id"),
+        )
+    except Exception as exc:
+        raise_sub_http(exc)
+
+
+@subscriptions_router.get("/checkout-sessions/{checkout_id}")
+def get_checkout_session(
+    checkout_id: int,
+    actor: dict = Depends(require_org_permission("subscription.view")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.get_checkout(
+            conn, int(actor["organization_id"]), checkout_id
+        )
+    except Exception as exc:
+        raise_sub_http(exc)
+
+
+@subscriptions_router.post("/checkout-sessions/{checkout_id}/payment-method")
+def attach_checkout_payment_method(
+    checkout_id: int,
+    body: CheckoutPaymentMethodRequest,
+    actor: dict = Depends(require_org_permission("subscription.create")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.attach_payment_method(
+            conn,
+            actor_user_id=int(actor["user_id"]),
+            organization_id=int(actor["organization_id"]),
+            checkout_id=checkout_id,
+            brand=body.brand,
+            last4=body.last4,
+            exp_month=body.exp_month,
+            exp_year=body.exp_year,
+            display_label=body.display_label,
+            simulation_token=body.simulation_token,
+            is_default=body.is_default,
+        )
+    except Exception as exc:
+        raise_sub_http(exc)
+
+
+@subscriptions_router.post("/checkout-sessions/{checkout_id}/confirm")
+def confirm_checkout_session(
+    checkout_id: int,
+    body: CheckoutConfirmRequest,
+    actor: dict = Depends(require_org_permission("subscription.create")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        session = checkout_uc.confirm_checkout(
+            conn,
+            actor_user_id=int(actor["user_id"]),
+            organization_id=int(actor["organization_id"]),
+            checkout_id=checkout_id,
+            idempotency_key=body.idempotency_key,
+            request_id=actor.get("request_id"),
+        )
+        if session.get("status") == "failed":
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": "payment_declined",
+                    "message": "Payment declined",
+                    "checkout": session,
+                },
+            )
+        return session
+    except Exception as exc:
+        raise_sub_http(exc)
+
+
+@subscriptions_router.post("/checkout-sessions/{checkout_id}/cancel")
+def cancel_checkout_session(
+    checkout_id: int,
+    actor: dict = Depends(require_org_permission("subscription.create")),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+):
+    try:
+        return checkout_uc.cancel_checkout(
+            conn,
+            actor_user_id=int(actor["user_id"]),
+            organization_id=int(actor["organization_id"]),
+            checkout_id=checkout_id,
+        )
     except Exception as exc:
         raise_sub_http(exc)
 

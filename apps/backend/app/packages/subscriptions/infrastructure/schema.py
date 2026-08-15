@@ -1,4 +1,4 @@
-"""Subscriptions schema — Spec 018.
+"""Subscriptions schema — Spec 018 / Spec 052.
 
 Idempotent CREATE TABLE IF NOT EXISTS for all subscription tables.
 Call after ensure_platform_rbac_tables and ensure_organization_tables.
@@ -26,6 +26,7 @@ SUBSCRIPTION_TABLES = (
     "app_subscription_addon",
     "app_usage_record",
     "app_subscription_access_state",
+    "app_subscription_checkout_session",
 )
 
 
@@ -43,6 +44,8 @@ def ensure_subscription_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_subscription_addon(conn)
         _create_usage_record(conn)
         _create_subscription_access_state(conn)
+        _create_subscription_checkout_session(conn)
+        _ensure_subscription_pending_status(conn)
     else:
         _create_plan(conn)
         _create_plan_price(conn)
@@ -54,6 +57,8 @@ def ensure_subscription_tables(conn: duckdb.DuckDBPyConnection) -> None:
         _create_subscription_addon(conn)
         _create_usage_record(conn)
         _create_subscription_access_state(conn)
+        _create_subscription_checkout_session(conn)
+        _ensure_subscription_pending_status(conn)
         logger.info("Subscriptions schema ensured (%s tables)", len(SUBSCRIPTION_TABLES))
 
     try:
@@ -161,7 +166,9 @@ def _create_subscription(conn: duckdb.DuckDBPyConnection) -> None:
             access_state            VARCHAR NOT NULL DEFAULT 'full',
             created_at              TIMESTAMP NOT NULL,
             updated_at              TIMESTAMP NOT NULL,
-            CHECK (status IN ('trialing', 'active', 'past_due', 'canceled', 'expired')),
+            CHECK (status IN (
+                'pending', 'trialing', 'active', 'past_due', 'canceled', 'expired'
+            )),
             CHECK (access_state IN ('full', 'limited', 'blocked'))
         )
     """)
@@ -169,6 +176,97 @@ def _create_subscription(conn: duckdb.DuckDBPyConnection) -> None:
         CREATE INDEX IF NOT EXISTS idx_subscription_org
         ON app_subscription(organization_id)
     """)
+
+
+def _subscription_status_allows_pending(conn: duckdb.DuckDBPyConnection) -> bool:
+    """True when CHECK on status already includes 'pending'."""
+    try:
+        rows = conn.execute(
+            """
+            SELECT constraint_text
+            FROM duckdb_constraints()
+            WHERE table_name = 'app_subscription' AND constraint_type = 'CHECK'
+            """
+        ).fetchall()
+    except Exception:
+        return False
+    for (text,) in rows:
+        t = str(text or "").lower()
+        if "status" in t and "pending" in t:
+            return True
+    return False
+
+
+def _rebuild_subscription_with_pending(conn: duckdb.DuckDBPyConnection) -> None:
+    """Atomically rebuild app_subscription CHECK to include status='pending'."""
+    staging = "app_subscription__pending_mig"
+    conn.execute(f"DROP TABLE IF EXISTS {staging}")
+    conn.execute(f"""
+        CREATE TABLE {staging} (
+            id                      INTEGER PRIMARY KEY,
+            organization_id         INTEGER NOT NULL,
+            plan_id                 INTEGER NOT NULL,
+            plan_price_id           INTEGER,
+            status                  VARCHAR NOT NULL DEFAULT 'trialing',
+            billing_currency        VARCHAR NOT NULL,
+            trial_ends_at           TIMESTAMP,
+            current_period_start    DATE,
+            current_period_end      DATE,
+            cancel_at_period_end    BOOLEAN NOT NULL DEFAULT FALSE,
+            canceled_at             TIMESTAMP,
+            activation_source       VARCHAR,
+            access_state            VARCHAR NOT NULL DEFAULT 'full',
+            created_at              TIMESTAMP NOT NULL,
+            updated_at              TIMESTAMP NOT NULL,
+            CHECK (status IN (
+                'pending', 'trialing', 'active', 'past_due', 'canceled', 'expired'
+            )),
+            CHECK (access_state IN ('full', 'limited', 'blocked'))
+        )
+    """)
+    conn.execute(f"""
+        INSERT INTO {staging} (
+            id, organization_id, plan_id, plan_price_id, status, billing_currency,
+            trial_ends_at, current_period_start, current_period_end,
+            cancel_at_period_end, canceled_at, activation_source, access_state,
+            created_at, updated_at
+        )
+        SELECT
+            id, organization_id, plan_id, plan_price_id, status, billing_currency,
+            trial_ends_at, current_period_start, current_period_end,
+            cancel_at_period_end, canceled_at, activation_source, access_state,
+            created_at, updated_at
+        FROM app_subscription
+    """)
+    before = int(conn.execute("SELECT COUNT(*) FROM app_subscription").fetchone()[0])
+    after = int(conn.execute(f"SELECT COUNT(*) FROM {staging}").fetchone()[0])
+    if before != after:
+        conn.execute(f"DROP TABLE IF EXISTS {staging}")
+        raise RuntimeError(
+            f"subscription migration row-count mismatch: source={before} staging={after}"
+        )
+    conn.execute("DROP TABLE app_subscription")
+    conn.execute(f"ALTER TABLE {staging} RENAME TO app_subscription")
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_subscription_org
+        ON app_subscription(organization_id)
+    """)
+    logger.info("app_subscription rebuilt to allow status=pending")
+
+
+def _ensure_subscription_pending_status(conn: duckdb.DuckDBPyConnection) -> None:
+    """Migrate legacy app_subscription CHECK to include pending (Spec 052)."""
+    from app.core.database import transactional
+
+    try:
+        conn.execute("SELECT 1 FROM app_subscription LIMIT 0")
+    except Exception:
+        return
+    if _subscription_status_allows_pending(conn):
+        return
+    with transactional(conn):
+        if not _subscription_status_allows_pending(conn):
+            _rebuild_subscription_with_pending(conn)
 
 
 def _create_subscription_change(conn: duckdb.DuckDBPyConnection) -> None:
@@ -273,4 +371,42 @@ def _create_subscription_access_state(conn: duckdb.DuckDBPyConnection) -> None:
             updated_at       TIMESTAMP NOT NULL,
             CHECK (access_state IN ('full', 'limited', 'blocked'))
         )
+    """)
+
+
+def _create_subscription_checkout_session(conn: duckdb.DuckDBPyConnection) -> None:
+    """Organization checkout sessions — Spec 052. Safe metadata only; no PAN/CVV."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_subscription_checkout_session (
+            id                      INTEGER PRIMARY KEY,
+            organization_id         INTEGER NOT NULL,
+            actor_user_id           INTEGER NOT NULL,
+            plan_code               VARCHAR NOT NULL,
+            plan_id                 INTEGER NOT NULL,
+            plan_price_id           INTEGER NOT NULL,
+            billing_period          VARCHAR NOT NULL,
+            amount                  DECIMAL(18,4) NOT NULL,
+            currency                VARCHAR(3) NOT NULL DEFAULT 'USD',
+            status                  VARCHAR NOT NULL DEFAULT 'draft',
+            subscription_id         INTEGER,
+            invoice_id              INTEGER,
+            payment_attempt_id      INTEGER,
+            payment_method_id       INTEGER,
+            idempotency_key         VARCHAR NOT NULL,
+            failure_code            VARCHAR,
+            created_at              TIMESTAMP NOT NULL,
+            updated_at              TIMESTAMP NOT NULL,
+            expires_at              TIMESTAMP,
+            completed_at            TIMESTAMP,
+            CHECK (billing_period IN ('monthly', 'annual')),
+            CHECK (status IN (
+                'draft', 'awaiting_method', 'ready', 'processing',
+                'succeeded', 'failed', 'canceled', 'expired'
+            )),
+            UNIQUE (organization_id, idempotency_key)
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sub_checkout_org
+        ON app_subscription_checkout_session(organization_id)
     """)
