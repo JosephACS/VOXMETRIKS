@@ -803,6 +803,9 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     sectionTitleKey: 'nav.section.platformOps',
     order: 60,
     exact: false,
+    contextGroup: 'platformOps',
+    tabLabel: 'Revisiones',
+    matchPrefixes: ['/platform-ops/catalog-reviews'],
   },
   {
     id: 'platform.ops.audio_unresolved',
@@ -818,6 +821,21 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     contextGroup: 'platformOps',
     tabLabel: 'Audio no resuelto',
     matchPrefixes: ['/platform-ops/audio-unresolved'],
+  },
+  {
+    id: 'platform.ops.system',
+    labelKey: 'nav.platformOps.system',
+    iconId: 'settings',
+    path: '/platform-ops/system',
+    spaces: ['platform_admin'],
+    staffCapability: STAFF_CAPABILITY.shell,
+    sectionId: 'space-platform-ops',
+    sectionTitleKey: 'nav.section.platformOps',
+    order: 80,
+    exact: true,
+    contextGroup: 'platformOps',
+    tabLabel: 'Sistema',
+    matchPrefixes: ['/platform-ops/system'],
   },
 ];
 

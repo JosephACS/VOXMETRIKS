@@ -1013,6 +1013,9 @@ class CatalogPublishingUseCases:
         actor_user_id: int,
         reason: str,
     ) -> dict[str, Any]:
+        cleaned = (reason or "").strip()
+        if not cleaned:
+            raise ValidationError("A non-blank rejection reason is required")
         sub = self._get_submission(submission_id, org_id=organization_id)
         if sub["status"] == "submitted":
             sub = transition(
@@ -1023,7 +1026,7 @@ class CatalogPublishingUseCases:
                 reason="review_start",
             )
         sub = transition(
-            self._conn, sub, "rejected", actor_user_id=actor_user_id, reason=reason
+            self._conn, sub, "rejected", actor_user_id=actor_user_id, reason=cleaned
         )
         self._conn.execute(
             """
@@ -1031,7 +1034,7 @@ class CatalogPublishingUseCases:
             SET reject_reason = ?, reviewer_id = ?, updated_at = ?
             WHERE id = ?
             """,
-            [reason, actor_user_id, _now(), submission_id],
+            [cleaned, actor_user_id, _now(), submission_id],
         )
         rid = _next_id(self._conn, "app_release_review")
         self._conn.execute(
@@ -1040,7 +1043,7 @@ class CatalogPublishingUseCases:
                 (id, submission_id, reviewer_id, decision, notes, created_at)
             VALUES (?, ?, ?, 'reject', ?, ?)
             """,
-            [rid, submission_id, actor_user_id, reason, _now()],
+            [rid, submission_id, actor_user_id, cleaned, _now()],
         )
         return self._get_submission(submission_id)
 

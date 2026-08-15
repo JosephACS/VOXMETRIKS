@@ -353,16 +353,30 @@ function platformOpsContext(
       path: '/platform-ops/artist-requests',
       matchPrefixes: ['/platform-ops/artist-requests'],
     },
+    {
+      label: 'Revisiones',
+      path: '/platform-ops/catalog-reviews',
+      matchPrefixes: ['/platform-ops/catalog-reviews'],
+    },
+    {
+      label: 'Sistema',
+      path: '/platform-ops/system',
+      matchPrefixes: ['/platform-ops/system'],
+    },
   ];
   const tabs = registryTabs('platformOps', access) ?? defaultTabs;
 
-  const isAudio = path.includes('audio');
+  const isAudio = path.includes('audio-unresolved');
   const isArtistReq = path.includes('artist-requests');
+  const isReviews = path.includes('catalog-reviews');
+  const isSystem = path.includes('/system');
   const crumbs: BreadcrumbCrumb[] = [
     { label: 'Administración de plataforma', path: '/platform-ops' },
   ];
   if (isAudio) crumbs.push({ label: 'Audio no resuelto' });
   else if (isArtistReq) crumbs.push({ label: 'Solicitudes de artista' });
+  else if (isReviews) crumbs.push({ label: 'Revisiones' });
+  else if (isSystem) crumbs.push({ label: 'Sistema' });
   else crumbs.push({ label: 'Panel de Ops' });
 
   return {
@@ -377,7 +391,11 @@ function platformOpsContext(
       ? '/platform-ops/audio-unresolved'
       : isArtistReq
         ? '/platform-ops/artist-requests'
-        : '/platform-ops',
+        : isReviews
+          ? '/platform-ops/catalog-reviews'
+          : isSystem
+            ? '/platform-ops/system'
+            : '/platform-ops',
   };
 }
 

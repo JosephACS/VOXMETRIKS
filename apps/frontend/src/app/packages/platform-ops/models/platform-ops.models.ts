@@ -5,6 +5,34 @@ export interface HealthStatus {
   components: Record<string, string>;
 }
 
+export type PlatformOpsQueueCode =
+  | 'artist_requests'
+  | 'catalog_reviews'
+  | 'audio_unresolved'
+  | 'incidents';
+
+export interface PlatformOpsQueue {
+  code: PlatformOpsQueueCode;
+  count: number | null;
+  availability: 'available' | 'unavailable';
+  severity: 'normal' | 'attention' | 'critical';
+}
+
+export interface PlatformOpsOverview {
+  health: 'healthy' | 'degraded' | 'unavailable';
+  generated_at: string;
+  queues: PlatformOpsQueue[];
+  next_queue: PlatformOpsQueueCode | null;
+  has_pending_work: boolean;
+}
+
+export const PLATFORM_OPS_QUEUE_PATHS: Record<PlatformOpsQueueCode, string> = {
+  artist_requests: '/platform-ops/artist-requests',
+  catalog_reviews: '/platform-ops/catalog-reviews',
+  audio_unresolved: '/platform-ops/audio-unresolved',
+  incidents: '/platform-ops/system',
+};
+
 export interface FeatureFlag {
   id: number;
   flag_key: string;

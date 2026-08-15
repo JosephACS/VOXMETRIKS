@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/054-permission-driven-product-navigation",
-  "previous_feature_directory": ".specify/history/053-organization-professional-journey",
+  "feature_directory": ".specify/features/055-platform-admin-professional-journey",
+  "previous_feature_directory": ".specify/history/054-permission-driven-product-navigation",
   "status": "active",
-  "feature_id": "054",
-  "short_name": "permission-driven-product-navigation",
-  "note": "Active: one permission-driven product-surface registry for sidebar, contextual tabs and route presentation across Personal, Artist, Organization, Data Ops and Platform Admin spaces."
+  "feature_id": "055",
+  "short_name": "platform-admin-professional-journey",
+  "note": "Active: one queue-first Platform Admin journey for artist requests, catalog reviews, unresolved audio and operational health, with diagnostics separated from primary work."
 }

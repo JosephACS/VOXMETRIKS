@@ -1,0 +1,23 @@
+# Tasks — 055 Platform Admin Professional Journey
+
+- [x] T001 Record branch, HEAD, staged state and canonical DuckDB fingerprint.
+- [x] T002 Implement strict Platform Ops overview contract and read-only use case.
+- [x] T003 Add overview route with platform authorization and no DDL on GET.
+- [x] T004 Add directed overview/RBAC/availability tests.
+- [x] T005 Convert `/platform-ops` to queue-first dashboard.
+- [x] T006 Move diagnostic lists to `/platform-ops/system` without duplication.
+- [x] T007 Register System in routes, registry and contextual navigation.
+- [x] T008 Professionalize artist-request review and require rejection reason.
+- [x] T009 Professionalize catalog-review actions and confirmation/feedback.
+- [x] T010 Professionalize unresolved-audio actions and confirmation/feedback.
+- [x] T011 Ensure mutations expose busy state and prevent double submission.
+- [x] T012 Remove technical/development/academic copy from primary surfaces.
+- [x] T013 Add ES/EN product copy and responsive styles.
+- [x] T014 Add directed frontend component/route/registry tests.
+- [x] T015 Add isolated 055 personas/data harness.
+- [x] T016 Exercise all visible Platform Admin links at 1366×768 and 390×844.
+- [x] T017 Exercise one successful and one rejected/invalid mutation through UI.
+- [x] T018 Run directed backend tests and `create_app()`/OpenAPI checks.
+- [x] T019 Run directed frontend tests and `npm run build`.
+- [x] T020 Run Playwright 055, diff check and final DB fingerprint comparison.
+- [x] T021 Report exact results, files and true residual risks; stop without publishing.

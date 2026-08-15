@@ -1,9 +1,9 @@
 # Features activas
 
-**Estado actual:** Spec **054** activa.
+**Estado actual:** Spec **055** activa.
 
-- [054 — Permission-Driven Product Navigation](054-permission-driven-product-navigation/)
-- Las Specs **001–053** están cerradas y viven en [history](../history/README.md).
-- No crear otra Spec mientras 054 siga activa.
+- [055 — Platform Admin Professional Journey](055-platform-admin-professional-journey/)
+- Las Specs **001–054** están cerradas y viven en [history](../history/README.md).
+- No crear otra Spec mientras 055 siga activa.
 
 Verdad de producto implementado: [`docs/STATUS.md`](../../docs/STATUS.md). Una Spec activa describe alcance aprobado, no prueba de implementación.

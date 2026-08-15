@@ -10,7 +10,8 @@
     "e2e:051": "node e2e/harness/051-run.mjs",
     "e2e:052": "node e2e/harness/052-run.mjs",
     "e2e:053": "node e2e/harness/053-run.mjs",
-    "e2e:054": "node e2e/harness/054-run.mjs"
+    "e2e:054": "node e2e/harness/054-run.mjs",
+    "e2e:055": "node e2e/harness/055-run.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",
