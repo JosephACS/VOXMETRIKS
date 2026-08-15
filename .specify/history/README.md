@@ -80,7 +80,7 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 043 | [043-professional-ux-visual-redesign](043-professional-ux-visual-redesign/) |
 | 044 | [044-product-consolidation-data-clarity](044-product-consolidation-data-clarity/) |
 
-## 045–053 (cerradas; movidas desde features/)
+## 045–054 (cerradas; movidas desde features/)
 
 | ID | Carpeta | Estado |
 |----|---------|--------|
@@ -93,9 +93,10 @@ Fuentes mínimas: este índice, Spec 047, `docs/STATUS.md`, código/pruebas, com
 | 051 | [051-artist-professional-journey](051-artist-professional-journey/) | cerrado; acceso, Artist Space, equipo, publicación y revisión independiente |
 | 052 | [052-professional-checkout-journey](052-professional-checkout-journey/) | cerrado; checkout personal y empresarial con pago simulado profesional |
 | 053 | [053-organization-professional-journey](053-organization-professional-journey/) | cerrado; creación, onboarding, plan, equipo y entrada al espacio empresarial |
+| 054 | [054-permission-driven-product-navigation](054-permission-driven-product-navigation/) | cerrado; registro único de superficies y navegación por capacidades |
 
 Cada una conserva `spec.md` + `closure.md` originales del cierre Spec Kit.
 
 ## Próxima Spec
 
-La Spec **054** está activa bajo `.specify/features/054-permission-driven-product-navigation/`. El siguiente ID disponible será **055** después de su cierre.
+La Spec **055** está activa bajo `.specify/features/055-platform-admin-professional-journey/`. El siguiente ID disponible será **056** después de su cierre.

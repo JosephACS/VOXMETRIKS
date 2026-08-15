@@ -23,6 +23,19 @@ describe('PlatformOpsApiService', () => {
     req.flush({ status: 'healthy', labeled_academic: true, message: 'ok', components: {} });
   });
 
+  it('getOverview hits GET /platform-ops/overview', () => {
+    service.getOverview().subscribe();
+    const req = http.expectOne(`${base}/platform-ops/overview`);
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      health: 'healthy',
+      generated_at: '2026-01-01T00:00:00Z',
+      queues: [],
+      next_queue: null,
+      has_pending_work: false,
+    });
+  });
+
   it('listFlags hits GET /platform-ops/flags', () => {
     service.listFlags().subscribe();
     const req = http.expectOne(`${base}/platform-ops/flags`);

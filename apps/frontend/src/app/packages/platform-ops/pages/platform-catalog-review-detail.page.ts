@@ -12,6 +12,7 @@ import {
   publishingUiBucket,
 } from '../../catalog-publishing/models/catalog-publishing.models';
 import { I18nService } from '../../../core/services/i18n.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
@@ -101,16 +102,62 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               type="button"
               class="btn btn--danger"
               [disabled]="busy() || !notes.trim()"
-              (click)="reject()"
+              (click)="beginReject()"
+              data-testid="platform-review-reject"
             >
               {{ 'publishing.review.reject' | t: lang() }}
             </button>
             @if (canPublish()) {
-              <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="publish()">
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="busy()"
+                (click)="beginPublish()"
+                data-testid="platform-review-publish"
+              >
                 {{ 'platformReviews.publish' | t: lang() }}
               </button>
             }
           </div>
+
+          @if (confirmAction() === 'reject') {
+            <div class="confirm" role="group" [attr.aria-label]="'publishing.review.rejectConfirm' | t: lang()">
+              <p>{{ 'publishing.review.rejectConfirmBody' | t: lang() }}</p>
+              <div class="actions">
+                <button
+                  type="button"
+                  class="btn btn--danger"
+                  [disabled]="busy()"
+                  (click)="reject()"
+                  data-testid="platform-review-reject-confirm"
+                >
+                  {{ 'publishing.review.confirmReject' | t: lang() }}
+                </button>
+                <button type="button" class="btn btn--secondary" [disabled]="busy()" (click)="cancelConfirm()">
+                  {{ 'common.cancel' | t: lang() }}
+                </button>
+              </div>
+            </div>
+          }
+          @if (confirmAction() === 'publish') {
+            <div class="confirm" role="group" [attr.aria-label]="'platformReviews.publishConfirm' | t: lang()">
+              <p>{{ 'platformReviews.publishConfirmBody' | t: lang() }}</p>
+              <div class="actions">
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="busy()"
+                  (click)="publish()"
+                  data-testid="platform-review-publish-confirm"
+                >
+                  {{ 'platformReviews.confirmPublish' | t: lang() }}
+                </button>
+                <button type="button" class="btn btn--secondary" [disabled]="busy()" (click)="cancelConfirm()">
+                  {{ 'common.cancel' | t: lang() }}
+                </button>
+              </div>
+            </div>
+          }
         </app-enterprise-section-card>
 
         @if (actionError()) {
@@ -194,12 +241,20 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
       color: #6fd3a0;
       margin-top: 0.75rem;
     }
+    .confirm {
+      margin-top: 0.85rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.08);
+    }
   `,
 })
 export class PlatformCatalogReviewDetailPage implements OnInit {
   private readonly api = inject(CatalogPublishingApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly i18n = inject(I18nService);
+  private readonly notify = inject(NotificationService);
 
   readonly lang = this.i18n.lang;
   readonly detail = signal<ReleaseDetail | null>(null);
@@ -208,6 +263,7 @@ export class PlatformCatalogReviewDetailPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
   readonly info = signal<string | null>(null);
+  readonly confirmAction = signal<'reject' | 'publish' | null>(null);
   notes = '';
 
   private submissionId = 0;
@@ -278,6 +334,22 @@ export class PlatformCatalogReviewDetailPage implements OnInit {
     );
   }
 
+  beginReject(): void {
+    if (!this.notes.trim()) {
+      this.actionError.set(this.i18n.t('publishing.review.notesRequired'));
+      return;
+    }
+    this.confirmAction.set('reject');
+  }
+
+  beginPublish(): void {
+    this.confirmAction.set('publish');
+  }
+
+  cancelConfirm(): void {
+    this.confirmAction.set(null);
+  }
+
   reject(): void {
     const reason = this.notes.trim();
     if (!reason) return;
@@ -289,17 +361,21 @@ export class PlatformCatalogReviewDetailPage implements OnInit {
   }
 
   private run(request: Observable<unknown>, successKey: string): void {
+    if (this.busy()) return;
     this.busy.set(true);
     this.actionError.set(null);
     this.info.set(null);
     request.subscribe({
       next: () => {
         this.info.set(this.i18n.t(successKey));
+        this.notify.success(this.i18n.t(successKey));
+        this.confirmAction.set(null);
         this.busy.set(false);
         this.load();
       },
-      error: (err: unknown) => {
+      error: (err) => {
         this.actionError.set(userFacingHttpError(this.i18n, err));
+        this.notify.show(this.i18n.t('common.error'), userFacingHttpError(this.i18n, err), 'error');
         this.busy.set(false);
       },
     });

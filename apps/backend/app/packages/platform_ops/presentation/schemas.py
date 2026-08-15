@@ -1,11 +1,11 @@
-"""Platform ops Pydantic schemas — Spec 027."""
+"""Platform ops Pydantic schemas — Spec 027 / Spec 055."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class NotificationSendRequest(BaseModel):
@@ -200,3 +200,34 @@ class MockEmailOut(BaseModel):
     success: bool
     labeled_mock: bool
     message: str
+
+
+class OverviewQueueOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Literal[
+        "artist_requests",
+        "catalog_reviews",
+        "audio_unresolved",
+        "incidents",
+    ]
+    count: Optional[int] = None
+    availability: Literal["available", "unavailable"]
+    severity: Literal["normal", "attention", "critical"]
+
+
+class PlatformOpsOverviewOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    health: Literal["healthy", "degraded", "unavailable"]
+    generated_at: datetime
+    queues: list[OverviewQueueOut]
+    next_queue: Optional[
+        Literal[
+            "artist_requests",
+            "catalog_reviews",
+            "audio_unresolved",
+            "incidents",
+        ]
+    ] = None
+    has_pending_work: bool

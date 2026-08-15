@@ -9,6 +9,7 @@ import {
   UnresolvedAudioItem,
 } from '../models/platform-ops.models';
 import { I18nService } from '../../../core/services/i18n.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
@@ -52,22 +53,22 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
           <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>{{ 'platformOps.audioUnresolved.colTrack' | t:lang() }}</th>
                 <th>{{ 'platformOps.audioUnresolved.colArtist' | t:lang() }}</th>
                 <th>{{ 'common.status' | t:lang() }}</th>
+                <th class="ref-col">{{ 'platformOps.audioUnresolved.colRef' | t:lang() }}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               @for (row of items; track row.track_id) {
                 <tr [class.active]="selected?.track_id === row.track_id">
-                  <td>{{ row.track_id }}</td>
-                  <td>{{ row.track_name || '—' }}</td>
-                  <td>{{ row.artist_name || '—' }}</td>
+                  <td>{{ row.track_name || ('platformOps.audioUnresolved.untitled' | t:lang()) }}</td>
+                  <td>{{ row.artist_name || ('common.notAvailable' | t:lang()) }}</td>
                   <td>
                     <app-enterprise-status-badge [status]="row.status" />
                   </td>
+                  <td class="ref-col">{{ row.track_id }}</td>
                   <td>
                     <button type="button" class="btn btn-sm" (click)="select(row)">
                       {{ 'platformOps.audioUnresolved.manage' | t:lang() }}
@@ -101,10 +102,48 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <button type="button" class="btn" [disabled]="busy" (click)="reresolve()">
               {{ 'platformOps.audioUnresolved.reresolve' | t:lang() }}
             </button>
-            <button type="button" class="btn btn-danger" [disabled]="busy" (click)="markUnavailable()">
+            <button
+              type="button"
+              class="btn btn-danger"
+              [disabled]="busy"
+              (click)="beginUnavailable()"
+              data-testid="audio-mark-unavailable"
+            >
               {{ 'platformOps.audioUnresolved.markUnavailable' | t:lang() }}
             </button>
           </div>
+
+          @if (confirmUnavailable) {
+            <div class="confirm" role="group" [attr.aria-label]="'platformOps.audioUnresolved.unavailableConfirm' | t:lang()">
+              <label class="field-label" for="unavailable-reason">
+                {{ 'platformOps.audioUnresolved.reason' | t:lang() }}
+              </label>
+              <textarea
+                id="unavailable-reason"
+                class="input textarea"
+                [(ngModel)]="unavailableReason"
+                rows="2"
+                data-testid="audio-unavailable-reason"
+              ></textarea>
+              @if (reasonError) {
+                <p class="err" role="alert">{{ reasonError }}</p>
+              }
+              <div class="manual-row">
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  [disabled]="busy"
+                  (click)="markUnavailable()"
+                  data-testid="audio-unavailable-confirm"
+                >
+                  {{ 'platformOps.audioUnresolved.confirmUnavailable' | t:lang() }}
+                </button>
+                <button type="button" class="btn" [disabled]="busy" (click)="cancelUnavailable()">
+                  {{ 'common.cancel' | t:lang() }}
+                </button>
+              </div>
+            </div>
+          }
 
           @if (actionMsg) {
             <p class="msg">{{ actionMsg }}</p>
@@ -229,12 +268,37 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         border: 0;
         margin-top: 0.75rem;
       }
+      .ref-col {
+        opacity: 0.65;
+        font-size: 0.85rem;
+      }
+      .confirm {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        background: rgba(248, 113, 113, 0.08);
+      }
+      .field-label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.85rem;
+      }
+      .textarea {
+        width: 100%;
+        resize: vertical;
+      }
+      .err {
+        color: #b91c1c;
+        margin: 0.35rem 0 0;
+      }
     `,
   ],
 })
 export class UnresolvedAudioPage implements OnInit {
   private readonly api = inject(PlatformOpsApiService);
   private readonly i18n = inject(I18nService);
+  private readonly notify = inject(NotificationService);
   private readonly sanitizer = inject(DomSanitizer);
 
   lang = () => this.i18n.lang();
@@ -250,6 +314,9 @@ export class UnresolvedAudioPage implements OnInit {
   candidates: AudioCandidate[] = [];
   manualUrl = '';
   previewUrl: SafeResourceUrl | null = null;
+  confirmUnavailable = false;
+  unavailableReason = '';
+  reasonError = '';
 
   ngOnInit(): void {
     this.load();
@@ -279,6 +346,7 @@ export class UnresolvedAudioPage implements OnInit {
     this.previewUrl = null;
     this.manualUrl = '';
     this.actionMsg = '';
+    this.cancelUnavailable();
   }
 
   loadCandidates(): void {
@@ -329,6 +397,7 @@ export class UnresolvedAudioPage implements OnInit {
         this.busy = false;
         if (!res) return;
         this.actionMsg = this.i18n.t('platformOps.audioUnresolved.saved');
+        this.notify.success(this.actionMsg);
         this.load();
       });
   }
@@ -348,19 +417,39 @@ export class UnresolvedAudioPage implements OnInit {
       .subscribe((res) => {
         this.busy = false;
         if (!res) return;
-        this.actionMsg = `${res.provider}/${res.status}`;
+        this.actionMsg = this.i18n.t('platformOps.audioUnresolved.reresolved');
+        this.notify.success(this.actionMsg);
         this.load();
       });
   }
 
+  beginUnavailable(): void {
+    this.confirmUnavailable = true;
+    this.unavailableReason = '';
+    this.reasonError = '';
+  }
+
+  cancelUnavailable(): void {
+    this.confirmUnavailable = false;
+    this.unavailableReason = '';
+    this.reasonError = '';
+  }
+
   markUnavailable(): void {
     if (!this.selected) return;
+    const reason = this.unavailableReason.trim();
+    if (!reason) {
+      this.reasonError = this.i18n.t('platformOps.audioUnresolved.reasonRequired');
+      return;
+    }
+    if (this.busy) return;
     this.busy = true;
     this.api
-      .markAudioUnavailable(this.selected.track_id)
+      .markAudioUnavailable(this.selected.track_id, reason)
       .pipe(
         catchError((err) => {
           this.actionMsg = err?.error?.detail || err?.message || 'Error';
+          this.notify.show(this.i18n.t('common.error'), this.actionMsg, 'error');
           this.busy = false;
           return of(null);
         }),
@@ -369,6 +458,8 @@ export class UnresolvedAudioPage implements OnInit {
         this.busy = false;
         if (!res) return;
         this.actionMsg = this.i18n.t('platformOps.audioUnresolved.markedUnavailable');
+        this.notify.success(this.actionMsg);
+        this.cancelUnavailable();
         this.load();
       });
   }

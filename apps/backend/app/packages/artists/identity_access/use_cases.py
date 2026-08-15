@@ -1837,6 +1837,9 @@ class PlatformArtistRequestUseCases:
         self, *, user_id: int, request_id: int, reason: Optional[str] = None
     ) -> dict[str, Any]:
         self._require_admin(user_id)
+        cleaned = (reason or "").strip()
+        if not cleaned:
+            raise ValidationError("A non-blank rejection reason is required")
         req = _get_request(self._conn, request_id)
         if req["status"] != "pending":
             raise ValidationError("Request is not pending")
@@ -1847,7 +1850,7 @@ class PlatformArtistRequestUseCases:
             request_id,
             status="rejected",
             reviewer_user_id=user_id,
-            rejection_reason=reason,
+            rejection_reason=cleaned,
         )
         return {"request_id": request_id, "status": "rejected"}
 

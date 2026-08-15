@@ -7,7 +7,14 @@ export const PLATFORM_OPS_ROUTES: Routes = [
     canActivate: [platformAdminGuard],
     loadComponent: () =>
       import('./pages/platform-ops-dashboard.page').then((m) => m.PlatformOpsDashboardPage),
-    title: 'Operaciones de plataforma',
+    title: 'Administración de plataforma',
+  },
+  {
+    path: 'platform-ops/system',
+    canActivate: [platformAdminGuard],
+    loadComponent: () =>
+      import('./pages/platform-system.page').then((m) => m.PlatformSystemPage),
+    title: 'Sistema de plataforma',
   },
   {
     path: 'platform-ops/catalog-reviews',

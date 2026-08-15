@@ -8,6 +8,7 @@ import {
   BackgroundJob,
   FeatureFlag,
   HealthStatus,
+  PlatformOpsOverview,
   ProviderConfig,
   UnresolvedAudioList,
 } from '../models/platform-ops.models';
@@ -18,6 +19,10 @@ const base = environment.apiUrl;
 @Injectable({ providedIn: 'root' })
 export class PlatformOpsApiService {
   private http = inject(HttpClient);
+
+  getOverview(): Observable<PlatformOpsOverview> {
+    return this.http.get<PlatformOpsOverview>(`${base}/platform-ops/overview`);
+  }
 
   getHealth(): Observable<HealthStatus> {
     return this.http.get<HealthStatus>(`${base}/platform-ops/health`);
@@ -69,7 +74,7 @@ export class PlatformOpsApiService {
     );
   }
 
-  markAudioUnavailable(trackId: number, reason = 'manual'): Observable<AudioSource> {
+  markAudioUnavailable(trackId: number, reason: string): Observable<AudioSource> {
     return this.http.post<AudioSource>(
       `${base}/platform-ops/audio-unresolved/${trackId}/unavailable`,
       { reason },

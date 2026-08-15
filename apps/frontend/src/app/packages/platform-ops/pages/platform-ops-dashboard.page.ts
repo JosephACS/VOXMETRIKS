@@ -1,12 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { PlatformOpsApiService } from '../services/platform-ops-api.service';
 import {
-  BackupRecord,
-  BackgroundJob,
-  FeatureFlag,
-  HealthStatus,
-  ProviderConfig,
+  PLATFORM_OPS_QUEUE_PATHS,
+  PlatformOpsOverview,
+  PlatformOpsQueue,
+  PlatformOpsQueueCode,
 } from '../models/platform-ops.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -15,192 +15,187 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 @Component({
   selector: 'app-platform-ops-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
+  imports: [CommonModule, RouterLink, TranslatePipe, ...ENTERPRISE_UI_IMPORTS],
   template: `
-    <div class="vx-enterprise platform-ops-page">
+    <div class="vx-enterprise platform-ops-page" data-testid="platform-ops-dashboard">
       <app-enterprise-page-header
-        [title]="'platformOps.dashboard.title' | t:lang()"
-        [subtitle]="'platformOps.dashboard.subtitle' | t:lang()"
-      />
+        [title]="'platformOps.overview.title' | t: lang()"
+        [subtitle]="'platformOps.overview.subtitle' | t: lang()"
+      >
+        <a routerLink="/platform-ops/system" class="btn btn--ghost" data-testid="platform-ops-system-link">
+          {{ 'platformOps.overview.openSystem' | t: lang() }}
+        </a>
+      </app-enterprise-page-header>
 
-      @if (error) {
-        <app-enterprise-error-state [message]="error" (retry)="load()" />
-      }
-
-      @if (health) {
-        <app-enterprise-section-card [title]="'platformOps.dashboard.health' | t:lang()">
-          <p>
-            <app-enterprise-status-badge [status]="health.status" />
-            —
-            {{
-              health.labeled_academic
-                ? ('platformOps.dashboard.healthMessageAcademic' | t:lang())
-                : health.message
-            }}
+      @if (loading()) {
+        <app-enterprise-loading-skeleton [rows]="5" />
+      } @else if (error()) {
+        <app-enterprise-error-state [message]="error()!" (retry)="load()" />
+      } @else if (overview(); as ov) {
+        <app-enterprise-section-card [title]="'platformOps.overview.health' | t: lang()">
+          <p class="health-line" data-testid="platform-ops-health">
+            <strong>{{ healthLabel(ov.health) }}</strong>
+            <span>{{ 'platformOps.overview.healthHint.' + ov.health | t: lang() }}</span>
           </p>
-          @if (health.labeled_academic) {
-            <span class="badge">{{ 'platformOps.dashboard.academic' | t:lang() }}</span>
-          }
         </app-enterprise-section-card>
+
+        @if (ov.next_queue) {
+          <app-enterprise-section-card
+            [title]="'platformOps.overview.nextAction' | t: lang()"
+            data-testid="platform-ops-next-queue"
+          >
+            <p>
+              {{ queueLabel(ov.next_queue) }}
+              —
+              {{ 'platformOps.overview.nextActionBody' | t: lang() }}
+            </p>
+            <a
+              class="btn btn--primary"
+              [routerLink]="queuePath(ov.next_queue)"
+              [attr.data-testid]="'platform-ops-next-' + ov.next_queue"
+            >
+              {{ 'platformOps.overview.openQueue' | t: lang() }}
+            </a>
+          </app-enterprise-section-card>
+        } @else {
+          <app-enterprise-empty-state
+            [title]="'platformOps.overview.allClearTitle' | t: lang()"
+            [description]="'platformOps.overview.allClearBody' | t: lang()"
+          />
+        }
+
+        <div class="queue-grid" data-testid="platform-ops-queues">
+          @for (q of ov.queues; track q.code) {
+            <a
+              class="queue-card"
+              [class.queue-card--attention]="q.severity === 'attention'"
+              [class.queue-card--critical]="q.severity === 'critical'"
+              [class.queue-card--unavailable]="q.availability === 'unavailable'"
+              [routerLink]="queuePath(q.code)"
+              [attr.data-testid]="'platform-ops-queue-' + q.code"
+            >
+              <h3>{{ queueLabel(q.code) }}</h3>
+              <p class="queue-count">
+                @if (q.availability === 'unavailable') {
+                  {{ 'platformOps.overview.unavailable' | t: lang() }}
+                } @else {
+                  {{ q.count ?? 0 }}
+                }
+              </p>
+              <p class="queue-meta">{{ severityLabel(q) }}</p>
+            </a>
+          }
+        </div>
       }
-
-      <app-enterprise-section-card [title]="'platformOps.dashboard.providers' | t:lang()">
-        @if (providers.length === 0) {
-          <app-enterprise-empty-state
-            [title]="'platformOps.dashboard.noProvidersTitle' | t:lang()"
-            [description]="'platformOps.dashboard.noProvidersBody' | t:lang()"
-          />
-        } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'platformOps.dashboard.code' | t:lang() }}</th>
-                  <th>{{ 'common.name' | t:lang() }}</th>
-                  <th>{{ 'common.mock' | t:lang() }}</th>
-                  <th>{{ 'platformOps.dashboard.secret' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of providers; track p.id) {
-                  <tr>
-                    <td>{{ p.provider_code }}</td>
-                    <td>{{ p.display_name }}</td>
-                    <td>
-                      {{ p.is_mock ? ('common.mock' | t:lang()) : ('common.notAvailable' | t:lang()) }}
-                    </td>
-                    <td>{{ p.secret_ref_redacted || ('common.notAvailable' | t:lang()) }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
-        }
-      </app-enterprise-section-card>
-
-      <app-enterprise-section-card [title]="'platformOps.dashboard.jobs' | t:lang()">
-        @if (jobs.length === 0) {
-          <app-enterprise-empty-state
-            [title]="'platformOps.dashboard.noJobsTitle' | t:lang()"
-            [description]="'platformOps.dashboard.noJobsBody' | t:lang()"
-          />
-        } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'platformOps.dashboard.code' | t:lang() }}</th>
-                  <th>{{ 'common.status' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (j of jobs; track j.id) {
-                  <tr>
-                    <td class="mono">{{ j.job_code }}</td>
-                    <td><app-enterprise-status-badge [status]="j.status" /></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
-        }
-      </app-enterprise-section-card>
-
-      <app-enterprise-section-card [title]="'platformOps.dashboard.flags' | t:lang()">
-        @if (flags.length === 0) {
-          <app-enterprise-empty-state
-            [title]="'platformOps.dashboard.noFlagsTitle' | t:lang()"
-            [description]="'platformOps.dashboard.noFlagsBody' | t:lang()"
-          />
-        } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'platformOps.dashboard.code' | t:lang() }}</th>
-                  <th>{{ 'common.status' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (f of flags; track f.id) {
-                  <tr>
-                    <td class="mono">{{ f.flag_key }}</td>
-                    <td>
-                      <app-enterprise-status-badge [status]="f.enabled ? 'active' : 'closed'" />
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
-        }
-      </app-enterprise-section-card>
-
-      <app-enterprise-section-card [title]="'platformOps.dashboard.backups' | t:lang()">
-        @if (backups.length === 0) {
-          <app-enterprise-empty-state
-            [title]="'platformOps.dashboard.noBackupsTitle' | t:lang()"
-            [description]="'platformOps.dashboard.noBackupsBody' | t:lang()"
-          />
-        } @else {
-          <app-enterprise-data-table>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>{{ 'platformOps.dashboard.backupPath' | t:lang() }}</th>
-                  <th>{{ 'common.status' | t:lang() }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (b of backups; track b.id) {
-                  <tr>
-                    <td>{{ b.file_path }}</td>
-                    <td>
-                      @if (b.labeled_academic) {
-                        <span class="badge">{{ 'platformOps.dashboard.academic' | t:lang() }}</span>
-                      } @else {
-                        {{ 'common.notAvailable' | t:lang() }}
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </app-enterprise-data-table>
-        }
-      </app-enterprise-section-card>
     </div>
+  `,
+  styles: `
+    .health-line {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+    .queue-card {
+      display: block;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+      color: inherit;
+      text-decoration: none;
+      min-height: 7rem;
+    }
+    .queue-card:hover,
+    .queue-card:focus-visible {
+      border-color: rgba(147, 197, 253, 0.55);
+      outline: none;
+    }
+    .queue-card--attention {
+      border-color: rgba(240, 195, 106, 0.45);
+    }
+    .queue-card--critical {
+      border-color: rgba(248, 113, 113, 0.5);
+    }
+    .queue-card--unavailable {
+      opacity: 0.72;
+    }
+    .queue-card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .queue-count {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .queue-meta {
+      margin: 0.35rem 0 0;
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+    @media (max-width: 480px) {
+      .queue-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `,
 })
 export class PlatformOpsDashboardPage implements OnInit {
-  private i18n = inject(I18nService);
+  private readonly api = inject(PlatformOpsApiService);
+  private readonly i18n = inject(I18nService);
+
   readonly lang = this.i18n.lang;
-
-  private api = inject(PlatformOpsApiService);
-
-  health: HealthStatus | null = null;
-  providers: ProviderConfig[] = [];
-  jobs: BackgroundJob[] = [];
-  flags: FeatureFlag[] = [];
-  backups: BackupRecord[] = [];
-  error: string | null = null;
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly overview = signal<PlatformOpsOverview | null>(null);
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.api.getHealth().subscribe({
-      next: (h) => {
-        this.health = h;
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.getOverview().subscribe({
+      next: (ov) => {
+        this.overview.set(ov);
+        this.loading.set(false);
       },
-      error: (e) => {
-        this.error = e?.error?.message || this.i18n.t('platformOps.dashboard.healthFailed');
+      error: (err) => {
+        this.error.set(
+          err?.error?.detail?.message ||
+            err?.error?.message ||
+            this.i18n.t('platformOps.overview.loadFailed'),
+        );
+        this.loading.set(false);
       },
     });
-    this.api.listProviders().subscribe({ next: (p) => (this.providers = p) });
-    this.api.listJobs().subscribe({ next: (j) => (this.jobs = j) });
-    this.api.listFlags().subscribe({ next: (f) => (this.flags = f) });
-    this.api.listBackups().subscribe({ next: (b) => (this.backups = b) });
+  }
+
+  queuePath(code: PlatformOpsQueueCode): string {
+    return PLATFORM_OPS_QUEUE_PATHS[code];
+  }
+
+  queueLabel(code: PlatformOpsQueueCode): string {
+    return this.i18n.t(`platformOps.overview.queue.${code}`);
+  }
+
+  healthLabel(health: string): string {
+    return this.i18n.t(`platformOps.overview.healthLabel.${health}`);
+  }
+
+  severityLabel(q: PlatformOpsQueue): string {
+    if (q.availability === 'unavailable') {
+      return this.i18n.t('platformOps.overview.unavailable');
+    }
+    return this.i18n.t(`platformOps.overview.severity.${q.severity}`);
   }
 }

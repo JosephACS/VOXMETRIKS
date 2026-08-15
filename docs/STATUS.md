@@ -35,6 +35,7 @@
 | Business analytics / engagement | Parcial: AGG estratégico OE visible; ROI no certificado; sin IA estratégica; metas comerciales diferidas |
 | Campaigns / ROI | Módulo presente; métricas no certificadas |
 | Compliance / CS / support | Esqueleto o parcial |
+| Platform Admin journey | Spec 055 activa: consolidación de colas operativas y separación de diagnóstico avanzado |
 | Smart recommendations / AI helpers | Reglas locales; no LLM obligatorio |
 | Royalties | Simulado / diferido — no payouts reales |
 | Unified Music Search (alcance avanzado) | Núcleo implementado; pendiente smoke con API key/proveedor real y alcance avanzado no aprobado |

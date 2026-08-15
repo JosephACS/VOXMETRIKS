@@ -16,6 +16,7 @@ from app.packages.platform_ops.application.use_cases import (
     WebhookUseCases,
     redact_secret,
 )
+from app.packages.platform_ops.application.overview import build_platform_ops_overview
 from app.packages.platform_ops.domain.errors import PlatformOpsError
 from app.packages.platform_ops.presentation.dependencies import require_ops_permission
 from app.packages.platform_ops.presentation.error_mapping import raise_platform_ops_http
@@ -43,6 +44,7 @@ from app.packages.platform_ops.presentation.schemas import (
     OperationalIncidentOut,
     PaginatedNotifications,
     PaginatedWebhookEvents,
+    PlatformOpsOverviewOut,
     ProviderConfigOut,
     ProviderRegisterRequest,
     RestoreVerificationOut,
@@ -51,6 +53,15 @@ from app.packages.platform_ops.presentation.schemas import (
 )
 
 platform_ops_router = APIRouter(prefix="/platform-ops", tags=["Platform Ops"])
+
+
+@platform_ops_router.get("/overview", response_model=PlatformOpsOverviewOut)
+def get_platform_ops_overview(
+    ctx: dict = Depends(require_ops_permission("ops.view")),
+) -> PlatformOpsOverviewOut:
+    """Spec 055 — authoritative queue overview (read-only, no DDL)."""
+    data = build_platform_ops_overview(ctx["conn"])
+    return PlatformOpsOverviewOut.model_validate(data)
 
 
 def _page(page: int, page_size: int) -> tuple[int, int, int]:
@@ -392,7 +403,13 @@ def audio_unresolved_mark_unavailable(
     from app.packages.streaming.services.audio_source_service import mark_audio_unavailable
     from fastapi import HTTPException
 
-    reason = (body.reason if body and body.reason else None) or "manual"
+    reason = (body.reason if body and body.reason else None) or ""
+    reason = reason.strip()
+    if not reason:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "reason_required", "message": "A non-blank reason is required"},
+        )
     result = mark_audio_unavailable(ctx["conn"], track_id, reason=str(reason))
     if result is None:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found")
