@@ -23,14 +23,14 @@ Correcciones locales, copy, tests y docs menores **no** abren Spec automáticame
 
 - Prefijo de **tres dígitos** obligatorio (`001`…`999`).
 - **IDs históricos inmutables** — no renumerar, no reutilizar.
-- **Spec activa: `051-artist-professional-journey`.** El siguiente ID disponible es `052` después de cerrar 051.
+- **Spec activa:** ninguna. El siguiente ID disponible es `052`.
 
 ## Carpetas canónicas
 
 | Ruta | Contenido |
 |------|-----------|
-| [`.specify/features/`](features/) | **Solo features activas** de implementación. Hoy: 051 (ver README). |
-| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–050). |
+| [`.specify/features/`](features/) | **Solo features activas** de implementación. Hoy: ninguna. |
+| [`.specify/history/`](history/) | Specs **cerradas** o **reconstruidas** (001–051). |
 | [`.specify/CAPABILITY_MAP.md`](CAPABILITY_MAP.md) | Mapa de familias → Specs/packages → STATUS (sin duplicar runtime). |
 | [`.specify/feature.json`](feature.json) | Puntero de compatibilidad Spec Kit (idle/closed). |
 

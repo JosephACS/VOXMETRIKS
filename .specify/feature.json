@@ -1,8 +1,8 @@
 {
-  "feature_directory": ".specify/features/051-artist-professional-journey",
+  "feature_directory": ".specify/history/051-artist-professional-journey",
   "previous_feature_directory": ".specify/history/050-identity-first-access",
-  "status": "active",
+  "status": "closed",
   "feature_id": "051",
   "short_name": "artist-professional-journey",
-  "note": "Active: canonical artist claim/create/access, editable Artist Space, team, publishing and independent review. Payments, royalties, AI and dashboards are excluded."
+  "note": "Closed and integrated via PR #11. Next available feature ID: 052."
 }

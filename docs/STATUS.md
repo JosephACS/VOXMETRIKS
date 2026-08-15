@@ -1,7 +1,7 @@
 # VOXMETRIKS — Estado actual del producto
 
 **Única verdad vigente de capacidades.**  
-**Referencia Git:** `main @ 49ecc7a2` y cambios posteriores aceptados por CI.
+**Referencia Git:** `main @ c5598e63` y cambios posteriores aceptados por CI.
 **Specs históricas:** [`.specify/history/`](../.specify/history/README.md) — no sustituyen este documento.
 
 ## Capacidades implementadas
@@ -16,11 +16,11 @@
 | Catálogo / favoritos / playlists / búsqueda | streaming + catalog |
 | Reproducción (resolver + player) | playback-core / music player |
 | Unified Music Search (núcleo) | backend `/tracks/music-search`, adopt, repair-source; frontend local → YouTube → adopt; pruebas asociadas |
-| Artist Space + invitaciones | artist_space (046) |
+| Artist Space profesional + publicación independiente | artist_space, identity_access y catalog_publishing (051) |
 | Catalog rights / contracts | catalog_rights |
 | Reportes simples / workpanel / complex | reports packages |
 | Business analytics / Estratégico AGG (049) | `agg_strategic_kpi_period`; overview OE-01…OE-08; dashboard Dirección estratégica; acceso CTA desde Reportes/Workpanel |
-| Navegación académica consolidada | Listener: Descubrir/Buscar/Biblioteca/Config; Admin: Workpanel/Catálogo/Org/Reportes/Plan; Engineer: ELT/Workpanel/Explorer/Reportes |
+| Navegación contextual consolidada | Listener: Descubrir/Buscar/Biblioteca/Config; Admin: Workpanel/Catálogo/Org/Reportes/Plan; Engineer: ELT/Workpanel/Explorer/Reportes |
 | Reproducción (resolver) | Catálogo = metadatos/portada; YouTube = fuente; matching con scoring; fallback silencioso |
 | Platform ops (parcial) | platform_ops |
 | ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |

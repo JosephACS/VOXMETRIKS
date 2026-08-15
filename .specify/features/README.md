@@ -1,9 +1,9 @@
 # Features activas
 
-**Estado actual:** Spec **051** está activa.
+**Estado actual:** no hay una Spec de implementación activa.
 
-- [051 — Professional Artist Journey](051-artist-professional-journey/)
-- Spec **050** está cerrada en [history](../history/050-identity-first-access/).
-- El siguiente identificador disponible es **052**; no debe crearse mientras 051 siga activa.
+- Las Specs **001–051** están cerradas y viven en [history](../history/README.md).
+- El siguiente identificador disponible es **052**.
+- No se debe crear `052-*` hasta aprobar formalmente su alcance de producto.
 
 Verdad de producto implementado: [`docs/STATUS.md`](../../docs/STATUS.md). Una Spec activa describe alcance aprobado, no prueba de implementación.
