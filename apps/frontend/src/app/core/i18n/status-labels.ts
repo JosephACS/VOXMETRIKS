@@ -52,6 +52,13 @@ export const STATUS_LABEL_KEYS: Record<string, string> = {
   negotiation: 'status.negotiation',
   won: 'status.won',
   lost: 'status.lost',
+  // Support case lifecycle
+  triaged: 'status.triaged',
+  assigned: 'status.assigned',
+  in_progress: 'status.in_progress',
+  waiting_customer: 'status.waiting_customer',
+  escalated: 'status.escalated',
+  reopened: 'status.reopened',
 };
 
 export function statusLabelKey(code: string | null | undefined): string {

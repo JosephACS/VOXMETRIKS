@@ -1,6 +1,29 @@
-/* Login — premium music / enterprise split layout */
+/* Login — premium music / enterprise split layout (dark + light) */
 
 .login-shell {
+  --login-card-bg: rgba(12, 12, 12, 0.92);
+  --login-card-border: rgba(255, 255, 255, 0.08);
+  --login-card-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  --login-hero-bg: linear-gradient(160deg, #0a0a0a 0%, #0f1a16 48%, #0a1612 100%);
+  --login-hero-title: #fff;
+  --login-hero-sub: rgba(255, 255, 255, 0.62);
+  --login-hero-bullet: rgba(255, 255, 255, 0.78);
+  --login-hero-grid: rgba(255, 255, 255, 0.03);
+  --login-hero-divider: rgba(255, 255, 255, 0.06);
+  --login-panel-bg: rgba(18, 18, 18, 0.98);
+  --login-fg: #e7edea;
+  --login-fg-muted: rgba(231, 237, 234, 0.64);
+  --login-fg-subtle: rgba(231, 237, 234, 0.45);
+  --login-label: rgba(255, 255, 255, 0.72);
+  --login-control-bg: rgba(255, 255, 255, 0.04);
+  --login-control-border: rgba(255, 255, 255, 0.08);
+  --login-input-bg: rgba(255, 255, 255, 0.035);
+  --login-input-border: rgba(255, 255, 255, 0.1);
+  --login-placeholder: rgba(255, 255, 255, 0.38);
+  --login-toggle: rgba(255, 255, 255, 0.45);
+  --login-autofill-bg: rgba(18, 18, 18, 0.98);
+  --login-divider: rgba(255, 255, 255, 0.08);
+
   display: grid;
   grid-template-columns: 1fr;
   width: 100%;
@@ -8,20 +31,45 @@
   margin: 0 auto;
   border-radius: 1.25rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(12, 12, 12, 0.92);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--login-card-border);
+  background: var(--login-card-bg);
+  box-shadow: var(--login-card-shadow);
+  color: var(--login-fg);
 }
 
-/* ── Hero (branding) ── */
+:host-context(html[data-theme='light']) .login-shell {
+  --login-card-bg: #ffffff;
+  --login-card-border: rgba(10, 18, 15, 0.12);
+  --login-card-shadow: 0 20px 50px rgba(10, 18, 15, 0.12);
+  --login-hero-bg: linear-gradient(160deg, #0f1f1a 0%, #14352c 48%, #0f2920 100%);
+  --login-hero-title: #fff;
+  --login-hero-sub: rgba(255, 255, 255, 0.78);
+  --login-hero-bullet: rgba(255, 255, 255, 0.9);
+  --login-hero-grid: rgba(255, 255, 255, 0.05);
+  --login-hero-divider: rgba(255, 255, 255, 0.1);
+  --login-panel-bg: #f7faf8;
+  --login-fg: #0A100E;
+  --login-fg-muted: #3A4741;
+  --login-fg-subtle: #5A6861;
+  --login-label: #2C3833;
+  --login-control-bg: #eef3f0;
+  --login-control-border: rgba(10, 18, 15, 0.14);
+  --login-input-bg: #fff;
+  --login-input-border: rgba(10, 18, 15, 0.18);
+  --login-placeholder: #6B7872;
+  --login-toggle: #4E5C56;
+  --login-autofill-bg: #fff;
+  --login-divider: rgba(10, 18, 15, 0.12);
+}
+
+/* ── Hero (branding) — always dark brand plane ── */
 .login-hero {
   position: relative;
   display: flex;
   align-items: flex-end;
   min-height: 0;
   padding: 1.5rem 1.35rem 1.35rem;
-  background:
-    linear-gradient(160deg, #0a0a0a 0%, #0f1a16 48%, #0a1612 100%);
+  background: var(--login-hero-bg);
   overflow: hidden;
 }
 
@@ -38,8 +86,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(90deg, var(--login-hero-grid) 1px, transparent 1px),
+    linear-gradient(0deg, var(--login-hero-grid) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: linear-gradient(180deg, black 20%, transparent 95%);
   pointer-events: none;
@@ -61,7 +109,7 @@
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--login-hero-title);
 }
 
 .login-hero__subtitle {
@@ -69,7 +117,7 @@
   font-size: var(--type-label-size, 0.8125rem);
   font-weight: 400;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--login-hero-sub);
   max-width: 22rem;
 }
 
@@ -88,7 +136,7 @@
   gap: 0.65rem;
   font-size: var(--type-label-size, 0.8125rem);
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--login-hero-bullet);
 }
 
 .login-hero__bullet-icon {
@@ -104,7 +152,7 @@
 .login-panel {
   position: relative;
   padding: 1.35rem 1.35rem 1.5rem;
-  background: rgba(18, 18, 18, 0.98);
+  background: var(--login-panel-bg);
   animation: loginPanelIn 0.35s cubic-bezier(0.34, 1.1, 0.64, 1) both;
 }
 
@@ -112,7 +160,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
 
@@ -120,12 +168,37 @@
   flex-shrink: 0;
 }
 
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--login-control-border);
+  background: var(--login-control-bg);
+  color: var(--login-fg-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--accent, #1ed896);
+  border-color: color-mix(in srgb, var(--accent, #1ed896) 45%, transparent);
+  background: var(--accent-dim, rgba(30, 216, 150, 0.12));
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--accent, #1ed896);
+  outline-offset: 2px;
+}
+
 .lang-toggle {
   display: inline-flex;
   gap: 0.15rem;
   padding: 0.2rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--login-control-bg);
+  border: 1px solid var(--login-control-border);
   border-radius: 2rem;
 }
 
@@ -134,7 +207,7 @@
   border: none;
   border-radius: 2rem;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--login-fg-subtle);
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -150,8 +223,8 @@
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--login-control-bg);
+  border: 1px solid var(--login-control-border);
   border-radius: 0.75rem;
   margin-bottom: 1.25rem;
 }
@@ -162,7 +235,7 @@
   border: none;
   border-radius: 0.55rem;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--login-fg-subtle);
   font-size: var(--type-button-size, 0.875rem);
   font-weight: 600;
   cursor: pointer;
@@ -183,7 +256,7 @@
   font-size: var(--type-section-title-size, 1.375rem);
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-text);
+  color: var(--login-fg);
   line-height: 1.25;
 }
 
@@ -192,7 +265,7 @@
   font-size: var(--type-label-size, 0.8125rem);
   font-weight: 400;
   line-height: 1.45;
-  color: var(--color-text-secondary);
+  color: var(--login-fg-muted);
 }
 
 .login-form {
@@ -211,15 +284,15 @@
   font-size: var(--type-label-size, 0.8125rem);
   font-weight: 500;
   letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--login-label);
 }
 
 .input-wrap {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
   border-radius: 0.65rem;
   padding: 0 0.85rem;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
@@ -228,7 +301,7 @@
 .input-wrap:focus-within {
   border-color: rgba(30, 216, 150, 0.55);
   box-shadow: 0 0 0 3px rgba(30, 216, 150, 0.14);
-  background: rgba(30, 216, 150, 0.04);
+  background: color-mix(in srgb, var(--login-input-bg) 88%, #1ed896);
 }
 
 .input-wrap.invalid {
@@ -241,14 +314,24 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--color-text);
+  color: var(--login-fg);
+  caret-color: var(--accent, #1ed896);
   font-size: var(--type-body-size, 0.9375rem);
   font-family: inherit;
   padding: 0.8rem 0;
 }
 
 .field-input::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--login-placeholder);
+}
+
+.field-input:-webkit-autofill,
+.field-input:-webkit-autofill:hover,
+.field-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--login-fg);
+  caret-color: var(--accent, #1ed896);
+  box-shadow: 0 0 0 1000px var(--login-autofill-bg) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .field-error,
@@ -258,7 +341,7 @@
 }
 
 .field-error { color: var(--color-danger); }
-.field-help { color: var(--color-text-muted); }
+.field-help { color: var(--login-fg-subtle); }
 
 .toggle-pw {
   display: inline-flex;
@@ -267,7 +350,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--login-toggle);
   padding: 0.25rem;
 }
 
@@ -281,7 +364,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   font-size: var(--type-label-size, 0.8125rem);
-  color: var(--color-text-secondary);
+  color: var(--login-fg-muted);
 }
 
 .checkbox-label {
@@ -304,22 +387,20 @@
   color: var(--color-danger);
 }
 
-.info-banner {
+.info-banner,
+.dev-code-banner {
   background: rgba(30, 216, 150, 0.08);
   border: 1px solid rgba(30, 216, 150, 0.22);
   border-radius: 0.65rem;
   padding: 0.65rem 0.85rem;
   font-size: var(--type-label-size, 0.8125rem);
-  color: var(--color-text);
+  color: var(--login-fg);
 }
 
 .dev-code-banner {
   background: rgba(20, 143, 94, 0.1);
-  border: 1px dashed rgba(20, 143, 94, 0.4);
-  border-radius: 0.65rem;
-  padding: 0.65rem 0.85rem;
-  font-size: var(--type-label-size, 0.8125rem);
-  color: var(--color-text);
+  border-style: dashed;
+  border-color: rgba(20, 143, 94, 0.4);
 }
 
 .code-input {
@@ -384,7 +465,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 1.15rem 0 0.85rem;
-  color: var(--color-text-muted);
+  color: var(--login-fg-subtle);
   font-size: var(--type-caption-size, 0.75rem);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -395,7 +476,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--login-divider);
 }
 
 .google-btn-wrap {
@@ -411,7 +492,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Desktop: two columns */
 @media (min-width: 860px) {
   .login-shell {
     grid-template-columns: 1.05fr 0.95fr;
@@ -421,7 +501,7 @@
   .login-hero {
     align-items: center;
     padding: 2.5rem 2.25rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid var(--login-hero-divider);
   }
 
   .login-hero__title {
@@ -454,7 +534,6 @@
   }
 }
 
-/* Mobile: compact hero */
 @media (max-width: 859px) {
   .login-shell {
     border-radius: 1rem;
@@ -475,7 +554,6 @@
     overflow: hidden;
   }
 
-  /* Hero already shows brand on mobile — avoid a second logo in the form header */
   .login-panel__brand {
     display: none;
   }

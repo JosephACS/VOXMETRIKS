@@ -63,7 +63,9 @@ export type ProductPathAccessResult =
   | 'allow'
   | 'unregistered'
   | 'permission-denied'
-  | 'unavailable';
+  | 'unavailable'
+  /** Organization space matches but subscription tier is below the surface minimum. */
+  | 'plan-required';
 
 /** Canonical staff capability codes hydrated from identity (not org RBAC). */
 export const STAFF_CAPABILITY = {
@@ -78,3 +80,6 @@ export const CRM_PLATFORM_ROLES = [
   'platform_admin',
   'auditor',
 ] as const;
+
+/** Platform Ops role — unlocks platform_admin shell without identity admin. */
+export const PLATFORM_ADMIN_ROLES = ['platform_admin'] as const;

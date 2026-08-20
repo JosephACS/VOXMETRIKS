@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -10,6 +10,7 @@ import {
 } from '../models/platform-ops.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
@@ -39,6 +40,127 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
       @if (error) {
         <app-enterprise-error-state [message]="error" (retry)="load()" />
+      }
+
+      @if (selected) {
+        <div #managePanel id="audio-manage-panel" class="manage-panel" tabindex="-1">
+          <app-enterprise-section-card
+            [title]="
+              (selected.track_name || ('#' + selected.track_id)) +
+              ' — ' +
+              (selected.artist_name || '')
+            "
+          >
+            <p class="manage-hint">
+              {{ 'platformOps.audioUnresolved.manageHint' | t:lang() }}
+            </p>
+            <div class="manual-row">
+              <input
+                class="input grow"
+                [(ngModel)]="manualUrl"
+                [placeholder]="'platformOps.audioUnresolved.pasteUrl' | t:lang()"
+              />
+              <button type="button" class="btn" [disabled]="busy" (click)="saveManual()">
+                {{ 'platformOps.audioUnresolved.validateSave' | t:lang() }}
+              </button>
+              <button type="button" class="btn" [disabled]="busy" (click)="reresolve()">
+                {{ 'platformOps.audioUnresolved.reresolve' | t:lang() }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                [disabled]="busy"
+                (click)="beginUnavailable()"
+                data-testid="audio-mark-unavailable"
+              >
+                {{ 'platformOps.audioUnresolved.markUnavailable' | t:lang() }}
+              </button>
+              <button type="button" class="btn btn-sm" (click)="clearSelection()">
+                {{ 'common.close' | t:lang() }}
+              </button>
+            </div>
+
+            @if (confirmUnavailable) {
+              <div class="confirm" role="group" [attr.aria-label]="'platformOps.audioUnresolved.unavailableConfirm' | t:lang()">
+                <label class="field-label" for="unavailable-reason">
+                  {{ 'platformOps.audioUnresolved.reason' | t:lang() }}
+                </label>
+                <textarea
+                  id="unavailable-reason"
+                  class="input textarea"
+                  [(ngModel)]="unavailableReason"
+                  rows="2"
+                  data-testid="audio-unavailable-reason"
+                ></textarea>
+                @if (reasonError) {
+                  <p class="err" role="alert">{{ reasonError }}</p>
+                }
+                <div class="manual-row">
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    [disabled]="busy"
+                    (click)="markUnavailable()"
+                    data-testid="audio-unavailable-confirm"
+                  >
+                    {{ 'platformOps.audioUnresolved.confirmUnavailable' | t:lang() }}
+                  </button>
+                  <button type="button" class="btn" [disabled]="busy" (click)="cancelUnavailable()">
+                    {{ 'common.cancel' | t:lang() }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (actionMsg) {
+              <p class="msg">{{ actionMsg }}</p>
+            }
+
+            <button type="button" class="btn btn-sm" [disabled]="busy" (click)="loadCandidates()">
+              {{ 'platformOps.audioUnresolved.loadCandidates' | t:lang() }}
+            </button>
+
+            @if (candidates.length) {
+              <ul class="candidates">
+                @for (c of candidates; track c.video_id) {
+                  <li>
+                    <div class="cand-meta">
+                      <strong>{{ c.title }}</strong>
+                      <span class="muted">
+                        {{ c.channel_title || '' }} · {{ c.duration_sec || '?' }}s · score
+                        {{ c.score ?? '—' }}
+                      </span>
+                    </div>
+                    <div class="cand-actions">
+                      <button type="button" class="btn btn-sm" (click)="preview(c)">
+                        {{ 'platformOps.audioUnresolved.listen' | t:lang() }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm"
+                        [disabled]="busy || c.accepted === false"
+                        (click)="pickCandidate(c)"
+                      >
+                        {{ 'platformOps.audioUnresolved.use' | t:lang() }}
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (previewUrl) {
+              <div class="preview">
+                <iframe
+                  [src]="previewUrl"
+                  title="YouTube preview"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+            }
+          </app-enterprise-section-card>
+        </div>
       }
 
       @if (loading) {
@@ -81,119 +203,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         </app-enterprise-data-table>
         <p class="muted">{{ total }} {{ 'platformOps.audioUnresolved.total' | t:lang() }}</p>
       }
-
-      @if (selected) {
-        <app-enterprise-section-card
-          [title]="
-            (selected.track_name || ('#' + selected.track_id)) +
-            ' — ' +
-            (selected.artist_name || '')
-          "
-        >
-          <div class="manual-row">
-            <input
-              class="input grow"
-              [(ngModel)]="manualUrl"
-              [placeholder]="'platformOps.audioUnresolved.pasteUrl' | t:lang()"
-            />
-            <button type="button" class="btn" [disabled]="busy" (click)="saveManual()">
-              {{ 'platformOps.audioUnresolved.validateSave' | t:lang() }}
-            </button>
-            <button type="button" class="btn" [disabled]="busy" (click)="reresolve()">
-              {{ 'platformOps.audioUnresolved.reresolve' | t:lang() }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger"
-              [disabled]="busy"
-              (click)="beginUnavailable()"
-              data-testid="audio-mark-unavailable"
-            >
-              {{ 'platformOps.audioUnresolved.markUnavailable' | t:lang() }}
-            </button>
-          </div>
-
-          @if (confirmUnavailable) {
-            <div class="confirm" role="group" [attr.aria-label]="'platformOps.audioUnresolved.unavailableConfirm' | t:lang()">
-              <label class="field-label" for="unavailable-reason">
-                {{ 'platformOps.audioUnresolved.reason' | t:lang() }}
-              </label>
-              <textarea
-                id="unavailable-reason"
-                class="input textarea"
-                [(ngModel)]="unavailableReason"
-                rows="2"
-                data-testid="audio-unavailable-reason"
-              ></textarea>
-              @if (reasonError) {
-                <p class="err" role="alert">{{ reasonError }}</p>
-              }
-              <div class="manual-row">
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  [disabled]="busy"
-                  (click)="markUnavailable()"
-                  data-testid="audio-unavailable-confirm"
-                >
-                  {{ 'platformOps.audioUnresolved.confirmUnavailable' | t:lang() }}
-                </button>
-                <button type="button" class="btn" [disabled]="busy" (click)="cancelUnavailable()">
-                  {{ 'common.cancel' | t:lang() }}
-                </button>
-              </div>
-            </div>
-          }
-
-          @if (actionMsg) {
-            <p class="msg">{{ actionMsg }}</p>
-          }
-
-          <button type="button" class="btn btn-sm" [disabled]="busy" (click)="loadCandidates()">
-            {{ 'platformOps.audioUnresolved.loadCandidates' | t:lang() }}
-          </button>
-
-          @if (candidates.length) {
-            <ul class="candidates">
-              @for (c of candidates; track c.video_id) {
-                <li>
-                  <div class="cand-meta">
-                    <strong>{{ c.title }}</strong>
-                    <span class="muted">
-                      {{ c.channel_title || '' }} · {{ c.duration_sec || '?' }}s · score
-                      {{ c.score ?? '—' }}
-                    </span>
-                  </div>
-                  <div class="cand-actions">
-                    <button type="button" class="btn btn-sm" (click)="preview(c)">
-                      {{ 'platformOps.audioUnresolved.listen' | t:lang() }}
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-sm"
-                      [disabled]="busy || c.accepted === false"
-                      (click)="pickCandidate(c)"
-                    >
-                      {{ 'platformOps.audioUnresolved.use' | t:lang() }}
-                    </button>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-
-          @if (previewUrl) {
-            <div class="preview">
-              <iframe
-                [src]="previewUrl"
-                title="YouTube preview"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
-            </div>
-          }
-        </app-enterprise-section-card>
-      }
     </div>
   `,
   styles: [
@@ -203,6 +212,15 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         gap: 0.75rem;
         margin-bottom: 1rem;
         flex-wrap: wrap;
+      }
+      .manage-panel {
+        margin-bottom: 1.25rem;
+        scroll-margin-top: 5rem;
+      }
+      .manage-hint {
+        margin: 0 0 0.75rem;
+        opacity: 0.8;
+        font-size: 0.9rem;
       }
       .input {
         min-width: 16rem;
@@ -301,6 +319,8 @@ export class UnresolvedAudioPage implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly sanitizer = inject(DomSanitizer);
 
+  @ViewChild('managePanel') managePanel?: ElementRef<HTMLElement>;
+
   lang = () => this.i18n.lang();
 
   loading = false;
@@ -329,7 +349,7 @@ export class UnresolvedAudioPage implements OnInit {
       .listUnresolvedAudio({ q: this.searchQ || undefined, limit: 50 })
       .pipe(
         catchError((err) => {
-          this.error = err?.error?.detail || err?.message || 'Error';
+          this.error = userFacingHttpError(this.i18n, err);
           return of({ items: [], total: 0, limit: 50, offset: 0 });
         }),
       )
@@ -347,6 +367,19 @@ export class UnresolvedAudioPage implements OnInit {
     this.manualUrl = '';
     this.actionMsg = '';
     this.cancelUnavailable();
+    setTimeout(() => {
+      this.managePanel?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.managePanel?.nativeElement?.focus({ preventScroll: true });
+    }, 0);
+  }
+
+  clearSelection(): void {
+    this.selected = null;
+    this.candidates = [];
+    this.previewUrl = null;
+    this.manualUrl = '';
+    this.actionMsg = '';
+    this.cancelUnavailable();
   }
 
   loadCandidates(): void {
@@ -357,7 +390,7 @@ export class UnresolvedAudioPage implements OnInit {
       .searchAudioCandidates(this.selected.track_id)
       .pipe(
         catchError((err) => {
-          this.actionMsg = err?.error?.detail || err?.message || 'Error';
+          this.actionMsg = userFacingHttpError(this.i18n, err);
           return of(null);
         }),
       )
@@ -388,7 +421,7 @@ export class UnresolvedAudioPage implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.actionMsg = err?.error?.detail || err?.message || 'Error';
+          this.actionMsg = userFacingHttpError(this.i18n, err);
           this.busy = false;
           return of(null);
         }),
@@ -409,7 +442,7 @@ export class UnresolvedAudioPage implements OnInit {
       .reresolveAudio(this.selected.track_id)
       .pipe(
         catchError((err) => {
-          this.actionMsg = err?.error?.detail || err?.message || 'Error';
+          this.actionMsg = userFacingHttpError(this.i18n, err);
           this.busy = false;
           return of(null);
         }),
@@ -448,7 +481,7 @@ export class UnresolvedAudioPage implements OnInit {
       .markAudioUnavailable(this.selected.track_id, reason)
       .pipe(
         catchError((err) => {
-          this.actionMsg = err?.error?.detail || err?.message || 'Error';
+          this.actionMsg = userFacingHttpError(this.i18n, err);
           this.notify.show(this.i18n.t('common.error'), this.actionMsg, 'error');
           this.busy = false;
           return of(null);

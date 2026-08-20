@@ -179,7 +179,7 @@ describe('space models & nav (054 product-surface)', () => {
     expect(paths).toContain('/account/plans');
   });
 
-  it('hides Platform Ops entries without staff shell capability', () => {
+  it('hides Platform Ops entries without staff shell or platform_admin role', () => {
     const raw = spaceNavSectionsFor('platform_admin');
     const paths = filterSpaceNavSections(raw, {
       productSurfaceContext: access({
@@ -189,6 +189,19 @@ describe('space models & nav (054 product-surface)', () => {
     }).flatMap((s) => s.items.map((i) => i.path));
     expect(paths.some((p) => p.startsWith('/platform-ops'))).toBe(false);
     expect(paths).not.toContain('/workpanel');
+  });
+
+  it('shows Platform Ops for CRM platform_admin without identity.staff', () => {
+    const raw = spaceNavSectionsFor('platform_admin');
+    const paths = filterSpaceNavSections(raw, {
+      productSurfaceContext: access({
+        activeSpace: 'platform_admin',
+        staffCapabilities: new Set(),
+        platformRoles: new Set(['platform_admin']),
+      }),
+    }).flatMap((s) => s.items.map((i) => i.path));
+    expect(paths).toContain('/workpanel');
+    expect(paths.some((p) => p.startsWith('/platform-ops'))).toBe(true);
   });
 
   it('every nav item has a registered icon', () => {

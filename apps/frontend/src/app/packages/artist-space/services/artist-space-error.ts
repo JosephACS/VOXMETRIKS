@@ -34,8 +34,16 @@ export function artistJourneyError(i18n: I18nService, err: unknown): string {
       return i18n.t(CODE_KEYS[code]);
     }
     if (typeof message === 'string' && message.trim()) {
-      return message.trim();
+      const msg = message.trim();
+      // Backend validate_ready / submit often returns validation_error with blockers in message.
+      if (/missing_cover|missing_audio|not ready|Submission not ready/i.test(msg)) {
+        return i18n.t('artistSpace.error.releaseIncomplete');
+      }
+      return msg;
     }
+  }
+  if (typeof detail === 'string' && /missing_cover|missing_audio|not ready/i.test(detail)) {
+    return i18n.t('artistSpace.error.releaseIncomplete');
   }
   return userFacingHttpError(i18n, err);
 }

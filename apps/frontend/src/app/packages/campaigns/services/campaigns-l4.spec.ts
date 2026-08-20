@@ -44,4 +44,16 @@ describe('CampaignsApiService (L4)', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ id: 1, campaign_id: 1, status: 'unavailable', computed_at: '2026-01-01' });
   });
+
+  it('lists attribution definitions and attributable revenue', () => {
+    api.listAttributionDefinitions(orgId, 1).subscribe();
+    const a = http.expectOne(`${base}/campaigns/1/attribution-definitions`);
+    expect(a.request.method).toBe('GET');
+    a.flush([]);
+
+    api.listAttributableRevenue(orgId, 1).subscribe();
+    const r = http.expectOne(`${base}/campaigns/1/attributable-revenue`);
+    expect(r.request.method).toBe('GET');
+    r.flush([]);
+  });
 });

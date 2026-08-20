@@ -58,7 +58,42 @@ export interface CampaignRoiSnapshot {
   goal_attainment?: number | null;
   engagement_lift?: number | null;
   currency?: string | null;
+  period_start?: string | null;
+  period_end?: string | null;
+  attribution_definition_id?: number | null;
   computed_at: string;
+}
+
+export interface AttributionDefinition {
+  id: number;
+  campaign_id: number;
+  organization_id: number;
+  version: number;
+  model_code: string;
+  description?: string | null;
+  confidence: number;
+  responsible: string;
+  status: string;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttributableRevenue {
+  id: number;
+  campaign_id: number;
+  organization_id: number;
+  attribution_definition_id: number;
+  amount: number;
+  currency: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PaginatedCampaigns {

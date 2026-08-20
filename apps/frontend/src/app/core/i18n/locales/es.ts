@@ -1,7 +1,7 @@
 export const LOCALE_ES = {
     // Product spaces (045)
     'spaces.personal': 'Personal',
-    'spaces.dataOps': 'Data Ops',
+    'spaces.dataOps': 'Operaciones de datos',
     'spaces.platformAdmin': 'Administración de plataforma',
     'spaces.selector.label': 'Espacio',
     'spaces.selector.current': 'Espacio actual',
@@ -9,7 +9,7 @@ export const LOCALE_ES = {
     'spaces.nav.group.main': 'Principal',
     'spaces.nav.group.library': 'Tu biblioteca',
     'spaces.nav.group.account': 'Cuenta',
-    'spaces.nav.group.dataOps': 'Data Ops',
+    'spaces.nav.group.dataOps': 'Operaciones de datos',
     'spaces.nav.group.platform': 'Administración',
     'spaces.nav.group.artist': 'Artista',
     'spaces.nav.org.summary': 'Organización',
@@ -54,6 +54,11 @@ export const LOCALE_ES = {
     'artistSpace.team.accessRequests': 'Solicitudes de acceso',
     'artistSpace.team.tokenHint': 'Invitación creada (no enviada por email). Token copiable:',
     'artistSpace.team.newTokenHint': 'Nuevo token generado (no enviado por email). El token anterior ya no es válido:',
+    'artistSpace.team.tokenOnceBody':
+      'Copia este token ahora o ábrelo en la pantalla de aceptación. No se volverá a mostrar.',
+    'artistSpace.team.copyToken': 'Copiar token',
+    'artistSpace.team.openAccept': 'Abrir aceptación',
+    'artistSpace.team.tokenCopied': 'Token copiado al portapapeles.',
     'artistSpace.team.pendingInvites': 'Invitaciones pendientes',
     'artistSpace.team.noPendingInvites': 'No hay invitaciones pendientes',
     'artistSpace.team.revokeInvite': 'Revocar invitación',
@@ -100,7 +105,7 @@ export const LOCALE_ES = {
     'artistSpace.platform.type.claim_ownership': 'Reclamación de propiedad',
     'artistSpace.platform.type.create_new': 'Alta de artista nuevo',
     'nav.platformOps.artistRequests': 'Solicitudes de artista',
-    'nav.platformOps.panel': 'Panel de Ops',
+    'nav.platformOps.panel': 'Panel operativo',
     'nav.platformOps.system': 'Sistema',
     'common.reject': 'Rechazar',
     // Nav sections
@@ -145,7 +150,7 @@ export const LOCALE_ES = {
 
     // Nav items
     'nav.home': 'Descubrir',
-    'nav.workpanel': 'Workpanel',
+    'nav.workpanel': 'Panel de trabajo',
     'workpanel.notice.syntheticFallback':
       'Incluye datos sintéticos del warehouse (pruebas analíticas).',
     'workpanel.notice.simulatedAmounts':
@@ -179,7 +184,11 @@ export const LOCALE_ES = {
     'activity.loading': 'Cargando tu actividad…',
     'activity.error': 'No pudimos cargar tu actividad.',
     'activity.retry': 'Reintentar',
-    'activity.empty': 'Aún no tienes suficiente actividad. Escucha algunas canciones y vuelve más tarde.',
+    'activity.empty':
+      'Todavía no hay actividad contada. Las estadísticas usan escuchas de al menos 30 segundos (o la mitad si la canción dura menos de un minuto). Tus plays recientes sí aparecen en Historial.',
+    'activity.emptyHint':
+      'Abre Historial para ver reproducciones recientes, o sigue escuchando unos segundos más.',
+    'activity.ctaHistory': 'Ver historial',
     'activity.ctaDiscover': 'Ir a Descubrir',
     'activity.ctaSearch': 'Buscar música',
     'activity.summary': 'Resumen',
@@ -205,7 +214,7 @@ export const LOCALE_ES = {
     'nav.settings': 'Configuración',
     'nav.orgStatus': 'Estado org.',
     'nav.orgCreate': 'Crear organización',
-    'nav.orgOnboarding': 'Onboarding empresarial',
+    'nav.orgOnboarding': 'Alta empresarial',
     'nav.orgSettings': 'Perfil org.',
     'nav.orgMembers': 'Miembros',
     'nav.orgInvitations': 'Invitaciones',
@@ -256,7 +265,7 @@ export const LOCALE_ES = {
     'home.stat.albums': 'Álbumes',
     'home.stat.albumsSub': 'Catálogo importado · registros únicos',
     'home.stat.albumsTip': 'Filas en dim_album (catálogo importado global).',
-    'home.stat.playlists': 'Playlists',
+    'home.stat.playlists': 'Listas',
     'home.stat.playlistsSub': 'Catálogo importado · dim_playlist',
     'home.stat.playlistsTip': 'Filas en dim_playlist del catálogo importado (no tus playlists personales).',
     'home.events.dialogTitle': 'Desglose de eventos analíticos',
@@ -287,7 +296,7 @@ export const LOCALE_ES = {
     'home.kpi.playlists': 'Playlists',
     'home.kpi.streams': 'Reproducciones',
     'home.kpi.favorites': 'Favoritos',
-    'home.kpi.likes': 'Likes',
+    'home.kpi.likes': 'Me gusta',
     'home.kpi.minutesToday': 'Minutos hoy',
     'home.kpi.vsWeek': 'vs semana pasada',
     'home.kpi.vsMonth': 'vs mes anterior',
@@ -305,7 +314,7 @@ export const LOCALE_ES = {
     'home.kpi.playlistsTip': 'Listas de reproducción creadas por tu usuario (no dim_playlist).',
     'home.kpi.streamsTip': 'Filas en fact_streaming (incluye actividad simulada).',
     'home.kpi.favoritesTip': 'Canciones que guardaste en favoritos.',
-    'home.kpi.likesTip': 'Canciones a las que diste like.',
+    'home.kpi.likesTip': 'Canciones a las que diste me gusta.',
     'home.kpi.todayTip': 'Tiempo aproximado de escucha durante el día de hoy.',
     'home.widget.catalogGrowth': 'Crecimiento del catálogo',
     'home.widget.catalogGrowthCtx': 'Canciones agregadas durante el último año.',
@@ -863,6 +872,10 @@ export const LOCALE_ES = {
     'elt.eyebrow': 'Ingeniería de datos',
     'elt.title': 'Pipeline ELT',
     'elt.subtitle': 'Importa, procesa y prepara los datos analíticos de VOXMETRIKS.',
+    'elt.honestyBanner':
+      'Importar catálogo ejecuta el pipeline real PocketBase → warehouse. La expansión de volumen genera actividad sintética para demos de analytics — no es tráfico real de oyentes. La línea de etapas es una visualización de progreso; el historial de etapas viene de tablas de control del warehouse cuando existen.',
+    'elt.syntheticBanner':
+      'Actividad sintética: streams, búsquedas, favoritos y sesiones generados sobre el catálogo real. No es uso de producción.',
     'elt.connected': 'Almacén de datos conectado',
     'elt.disconnected': 'Sin conexión API',
     'elt.eventsCount': '{{count}} eventos en BD',
@@ -906,13 +919,14 @@ export const LOCALE_ES = {
     'elt.custom': 'Personalizado',
     'elt.customTarget': 'Total deseado de eventos',
     'elt.generate': 'Generará +{{count}} eventos',
-    'elt.run': 'Importar + expandir',
+    'elt.run': 'Importar + expandir (sintético)',
     'elt.running': 'Ejecutando...',
-    'elt.pocketbaseOnly': 'Importar catálogo',
+    'elt.pocketbaseOnly': 'Importar catálogo (real)',
     'elt.reset': 'Resetear',
     'elt.flow': 'Flujo ELT',
     'elt.stepsNote': 'Los registros por etapa son aproximados cuando el pipeline aún no se ha ejecutado en esta sesión.',
-    'elt.timelineNote': 'Esta línea de tiempo es una visualización del proceso. La actividad simulada se genera vía la API, no paso a paso en vivo.',
+    'elt.timelineNote':
+      'El progreso en la línea de tiempo es visual. La importación PocketBase es el rebuild canónico del warehouse; la expansión es sintética vía API.',
     'elt.terminal': 'Terminal',
     'elt.terminalEmpty': '$ listo — elige objetivo de actividad y ejecuta ELT',
     'elt.totalSuffix': 'eventos total',
@@ -1112,7 +1126,7 @@ export const LOCALE_ES = {
     'history.clearConfirm': '¿Borrar todo tu historial musical de la cuenta?',
     'history.emptyMusic': 'Aún no hay canciones en tu historial.',
     'history.emptyMusicHint': 'Reproduce o abre un track para que aparezca aquí.',
-    'history.emptyMusicAccount': 'Aún no tienes reproducciones en tu historial. La música que escuches aparecerá aquí.',
+    'history.emptyMusicAccount': 'Aún no tienes reproducciones en tu historial. Deja sonar una canción unos segundos y vuelve a actualizar.',
     'history.remove': 'Quitar',
     'history.loadMore': 'Cargar más',
     'history.status.completed': 'Completada',
@@ -1386,7 +1400,7 @@ export const LOCALE_ES = {
     'nav.compliance.privacy': 'Privacidad y cumplimiento',
     'nav.compliance.admin': 'Administración',
     'nav.section.platformOps': 'Operaciones de Plataforma',
-    'nav.platformOps.dashboard': 'Panel de Ops',
+    'nav.platformOps.dashboard': 'Panel operativo',
     'nav.platformOps.audioUnresolved': 'Audio no resuelto',
     'platformOps.audioUnresolved.title': 'Audio no resuelto',
     'platformOps.audioUnresolved.subtitle':
@@ -1398,6 +1412,8 @@ export const LOCALE_ES = {
     'platformOps.audioUnresolved.colTrack': 'Canción',
     'platformOps.audioUnresolved.colArtist': 'Artista',
     'platformOps.audioUnresolved.manage': 'Gestionar',
+    'platformOps.audioUnresolved.manageHint':
+      'Aquí resolvés la fuente de audio: pegá una URL/ID de YouTube, buscá candidatos o marcá la pista como no disponible.',
     'platformOps.audioUnresolved.total': 'registros',
     'platformOps.audioUnresolved.pasteUrl': 'Pegar URL o video ID de YouTube',
     'platformOps.audioUnresolved.validateSave': 'Validar y guardar',
@@ -1522,7 +1538,7 @@ export const LOCALE_ES = {
     'artistSpace.music.newRelease': 'Nuevo lanzamiento',
 
     'artistSpace.team.inviteHint':
-      'Enviamos la invitación por correo. El enlace nunca se muestra aquí.',
+      'Creamos la invitación. Si el correo no se entrega, verás un token de una sola vez para compartir de forma segura.',
     'artistSpace.team.inviteCreated': 'Invitación enviada',
     'artistSpace.team.inviteResent': 'Invitación reenviada',
     'artistSpace.team.inviteRevoked': 'Invitación anulada',

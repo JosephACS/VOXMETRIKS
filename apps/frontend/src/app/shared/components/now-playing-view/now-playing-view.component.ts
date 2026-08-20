@@ -1,4 +1,5 @@
 import { I18nService } from '../../../core/services/i18n.service';
+import { isAbortOrOfflineHttpError } from '../../../core/i18n/http-error-keys';
 import { Component, DestroyRef, inject, HostListener, effect, OnInit, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -61,7 +62,11 @@ export class NowPlayingViewComponent implements OnInit {
   ngOnInit() {
     this.playlistsSvc.list().subscribe({
       next: (d) => this.playlists.set((d ?? []).slice(0, 6)),
-      error: (err) => console.error('[NowPlayingViewComponent] playlists.list failed', err),
+      error: (err) => {
+        if (!isAbortOrOfflineHttpError(err)) {
+          console.error('[NowPlayingViewComponent] playlists.list failed', err);
+        }
+      },
     });
     this.historySvc.history$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -78,7 +83,11 @@ export class NowPlayingViewComponent implements OnInit {
         // Precargar portadas de la cola actual
         this.playback.queue().forEach((t) => this.resolveCover(t.id));
       },
-      error: (err) => console.error('[NowPlayingViewComponent] getTopTracks failed', err),
+      error: (err) => {
+        if (!isAbortOrOfflineHttpError(err)) {
+          console.error('[NowPlayingViewComponent] getTopTracks failed', err);
+        }
+      },
     });
   }
 

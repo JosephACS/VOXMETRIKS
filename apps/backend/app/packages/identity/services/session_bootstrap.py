@@ -207,7 +207,7 @@ def _discover_spaces(
             _space(
                 key="platform_admin",
                 kind="platform_admin",
-                display_name="Platform administration",
+                display_name="Administración de plataforma",
                 home_path="/workpanel",
                 capabilities=[_cap("platform.admin", True)],
             )

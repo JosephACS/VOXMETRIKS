@@ -62,6 +62,11 @@ describe('HistoryService music-core', () => {
     expect(svc.meetsListenThreshold(40_000, 120)).toBe(true);
   });
 
+  it('records personal history after ~3s of real listen time', () => {
+    expect(svc.meetsHistoryRecordThreshold(2_999)).toBe(false);
+    expect(svc.meetsHistoryRecordThreshold(3_000)).toBe(true);
+  });
+
   it('migrates localStorage history once and is idempotent', async () => {
     const key = 'voxmetrik_history_42';
     const migrated = 'voxmetrik_history_migrated_42';
@@ -122,17 +127,16 @@ describe('HistoryService music-core', () => {
     svc.updateProgress(5, 180);
     expect(svc.getAccumulatedListenedMs()).toBe(0);
 
-    tickListen(10, 40, 180); // playhead jumps; listen follows wall clock
-    expect(svc.getAccumulatedListenedMs()).toBe(10_000);
+    // Stay under HISTORY_RECORD_MS so this test only covers listen accumulation.
+    tickListen(2, 40, 180); // playhead jumps; listen follows wall clock
+    expect(svc.getAccumulatedListenedMs()).toBe(2_000);
     expect(svc.getAccumulatedListenedMs()).not.toBe(40_000);
-
-    tickListen(5, 12, 180); // seek backward playhead
-    expect(svc.getAccumulatedListenedMs()).toBe(15_000);
+    http.expectNone(`${base}/start`);
 
     vi.useRealTimers();
   });
 
-  it('seek-to-30s playhead alone does not meet listen threshold', async () => {
+  it('seek-to-30s playhead alone does not record history', async () => {
     await authAs();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-06-01T12:00:00.000Z'));
@@ -141,25 +145,24 @@ describe('HistoryService music-core', () => {
     svc.updateProgress(0, 180);
     tickListen(1, 30, 180); // only 1s real listen after seek-to-30s playhead
     expect(svc.getAccumulatedListenedMs()).toBe(1_000);
-    expect(svc.meetsListenThreshold(svc.getAccumulatedListenedMs(), 180)).toBe(false);
+    expect(svc.meetsHistoryRecordThreshold(svc.getAccumulatedListenedMs())).toBe(false);
     http.expectNone(`${base}/start`);
 
     vi.useRealTimers();
   });
 
-  it('qualifies short tracks at ≥50% real listen time', async () => {
+  it('persists history after ~3s real listen (not waiting for 30s counted-listen)', async () => {
     await authAs();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-06-01T12:00:00.000Z'));
     svc.add({ id_track: 3, nombre_track: 'Short', nombre_artista: 'X' });
 
-    svc.updateProgress(0, 50);
-    tickListen(25, 25, 50);
+    svc.updateProgress(0, 180);
+    tickListen(3, 3, 180);
 
     const start = http.expectOne(`${base}/start`);
     expect(start.request.body.track_id).toBe(3);
-    expect(start.request.body.listened_ms).toBe(25_000);
-    expect(start.request.body.progress_ms).toBe(25_000);
+    expect(start.request.body.listened_ms).toBe(3_000);
     start.flush({
       id: 1,
       id_track: 3,
@@ -168,12 +171,15 @@ describe('HistoryService music-core', () => {
       viewed_at: '2024-06-01T12:00:00.000Z',
     });
     const progress = http.expectOne(`${base}/progress`);
-    expect(progress.request.body.listened_ms).toBe(25_000);
-    expect(progress.request.body.progress_ms).toBe(25_000);
     progress.flush({ ok: true });
     expect(svc.isQualified()).toBe(true);
 
     vi.useRealTimers();
+  });
+
+  it('qualifies short tracks at ≥50% real listen time for counted-listen rule', async () => {
+    expect(svc.meetsListenThreshold(25_000, 50)).toBe(true);
+    expect(svc.meetsListenThreshold(20_000, 50)).toBe(false);
   });
 
   it('reverts qualified state and retries when /start fails', async () => {
@@ -183,14 +189,14 @@ describe('HistoryService music-core', () => {
     svc.add({ id_track: 7, nombre_track: 'Retry', nombre_artista: 'Y' });
 
     svc.updateProgress(0, 180);
-    tickListen(30, 30, 180);
+    tickListen(3, 3, 180);
 
     const start1 = http.expectOne(`${base}/start`);
     start1.flush({ detail: 'fail' }, { status: 500, statusText: 'Server Error' });
     expect(svc.isQualified()).toBe(false);
     http.expectNone(`${base}/progress`);
 
-    tickListen(1, 31, 180);
+    tickListen(1, 4, 180);
     const start2 = http.expectOne(`${base}/start`);
     start2.flush({
       id: 2,
@@ -212,7 +218,7 @@ describe('HistoryService music-core', () => {
     svc.add({ id_track: 11, nombre_track: 'Done', nombre_artista: 'Z' });
 
     svc.updateProgress(0, 180);
-    tickListen(30, 90, 180);
+    tickListen(3, 90, 180);
     const start = http.expectOne(`${base}/start`);
     const eventKey = start.request.body.event_key as string;
     start.flush({
@@ -229,7 +235,7 @@ describe('HistoryService music-core', () => {
     expect(complete.request.body).toEqual({
       event_key: eventKey,
       progress_ms: 90_000,
-      listened_ms: 30_000,
+      listened_ms: 3_000,
     });
     complete.flush({ detail: 'fail' }, { status: 500, statusText: 'Server Error' });
     // Failure triggers reload — must not leave a fake completed flag without refetch.
@@ -279,7 +285,7 @@ describe('HistoryService music-core', () => {
 
     const keyA = svc.add({ id_track: 1, nombre_track: 'A', nombre_artista: 'X' });
     svc.updateProgress(0, 180);
-    tickListen(30, 30, 180);
+    tickListen(3, 30, 180);
     const startA = http.expectOne(`${base}/start`);
     expect(startA.request.body.event_key).toBe(keyA);
 
@@ -312,7 +318,7 @@ describe('HistoryService music-core', () => {
 
     const key = svc.add({ id_track: 4, nombre_track: 'C', nombre_artista: 'Z' });
     svc.updateProgress(0, 180);
-    tickListen(30, 30, 180);
+    tickListen(3, 30, 180);
     const start = http.expectOne(`${base}/start`);
 
     svc.clearLocalCache();
@@ -342,7 +348,7 @@ describe('HistoryService music-core', () => {
 
     const key = svc.add({ id_track: 5, nombre_track: 'E', nombre_artista: 'Z' });
     svc.updateProgress(0, 180);
-    tickListen(30, 30, 180);
+    tickListen(3, 30, 180);
     const start = http.expectOne(`${base}/start`);
 
     // End before start returns — session invalidated (not yet qualified).
@@ -383,7 +389,7 @@ describe('HistoryService music-core', () => {
 
     const first = svc.add({ id_track: 9, nombre_track: 'Same', nombre_artista: 'A' });
     svc.updateProgress(0, 180);
-    tickListen(30, 30, 180);
+    tickListen(3, 30, 180);
     const start = http.expectOne(`${base}/start`);
     start.flush({
       id: 1,

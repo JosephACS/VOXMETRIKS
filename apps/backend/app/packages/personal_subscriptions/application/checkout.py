@@ -305,7 +305,7 @@ def create_checkout(
     period_end = period_start + timedelta(days=period_days)
 
     with transactional(conn):
-        # Conflict: same open checkout for same price
+        # Resume an abandoned open checkout for the same price instead of blocking re-entry.
         open_row = conn.execute(
             """
             SELECT id, idempotency_key FROM personal_checkout_session
@@ -315,11 +315,10 @@ def create_checkout(
             """,
             [user_id, int(price[0])],
         ).fetchone()
-        if open_row and str(open_row[1]) != key:
-            raise CheckoutError(
-                "An open checkout already exists for this price",
-                code="checkout_idempotency_conflict",
-            )
+        if open_row:
+            existing = get_checkout(conn, user_id, int(open_row[0]))
+            if existing.get("status") not in ("canceled", "expired", "succeeded"):
+                return existing
 
         inv_id = _next_id(conn, "personal_invoice")
         inv_number = f"PINV-{user_id}-{inv_id}"

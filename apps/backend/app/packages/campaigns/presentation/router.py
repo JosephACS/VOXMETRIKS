@@ -468,6 +468,23 @@ def record_result(
 
 # ── Attribution & Revenue ─────────────────────────────────────────────────────
 
+@campaigns_router.get(
+    "/{campaign_id}/attribution-definitions",
+    response_model=list[AttributionDefinitionOut],
+)
+def list_attribution_definitions(
+    campaign_id: int,
+    ctx: dict = Depends(require_org_campaign_permission("campaign.view")),
+) -> list[AttributionDefinitionOut]:
+    try:
+        items = AttributionDefinitionUseCases(ctx["conn"]).list(
+            campaign_id, ctx["organization_id"],
+        )
+    except CampaignsError as e:
+        raise_campaigns_http(e)
+    return [AttributionDefinitionOut(**d.__dict__) for d in items]
+
+
 @campaigns_router.post(
     "/{campaign_id}/attribution-definitions",
     response_model=AttributionDefinitionOut,
@@ -510,6 +527,23 @@ def approve_attribution_definition(
     except CampaignsError as e:
         raise_campaigns_http(e)
     return AttributionDefinitionOut(**definition.__dict__)
+
+
+@campaigns_router.get(
+    "/{campaign_id}/attributable-revenue",
+    response_model=list[AttributableRevenueOut],
+)
+def list_attributable_revenue(
+    campaign_id: int,
+    ctx: dict = Depends(require_org_campaign_permission("campaign.view")),
+) -> list[AttributableRevenueOut]:
+    try:
+        items = AttributableRevenueUseCases(ctx["conn"]).list(
+            campaign_id, ctx["organization_id"],
+        )
+    except CampaignsError as e:
+        raise_campaigns_http(e)
+    return [AttributableRevenueOut(**r.__dict__) for r in items]
 
 
 @campaigns_router.post(

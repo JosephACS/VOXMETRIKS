@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CrmApiError, CrmApiService } from '../services/crm-api.service';
 import { Contact, Prospect } from '../models/crm.models';
@@ -11,7 +11,7 @@ import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
-const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
+const PROSPECT_STATUSES = ['contacted', 'qualified', 'disqualified', 'lost'];
 
 @Component({
   selector: 'app-crm-prospect-detail-page',
@@ -36,6 +36,11 @@ const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'con
         </a>
         @if (prospect()) {
           <app-enterprise-status-badge [status]="prospect()!.status" />
+          @if (prospect()!.status === 'qualified') {
+            <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="createOpportunity()">
+              {{ 'crm.prospectDetail.createOpportunity' | t:lang() }}
+            </button>
+          }
         }
       </app-enterprise-page-header>
 
@@ -160,6 +165,7 @@ export class CrmProspectDetailPageComponent implements OnInit {
 
   private readonly api = inject(CrmApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly statuses = PROSPECT_STATUSES;
 
@@ -260,6 +266,28 @@ export class CrmProspectDetailPageComponent implements OnInit {
     } catch (e) {
       this.error.set(e instanceof CrmApiError ? e.message : 'Error al vincular contacto');
     } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async createOpportunity(): Promise<void> {
+    const p = this.prospect();
+    if (!p || p.status !== 'qualified') return;
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const opp = await firstValueFrom(
+        this.api.createOpportunity({
+          prospect_id: this.prospectId,
+          name: p.company_name?.trim() || p.display_name,
+        }),
+      );
+      this.success.set(this.i18n.t('crm.prospectDetail.opportunityCreated'));
+      await this.router.navigate(['/crm/opportunities', opp.id]);
+    } catch (e) {
+      this.error.set(
+        e instanceof CrmApiError ? e.message : this.i18n.t('crm.prospectDetail.opportunityCreateError'),
+      );
       this.saving.set(false);
     }
   }

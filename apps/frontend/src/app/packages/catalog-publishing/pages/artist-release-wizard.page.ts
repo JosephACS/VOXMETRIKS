@@ -18,6 +18,7 @@ import {
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
+import { artistJourneyError } from '../../artist-space/services/artist-space-error';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import { catalogPublishingAccess } from '../catalog-publishing-access';
 
@@ -140,9 +141,9 @@ interface PublishingGateway {
                 </app-enterprise-form-field>
                 <app-enterprise-form-field [label]="'publishing.field.releaseType' | t: lang()">
                   <select formControlName="release_type" class="input">
-                    <option value="single">Single</option>
-                    <option value="ep">EP</option>
-                    <option value="album">Album</option>
+                    <option value="single">{{ 'publishing.releaseType.single' | t: lang() }}</option>
+                    <option value="ep">{{ 'publishing.releaseType.ep' | t: lang() }}</option>
+                    <option value="album">{{ 'publishing.releaseType.album' | t: lang() }}</option>
                   </select>
                 </app-enterprise-form-field>
                 <app-enterprise-form-field [label]="'publishing.field.genre' | t: lang()">
@@ -290,7 +291,7 @@ interface PublishingGateway {
                 <dt>{{ 'publishing.field.title' | t: lang() }}</dt>
                 <dd>{{ form.value.title }}</dd>
                 <dt>{{ 'publishing.field.releaseType' | t: lang() }}</dt>
-                <dd>{{ form.value.release_type }}</dd>
+                <dd>{{ releaseTypeLabel(form.value.release_type) }}</dd>
                 <dt>{{ 'publishing.wizard.trackCount' | t: lang() }}</dt>
                 <dd>{{ tracks.length }}</dd>
               </dl>
@@ -600,6 +601,39 @@ export class ArtistReleaseWizardPage implements OnInit {
     return this.coverFile?.name;
   }
 
+  /** Client-side blockers before calling submit (cover + audio required). */
+  private submitBlockers(): string[] {
+    const out: string[] = [];
+    if (!this.coverFile && !this.coverUploaded) {
+      out.push(this.i18n.t('publishing.wizard.needCover'));
+    }
+    const rows = this.tracks.controls;
+    if (rows.length === 0) {
+      out.push(this.i18n.t('publishing.wizard.needAudio'));
+      return out;
+    }
+    let missingAudio = 0;
+    for (let i = 0; i < rows.length; i += 1) {
+      const uid = this.trackUid(i);
+      const persisted = rows[i].get('persisted_id')?.value;
+      const hasLocal = this.audioFiles.has(uid);
+      if (!hasLocal && persisted == null) {
+        missingAudio += 1;
+      }
+    }
+    if (missingAudio > 0) {
+      out.push(this.i18n.t('publishing.wizard.needAudio'));
+    }
+    return out;
+  }
+
+  releaseTypeLabel(code: string | null | undefined): string {
+    const c = (code || 'single').toLowerCase();
+    if (c === 'ep') return this.i18n.t('publishing.releaseType.ep');
+    if (c === 'album') return this.i18n.t('publishing.releaseType.album');
+    return this.i18n.t('publishing.releaseType.single');
+  }
+
   onAudioSelected(index: number, ev: Event): void {
     const uid = this.trackUid(index);
     const file = (ev.target as HTMLInputElement).files?.[0] ?? null;
@@ -674,6 +708,12 @@ export class ArtistReleaseWizardPage implements OnInit {
 
       const shouldSubmit = this.canSubmitRelease() && !!v.submit_now;
       if (shouldSubmit) {
+        const blockers = this.submitBlockers();
+        if (blockers.length) {
+          this.busy.set(false);
+          this.error.set(blockers.join(' '));
+          return;
+        }
         await firstValueFrom(gateway.submit(submissionId));
         this.info.set(this.i18n.t('publishing.wizard.submitted'));
       } else {
@@ -682,7 +722,7 @@ export class ArtistReleaseWizardPage implements OnInit {
       this.busy.set(false);
     } catch (e) {
       this.busy.set(false);
-      this.error.set(userFacingHttpError(this.i18n, e));
+      this.error.set(artistJourneyError(this.i18n, e));
       return;
     }
 

@@ -288,6 +288,18 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
     expect(paths).not.toContain('/catalog');
   });
 
+  it('CRM platform_admin unlocks Platform Ops without identity.staff', () => {
+    const ctx = persona({
+      activeSpace: 'platform_admin',
+      platformRoles: new Set(['platform_admin']),
+    });
+    const paths = sidebarPaths(ctx);
+    expect(paths).toContain('/workpanel');
+    expect(paths).toContain('/platform-ops');
+    expect(paths).toContain('/platform-ops/artist-requests');
+    expect(evaluateProductPathAccess('/platform-ops/system', ctx)).toBe('allow');
+  });
+
   it('ready=false never flashes privileged organization surfaces', () => {
     const ctx = {
       ...emptyProductSurfaceContext('organization'),
@@ -335,7 +347,7 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
           permissions: new Set(['campaign.view']),
         }),
       ),
-    ).toBe('unavailable');
+    ).toBe('plan-required');
     expect(evaluateProductPathAccess('/discover', persona({ activeSpace: 'personal' }))).toBe(
       'allow',
     );

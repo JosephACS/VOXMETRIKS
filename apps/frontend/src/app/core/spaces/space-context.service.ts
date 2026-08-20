@@ -330,10 +330,11 @@ export class SpaceContextService {
 
   private applyManifest(manifest: SessionBootstrap): void {
     this._manifest.set(manifest);
+    const t = (key: string) => this.i18n.t(key);
     this._available.set(
       (manifest.spaces || [])
         .filter((space) => space.capabilities.some((capability) => capability.allowed))
-        .map(appSpaceFromSession),
+        .map((space) => appSpaceFromSession(space, t)),
     );
   }
 
@@ -412,14 +413,14 @@ function appSpaceIdFromKey(key: string): string {
   return key;
 }
 
-function appSpaceFromSession(item: SessionSpace): AppSpace {
+function appSpaceFromSession(item: SessionSpace, t: (key: string) => string): AppSpace {
   switch (item.kind) {
     case 'personal':
-      return personalSpace(item.display_name);
+      return personalSpace(t('spaces.personal') || item.display_name);
     case 'data_ops':
-      return dataOpsSpace(item.display_name);
+      return dataOpsSpace(t('spaces.dataOps') || item.display_name);
     case 'platform_admin':
-      return platformAdminSpace(item.display_name);
+      return platformAdminSpace(t('spaces.platformAdmin') || item.display_name);
     case 'organization': {
       const id = Number(item.key.split(':')[1]);
       return organizationSpace(id, item.display_name);

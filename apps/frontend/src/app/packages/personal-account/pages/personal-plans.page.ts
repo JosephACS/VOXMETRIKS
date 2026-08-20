@@ -63,10 +63,10 @@ import {
               <header>
                 <h2>{{ p.display_name }}</h2>
                 @if (isCurrent(p)) {
-                  <span class="badge badge--ok">{{ 'personal.plans.current' | t:lang() }}</span>
+                  <span class="badge badge--current">{{ 'personal.plans.current' | t:lang() }}</span>
                 }
                 @if (p.code === 'premium_individual') {
-                  <span class="badge badge--mock">{{ 'personal.plans.recommended' | t:lang() }}</span>
+                  <span class="badge badge--recommended">{{ 'personal.plans.recommended' | t:lang() }}</span>
                 }
               </header>
               <p class="plan-price">

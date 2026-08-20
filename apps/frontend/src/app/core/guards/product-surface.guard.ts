@@ -56,8 +56,22 @@ export const productSurfaceGuard: CanActivateFn = async (
       return true;
     case 'permission-denied':
       return router.createUrlTree(['/error/403']);
+    case 'plan-required': {
+      const orgId =
+        spaces.activeSpace()?.organizationId ?? orgCtx.organizationId() ?? null;
+      if (orgId != null) {
+        return router.createUrlTree(['/organizations/onboarding'], {
+          queryParams: { organization_id: orgId, reason: 'plan' },
+        });
+      }
+      return router.createUrlTree(['/subscriptions/select-plan'], {
+        queryParams: { reason: 'plan' },
+      });
+    }
     case 'unavailable':
-      return router.createUrlTree(['/error/module-unavailable']);
+      return router.createUrlTree(['/error/module-unavailable'], {
+        queryParams: { reason: 'space' },
+      });
     default: {
       const _exhaustive: never = verdict;
       return _exhaustive;

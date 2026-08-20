@@ -28,9 +28,11 @@
     </div>
   } @else if (empty()) {
     <div class="empty-state" data-testid="activity-empty">
-      <p>{{ data()?.message || ('activity.empty' | t:lang()) }}</p>
+      <p>{{ 'activity.empty' | t:lang() }}</p>
+      <p class="muted">{{ 'activity.emptyHint' | t:lang() }}</p>
       <div class="empty-actions">
-        <a routerLink="/discover" class="btn">{{ 'activity.ctaDiscover' | t:lang() }}</a>
+        <a routerLink="/history" class="btn">{{ 'activity.ctaHistory' | t:lang() }}</a>
+        <a routerLink="/discover" class="btn btn-ghost">{{ 'activity.ctaDiscover' | t:lang() }}</a>
         <a routerLink="/search" class="btn btn-ghost">{{ 'activity.ctaSearch' | t:lang() }}</a>
       </div>
     </div>

@@ -1,5 +1,7 @@
 /** HTTP status → i18n key for user-facing API errors (no technical dumps). */
 
+import { HttpErrorResponse } from '@angular/common/http';
+
 export const HTTP_ERROR_KEYS: Record<number, string> = {
   400: 'httpError.400',
   401: 'httpError.401',
@@ -17,6 +19,14 @@ export const HTTP_ERROR_KEYS: Record<number, string> = {
 export function httpErrorKey(status: number | null | undefined): string {
   if (status == null) return 'httpError.generic';
   return HTTP_ERROR_KEYS[status] ?? 'httpError.generic';
+}
+
+/**
+ * Aborted / navigated-away / offline client failures (status 0).
+ * Safe to skip console.error noise; still surface UI error state if needed.
+ */
+export function isAbortOrOfflineHttpError(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 0;
 }
 
 /** True when a backend message looks technical and must not be shown raw. */

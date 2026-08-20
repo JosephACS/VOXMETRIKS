@@ -148,7 +148,7 @@ body.light .ws-section {
 .ws-actions a.primary,
 .ws-actions .primary {
   background: var(--vx-accent, var(--accent, #1ed896));
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
   border-color: transparent;
 }
 

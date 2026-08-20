@@ -93,9 +93,12 @@ describe('Campaigns visual consolidation', () => {
             <div data-testid="campaign-summary-strip">
               <span>campaigns.detail.budgetTitle</span>
               <span>campaigns.detail.spendTitle</span>
-              <span>campaigns.detail.roiSimulated</span>
+              <span>campaigns.detail.roiValue</span>
             </div>
             <div data-testid="campaign-roi-disclosure" role="note">campaigns.detail.roiDisclosure</div>
+            <section>campaigns.detail.periodTitle</section>
+            <section>campaigns.detail.attributionTitle</section>
+            <section>campaigns.detail.revenueTitle</section>
             <section>campaigns.detail.budgetTitle</section>
             <section>campaigns.detail.expensesTitle</section>
             <section>campaigns.detail.approvalsTitle</section>
@@ -110,22 +113,29 @@ describe('Campaigns visual consolidation', () => {
         providers: [
           provideRouter([]),
           { provide: I18nService, useValue: i18n() },
-          { provide: OrganizationContextService, useValue: { organizationId: () => 1 } },
+          { provide: OrganizationContextService, useValue: { organizationId: () => 1, hasPermission: () => true } },
           { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' } } } },
           { provide: ConfirmDialogService, useValue: { open: async () => true } },
           {
             provide: CampaignsApiService,
             useValue: {
-              get: () => of({ id: 1, name: 'Launch', status: 'active', market: 'ES' }),
+              get: () => of({ id: 1, name: 'Launch', status: 'active', market: 'ES', start_date: '2026-01-01', end_date: '2026-03-31' }),
               getBudget: () => of({ amount: 1000, currency: 'USD' }),
               listExpenses: () => of([{ id: 1, amount: 250, currency: 'USD', category: 'ads', expense_date: '2026-01-01' }]),
               listApprovals: () => of([]),
+              listAttributionDefinitions: () => of([]),
+              listAttributableRevenue: () => of([]),
               getRoi: () => of({ status: 'available', roi_value: 1.25, budget_utilization: 0.25 }),
               computeRoi: () => of({ status: 'available', roi_value: 1.25 }),
               setBudget: () => of({}),
               addExpense: () => of({}),
               requestApproval: () => of({}),
               decideApproval: () => of({}),
+              update: () => of({}),
+              createAttributionDefinition: () => of({}),
+              approveAttributionDefinition: () => of({}),
+              recordAttributableRevenue: () => of({}),
+              approveAttributableRevenue: () => of({}),
             },
           },
         ],
@@ -136,23 +146,27 @@ describe('Campaigns visual consolidation', () => {
       fixture.detectChanges();
     });
 
-    it('shows a single ROI simulated disclosure callout', () => {
+    it('shows a single ROI disclosure callout', () => {
       const disclosure = fixture.nativeElement.querySelectorAll('[data-testid="campaign-roi-disclosure"]');
       expect(disclosure.length).toBe(1);
       expect(disclosure[0].textContent).toContain('campaigns.detail.roiDisclosure');
-      expect(fixture.nativeElement.textContent).toContain('campaigns.detail.roiSimulated');
+      expect(fixture.nativeElement.textContent).toContain('campaigns.detail.roiValue');
       expect(fixture.nativeElement.textContent).not.toMatch(/RegalÃ|ROIÃ/);
       expect(page.expensesTotal).toBe(250);
     });
 
-    it('preserves budget / expenses / approvals operations surface', () => {
+    it('preserves budget / expenses / approvals and ROI prep surfaces', () => {
       const text = fixture.nativeElement.textContent as string;
       expect(text).toContain('campaigns.detail.budgetTitle');
       expect(text).toContain('campaigns.detail.expensesTitle');
       expect(text).toContain('campaigns.detail.approvalsTitle');
+      expect(text).toContain('campaigns.detail.periodTitle');
+      expect(text).toContain('campaigns.detail.attributionTitle');
+      expect(text).toContain('campaigns.detail.revenueTitle');
       expect(typeof page.computeRoi).toBe('function');
       expect(typeof page.addExpense).toBe('function');
       expect(typeof page.requestApproval).toBe('function');
+      expect(typeof page.savePeriod).toBe('function');
     });
   });
 });

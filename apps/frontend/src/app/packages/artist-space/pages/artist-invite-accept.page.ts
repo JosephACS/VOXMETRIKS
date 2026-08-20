@@ -71,6 +71,7 @@ export class ArtistInviteAcceptPage implements OnInit {
   });
 
   ngOnInit(): void {
+    // Prefill from history.state only (never URL query — Spec 046).
     const state = window.history.state as { invitationToken?: unknown } | null;
     const token = typeof state?.invitationToken === 'string' ? state.invitationToken.trim() : '';
     if (token) this.form.controls.token.setValue(token);

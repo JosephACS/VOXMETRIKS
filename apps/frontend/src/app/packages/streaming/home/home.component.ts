@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { DashboardService } from '../services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { isAbortOrOfflineHttpError } from '../../../core/i18n/http-error-keys';
 import { HistoryService } from '../services/history.service';
 import { ListenStatsService } from '../services/listen-stats.service';
 import { FavoritesService } from '../services/favorites.service';
@@ -232,7 +233,9 @@ export class HomeComponent implements OnInit {
         this.hasError.set(true);
         this.summaryLoading.set(false);
         this.railsLoading.set(false);
-        console.error('[HomeComponent] getHomeFeed failed', err);
+        if (!isAbortOrOfflineHttpError(err)) {
+          console.error('[HomeComponent] getHomeFeed failed', err);
+        }
       },
     });
     this.historySvc.history$
@@ -265,7 +268,9 @@ export class HomeComponent implements OnInit {
       },
       error: (err) => {
         this.smartLoading.set(false);
-        console.error('[HomeComponent] smart home failed', err);
+        if (!isAbortOrOfflineHttpError(err)) {
+          console.error('[HomeComponent] smart home failed', err);
+        }
       },
     });
   }

@@ -12,7 +12,7 @@ import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import { NotificationService } from '../../../core/services/notification.service';
 
-const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'converted'];
+const PROSPECT_STATUSES = ['new', 'contacted', 'qualified', 'disqualified', 'lost', 'converted'];
 const PROSPECT_SOURCES = ['referral', 'web', 'event', 'outbound', 'partner', 'other'];
 
 @Component({

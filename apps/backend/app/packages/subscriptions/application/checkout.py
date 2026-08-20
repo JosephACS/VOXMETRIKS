@@ -323,6 +323,7 @@ def create_checkout(
     plan_code = str(plan[1])
 
     with transactional(conn):
+        # Resume an abandoned open checkout for the same price instead of blocking re-entry.
         open_row = conn.execute(
             """
             SELECT id, idempotency_key FROM app_subscription_checkout_session
@@ -332,11 +333,10 @@ def create_checkout(
             """,
             [organization_id, plan_price_id],
         ).fetchone()
-        if open_row and str(open_row[1]) != key:
-            raise CheckoutError(
-                "An open checkout already exists for this price",
-                code="checkout_idempotency_conflict",
-            )
+        if open_row:
+            existing = get_checkout(conn, organization_id, int(open_row[0]))
+            if existing.get("status") not in ("canceled", "expired", "succeeded"):
+                return existing
 
         # Pending subscription — do NOT call SubscriptionUseCases.create (activates).
         sub_id = _next_id(conn, "app_subscription")

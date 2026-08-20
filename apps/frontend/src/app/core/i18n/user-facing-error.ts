@@ -11,13 +11,18 @@ interface ErrLike {
 export function userFacingHttpError(i18n: I18nService, err: unknown): string {
   const e = (err ?? {}) as ErrLike;
   const status = typeof e.status === 'number' ? e.status : undefined;
-  const detail =
-    (typeof e.error?.detail === 'string' && e.error.detail) ||
-    (typeof e.error?.message === 'string' && e.error.message) ||
-    (typeof e.message === 'string' && e.message) ||
-    '';
+  const rawDetail = e.error?.detail;
+  let detail = '';
+  if (typeof rawDetail === 'string') {
+    detail = rawDetail;
+  } else if (rawDetail && typeof rawDetail === 'object') {
+    const msg = (rawDetail as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) detail = msg.trim();
+  }
+  if (!detail && typeof e.error?.message === 'string') detail = e.error.message;
+  if (!detail && typeof e.message === 'string') detail = e.message;
 
-  if (detail && !isTechnicalErrorMessage(detail) && detail.length <= 180 && !status) {
+  if (detail && !isTechnicalErrorMessage(detail) && detail.length <= 180) {
     return detail;
   }
   return i18n.t(httpErrorKey(status));

@@ -12,6 +12,7 @@ import { SubscriptionsApiService } from '../../subscriptions/services/subscripti
 import { Invoice } from '../../billing/models/billing.models';
 import { Plan, Subscription } from '../../subscriptions/models/subscriptions.models';
 import { AuthService } from '../../../core/services/auth.service';
+import { SpaceContextService } from '../../../core/spaces/space-context.service';
 import {
   productInvoiceNumber,
   productOrgSlugDisplay,
@@ -27,7 +28,12 @@ import {
       <header class="ws-head">
         <p class="ws-kicker">Organización</p>
         <h1 class="ws-title">{{ orgName() }}</h1>
-        <p class="ws-sub">Información, miembros y configuración del espacio de trabajo.</p>
+        <p class="ws-sub">
+          Este es el espacio de tu empresa o sello (por ejemplo Horizonte Musical). Desde aquí
+          se gestiona la identidad del negocio, el plan contratado y el acceso al trabajo en
+          equipo: clientes, facturación y módulos que el plan habilite. No es el espacio personal
+          de escucha ni el Artist Space.
+        </p>
       </header>
 
       @if (!orgId()) {
@@ -127,22 +133,53 @@ import {
         <section class="ws-section" aria-label="Acciones">
           <h2 class="ws-section__title">Acciones</h2>
           <div class="ws-actions">
-            <a class="primary" [routerLink]="['/organizations', orgId(), 'members']">Gestionar miembros</a>
-            <a [routerLink]="['/organizations', orgId(), 'settings']">Actualizar configuración</a>
-            @if (canInvite()) {
-              <a [routerLink]="['/organizations', orgId(), 'invitations']">Invitaciones</a>
+            @if (canManageMembers()) {
+              <a class="primary" [routerLink]="['/organizations', orgId(), 'members']">Gestionar miembros</a>
+            } @else {
+              <a
+                class="primary"
+                routerLink="/organizations/onboarding"
+                [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
+                >Activar plan para gestionar equipo</a
+              >
             }
-            @if (canRoles()) {
+            <a [routerLink]="['/organizations', orgId(), 'settings']">Actualizar configuración</a>
+            @if (canInvite() && canManageMembers()) {
+              <a [routerLink]="['/organizations', orgId(), 'invitations']">Invitaciones</a>
+            } @else if (canInvite() && !canManageMembers()) {
+              <a
+                routerLink="/organizations/onboarding"
+                [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
+                >Invitaciones (requiere plan operacional)</a
+              >
+            }
+            @if (canRoles() && canManageMembers()) {
               <a [routerLink]="['/organizations', orgId(), 'roles']">Roles</a>
             }
             <a routerLink="/billing/invoices">Revisar pagos</a>
           </div>
+          @if (!canManageMembers()) {
+            <p class="ws-empty" style="margin-top: 0.75rem">
+              La gestión avanzada de miembros e invitaciones está disponible desde el plan
+              operacional de la organización. Con el plan actual puedes completar el onboarding y
+              elegir un plan.
+            </p>
+          }
         </section>
 
         <section class="ws-section" aria-label="Miembros">
           <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap">
             <h2 class="ws-section__title" style="margin:0">Miembros</h2>
-            <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Ver todos</a>
+            @if (canManageMembers()) {
+              <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Ver todos</a>
+            } @else {
+              <a
+                class="ws-link"
+                routerLink="/organizations/onboarding"
+                [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
+                >Ver plan</a
+              >
+            }
           </div>
           @if (!members().length) {
             <p class="ws-empty" style="margin-top:0.75rem">No hay miembros para mostrar.</p>
@@ -157,10 +194,17 @@ import {
                         <span class="ws-pill ws-pill--muted" style="margin-left:0.35rem">Tú</span>
                       }
                     </p>
-                    <p class="ws-row__meta">Estado: {{ humanMemberStatus(m.status) }}</p>
+                    <p class="ws-row__meta">
+                      Estado: {{ humanMemberStatus(m.status) }}
+                      @if (memberRolesLabel(m)) {
+                        · {{ memberRolesLabel(m) }}
+                      }
+                    </p>
                   </div>
                   <div class="ws-row__side">
-                    <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Gestionar</a>
+                    @if (canManageMembers()) {
+                      <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Gestionar</a>
+                    }
                   </div>
                 </li>
               }
@@ -246,6 +290,7 @@ import {
 export class OrgHubPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly orgCtx = inject(OrganizationContextService);
+  private readonly spaces = inject(SpaceContextService);
   private readonly api = inject(OrganizationsApiService);
   private readonly billing = inject(BillingApiService);
   private readonly subs = inject(SubscriptionsApiService);
@@ -296,6 +341,12 @@ export class OrgHubPage implements OnInit {
     return this.orgCtx.hasPermission('audit.view');
   }
 
+  /** Members / invitations / roles tabs require operational organization tier. */
+  canManageMembers(): boolean {
+    const tier = this.spaces.productSurfaceContext().organizationTier;
+    return tier === 'operational' || tier === 'recovery';
+  }
+
   orgStatusLabel(): string {
     const s = this.org()?.status || this.orgCtx.activeOrganization()?.status || '';
     return this.humanOrgStatus(s);
@@ -309,7 +360,17 @@ export class OrgHubPage implements OnInit {
   }
 
   memberLabel(m: Membership): string {
+    const name = m.user?.display_name?.trim();
+    if (name) return name;
+    const email = m.user?.email?.trim();
+    if (email) return email;
     return `Usuario ${m.user_id}`;
+  }
+
+  memberRolesLabel(m: Membership): string | null {
+    const roles = m.roles || [];
+    if (!roles.length) return null;
+    return roles.map((r) => this.humanRole(r.code || r.label)).join(', ');
   }
 
   humanMemberStatus(status: string): string {

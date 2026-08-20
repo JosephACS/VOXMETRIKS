@@ -1,4 +1,5 @@
 import { I18nService } from '../../core/services/i18n.service';
+import { isAbortOrOfflineHttpError } from '../../core/i18n/http-error-keys';
 import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -126,7 +127,9 @@ export class HistoryComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.hasError.set(true);
         this.isLoading.set(false);
-        console.error('[HistoryComponent] getHistoryHub failed', err);
+        if (!isAbortOrOfflineHttpError(err)) {
+          console.error('[HistoryComponent] getHistoryHub failed', err);
+        }
       },
     });
   }

@@ -4,7 +4,11 @@
  */
 
 import type { ProductSurfaceDefinition } from './product-surface.models';
-import { CRM_PLATFORM_ROLES, STAFF_CAPABILITY } from './product-surface.models';
+import {
+  CRM_PLATFORM_ROLES,
+  PLATFORM_ADMIN_ROLES,
+  STAFF_CAPABILITY,
+} from './product-surface.models';
 
 const personalMain: ProductSurfaceDefinition[] = [
   {
@@ -233,6 +237,7 @@ const orgMain: ProductSurfaceDefinition[] = [
     order: 40,
     exact: true,
     contextGroup: 'reports',
+    tabLabel: 'Catálogo',
   },
 ];
 
@@ -806,6 +811,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/workpanel',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform',
     sectionTitleKey: 'spaces.nav.group.platform',
     order: 10,
@@ -818,6 +824,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/reports',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform',
     sectionTitleKey: 'spaces.nav.group.platform',
     order: 20,
@@ -841,6 +848,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/platform-ops',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform-ops',
     sectionTitleKey: 'nav.section.platformOps',
     order: 40,
@@ -856,6 +864,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/platform-ops/artist-requests',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform-ops',
     sectionTitleKey: 'nav.section.platformOps',
     order: 50,
@@ -871,6 +880,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/platform-ops/catalog-reviews',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform-ops',
     sectionTitleKey: 'nav.section.platformOps',
     order: 60,
@@ -886,6 +896,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/platform-ops/audio-unresolved',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform-ops',
     sectionTitleKey: 'nav.section.platformOps',
     order: 70,
@@ -901,6 +912,7 @@ const platformAdmin: ProductSurfaceDefinition[] = [
     path: '/platform-ops/system',
     spaces: ['platform_admin'],
     staffCapability: STAFF_CAPABILITY.shell,
+    platformRolesAny: PLATFORM_ADMIN_ROLES,
     sectionId: 'space-platform-ops',
     sectionTitleKey: 'nav.section.platformOps',
     order: 80,

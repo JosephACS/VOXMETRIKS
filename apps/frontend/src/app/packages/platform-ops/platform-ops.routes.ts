@@ -33,6 +33,13 @@ export const PLATFORM_OPS_ROUTES: Routes = [
     title: 'Revisión independiente',
   },
   {
+    path: 'platform-ops/incidents',
+    canActivate: [platformAdminGuard],
+    loadComponent: () =>
+      import('./pages/platform-ops-incidents.page').then((m) => m.PlatformOpsIncidentsPage),
+    title: 'Incidentes operativos',
+  },
+  {
     path: 'platform-ops/audio-unresolved',
     canActivate: [platformAdminGuard],
     loadComponent: () =>

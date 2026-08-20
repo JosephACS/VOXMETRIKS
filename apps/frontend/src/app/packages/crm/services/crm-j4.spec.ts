@@ -102,7 +102,7 @@ describe('CrmApiService (J4)', () => {
     const req = http.expectOne(`${base}/crm/opportunities/9/close`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body.outcome).toBe('lost');
-    req.flush({ id: 9, prospect_id: 1, name: 'Test', stage: 'lost', created_at: '', updated_at: '' });
+    req.flush({ id: 9, prospect_id: 1, name: 'Test', stage: 'closed_lost', created_at: '', updated_at: '' });
   });
 
   it('listQuotationVersions hits /crm/quotations/:id/versions', () => {

@@ -135,7 +135,8 @@ Abrir http://localhost:4200
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
 | `demo` o `demo@voxmetrik.io` | `demo123` | Usuario estándar |
-| `admin` o `admin@voxmetrik.io` | `admin123` | Engineer (+ `/elt-pipeline`, `/explorer`) |
+| `admin` o `admin@voxmetrik.io` | `admin123` | Admin de plataforma (incluye Data Ops / ELT y Platform Ops) |
+| `engineer` o `engineer@voxmetrik.io` | `engineer123` | Ingeniero de datos — Data Ops (`/workpanel`, `/elt-pipeline`, `/explorer`, reportes técnicos); **sin** Platform Ops |
 
 ### Cuentas demo (B2C + B2B) — seed opt-in
 

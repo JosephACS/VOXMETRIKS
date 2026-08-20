@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 import { AuthService } from '../../../core/services/auth.service';
 import {
@@ -595,9 +596,26 @@ export class ReportsHubPage implements OnInit {
   loadCatalog(): void {
     this.loading.set(true);
     this.loadError.set(null);
+    let denied = false;
+    const emptySimple = { items: [] as SimpleReportCatalogItem[], total: 0 };
+    const emptyComplex = { items: [] as ComplexCatalogItem[], total: 0 };
     forkJoin({
-      simple: this.simpleApi.catalog().pipe(catchError(() => of({ items: [], total: 0 }))),
-      complex: this.complexApi.catalog().pipe(catchError(() => of({ items: [], total: 0 }))),
+      simple: this.simpleApi.catalog().pipe(
+        catchError((err: unknown) => {
+          if (err instanceof HttpErrorResponse && (err.status === 403 || err.status === 401)) {
+            denied = true;
+          }
+          return of(emptySimple);
+        }),
+      ),
+      complex: this.complexApi.catalog().pipe(
+        catchError((err: unknown) => {
+          if (err instanceof HttpErrorResponse && (err.status === 403 || err.status === 401)) {
+            denied = true;
+          }
+          return of(emptyComplex);
+        }),
+      ),
     }).subscribe({
       next: ({ simple, complex }) => {
         const items: HubReportItem[] = [
@@ -607,7 +625,11 @@ export class ReportsHubPage implements OnInit {
         this.master.set(items);
         this.loading.set(false);
         if (!items.length) {
-          this.loadError.set('El catálogo de informes está vacío o no está disponible.');
+          this.loadError.set(
+            denied
+              ? 'El catálogo de informes simples/complejos requiere cuenta staff (admin o engineer). Prueba organization.owner, admin o engineer.'
+              : 'El catálogo de informes está vacío o no está disponible.',
+          );
         }
       },
       error: () => {

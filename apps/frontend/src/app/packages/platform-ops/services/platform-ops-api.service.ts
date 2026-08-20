@@ -8,6 +8,7 @@ import {
   BackgroundJob,
   FeatureFlag,
   HealthStatus,
+  OperationalIncident,
   PlatformOpsOverview,
   ProviderConfig,
   UnresolvedAudioList,
@@ -84,6 +85,25 @@ export class PlatformOpsApiService {
   reresolveAudio(trackId: number): Observable<AudioSource> {
     return this.http.post<AudioSource>(
       `${base}/platform-ops/audio-unresolved/${trackId}/reresolve`,
+      {},
+    );
+  }
+
+  listIncidents(): Observable<OperationalIncident[]> {
+    return this.http.get<OperationalIncident[]>(`${base}/platform-ops/incidents`);
+  }
+
+  createIncident(body: {
+    title: string;
+    severity: string;
+    description: string;
+  }): Observable<OperationalIncident> {
+    return this.http.post<OperationalIncident>(`${base}/platform-ops/incidents`, body);
+  }
+
+  resolveIncident(incidentId: number): Observable<OperationalIncident> {
+    return this.http.post<OperationalIncident>(
+      `${base}/platform-ops/incidents/${incidentId}/resolve`,
       {},
     );
   }

@@ -1,27 +1,40 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs/operators';
+import { I18nService } from '../../core/services/i18n.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 /**
- * Spec 038 — modules that exist technically but are outside the product-final surface.
+ * Spec 038 / 054 — product-surface denial landing.
+ * Distinguishes space mismatch vs residual unavailable; plan-required usually
+ * redirects to onboarding before reaching this page.
  */
 @Component({
   selector: 'app-module-unavailable-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
-    <div class="unavailable" role="status">
-      <h1>Función no disponible</h1>
-      <p>
-        Esta función no está disponible en la versión actual de VOXMETRIKS.
-      </p>
-      <p class="muted">
-        Puede formar parte de demos o capacidades futuras, pero no del producto final entregable.
-      </p>
+    <div class="unavailable" role="status" data-testid="module-unavailable">
+      <h1>{{ titleKey() | t:lang() }}</h1>
+      <p>{{ bodyKey() | t:lang() }}</p>
+      <p class="muted">{{ hintKey() | t:lang() }}</p>
       <div class="actions">
-        <a routerLink="/discover" class="btn">Ir a Discover</a>
-        <a routerLink="/workpanel" class="btn btn--secondary">Ir a Workpanel</a>
-        <a routerLink="/activity" class="btn btn--secondary">Tu actividad</a>
+        @if (reason() === 'plan') {
+          <a routerLink="/subscriptions/select-plan" class="btn">
+            {{ 'errors.moduleUnavailable.ctaPlan' | t:lang() }}
+          </a>
+          <a routerLink="/organizations" class="btn btn--secondary">
+            {{ 'errors.moduleUnavailable.ctaOrg' | t:lang() }}
+          </a>
+        }
+        <a routerLink="/discover" class="btn" [class.btn--secondary]="reason() === 'plan'">
+          {{ 'errors.moduleUnavailable.ctaDiscover' | t:lang() }}
+        </a>
+        <a routerLink="/activity" class="btn btn--secondary">
+          {{ 'errors.moduleUnavailable.ctaActivity' | t:lang() }}
+        </a>
       </div>
     </div>
   `,
@@ -64,4 +77,41 @@ import { CommonModule } from '@angular/common';
     `,
   ],
 })
-export class ModuleUnavailablePageComponent {}
+export class ModuleUnavailablePageComponent {
+  private readonly i18n = inject(I18nService);
+  private readonly route = inject(ActivatedRoute);
+  readonly lang = this.i18n.lang;
+
+  private readonly query = toSignal(
+    this.route.queryParamMap.pipe(
+      map((p) => ({
+        reason: (p.get('reason') || 'unavailable').toLowerCase(),
+      })),
+    ),
+    { initialValue: { reason: 'unavailable' } },
+  );
+
+  readonly reason = computed(() => this.query().reason);
+
+  readonly titleKey = computed(() =>
+    this.reason() === 'plan'
+      ? 'errors.moduleUnavailable.planTitle'
+      : this.reason() === 'space'
+        ? 'errors.moduleUnavailable.spaceTitle'
+        : 'errors.moduleUnavailable.title',
+  );
+
+  readonly bodyKey = computed(() =>
+    this.reason() === 'plan'
+      ? 'errors.moduleUnavailable.planBody'
+      : this.reason() === 'space'
+        ? 'errors.moduleUnavailable.spaceBody'
+        : 'errors.moduleUnavailable.body',
+  );
+
+  readonly hintKey = computed(() =>
+    this.reason() === 'plan'
+      ? 'errors.moduleUnavailable.planHint'
+      : 'errors.moduleUnavailable.hint',
+  );
+}

@@ -679,6 +679,35 @@ class OperationalIncidentUseCases:
         ).fetchall()
         return [OperationalIncident(*r) for r in rows]
 
+    def resolve(
+        self,
+        incident_id: int,
+        *,
+        actor_user_id: int,
+        request_id: Optional[str] = None,
+    ) -> OperationalIncident:
+        existing = self.get(incident_id)
+        if existing.status in ("resolved", "closed"):
+            return existing
+        now = _now()
+        self._conn.execute(
+            """
+            UPDATE app_operational_incident
+            SET status = 'resolved', resolved_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            [now, now, incident_id],
+        )
+        _audit(
+            self._conn,
+            action="ops_incident.resolved",
+            target_type="operational_incident",
+            target_id=str(incident_id),
+            actor_user_id=actor_user_id,
+            request_id=request_id,
+        )
+        return self.get(incident_id)
+
 
 class EmailUseCases:
     def send_mock_email(

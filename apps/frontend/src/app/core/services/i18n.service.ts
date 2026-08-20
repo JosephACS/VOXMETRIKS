@@ -104,8 +104,8 @@ export class I18nService {
 
   greetingKey(): TranslationKey {
     const hour = new Date().getHours();
-    if (hour < 12) return 'greeting.morning';
-    if (hour < 19) return 'greeting.afternoon';
-    return 'greeting.evening';
+    if (hour < 12) return 'home.greet.morning';
+    if (hour < 19) return 'home.greet.afternoon';
+    return 'home.greet.evening';
   }
 }

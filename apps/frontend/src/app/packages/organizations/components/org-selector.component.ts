@@ -64,14 +64,15 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         display: flex;
         flex-direction: column;
         border-radius: 10px;
-        border: 1px solid var(--border, #30363d);
-        background: var(--surface, #161b22);
+        border: 1px solid var(--shell-border-strong, var(--border, #30363d));
+        background: var(--shell-dropdown, var(--color-surface, #161b22));
+        color: var(--shell-fg, var(--color-text, #e7edea));
         padding: 0.35rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.35));
       }
       .org-selector-current {
         padding: 0.45rem 0.65rem 0.55rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
         margin-bottom: 0.25rem;
       }
       .org-selector-current-label {
@@ -79,12 +80,13 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        opacity: 0.6;
+        color: var(--shell-fg-subtle, rgba(231, 237, 234, 0.55));
         margin-bottom: 0.15rem;
       }
       .org-selector-current-name {
         font-weight: 600;
         font-size: 0.875rem;
+        color: var(--shell-fg, inherit);
       }
       .org-selector-search {
         width: 100%;
@@ -92,9 +94,9 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         margin: 0.15rem 0 0.35rem;
         padding: 0.45rem 0.65rem;
         border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(0, 0, 0, 0.25);
-        color: inherit;
+        border: 1px solid var(--shell-border, rgba(255, 255, 255, 0.12));
+        background: var(--shell-control-bg, rgba(0, 0, 0, 0.25));
+        color: var(--shell-fg, inherit);
         font: inherit;
         font-size: 0.8125rem;
       }
@@ -120,14 +122,14 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         border: 0;
         border-radius: 8px;
         background: transparent;
-        color: inherit;
+        color: var(--shell-fg, inherit);
         font: inherit;
         cursor: pointer;
       }
       .org-selector-item:hover,
       .org-selector-item:focus-visible,
       .org-selector-item--focused {
-        background: color-mix(in srgb, #1ed896 12%, transparent);
+        background: var(--shell-hover-strong, color-mix(in srgb, #1ed896 12%, transparent));
         outline: none;
       }
       .org-selector-item--active {
@@ -154,12 +156,13 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         text-transform: uppercase;
         padding: 0.12rem 0.4rem;
         border-radius: 999px;
-        background: rgba(30, 216, 150, 0.18);
-        color: #1ed896;
+        background: var(--accent-dim, rgba(30, 216, 150, 0.18));
+        color: var(--accent, #1ed896);
       }
       .org-selector-status {
         font-size: 0.75rem;
-        opacity: 0.75;
+        color: var(--shell-fg-muted, inherit);
+        opacity: 0.9;
       }
       .org-selector-link {
         display: block;
@@ -167,10 +170,10 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         text-align: left;
         padding: 0.55rem 0.65rem;
         text-decoration: none;
-        color: inherit;
+        color: var(--shell-fg, inherit);
         border-radius: 8px;
         border: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
         margin-top: 0.25rem;
         background: transparent;
         font: inherit;

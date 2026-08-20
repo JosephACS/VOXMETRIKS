@@ -10,6 +10,8 @@
         type="button"
         class="elt-btn elt-btn--primary"
         [disabled]="!canRunPipeline()"
+        [attr.title]="!canRunPipeline() ? runBlockedReason() || null : null"
+        [attr.aria-description]="!canRunPipeline() ? runBlockedReason() || null : null"
         (click)="runPipeline()"
       >
         @if (pipelineState() === 'running') {
@@ -23,6 +25,9 @@
         type="button"
         class="elt-btn elt-btn--ghost"
         [disabled]="pipelineState() === 'running' || !apiConnected()"
+        [attr.title]="
+          pipelineState() === 'running' || !apiConnected() ? runBlockedReason() || null : null
+        "
         (click)="importFromPocketBaseOnly()"
       >
         {{ 'elt.pocketbaseOnly' | t:lang() }}
@@ -78,6 +83,10 @@
       {{ apiConnected() ? ('elt.sourceAvailable' | t:lang()) : ('elt.sourceOffline' | t:lang()) }}
     </span>
   </section>
+
+  <div class="elt-banner" data-level="info" role="note" data-testid="elt-honesty-banner">
+    {{ 'elt.honestyBanner' | t:lang() }}
+  </div>
 
   <section class="elt-flow" aria-label="Flujo ELT">
     <div class="elt-flow__head">
@@ -148,6 +157,9 @@
       <span class="elt-controls__hint">
         {{ 'elt.generate' | t: { count: fmt(tracksToCreate()) }:lang() }}
       </span>
+    </div>
+    <div class="elt-banner" data-level="warn" role="note" data-testid="elt-synthetic-banner">
+      {{ 'elt.syntheticBanner' | t:lang() }}
     </div>
 
     @if (volumeValidation().message) {

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Invitation, InvitationRoleOption } from '../models/organization.models';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
@@ -22,12 +22,28 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
       }
+      @if (feedback()) {
+        <div class="org-alert org-alert--ok" role="status">{{ feedback() }}</div>
+      }
       @if (tokenOnce()) {
         <div class="org-alert org-alert--warn" role="status" data-testid="invite-token-banner">
-          Enlace de prueba disponible una sola vez (entorno de verificación).
-          <div class="org-token-box">{{ tokenOnce() }}</div>
-          <button type="button" class="org-btn org-btn--ghost" (click)="copyToken()">Copiar</button>
-          <button type="button" class="org-btn org-btn--ghost" (click)="tokenOnce.set(null)">Ocultar</button>
+          <p>{{ 'organizations.invitations.tokenOnce' | t: lang() }}</p>
+          <p class="org-muted">{{ 'organizations.invitations.tokenOnceBody' | t: lang() }}</p>
+          <div class="org-token-box" data-testid="invite-deep-link">{{ inviteDeepLink() }}</div>
+          <div class="org-actions" style="margin-top: 0.5rem">
+            <button type="button" class="org-btn org-btn--ghost" (click)="copyDeepLink()">
+              {{ 'organizations.invitations.copyLink' | t: lang() }}
+            </button>
+            <button type="button" class="org-btn org-btn--ghost" (click)="copyToken()">
+              {{ 'organizations.invitations.copyToken' | t: lang() }}
+            </button>
+            <button type="button" class="org-btn" (click)="openAccept()">
+              {{ 'organizations.invitations.openAccept' | t: lang() }}
+            </button>
+            <button type="button" class="org-btn org-btn--ghost" (click)="tokenOnce.set(null)">
+              {{ 'organizations.invitations.hideToken' | t: lang() }}
+            </button>
+          </div>
         </div>
       }
 
@@ -111,6 +127,7 @@ export class OrgInvitationsPageComponent implements OnInit {
   private readonly api = inject(OrganizationsApiService);
   readonly ctx = inject(OrganizationContextService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   orgId = 0;
   email = '';
@@ -122,6 +139,7 @@ export class OrgInvitationsPageComponent implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly feedback = signal<string | null>(null);
   readonly tokenOnce = signal<string | null>(null);
 
   canRevoke(): boolean {
@@ -177,6 +195,7 @@ export class OrgInvitationsPageComponent implements OnInit {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
+    this.feedback.set(null);
     this.tokenOnce.set(null);
     try {
       const res = await firstValueFrom(
@@ -185,33 +204,57 @@ export class OrgInvitationsPageComponent implements OnInit {
       if (res.invite_token && res.returned_once) {
         this.tokenOnce.set(res.invite_token);
       }
+      this.feedback.set(this.i18n.t('organizations.invitations.created'));
       this.email = '';
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof OrganizationsApiError ? e.message : 'No se pudo crear');
+      this.error.set(e instanceof OrganizationsApiError ? e.message : this.i18n.t('organizations.invitations.createFailed'));
     } finally {
       this.busy.set(false);
     }
   }
 
   async revoke(inv: Invitation): Promise<void> {
-    if (!confirm(`¿Revocar invitación a ${inv.email_normalized}?`)) return;
+    if (!confirm(this.i18n.t('organizations.invitations.revokeConfirm', { email: inv.email_normalized }))) {
+      return;
+    }
     try {
       await firstValueFrom(this.api.revokeInvitation(this.orgId, inv.id));
+      this.feedback.set(this.i18n.t('organizations.invitations.revoked'));
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof OrganizationsApiError ? e.message : 'No se pudo revocar');
+      this.error.set(e instanceof OrganizationsApiError ? e.message : this.i18n.t('organizations.invitations.revokeFailed'));
     }
   }
 
   async resend(inv: Invitation): Promise<void> {
     this.tokenOnce.set(null);
+    this.feedback.set(null);
     try {
       const res = await firstValueFrom(this.api.resendInvitation(this.orgId, inv.id));
       if (res.invite_token) this.tokenOnce.set(res.invite_token);
+      this.feedback.set(this.i18n.t('organizations.invitations.resent'));
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof OrganizationsApiError ? e.message : 'No se pudo reenviar');
+      this.error.set(e instanceof OrganizationsApiError ? e.message : this.i18n.t('organizations.invitations.resendFailed'));
+    }
+  }
+
+  inviteDeepLink(): string {
+    const t = this.tokenOnce();
+    if (!t) return '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/invitations/accept?token=${encodeURIComponent(t)}`;
+  }
+
+  async copyDeepLink(): Promise<void> {
+    const link = this.inviteDeepLink();
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      this.feedback.set(this.i18n.t('organizations.invitations.linkCopied'));
+    } catch {
+      this.error.set(this.i18n.t('organizations.invitations.copyFailed'));
     }
   }
 
@@ -220,8 +263,17 @@ export class OrgInvitationsPageComponent implements OnInit {
     if (!t) return;
     try {
       await navigator.clipboard.writeText(t);
+      this.feedback.set(this.i18n.t('organizations.invitations.tokenCopied'));
     } catch {
-      /* ignore */
+      this.error.set(this.i18n.t('organizations.invitations.copyFailed'));
     }
+  }
+
+  openAccept(): void {
+    const t = this.tokenOnce();
+    if (!t) return;
+    void this.router.navigate(['/invitations/accept'], {
+      state: { invitationToken: t },
+    });
   }
 }

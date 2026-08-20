@@ -21,8 +21,14 @@ import {
   initialCheckoutState,
 } from '../state/checkout.reducer';
 import {
+  CardBrand,
+  DEMO_PAN_BY_BRAND,
   clearSensitive,
+  cvvMaxDigits,
+  digitsOnly,
+  formatPanDisplay,
   mapToSafeMethod,
+  panMaxDigits,
   validateCardInput,
 } from '../utils/simulated-card';
 
@@ -125,14 +131,51 @@ function newIdempotencyKey(prefix: string): string {
             </section>
           }
           @case ('payment') {
-            <section class="vx-card" data-testid="checkout-payment">
+            <section class="vx-card pay-panel" data-testid="checkout-payment">
               <h2>{{ 'checkout.payment.heading' | t:lang() }}</h2>
               @if (ui().attachedMethod; as m) {
                 <p class="muted">
                   {{ m.display_label || (m.brand + ' ···· ' + m.last4) }}
                 </p>
               }
-              <form class="vx-form" (ngSubmit)="submitPayment()">
+
+              <div class="brand-picker" role="radiogroup" [attr.aria-label]="'checkout.payment.brand' | t:lang()">
+                @for (b of brands; track b.id) {
+                  <button
+                    type="button"
+                    class="brand-chip"
+                    role="radio"
+                    [attr.aria-checked]="cardBrand === b.id"
+                    [class.active]="cardBrand === b.id"
+                    [attr.data-testid]="'checkout-brand-' + b.id"
+                    (click)="selectBrand(b.id)"
+                  >
+                    <span class="brand-chip__mark" [attr.data-brand]="b.id" aria-hidden="true"></span>
+                    <span>{{ b.labelKey | t:lang() }}</span>
+                  </button>
+                }
+              </div>
+
+              <div class="pay-preview" [attr.data-brand]="cardBrand" aria-hidden="true">
+                <div class="pay-preview__top">
+                  <span class="pay-preview__chip"></span>
+                  <span class="pay-preview__brand">{{ brandLabelKey() | t:lang() }}</span>
+                </div>
+                <div class="pay-preview__pan">{{ panPreview() }}</div>
+                <div class="pay-preview__bottom">
+                  <span>{{ expMonthDisplay() }} / {{ expYearDisplay() }}</span>
+                  <span>•••</span>
+                </div>
+              </div>
+
+              <p class="pay-hint" data-testid="checkout-demo-hint">
+                {{ 'checkout.payment.demoHint' | t:lang() }}
+                <button type="button" class="pay-hint__fill" (click)="fillDemoCard()">
+                  {{ formatPanDisplay(demoPan(), cardBrand) }}
+                </button>
+              </p>
+
+              <form class="vx-form pay-form" (ngSubmit)="submitPayment()" novalidate>
                 <div class="form-field">
                   <label for="checkout-pan">{{ 'checkout.payment.pan' | t:lang() }}</label>
                   <input
@@ -141,8 +184,10 @@ function newIdempotencyKey(prefix: string): string {
                     class="input"
                     autocomplete="cc-number"
                     inputmode="numeric"
+                    [attr.maxlength]="panInputMax()"
                     data-testid="checkout-card-pan"
-                    [(ngModel)]="pan"
+                    [ngModel]="panDisplay"
+                    (ngModelChange)="onPanChange($event)"
                   />
                 </div>
                 <div class="form-field">
@@ -153,7 +198,10 @@ function newIdempotencyKey(prefix: string): string {
                     class="input"
                     autocomplete="cc-csc"
                     inputmode="numeric"
-                    [(ngModel)]="cvv"
+                    [attr.maxlength]="cvvInputMax()"
+                    data-testid="checkout-card-cvv"
+                    [ngModel]="cvv"
+                    (ngModelChange)="onCvvChange($event)"
                   />
                 </div>
                 <div class="form-row">
@@ -162,11 +210,13 @@ function newIdempotencyKey(prefix: string): string {
                     <input
                       id="checkout-exp-month"
                       name="expMonth"
-                      type="number"
-                      min="1"
-                      max="12"
                       class="input"
-                      [(ngModel)]="expMonth"
+                      inputmode="numeric"
+                      maxlength="2"
+                      placeholder="MM"
+                      data-testid="checkout-exp-month"
+                      [ngModel]="expMonthText"
+                      (ngModelChange)="onMonthChange($event)"
                     />
                   </div>
                   <div class="form-field">
@@ -174,11 +224,13 @@ function newIdempotencyKey(prefix: string): string {
                     <input
                       id="checkout-exp-year"
                       name="expYear"
-                      type="number"
-                      min="2024"
-                      max="2100"
                       class="input"
-                      [(ngModel)]="expYear"
+                      inputmode="numeric"
+                      maxlength="4"
+                      placeholder="AAAA"
+                      data-testid="checkout-exp-year"
+                      [ngModel]="expYearText"
+                      (ngModelChange)="onYearChange($event)"
                     />
                   </div>
                 </div>
@@ -272,6 +324,7 @@ function newIdempotencyKey(prefix: string): string {
       .checkout-steps .active {
         font-weight: 600;
         text-decoration: underline;
+        color: var(--accent, #0d9f70);
       }
       .checkout-summary {
         display: grid;
@@ -285,6 +338,121 @@ function newIdempotencyKey(prefix: string): string {
       .checkout-summary dt {
         font-weight: 600;
         min-width: 6rem;
+      }
+      .pay-panel h2 {
+        margin-bottom: 0.85rem;
+      }
+      .brand-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin: 0 0 1rem;
+      }
+      .brand-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--border, rgba(18, 28, 24, 0.16));
+        background: var(--vx-surface, #e3eae6);
+        color: var(--color-text, #121916);
+        font: inherit;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      }
+      .brand-chip:hover {
+        border-color: color-mix(in srgb, var(--accent, #0d9f70) 45%, transparent);
+      }
+      .brand-chip.active {
+        border-color: var(--accent, #0d9f70);
+        background: var(--accent-dim, rgba(13, 159, 112, 0.12));
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #0d9f70) 22%, transparent);
+      }
+      .brand-chip__mark {
+        width: 1.35rem;
+        height: 0.9rem;
+        border-radius: 0.2rem;
+        background: linear-gradient(135deg, #1a1f71, #3b82f6);
+      }
+      .brand-chip__mark[data-brand='mastercard'] {
+        background: linear-gradient(90deg, #eb001b 0 50%, #f79e1b 50% 100%);
+      }
+      .brand-chip__mark[data-brand='amex'] {
+        background: linear-gradient(135deg, #016fd0, #00a3e0);
+      }
+      .pay-preview {
+        position: relative;
+        margin: 0 0 1rem;
+        padding: 1.1rem 1.15rem 1rem;
+        border-radius: 1rem;
+        min-height: 8.5rem;
+        color: #f4f8f6;
+        background:
+          radial-gradient(ellipse 70% 80% at 100% 0%, rgba(30, 216, 150, 0.28), transparent 55%),
+          linear-gradient(145deg, #121916 0%, #1c2a24 52%, #0f1714 100%);
+        box-shadow: 0 14px 32px rgba(18, 28, 24, 0.18);
+        overflow: hidden;
+      }
+      .pay-preview[data-brand='mastercard'] {
+        background:
+          radial-gradient(ellipse 55% 70% at 85% 15%, rgba(247, 158, 27, 0.35), transparent 50%),
+          radial-gradient(ellipse 45% 60% at 70% 20%, rgba(235, 0, 27, 0.28), transparent 48%),
+          linear-gradient(145deg, #1a1214 0%, #2a1c1e 55%, #120e10 100%);
+      }
+      .pay-preview[data-brand='amex'] {
+        background:
+          radial-gradient(ellipse 60% 70% at 90% 10%, rgba(0, 163, 224, 0.35), transparent 55%),
+          linear-gradient(145deg, #061525 0%, #0b2f4a 55%, #05101c 100%);
+      }
+      .pay-preview__top,
+      .pay-preview__bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+      .pay-preview__chip {
+        width: 2.4rem;
+        height: 1.7rem;
+        border-radius: 0.35rem;
+        background: linear-gradient(145deg, #d4af37, #f5e6a3 45%, #b8860b);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+      }
+      .pay-preview__pan {
+        margin: 1.15rem 0 0.95rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        font-variant-numeric: tabular-nums;
+      }
+      .pay-hint {
+        margin: 0 0 0.85rem;
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary, rgba(18, 25, 22, 0.72));
+        line-height: 1.45;
+      }
+      .pay-hint__fill {
+        display: inline;
+        margin-left: 0.25rem;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--accent, #0d9f70);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .pay-form .input {
+        font-variant-numeric: tabular-nums;
       }
       .form-row {
         display: flex;
@@ -319,14 +487,25 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
 
   /** In-memory only — never copied into reducer state. */
   pan = '';
+  panDisplay = '';
   cvv = '';
   expMonth = 12;
   expYear = new Date().getFullYear() + 2;
+  expMonthText = '12';
+  expYearText = String(new Date().getFullYear() + 2);
+  cardBrand: CardBrand = 'visa';
+
+  readonly brands: Array<{ id: CardBrand; labelKey: string }> = [
+    { id: 'visa', labelKey: 'checkout.payment.brand.visa' },
+    { id: 'mastercard', labelKey: 'checkout.payment.brand.mastercard' },
+    { id: 'amex', labelKey: 'checkout.payment.brand.amex' },
+  ];
 
   private createKey: string | null = null;
   private confirmKey: string | null = null;
   private pollSub: Subscription | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private conflictRetried = false;
 
   ngOnInit(): void {
     const dataScope = this.route.snapshot.data['checkoutScope'] as CheckoutScope | undefined;
@@ -437,6 +616,9 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
       return;
     }
 
+    // New attempt from plans: always mint a fresh create key.
+    this.createKey = null;
+    this.conflictRetried = false;
     this.createSessionFromQuery();
   }
 
@@ -501,11 +683,31 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
 
   private onSessionReady(session: CheckoutSession, initial: boolean): void {
     this.bootLoading.set(false);
+    // Abandoned/expired session loaded by id → start a fresh checkout for the same plan.
+    if (
+      initial &&
+      (session.status === 'canceled' || session.status === 'expired') &&
+      !this.route.snapshot.queryParamMap.get('plan_code') &&
+      !this.route.snapshot.queryParamMap.get('plan_id')
+    ) {
+      this.fatalError.set(this.i18n.t('checkout.result.canceledBody'));
+      return;
+    }
+    if (initial && (session.status === 'canceled' || session.status === 'expired')) {
+      this.createKey = null;
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { checkout_id: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      }).then(() => this.createSessionFromQuery());
+      return;
+    }
     if (!this.ui().disclosureSeen) {
       this.dispatch({ type: 'SET_DISCLOSURE_SEEN', seen: true });
     }
     this.dispatch({ type: 'APPLY_SESSION', session });
-    if (initial && (session.status === 'draft' || session.status === 'awaiting_method')) {
+    if (initial && (session.status === 'draft' || session.status === 'awaiting_method' || session.status === 'ready' || session.status === 'failed')) {
       this.dispatch({ type: 'GO_STEP', step: 'review' });
     }
     void this.router.navigate([], {
@@ -528,6 +730,14 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
     this.bootLoading.set(false);
     const code = e?.error?.detail?.code;
     const msg = e?.error?.detail?.message;
+    // Legacy conflict: open session exists — retry create once (backend now resumes).
+    if (code === 'checkout_idempotency_conflict' && !this.conflictRetried) {
+      this.conflictRetried = true;
+      this.createKey = null;
+      this.bootLoading.set(true);
+      this.createSessionFromQuery();
+      return;
+    }
     this.fatalError.set(msg || (code ? this.errorMessage(code) : this.i18n.t('checkout.error.generic')));
   }
 
@@ -536,7 +746,13 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
     const session = this.ui().session;
     if (!session) return;
 
-    const validation = validateCardInput(this.pan, this.cvv, Number(this.expMonth), Number(this.expYear));
+    const validation = validateCardInput(
+      this.pan,
+      this.cvv,
+      Number(this.expMonth),
+      Number(this.expYear),
+      this.cardBrand,
+    );
     if (!validation.ok) {
       this.dispatch({ type: 'SET_ERROR', errorCode: validation.errors[0] || 'invalid_pan' });
       return;
@@ -544,7 +760,13 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
 
     let payload: SafePaymentMethodPayload;
     try {
-      payload = mapToSafeMethod(this.pan, this.cvv, Number(this.expMonth), Number(this.expYear));
+      payload = mapToSafeMethod(
+        this.pan,
+        this.cvv,
+        Number(this.expMonth),
+        Number(this.expYear),
+        this.cardBrand,
+      );
     } catch {
       this.dispatch({ type: 'SET_ERROR', errorCode: 'invalid_pan' });
       return;
@@ -580,6 +802,82 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
         });
       },
     });
+  }
+
+  selectBrand(brand: CardBrand): void {
+    this.cardBrand = brand;
+    this.pan = digitsOnly(this.pan).slice(0, panMaxDigits(brand));
+    this.panDisplay = formatPanDisplay(this.pan, brand);
+    this.cvv = digitsOnly(this.cvv).slice(0, cvvMaxDigits(brand));
+    this.dispatch({ type: 'SET_ERROR', errorCode: null });
+  }
+
+  fillDemoCard(): void {
+    const demo = DEMO_PAN_BY_BRAND[this.cardBrand];
+    this.pan = demo;
+    this.panDisplay = formatPanDisplay(demo, this.cardBrand);
+    this.cvv = this.cardBrand === 'amex' ? '1234' : '123';
+    this.expMonth = 12;
+    this.expYear = new Date().getFullYear() + 2;
+    this.expMonthText = '12';
+    this.expYearText = String(this.expYear);
+    this.dispatch({ type: 'SET_ERROR', errorCode: null });
+  }
+
+  demoPan(): string {
+    return DEMO_PAN_BY_BRAND[this.cardBrand];
+  }
+
+  formatPanDisplay(pan: string, brand: CardBrand): string {
+    return formatPanDisplay(pan, brand);
+  }
+
+  brandLabelKey(): string {
+    return `checkout.payment.brand.${this.cardBrand}`;
+  }
+
+  panPreview(): string {
+    return this.panDisplay || '•••• •••• •••• ••••';
+  }
+
+  expMonthDisplay(): string {
+    return this.expMonthText.padStart(2, '0').slice(0, 2) || 'MM';
+  }
+
+  expYearDisplay(): string {
+    return this.expYearText.slice(0, 4) || 'AAAA';
+  }
+
+  panInputMax(): number {
+    return this.cardBrand === 'amex' ? 17 : 19;
+  }
+
+  cvvInputMax(): number {
+    return cvvMaxDigits(this.cardBrand);
+  }
+
+  onPanChange(value: string): void {
+    const digits = digitsOnly(value).slice(0, panMaxDigits(this.cardBrand));
+    this.pan = digits;
+    this.panDisplay = formatPanDisplay(digits, this.cardBrand);
+  }
+
+  onCvvChange(value: string): void {
+    this.cvv = digitsOnly(value).slice(0, cvvMaxDigits(this.cardBrand));
+  }
+
+  onMonthChange(value: string): void {
+    const digits = digitsOnly(value).slice(0, 2);
+    this.expMonthText = digits;
+    const n = Number(digits);
+    this.expMonth = Number.isFinite(n) ? n : 0;
+  }
+
+  onYearChange(value: string): void {
+    const digits = digitsOnly(value).slice(0, 4);
+    this.expYearText = digits;
+    const n = Number(digits);
+    this.expYear = Number.isFinite(n) ? n : 0;
   }
 
   private confirmSession(session: CheckoutSession): void {
@@ -669,6 +967,7 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
     clearSensitive(panRef);
     clearSensitive(cvvRef);
     this.pan = panRef.value;
+    this.panDisplay = '';
     this.cvv = cvvRef.value;
   }
 }

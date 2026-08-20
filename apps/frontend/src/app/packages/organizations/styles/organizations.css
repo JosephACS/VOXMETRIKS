@@ -88,7 +88,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   background: var(--accent);
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
   font-weight: 600;
 }
 

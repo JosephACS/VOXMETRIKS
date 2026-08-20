@@ -88,7 +88,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   background: var(--accent);
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
   font-weight: 600;
   text-decoration: none;
   display: inline-flex;
@@ -186,16 +186,19 @@
   background: var(--chip-bg);
 }
 
-.crm-badge--prospect { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
+.crm-badge--prospect,
+.crm-badge--qualification { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
 .crm-badge--qualified { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
 .crm-badge--proposal { border-color: rgba(168, 85, 247, 0.45); color: #c084fc; }
 .crm-badge--negotiation { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
-.crm-badge--won {
+.crm-badge--won,
+.crm-badge--closed_won {
   background: var(--accent-dim);
   border-color: rgba(30, 216, 150, 0.45);
   color: var(--accent);
 }
-.crm-badge--lost {
+.crm-badge--lost,
+.crm-badge--closed_lost {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.4);
   color: #f87171;
@@ -211,6 +214,16 @@
   background: var(--accent-dim);
   border-color: rgba(30, 216, 150, 0.45);
   color: var(--accent);
+}
+
+.crm-token-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border, #30363d);
+  background: var(--chip-bg, rgba(0, 0, 0, 0.04));
 }
 
 .crm-board {

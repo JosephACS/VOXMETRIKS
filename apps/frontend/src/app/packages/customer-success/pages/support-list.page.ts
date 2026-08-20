@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -33,9 +33,9 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         </app-enterprise-page-header>
 
         <app-enterprise-section-card [title]="'support.list.create' | t:lang()">
-          <form class="form-grid" (ngSubmit)="create()">
+          <form class="form-grid" (ngSubmit)="create()" id="support-create-form">
             <app-enterprise-form-field [label]="'support.list.subject' | t:lang()" [required]="true">
-              <input [(ngModel)]="subject" name="subject" class="input" />
+              <input [(ngModel)]="subject" name="subject" class="input" #subjectInput />
             </app-enterprise-form-field>
             <div class="form-grid__actions">
               <button type="submit" class="btn btn--primary" [disabled]="busy || !subject">
@@ -54,6 +54,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             [title]="'support.list.emptyTitle' | t:lang()"
             [description]="'support.list.emptyBody' | t:lang()"
             [ctaLabel]="'support.list.create' | t:lang()"
+            (ctaClick)="focusCreate()"
           />
         } @else {
           <app-enterprise-data-table>
@@ -96,6 +97,7 @@ export class SupportListPage implements OnInit {
 
   private api = inject(CustomerSuccessApiService);
   private orgCtx = inject(OrganizationContextService);
+  @ViewChild('subjectInput') subjectInput?: ElementRef<HTMLInputElement>;
   orgId: number | null = null;
   cases: unknown[] = [];
   subject = '';
@@ -106,6 +108,16 @@ export class SupportListPage implements OnInit {
   ngOnInit(): void {
     this.orgId = this.orgCtx.organizationId();
     if (this.orgId) this.reload();
+  }
+
+  focusCreate(): void {
+    const el = this.subjectInput?.nativeElement;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus();
+    } else {
+      document.getElementById('support-create-form')?.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   reload(): void {

@@ -34,6 +34,8 @@ export function artistPermissionGuard(
       return router.createUrlTree(['/artist-space/claim']);
     }
     if (artistCtx.can(permission)) return true;
-    return router.createUrlTree(['/access-denied']);
+    return router.createUrlTree(['/access-denied'], {
+      queryParams: { reason: 'artist' },
+    });
   };
 }

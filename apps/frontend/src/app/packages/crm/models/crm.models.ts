@@ -73,12 +73,11 @@ export interface ContactCreateRequest {
 // ── Opportunities ─────────────────────────────────────────────────────────────
 
 export const OPPORTUNITY_STAGES = [
-  'prospect',
-  'qualified',
+  'qualification',
   'proposal',
   'negotiation',
-  'won',
-  'lost',
+  'closed_won',
+  'closed_lost',
   'canceled',
 ] as const;
 

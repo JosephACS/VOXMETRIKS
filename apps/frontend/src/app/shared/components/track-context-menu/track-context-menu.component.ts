@@ -83,9 +83,10 @@ import { NotificationService } from '../../../core/services/notification.service
       min-width: 200px;
       padding: 0.35rem 0;
       border-radius: 8px;
-      background: var(--shell-panel, #282828);
+      background: var(--shell-dropdown, var(--shell-panel, #282828));
       border: 1px solid var(--shell-border-strong, rgba(255,255,255,0.1));
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.45));
+      color: var(--shell-fg, var(--text));
       z-index: 120;
     }
     .tcm-menu.drop-up {
@@ -98,7 +99,7 @@ import { NotificationService } from '../../../core/services/notification.service
       padding: 0.55rem 1rem;
       border: none;
       background: transparent;
-      color: var(--text);
+      color: var(--shell-fg, var(--text));
       font-size: 0.8125rem;
       text-align: left;
       cursor: pointer;

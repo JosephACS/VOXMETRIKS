@@ -30,7 +30,7 @@ export const PLATFORM_OPS_QUEUE_PATHS: Record<PlatformOpsQueueCode, string> = {
   artist_requests: '/platform-ops/artist-requests',
   catalog_reviews: '/platform-ops/catalog-reviews',
   audio_unresolved: '/platform-ops/audio-unresolved',
-  incidents: '/platform-ops/system',
+  incidents: '/platform-ops/incidents',
 };
 
 export interface FeatureFlag {
@@ -100,4 +100,17 @@ export interface AudioCandidatesResponse {
   artist_name: string;
   duration_ms?: number | null;
   candidates: AudioCandidate[];
+}
+
+export interface OperationalIncident {
+  id: number;
+  title: string;
+  severity: string;
+  status: string;
+  description: string;
+  reported_by: number;
+  reported_at: string;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }

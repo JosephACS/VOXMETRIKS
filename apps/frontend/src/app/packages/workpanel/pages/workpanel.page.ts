@@ -508,7 +508,7 @@ interface ShortcutItem {
       }
       .wp-cta--primary {
         background: var(--vx-accent, #1ed896);
-        color: #04140e;
+        color: var(--btn-on-accent, #0A1210);
         border-color: transparent;
       }
       .wp-cta--ghost {

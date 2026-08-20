@@ -114,6 +114,27 @@ def test_onboarding_health_risk_support_lifecycle(client: TestClient, cs_admin):
     assert sla.status_code == 200
     assert len(sla.json()) >= 1
 
+    reopened = client.post(f"/api/v1/support/cases/{cid}/reopen", headers=h)
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["status"] == "reopened"
+    assert client.post(f"/api/v1/support/cases/{cid}/triage", headers=h).status_code == 200
+    # Closed/resolved cannot be assigned without reopen (already reopened+triaged here)
+    bad_assign = client.post(
+        f"/api/v1/support/cases/{cid}/assign",
+        headers=h,
+        json={"assignee_user_id": cs_admin["user_id"]},
+    )
+    assert bad_assign.status_code == 200
+    closed_again = client.post(f"/api/v1/support/cases/{cid}/resolve", headers=h)
+    assert closed_again.status_code == 200
+    assert client.post(f"/api/v1/support/cases/{cid}/close", headers=h).status_code == 200
+    blocked = client.post(
+        f"/api/v1/support/cases/{cid}/assign",
+        headers=h,
+        json={"assignee_user_id": cs_admin["user_id"]},
+    )
+    assert blocked.status_code in (409, 422)
+
 
 def test_cross_tenant_support_404(client: TestClient, cs_admin):
     h = cs_admin["org_headers"]

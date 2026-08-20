@@ -150,6 +150,21 @@ export class EltPipelineComponent implements OnInit, OnDestroy {
       (this.volumeValidation().ok || this.volumeValidation().level === 'info'),
   );
 
+  /** Shown on disabled run/import controls so the reason is obvious without redesign. */
+  runBlockedReason = computed(() => {
+    if (this.pipelineState() === 'running') {
+      return 'Pipeline en ejecución';
+    }
+    if (!this.apiConnected()) {
+      return 'Sin conexión API — no se puede ejecutar el pipeline';
+    }
+    const vol = this.volumeValidation();
+    if (!vol.ok && vol.level !== 'info' && vol.message) {
+      return vol.message;
+    }
+    return '';
+  });
+
   overallStateKey = computed<OverallStateKey>(() => {
     if (!this.apiConnected()) return 'offline';
     if (this.pipelineState() === 'running') return 'running';

@@ -62,7 +62,7 @@ COMMERCIAL_CATALOG: tuple[CatalogPlan, ...] = (
     CatalogPlan(
         code="starter",
         display_name="Starter",
-        description="VOXMETRIKS Starter — entry commercial plan.",
+        description="Plan inicial para organizar el trabajo comercial de tu sello o empresa musical.",
         sort_order=10,
         trial_days_default=14,
         prices=(
@@ -78,7 +78,7 @@ COMMERCIAL_CATALOG: tuple[CatalogPlan, ...] = (
     CatalogPlan(
         code="professional",
         display_name="Professional",
-        description="VOXMETRIKS Professional — growth commercial plan.",
+        description="Plan de crecimiento con más miembros, proyectos y analítica básica.",
         sort_order=20,
         trial_days_default=14,
         prices=(
@@ -95,7 +95,7 @@ COMMERCIAL_CATALOG: tuple[CatalogPlan, ...] = (
     CatalogPlan(
         code="business",
         display_name="Business",
-        description="VOXMETRIKS Business — team commercial plan.",
+        description="Plan para equipos: más capacidad, analítica avanzada e inicio de sesión único (SSO).",
         sort_order=30,
         trial_days_default=14,
         prices=(
@@ -113,7 +113,7 @@ COMMERCIAL_CATALOG: tuple[CatalogPlan, ...] = (
     CatalogPlan(
         code="enterprise",
         display_name="Enterprise",
-        description="VOXMETRIKS Enterprise — full commercial plan.",
+        description="Plan completo: capacidad ampliada, soporte dedicado y SLA personalizado.",
         sort_order=40,
         trial_days_default=30,
         prices=(

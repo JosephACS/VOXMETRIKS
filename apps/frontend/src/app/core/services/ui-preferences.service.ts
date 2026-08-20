@@ -116,7 +116,7 @@ export class UiPreferencesService {
     document.documentElement.setAttribute('data-theme', resolved);
     document.documentElement.style.colorScheme = resolved;
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute('content', resolved === 'dark' ? '#0C1110' : '#DEE4E1');
+    meta?.setAttribute('content', resolved === 'dark' ? '#0C1110' : '#F3F6F4');
   }
 
   private applyCompact(): void {

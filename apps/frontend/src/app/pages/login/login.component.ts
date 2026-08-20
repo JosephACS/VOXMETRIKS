@@ -2,7 +2,7 @@
  * LoginComponent — VOXMETRIK auth (login + register)
  */
 
-import { Component, inject, signal, OnInit, NgZone, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, OnInit, NgZone, ElementRef, ViewChild, computed } from '@angular/core';
 import {
   AbstractControl,
   ReactiveFormsModule,
@@ -13,6 +13,7 @@ import {
 
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { isAbortOrOfflineHttpError } from '../../core/i18n/http-error-keys';
 import { UiPreferencesService, AppLanguage } from '../../core/services/ui-preferences.service';
 import { PostAuthOrchestrator } from '../../core/spaces/post-auth.orchestrator';
 import { captureReturnUrl, isSafeReturnUrl } from '../../core/spaces/return-url';
@@ -76,6 +77,12 @@ export class LoginComponent implements OnInit {
   private readonly zone = inject(NgZone);
 
   protected readonly language = this.ui.language;
+  protected readonly isDarkTheme = computed(() => this.ui.isVisuallyDark());
+  protected readonly themeToggleAria = computed(() =>
+    this.isDarkTheme()
+      ? this.i18n.t('shell.theme.toLight')
+      : this.i18n.t('shell.theme.toDark'),
+  );
 
   protected readonly mode = signal<AuthMode>('login');
   protected readonly isLoading = signal(false);
@@ -145,7 +152,11 @@ export class LoginComponent implements OnInit {
         this.googleClientId.set(cfg.google_client_id);
         this.loadGoogleScript();
       }
-    }).catch((err) => console.error('[LoginComponent] getAuthConfig failed', err));
+    }).catch((err) => {
+      if (!isAbortOrOfflineHttpError(err)) {
+        console.error('[LoginComponent] getAuthConfig failed', err);
+      }
+    });
 
     // Deep-link: /login?mode=reset&email=...&returnUrl=...
     const params = new URLSearchParams(window.location.search);
@@ -166,6 +177,10 @@ export class LoginComponent implements OnInit {
 
   protected setLanguage(lang: AppLanguage): void {
     this.ui.setLanguage(lang);
+  }
+
+  protected toggleTheme(): void {
+    this.ui.toggleDarkLight();
   }
 
   protected setMode(m: AuthMode): void {

@@ -553,7 +553,19 @@ class SupportUseCases:
         return self._get_case(organization_id, case_id)
 
     def assign(self, *, organization_id: int, case_id: int, assignee_user_id: int, actor_user_id: Optional[int] = None, request_id: Optional[str] = None) -> SupportCase:
-        self._get_case(organization_id, case_id)
+        case = self._get_case(organization_id, case_id)
+        if case.status in ("closed", "resolved"):
+            raise StateError("Cannot assign closed/resolved case; reopen first")
+        if case.status not in (
+            "open",
+            "triaged",
+            "reopened",
+            "assigned",
+            "escalated",
+            "in_progress",
+            "waiting_customer",
+        ):
+            raise StateError("Cannot assign from current status")
         now = _now()
         aid = _next_id(self._conn, "app_support_assignment")
         self._conn.execute(
@@ -627,7 +639,15 @@ class SupportUseCases:
         return [SupportMessage(*r) for r in rows]
 
     def escalate(self, *, organization_id: int, case_id: int, actor_user_id: Optional[int] = None, request_id: Optional[str] = None) -> SupportCase:
-        self._get_case(organization_id, case_id)
+        case = self._get_case(organization_id, case_id)
+        if case.status not in (
+            "triaged",
+            "assigned",
+            "in_progress",
+            "waiting_customer",
+            "reopened",
+        ):
+            raise StateError("Cannot escalate from current status")
         now = _now()
         self._conn.execute("UPDATE app_support_case SET status = 'escalated', updated_at = ? WHERE id = ?", [now, case_id])
         _audit(self._conn, action="support.case.escalated", target_type="support_case", target_id=str(case_id),

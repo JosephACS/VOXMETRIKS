@@ -116,11 +116,31 @@ export class CustomerSuccessApiService {
     });
   }
 
+  triage(orgId: number, id: number) {
+    return this.http.post(`${base}/support/cases/${id}/triage`, null, { headers: this.orgHeaders(orgId) });
+  }
+
+  assign(orgId: number, id: number, assigneeUserId: number) {
+    return this.http.post(
+      `${base}/support/cases/${id}/assign`,
+      { assignee_user_id: assigneeUserId },
+      { headers: this.orgHeaders(orgId) },
+    );
+  }
+
+  escalate(orgId: number, id: number) {
+    return this.http.post(`${base}/support/cases/${id}/escalate`, null, { headers: this.orgHeaders(orgId) });
+  }
+
   resolve(orgId: number, id: number) {
     return this.http.post(`${base}/support/cases/${id}/resolve`, null, { headers: this.orgHeaders(orgId) });
   }
 
   close(orgId: number, id: number) {
     return this.http.post(`${base}/support/cases/${id}/close`, null, { headers: this.orgHeaders(orgId) });
+  }
+
+  reopen(orgId: number, id: number) {
+    return this.http.post(`${base}/support/cases/${id}/reopen`, null, { headers: this.orgHeaders(orgId) });
   }
 }

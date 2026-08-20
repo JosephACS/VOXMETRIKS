@@ -6,9 +6,10 @@ import { firstValueFrom } from 'rxjs';
 import { OrganizationsApiError, OrganizationsApiService } from '../services/organizations-api.service';
 import { OrganizationContextService } from '../services/organization-context.service';
 import { AuthService } from '../../../core/services/auth.service';
-
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { captureReturnUrl } from '../../../core/spaces/return-url';
+
 @Component({
   selector: 'app-org-accept-invite-page',
   standalone: true,
@@ -16,37 +17,64 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrls: ['../styles/organizations.css'],
   template: `
     <section class="org-page" data-testid="org-accept-invite-page">
-      <h1>{{ 'organizations.acceptInvite.title' | t:lang() }}</h1>
-      <p class="lede">
-        Acepta una invitación con el enlace que recibiste. Debes iniciar sesión con el mismo correo.
-      </p>
+      <h1>{{ 'organizations.acceptInvite.title' | t: lang() }}</h1>
+      <p class="lede">{{ 'organizations.acceptInvite.lede' | t: lang() }}</p>
 
       @if (!auth.isAuthenticated()) {
-        <div class="org-alert org-alert--warn">
-          Inicia sesión para aceptar la invitación.
-          <a routerLink="/login">Ir a login</a>
+        <div class="org-alert org-alert--warn" role="status">
+          {{ 'organizations.acceptInvite.needLogin' | t: lang() }}
+          <div class="org-actions" style="margin-top: 0.75rem">
+            <a class="org-btn" [routerLink]="['/login']" [queryParams]="loginQuery()" (click)="captureLoginReturn()">
+              {{ 'organizations.acceptInvite.login' | t: lang() }}
+            </a>
+          </div>
         </div>
+        @if (token.trim()) {
+          <p class="org-muted">{{ 'organizations.acceptInvite.tokenReady' | t: lang() }}</p>
+        }
       } @else {
         @if (error()) {
           <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
         }
         @if (success()) {
           <div class="org-alert org-alert--ok" role="status">
-            Te uniste a {{ successOrg() }}.
+            {{ 'organizations.acceptInvite.joined' | t: { name: successOrg() }: lang() }}
           </div>
           <div class="org-actions">
-            <button type="button" class="org-btn" (click)="activate()" [disabled]="!successOrgId() || activating()" data-testid="invite-activate">
-              Entrar al espacio
+            <button
+              type="button"
+              class="org-btn"
+              (click)="activate()"
+              [disabled]="!successOrgId() || activating()"
+              data-testid="invite-activate"
+            >
+              {{ 'organizations.acceptInvite.enterSpace' | t: lang() }}
             </button>
           </div>
         } @else {
           <form class="org-card org-form" (ngSubmit)="accept()">
             <label>
-              Código de invitación
-              <input name="token" [(ngModel)]="token" autocomplete="off" required [disabled]="busy()" data-testid="invite-token-input" />
+              {{ 'organizations.acceptInvite.tokenLabel' | t: lang() }}
+              <input
+                name="token"
+                [(ngModel)]="token"
+                autocomplete="off"
+                required
+                [disabled]="busy()"
+                data-testid="invite-token-input"
+              />
             </label>
-            <button class="org-btn" type="submit" [disabled]="busy() || !token.trim()" data-testid="invite-accept-submit">
-              {{ busy() ? 'Aceptando…' : 'Aceptar invitación' }}
+            <button
+              class="org-btn"
+              type="submit"
+              [disabled]="busy() || !token.trim()"
+              data-testid="invite-accept-submit"
+            >
+              {{
+                busy()
+                  ? ('organizations.acceptInvite.accepting' | t: lang())
+                  : ('organizations.acceptInvite.submit' | t: lang())
+              }}
             </button>
           </form>
         }
@@ -55,7 +83,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   `,
 })
 export class OrgAcceptInvitePageComponent implements OnInit {
-  private i18n = inject(I18nService);
+  private readonly i18n = inject(I18nService);
   readonly lang = this.i18n.lang;
 
   private readonly api = inject(OrganizationsApiService);
@@ -74,8 +102,10 @@ export class OrgAcceptInvitePageComponent implements OnInit {
   readonly successOrg = signal('');
   readonly successOrgId = signal<number | null>(null);
 
+  private autoAcceptStarted = false;
+
   ngOnInit(): void {
-    // Prefer query token only — never path params (Referer/history leakage).
+    // Prefer history.state; query token is stripped immediately (deep-link / email).
     const state = window.history.state as { invitationToken?: unknown } | null;
     const memoryToken =
       typeof state?.invitationToken === 'string' ? state.invitationToken.trim() : '';
@@ -89,6 +119,22 @@ export class OrgAcceptInvitePageComponent implements OnInit {
         replaceUrl: true,
       });
     }
+    if (this.auth.isAuthenticated() && this.token.trim() && !this.autoAcceptStarted) {
+      this.autoAcceptStarted = true;
+      void this.accept();
+    }
+  }
+
+  loginQuery(): { returnUrl: string } {
+    const t = this.token.trim();
+    const returnUrl = t
+      ? `/invitations/accept?token=${encodeURIComponent(t)}`
+      : '/invitations/accept';
+    return { returnUrl };
+  }
+
+  captureLoginReturn(): void {
+    captureReturnUrl(this.loginQuery().returnUrl);
   }
 
   async accept(): Promise<void> {
@@ -111,13 +157,15 @@ export class OrgAcceptInvitePageComponent implements OnInit {
   }
 
   private mapAcceptError(e: unknown): string {
-    if (!(e instanceof OrganizationsApiError)) return 'No se pudo aceptar la invitación';
+    if (!(e instanceof OrganizationsApiError)) {
+      return this.i18n.t('organizations.acceptInvite.errorGeneric');
+    }
     const code = e.code || '';
     if (code.includes('email') || e.message.toLowerCase().includes('email')) {
-      return `Email incorrecto: ${e.message}`;
+      return this.i18n.t('organizations.acceptInvite.errorEmail', { message: e.message });
     }
     if (code.includes('expired') || e.status === 410) {
-      return `Invitación no disponible (${e.status}): ${e.message}`;
+      return this.i18n.t('organizations.acceptInvite.errorExpired', { message: e.message });
     }
     if (code.includes('revoked') || code.includes('used')) {
       return e.message;
@@ -135,7 +183,11 @@ export class OrgAcceptInvitePageComponent implements OnInit {
         queryParams: { organization_id: id },
       });
     } catch (e) {
-      this.error.set(e instanceof OrganizationsApiError ? e.message : 'No se pudo activar');
+      this.error.set(
+        e instanceof OrganizationsApiError
+          ? e.message
+          : this.i18n.t('organizations.acceptInvite.errorActivate'),
+      );
     } finally {
       this.activating.set(false);
     }

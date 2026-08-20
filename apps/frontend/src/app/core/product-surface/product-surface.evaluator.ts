@@ -301,7 +301,8 @@ export function findSurfacesByPath(
  * Path-level access for the product-surface guard.
  * - allow: at least one registry row permits the path in the active space
  * - permission-denied: row matches space/tier but capability/staff/platform missing
- * - unavailable: wrong space or tier / org context
+ * - plan-required: space matches but organization tier is below the minimum
+ * - unavailable: wrong space / no org context for a non-tier reason
  * - unregistered: no registry row (personal paths stay allow-by-route-guards)
  */
 export function evaluateProductPathAccess(
@@ -320,16 +321,20 @@ export function evaluateProductPathAccess(
   }
 
   let sawPermission = false;
-  let sawUnavailable = false;
+  let sawTier = false;
+  let sawSpaceOrBootstrap = false;
   for (const surface of spaceMatches) {
     const reason = evaluateProductSurfaceReason(surface, ctx);
     if (reason === 'allow') return 'allow';
     if (reason === 'permission') sawPermission = true;
-    else sawUnavailable = true;
+    else if (reason === 'tier') sawTier = true;
+    else sawSpaceOrBootstrap = true;
   }
 
   if (sawPermission) return 'permission-denied';
-  if (sawUnavailable) return 'unavailable';
+  if (sawTier && !sawSpaceOrBootstrap) return 'plan-required';
+  if (sawTier) return 'plan-required';
+  if (sawSpaceOrBootstrap) return 'unavailable';
   // Personal unregistered is handled above; keep personal helper for clarity.
   if (isPersonalSurfacePath(normalized)) return 'unregistered';
   return 'unavailable';

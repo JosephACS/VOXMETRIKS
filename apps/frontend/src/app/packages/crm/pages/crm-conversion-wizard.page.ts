@@ -129,19 +129,34 @@ type WizardStep = 'view' | 'confirm-link' | 'claim';
             </app-enterprise-section-card>
           }
 
-          @if (conv()!.status === 'pending' || conv()!.status === 'prepared') {
+          @if (conv()!.status === 'pending' || conv()!.status === 'prepared' || conv()!.status === 'awaiting_customer_claim') {
             <app-enterprise-section-card [title]="'crm.conversion.continueProcess' | t:lang()">
               <app-enterprise-action-bar>
-                @if (conv()!.mode === 'link_existing') {
+                @if (conv()!.mode === 'link_existing' && (conv()!.status === 'pending' || conv()!.status === 'prepared')) {
                   <button type="button" class="btn btn--primary" (click)="step = 'confirm-link'">
                     {{ 'crm.conversion.confirmLinkOwner' | t:lang() }}
                   </button>
                 }
-                @if (conv()!.mode === 'create_org') {
+                @if (conv()!.mode === 'create_org' && conv()!.status === 'awaiting_customer_claim') {
                   <button type="button" class="btn btn--primary" (click)="step = 'claim'">
                     {{ 'crm.conversion.claimWithToken' | t:lang() }}
                   </button>
                 }
+              </app-enterprise-action-bar>
+            </app-enterprise-section-card>
+          }
+
+          @if (oneTimeClaimToken()) {
+            <app-enterprise-section-card [title]="'crm.conversion.oneTimeTokenTitle' | t:lang()">
+              <div class="alert alert--warn" role="status">{{ 'crm.conversion.oneTimeTokenBody' | t:lang() }}</div>
+              <p class="crm-token-mono" data-testid="crm-claim-token-once">{{ oneTimeClaimToken() }}</p>
+              <app-enterprise-action-bar>
+                <button type="button" class="btn btn--secondary" (click)="copyClaimToken()">
+                  {{ 'crm.conversion.copyToken' | t:lang() }}
+                </button>
+                <button type="button" class="btn btn--primary" (click)="useClaimToken()">
+                  {{ 'crm.conversion.claimWithToken' | t:lang() }}
+                </button>
               </app-enterprise-action-bar>
             </app-enterprise-section-card>
           }
@@ -250,10 +265,35 @@ export class CrmConversionWizardPageComponent implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  /** Raw claim token from prepare navigation state (shown once). */
+  readonly oneTimeClaimToken = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.conversionId = Number(this.route.snapshot.paramMap.get('id'));
+    const nav = this.router.getCurrentNavigation();
+    const state = (nav?.extras?.state ?? history.state) as {
+      claimToken?: string;
+      claimTokenNote?: string;
+    } | null;
+    const token = state?.claimToken?.trim();
+    if (token) {
+      this.oneTimeClaimToken.set(token);
+      this.claimToken = token;
+    }
     await this.load();
+  }
+
+  copyClaimToken(): void {
+    const token = this.oneTimeClaimToken();
+    if (!token || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+    void navigator.clipboard.writeText(token);
+    this.success.set(this.i18n.t('crm.conversion.tokenCopied'));
+  }
+
+  useClaimToken(): void {
+    const token = this.oneTimeClaimToken();
+    if (token) this.claimToken = token;
+    this.step = 'claim';
   }
 
   async load(): Promise<void> {
@@ -325,7 +365,7 @@ export class CrmConversionWizardPageComponent implements OnInit {
     try {
       await this.orgCtx.activate(orgId);
       await this.router.navigate(['/subscriptions/select-plan'], {
-        queryParams: { organizationId: orgId, conversionId: this.conversionId },
+        queryParams: { organization_id: orgId, conversionId: this.conversionId },
       });
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'No se pudo activar la organización');

@@ -15,6 +15,7 @@ import {
 } from '../models/crm.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-format.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
 
@@ -26,6 +27,7 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
     FormsModule,
     RouterLink,
     TranslatePipe,
+    StatusLabelPipe,
     LocaleDatePipe,
     ...ENTERPRISE_UI_IMPORTS,
   ],
@@ -84,8 +86,8 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
             <form class="form-grid">
               <app-enterprise-form-field [label]="'crm.opportunityDetail.newStage' | t:lang()">
                 <select class="select" [(ngModel)]="newStage" name="newStage">
-                  @for (s of stages; track s) {
-                    <option [value]="s" [disabled]="s === opp()!.stage">{{ s }}</option>
+                  @for (s of openStages; track s) {
+                    <option [value]="s" [disabled]="s === opp()!.stage">{{ s | statusLabel }}</option>
                   }
                 </select>
               </app-enterprise-form-field>
@@ -113,16 +115,16 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 <form class="form-grid">
                   <app-enterprise-form-field [label]="'crm.opportunityDetail.outcome' | t:lang()" [required]="true">
                     <select class="select" [(ngModel)]="closeOutcome" name="closeOutcome">
-                      <option value="won">won</option>
-                      <option value="lost">lost</option>
-                      <option value="canceled">canceled</option>
+                      <option value="won">{{ 'closed_won' | statusLabel }}</option>
+                      <option value="lost">{{ 'closed_lost' | statusLabel }}</option>
+                      <option value="canceled">{{ 'canceled' | statusLabel }}</option>
                     </select>
                   </app-enterprise-form-field>
                   <app-enterprise-form-field [label]="'crm.opportunityDetail.finalStage' | t:lang()" [required]="true">
                     <select class="select" [(ngModel)]="closeStage" name="closeStage">
-                      <option value="won">won</option>
-                      <option value="lost">lost</option>
-                      <option value="canceled">canceled</option>
+                      <option value="closed_won">{{ 'closed_won' | statusLabel }}</option>
+                      <option value="closed_lost">{{ 'closed_lost' | statusLabel }}</option>
+                      <option value="canceled">{{ 'canceled' | statusLabel }}</option>
                     </select>
                   </app-enterprise-form-field>
                   <app-enterprise-form-field [label]="'common.reason' | t:lang()">
@@ -154,8 +156,14 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
                 <tbody>
                   @for (h of history(); track h.id) {
                     <tr>
-                      <td>{{ h.from_stage || ('common.notAvailable' | t:lang()) }}</td>
-                      <td>{{ h.to_stage }}</td>
+                      <td>
+                        @if (h.from_stage) {
+                          {{ h.from_stage | statusLabel }}
+                        } @else {
+                          {{ 'common.notAvailable' | t:lang() }}
+                        }
+                      </td>
+                      <td>{{ h.to_stage | statusLabel }}</td>
                       <td>{{ h.reason || ('common.notAvailable' | t:lang()) }}</td>
                       <td class="muted">{{ h.occurred_at | localeDate:true }}</td>
                     </tr>
@@ -361,6 +369,8 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly stages = [...OPPORTUNITY_STAGES];
+  /** Stages selectable for advance (terminal stages use close). */
+  readonly openStages = ['qualification', 'proposal', 'negotiation'] as const;
 
   oppId = 0;
   showCloseForm = false;
@@ -368,7 +378,7 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   newStage = '';
   stageReason = '';
   closeOutcome = 'won';
-  closeStage = 'won';
+  closeStage = 'closed_won';
   closeReason = '';
 
   editForm = {
@@ -391,10 +401,18 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  /** One-time claim token from prepare (create_org); shown until leaving the page. */
+  readonly claimTokenOnce = signal<string | null>(null);
 
   isClosedStage(): boolean {
     const s = this.opp()?.stage;
-    return s === 'won' || s === 'lost' || s === 'canceled';
+    return (
+      s === 'closed_won' ||
+      s === 'closed_lost' ||
+      s === 'canceled' ||
+      s === 'won' ||
+      s === 'lost'
+    );
   }
 
   async ngOnInit(): Promise<void> {
@@ -521,14 +539,28 @@ export class CrmOpportunityDetailPageComponent implements OnInit {
   async prepareConversion(mode: 'create_org' | 'link_existing'): Promise<void> {
     this.saving.set(true);
     this.error.set(null);
+    this.claimTokenOnce.set(null);
     try {
       const res = await firstValueFrom(
         this.api.prepareConversion({ opportunity_id: this.oppId, mode }),
       );
-      this.success.set(`Conversión #${res.conversion.id} preparada.`);
-      await this.router.navigate(['/crm/conversions', res.conversion.id]);
+      const token = res.claim_token?.trim() || null;
+      this.success.set(
+        this.i18n.t('crm.opportunityDetail.prepareSuccess', { id: res.conversion.id }),
+      );
+      if (token) {
+        this.claimTokenOnce.set(token);
+        await this.router.navigate(['/crm/conversions', res.conversion.id], {
+          state: {
+            claimToken: token,
+            claimTokenNote: res.claim_token_note ?? null,
+          },
+        });
+      } else {
+        await this.router.navigate(['/crm/conversions', res.conversion.id]);
+      }
     } catch (e) {
-      this.error.set(e instanceof CrmApiError ? e.message : 'Error al preparar conversión');
+      this.error.set(e instanceof CrmApiError ? e.message : this.i18n.t('crm.opportunityDetail.prepareError'));
       this.saving.set(false);
     }
   }

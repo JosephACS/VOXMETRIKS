@@ -10,6 +10,11 @@ const STORAGE_PREFIX = 'voxmetrik_history';
 const MIGRATED_PREFIX = 'voxmetrik_history_migrated';
 /** Cap a single wall-clock tick so tab sleep / seeks cannot inflate listen time. */
 const MAX_LISTEN_DELTA_MS = 2_000;
+/**
+ * Persist a row in personal history after this much real listen time.
+ * (Counted / completed listens still use the 30s / 50% rule below.)
+ */
+const HISTORY_RECORD_MS = 3_000;
 
 export interface ListeningHistoryItem extends HistoryEntry {
   id?: number;
@@ -122,7 +127,19 @@ export class HistoryService {
           this.page = res.page;
           this.hasMore = !!res.has_more;
           this.total = res.total ?? items.length;
-          this.entriesSubject.next(append ? [...this.entriesSubject.value, ...items] : items);
+          let next = append ? [...this.entriesSubject.value, ...items] : items;
+          // Keep the in-flight play visible across reload while listening.
+          const pending = this.pendingEntry;
+          if (
+            !append &&
+            pending &&
+            this.currentEventKey &&
+            pending.event_key === this.currentEventKey &&
+            !next.some((e) => e.event_key === pending.event_key)
+          ) {
+            next = [this.normalize(pending), ...next];
+          }
+          this.entriesSubject.next(next);
           this.loadingSubject.next(false);
         },
         error: () => {
@@ -224,7 +241,7 @@ export class HistoryService {
     this.lastListenWallClock = 0;
   }
 
-  /** Business rule: ≥30s, or ≥50% when track duration < 60s. */
+  /** Counted-listen rule: ≥30s, or ≥50% when track duration < 60s. */
   private meetsThreshold(listenedMs: number, durationSec?: number): boolean {
     if (listenedMs >= 30_000) return true;
     const durMs = durationSec != null && durationSec > 0 ? durationSec * 1000 : 0;
@@ -232,9 +249,19 @@ export class HistoryService {
     return false;
   }
 
+  /** When a play becomes visible / persisted in personal history. */
+  private meetsHistoryRecord(listenedMs: number): boolean {
+    return listenedMs >= HISTORY_RECORD_MS;
+  }
+
   /** Exposed for unit tests of the listen threshold rule. */
   meetsListenThreshold(listenedMs: number, durationSec?: number): boolean {
     return this.meetsThreshold(listenedMs, durationSec);
+  }
+
+  /** Exposed for unit tests of the history-record threshold. */
+  meetsHistoryRecordThreshold(listenedMs: number): boolean {
+    return this.meetsHistoryRecord(listenedMs);
   }
 
   /** Current accumulated listen ms for the open session (tests / diagnostics). */
@@ -274,14 +301,16 @@ export class HistoryService {
     if (
       !this.qualified &&
       !this.startInFlight &&
-      this.meetsThreshold(listened_ms, durationSec) &&
+      this.meetsHistoryRecord(listened_ms) &&
       this.isLiveSession(identity)
     ) {
       this.startInFlight = true;
       const entry = this.pendingEntry;
       const trackId = entry?.id_track;
       if (entry) {
-        const rest = this.entriesSubject.value.filter((e) => e.id_track !== entry.id_track);
+        const rest = this.entriesSubject.value.filter(
+          (e) => e.event_key !== entry.event_key && e.id_track !== entry.id_track,
+        );
         this.entriesSubject.next([{ ...entry, progress_ms, listened_ms }, ...rest].slice(0, 50));
       }
       this.http

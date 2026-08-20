@@ -99,7 +99,7 @@ describe('evaluateProductPathAccess (054)', () => {
     ).toBe('allow');
   });
 
-  it('unavailable for wrong tier even with permission', () => {
+  it('plan-required for wrong tier even with permission', () => {
     expect(
       evaluateProductPathAccess(
         '/campaigns',
@@ -108,7 +108,7 @@ describe('evaluateProductPathAccess (054)', () => {
           permissions: new Set(['campaign.view']),
         }),
       ),
-    ).toBe('unavailable');
+    ).toBe('plan-required');
   });
 
   it('allows staff workpanel in data_ops; denies listener', () => {

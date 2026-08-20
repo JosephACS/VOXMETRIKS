@@ -218,7 +218,7 @@ html[data-theme='light'] .kpi-card:hover {
 .org-btn,
 .crm-btn {
   background: var(--accent);
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
 }
 
 .btn--primary:hover:not(:disabled),
@@ -233,9 +233,9 @@ html[data-theme='light'] .kpi-card:hover {
 .btn--ghost,
 .org-btn--ghost,
 .crm-btn--ghost {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--spotify-muted);
+  background: var(--shell-control-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--shell-border-strong, rgba(255, 255, 255, 0.12));
+  color: var(--color-text-secondary, var(--spotify-muted));
   font-weight: 500;
 }
 
@@ -243,7 +243,7 @@ html[data-theme='light'] .kpi-card:hover {
 .btn--ghost:hover:not(:disabled),
 .org-btn--ghost:hover:not(:disabled),
 .crm-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--shell-hover-strong, rgba(255, 255, 255, 0.1));
   color: var(--text);
 }
 
@@ -467,15 +467,15 @@ html[data-theme='light'] .kpi-card:hover {
 }
 
 .badge--recommended {
-  border-color: rgba(30, 216, 150, 0.5);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   background: var(--accent);
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
 }
 
 .badge--current {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
+  border-color: var(--shell-border-strong, rgba(255, 255, 255, 0.2));
+  background: var(--shell-control-bg, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-secondary, var(--text));
 }
 
 /* ── Alerts / states ─────────────────────────────────────────────────────── */
@@ -705,7 +705,7 @@ html[data-theme='light'] .kpi-card:hover {
 
 .billing-toggle__btn.is-active {
   background: var(--accent);
-  color: #04140e;
+  color: var(--btn-on-accent, #0A1210);
 }
 
 .billing-toggle__save {
@@ -1310,6 +1310,45 @@ html[data-theme='light'] .kpi-card:hover {
   background: rgba(56, 189, 248, 0.14);
   color: #7dd3fc;
   border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+html[data-theme='light'] .badge--mock,
+html[data-theme='light'] .vx-enterprise .badge.badge--mock {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0E7490;
+  border-color: rgba(14, 116, 144, 0.28);
+}
+
+html[data-theme='light'] .badge--trialing,
+html[data-theme='light'] .badge--draft,
+html[data-theme='light'] .badge--pending,
+html[data-theme='light'] .badge--issued {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1D4ED8;
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+html[data-theme='light'] .badge--past_due,
+html[data-theme='light'] .badge--partially_paid,
+html[data-theme='light'] .badge--warn,
+html[data-theme='light'] .badge--limited {
+  background: rgba(180, 83, 9, 0.1);
+  color: #B45309;
+  border-color: rgba(180, 83, 9, 0.3);
+}
+
+html[data-theme='light'] .badge--canceled,
+html[data-theme='light'] .badge--expired,
+html[data-theme='light'] .badge--void,
+html[data-theme='light'] .badge--blocked,
+html[data-theme='light'] .badge--archived,
+html[data-theme='light'] .badge--suspended,
+html[data-theme='light'] .badge--closed,
+html[data-theme='light'] .org-badge--suspended,
+html[data-theme='light'] .org-badge--closed {
+  background: rgba(185, 28, 28, 0.08);
+  color: #B91C1C;
+  border-color: rgba(185, 28, 28, 0.28);
 }
 
 .badge--linked {

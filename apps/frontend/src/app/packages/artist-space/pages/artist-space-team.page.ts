@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ArtistContextService } from '../services/artist-context.service';
 import { ArtistSpaceApiService } from '../services/artist-space-api.service';
 import { artistJourneyError } from '../services/artist-space-error';
@@ -35,6 +36,24 @@ import { SpaceContextService } from '../../../core/spaces/space-context.service'
       }
       @if (actionError()) {
         <app-enterprise-error-state [message]="actionError()!" />
+      }
+
+      @if (oneTimeInviteToken()) {
+        <app-enterprise-section-card
+          [title]="'artistSpace.team.tokenHint' | t: lang()"
+          data-testid="artist-invite-token-once"
+        >
+          <p class="muted">{{ 'artistSpace.team.tokenOnceBody' | t: lang() }}</p>
+          <p class="token-mono">{{ oneTimeInviteToken() }}</p>
+          <div class="form-actions">
+            <button type="button" class="btn btn--secondary" (click)="copyInviteToken()">
+              {{ 'artistSpace.team.copyToken' | t: lang() }}
+            </button>
+            <button type="button" class="btn btn--primary" (click)="openAcceptWithToken()">
+              {{ 'artistSpace.team.openAccept' | t: lang() }}
+            </button>
+          </div>
+        </app-enterprise-section-card>
       }
 
       @if (canInvite()) {
@@ -268,6 +287,15 @@ import { SpaceContextService } from '../../../core/spaces/space-context.service'
       .ok {
         color: var(--vx-success, #6fd3a0);
       }
+      .token-mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.85rem;
+        word-break: break-all;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px dashed var(--border, #30363d);
+        background: var(--chip-bg, rgba(0, 0, 0, 0.04));
+      }
       .sr-only {
         position: absolute;
         width: 1px;
@@ -296,6 +324,7 @@ export class ArtistSpaceTeamPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly spaces = inject(SpaceContextService);
+  private readonly router = inject(Router);
 
   readonly lang = this.i18n.lang;
   readonly assignableRoles = ARTIST_ASSIGNABLE_ROLES;
@@ -307,6 +336,8 @@ export class ArtistSpaceTeamPage implements OnInit {
   readonly invitesError = signal<string | null>(null);
   readonly requestsError = signal<string | null>(null);
   readonly feedback = signal<string | null>(null);
+  /** One-time plaintext invite token from create/resend (never persisted). */
+  readonly oneTimeInviteToken = signal<string | null>(null);
   readonly members = signal<ArtistTeamMember[]>([]);
   readonly accessRequests = signal<ArtistAccessRequest[]>([]);
   readonly pendingInvites = signal<ArtistInvitation[]>([]);
@@ -402,19 +433,38 @@ export class ArtistSpaceTeamPage implements OnInit {
     if (id == null || !this.canInvite() || this.inviteForm.invalid) return;
     const v = this.inviteForm.getRawValue();
     this.startAction();
+    this.oneTimeInviteToken.set(null);
     this.api.invite(id, { email: v.email.trim(), role: v.role }).subscribe({
       next: (result) => {
         this.busy.set(false);
-        // Tokens are secrets: only delivery status is ever surfaced.
+        const token = result.invite_token?.trim() || null;
+        if (token) this.oneTimeInviteToken.set(token);
+        const hintKey =
+          result.email_delivery_status === 'sent'
+            ? 'artistSpace.team.inviteCreated'
+            : 'artistSpace.team.tokenHint';
         this.feedback.set(
-          `${this.i18n.t('artistSpace.team.inviteCreated')} (${this.deliveryLabel(
-            result.email_delivery_status,
-          )})`,
+          `${this.i18n.t(hintKey)} (${this.deliveryLabel(result.email_delivery_status)})`,
         );
         this.inviteForm.reset({ email: '', role: 'member' });
         this.load();
       },
       error: (e) => this.failAction(e),
+    });
+  }
+
+  copyInviteToken(): void {
+    const token = this.oneTimeInviteToken();
+    if (!token || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+    void navigator.clipboard.writeText(token);
+    this.feedback.set(this.i18n.t('artistSpace.team.tokenCopied'));
+  }
+
+  openAcceptWithToken(): void {
+    const token = this.oneTimeInviteToken();
+    if (!token) return;
+    void this.router.navigate(['/artist-invitations/accept'], {
+      state: { invitationToken: token },
     });
   }
 
@@ -442,13 +492,18 @@ export class ArtistSpaceTeamPage implements OnInit {
     const id = this.artistCtx.artistProfileId();
     if (id == null || !this.canInvite()) return;
     this.startAction();
+    this.oneTimeInviteToken.set(null);
     this.api.resendInvitation(id, invitation.id).subscribe({
       next: (result) => {
         this.busy.set(false);
+        const token = result.invite_token?.trim() || null;
+        if (token) this.oneTimeInviteToken.set(token);
+        const hintKey =
+          result.email_delivery_status === 'sent'
+            ? 'artistSpace.team.inviteResent'
+            : 'artistSpace.team.newTokenHint';
         this.feedback.set(
-          `${this.i18n.t('artistSpace.team.inviteResent')} (${this.deliveryLabel(
-            result.email_delivery_status,
-          )})`,
+          `${this.i18n.t(hintKey)} (${this.deliveryLabel(result.email_delivery_status)})`,
         );
         this.load();
       },

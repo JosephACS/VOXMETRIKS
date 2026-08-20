@@ -21,5 +21,7 @@ export const platformAdminGuard: CanActivateFn = async () => {
     crmRoles: crm.roles(),
   });
   if (allowed) return true;
-  return router.createUrlTree(['/access-denied']);
+  return router.createUrlTree(['/access-denied'], {
+    queryParams: { reason: 'platform' },
+  });
 };

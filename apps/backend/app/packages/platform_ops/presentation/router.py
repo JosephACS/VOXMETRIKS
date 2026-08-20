@@ -336,6 +336,22 @@ def create_ops_incident(
     return OperationalIncidentOut(**inc.__dict__)
 
 
+@platform_ops_router.post("/incidents/{incident_id}/resolve", response_model=OperationalIncidentOut)
+def resolve_ops_incident(
+    incident_id: int,
+    ctx: dict = Depends(require_ops_permission("ops.manage")),
+) -> OperationalIncidentOut:
+    try:
+        inc = OperationalIncidentUseCases(ctx["conn"]).resolve(
+            incident_id,
+            actor_user_id=ctx["user_id"],
+            request_id=ctx["request_id"],
+        )
+    except PlatformOpsError as e:
+        raise_platform_ops_http(e)
+    return OperationalIncidentOut(**inc.__dict__)
+
+
 # ── Unresolved external audio tray ───────────────────────────────────────────
 
 

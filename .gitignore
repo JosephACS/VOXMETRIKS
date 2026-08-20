@@ -84,6 +84,10 @@ pytest-*.txt
 # Agent / local temp capture
 .tmp-*
 .tmp_*
+output/
+tmp/
+scripts/_analyze_walk.mjs
+scripts/_final_role_walk_report.json
 
 # Credentials / keys (never commit)
 *.pem

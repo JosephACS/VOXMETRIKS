@@ -106,14 +106,15 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
         width: min(300px, 92vw);
         z-index: 50;
         border-radius: 10px;
-        border: 1px solid var(--border, #30363d);
-        background: var(--surface, #161b22);
+        border: 1px solid var(--shell-border-strong, var(--border, #30363d));
+        background: var(--shell-dropdown, var(--color-surface, #161b22));
+        color: var(--shell-fg, var(--color-text, #e7edea));
         padding: 0.35rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.35));
       }
       .space-selector-current {
         padding: 0.45rem 0.65rem 0.55rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
         margin-bottom: 0.25rem;
       }
       .space-selector-current-label {
@@ -121,12 +122,13 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
         font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        opacity: 0.6;
+        color: var(--shell-fg-subtle, rgba(231, 237, 234, 0.55));
         margin-bottom: 0.15rem;
       }
       .space-selector-current-name {
         font-weight: 600;
         font-size: 0.875rem;
+        color: var(--shell-fg, inherit);
       }
       .space-selector-list {
         max-height: 240px;
@@ -140,18 +142,18 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
         border: 0;
         border-radius: 8px;
         background: transparent;
-        color: inherit;
+        color: var(--shell-fg, inherit);
         font: inherit;
         cursor: pointer;
       }
       .space-selector-item:hover,
       .space-selector-item:focus-visible {
-        background: color-mix(in srgb, #1ed896 12%, transparent);
+        background: var(--shell-hover-strong, color-mix(in srgb, #1ed896 12%, transparent));
         outline: none;
       }
       .space-selector-item--active {
         font-weight: 700;
-        background: color-mix(in srgb, #1ed896 18%, transparent);
+        background: color-mix(in srgb, var(--accent, #1ed896) 18%, transparent);
       }
       .space-selector-item-row {
         display: flex;

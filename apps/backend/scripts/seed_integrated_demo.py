@@ -1347,6 +1347,8 @@ def seed_integrated_demo() -> dict[str, Any]:
 
         org_id = _ensure_canonical_org(conn, ids["organization.owner"])
         _ensure_org_member(conn, org_id, ids["organization.owner"], ["owner"])
+        # CRM demo account: platform sales_manager + org membership (CRM is org-scoped UI)
+        _ensure_org_member(conn, org_id, ids["sales.manager"], ["viewer"])
         # billing_manager: invoices, payments, refunds, credit notes — not global plans
         _ensure_org_member(
             conn, org_id, ids["finance.manager"], ["billing_manager", "finance"]

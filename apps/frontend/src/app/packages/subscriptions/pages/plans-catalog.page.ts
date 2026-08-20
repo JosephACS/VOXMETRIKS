@@ -342,11 +342,20 @@ export class PlansCatalogPageComponent implements OnInit {
   }
 
   featureLabel(f: PlanFeature): string {
-    const code = f.feature_code.replace(/[_.]/g, ' ');
+    const key = `subscriptions.feature.${f.feature_code}`;
+    const translated = this.i18n.t(key);
+    const missing = this.i18n.t('common.missingTranslation');
+    const name =
+      translated && translated !== key && translated !== missing
+        ? translated
+        : f.feature_code.replace(/[_.]/g, ' ');
     if (f.limit_value != null) {
-      return `${code} · ${f.limit_value}`;
+      return `${name} · ${f.limit_value}`;
     }
-    return code;
+    if (f.limit_value === null && (f.feature_code === 'seats' || f.feature_code === 'projects')) {
+      return `${name} · ${this.i18n.t('subscriptions.plans.unlimited')}`;
+    }
+    return name;
   }
 
   isUpgrade(card: PlanCardVm): boolean {

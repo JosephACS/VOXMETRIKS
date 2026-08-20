@@ -795,6 +795,17 @@ class AttributionDefinitionUseCases:
         ).fetchone()
         return AttributionDefinition(*row) if row else None
 
+    def list(self, campaign_id: int, organization_id: int) -> list[AttributionDefinition]:
+        CampaignUseCases(self._conn).get(campaign_id, organization_id)
+        rows = self._conn.execute(
+            "SELECT id, campaign_id, organization_id, version, model_code, description, "
+            "confidence, responsible, status, approved_by, approved_at, created_at, updated_at "
+            "FROM app_attribution_definition WHERE campaign_id = ? AND organization_id = ? "
+            "ORDER BY version DESC",
+            [campaign_id, organization_id],
+        ).fetchall()
+        return [AttributionDefinition(*r) for r in rows]
+
 
 class AttributableRevenueUseCases:
     def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
