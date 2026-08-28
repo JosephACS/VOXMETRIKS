@@ -638,10 +638,96 @@ def fair_pdf() -> None:
     build_doc(OUT / "voxmetriks-flujo-feria.pdf", "Guion de feria", story)
 
 
+def methodology_pdf() -> None:
+    story: list[Flowable] = cover(
+        "Cómo se construyó Voxmetriks",
+        "Una explicación sencilla de Spec-Driven Development, las herramientas usadas y la forma de comprobar el resultado.",
+        "Documento 05 / metodología y stack",
+    )
+    story += [
+        P("Qué significa Spec-Driven Development", "H1Vox"),
+        P("Spec-Driven Development (SDD) significa que la especificación es el punto de partida y la referencia del trabajo. Antes de cambiar una parte importante, se deja claro qué problema se resuelve, qué debe ocurrir, qué queda fuera y cómo se va a comprobar.", "BodyVox"),
+        P("En Voxmetriks se usa GitHub Spec Kit con esta cadena:", "BodyVox"),
+        P("Constitution -> Specify -> Clarify -> Checklist -> Plan -> Tasks -> Analyze -> Implement -> Validate -> Evidence -> Close", "CodeVox"),
+        P("No es burocracia por sí misma. Es una forma de evitar que una idea termine convertida en una pantalla bonita que no cumple el flujo real.", "SmallVox"),
+        P("Cómo se aplicó aquí", "H2Vox"),
+        Table([
+            [P("Etapa", "CalloutVox"), P("Qué hice", "CalloutVox"), P("Dónde queda", "CalloutVox")],
+            [P("Constitution", "SmallVox"), P("Fijé las reglas del producto, datos y arquitectura.", "SmallVox"), P(".specify/memory/constitution.md", "SmallVox")],
+            [P("Specify", "SmallVox"), P("Escribí requisitos y criterios para cada feature no trivial.", "SmallVox"), P(".specify/features/", "SmallVox")],
+            [P("Plan + tasks", "SmallVox"), P("Partí el trabajo en cambios pequeños y verificables.", "SmallVox"), P("plan.md / tasks.md", "SmallVox")],
+            [P("Implement", "SmallVox"), P("Ajusté Angular, FastAPI, DuckDB y ELT sin reescribir desde cero.", "SmallVox"), P("apps/ y analytics/", "SmallVox")],
+            [P("Validate", "SmallVox"), P("Combiné pruebas, lint, build, backend y revisión visual.", "SmallVox"), P("tests + evidencia", "SmallVox")],
+            [P("Evidence + close", "SmallVox"), P("Dejé documentación, diagramas, datos demo y commits reproducibles.", "SmallVox"), P("docs/ + GitHub", "SmallVox")],
+        ], colWidths=[34 * mm, 76 * mm, 50 * mm], style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), AMBER), ("BACKGROUND", (0, 1), (-1, -1), PAPER),
+            ("GRID", (0, 0), (-1, -1), 0.5, LINE), ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ])),
+        PageBreak(),
+        P("Qué herramientas usé", "H1Vox"),
+        P("Cada herramienta tiene un papel concreto. No hay una tecnología puesta solo para llenar la arquitectura.", "BodyVox"),
+        Table([
+            [P("Capa", "CalloutVox"), P("Herramienta", "CalloutVox"), P("Para qué sirve", "CalloutVox")],
+            [P("Interfaz", "SmallVox"), P("Angular + TypeScript", "SmallVox"), P("Pantallas, rutas, menú, temas y reproductor.", "SmallVox")],
+            [P("Componentes", "SmallVox"), P("Angular Material/CDK + CSS", "SmallVox"), P("Controles, accesibilidad y design system ámbar.", "SmallVox")],
+            [P("Backend", "SmallVox"), P("Python + FastAPI + Pydantic", "SmallVox"), P("API, reglas, permisos y validación.", "SmallVox")],
+            [P("Datos", "SmallVox"), P("DuckDB", "SmallVox"), P("Warehouse local: catálogo, operación y analítica.", "SmallVox")],
+            [P("Ingesta", "SmallVox"), P("ELT + Parquet + Airflow local", "SmallVox"), P("Preparar y actualizar el catálogo de forma trazable.", "SmallVox")],
+            [P("Audio", "SmallVox"), P("Spotify SDK + Deezer API", "SmallVox"), P("Spotify completo con sesión; Deezer como preview de respaldo.", "SmallVox")],
+            [P("Seguridad", "SmallVox"), P("Sesiones + RBAC", "SmallVox"), P("Separar usuarios, organizaciones y permisos.", "SmallVox")],
+            [P("Calidad", "SmallVox"), P("Vitest + pytest + ESLint + Ruff", "SmallVox"), P("Detectar regresiones y mantener el código consistente.", "SmallVox")],
+            [P("Entrega", "SmallVox"), P("Git + GitHub", "SmallVox"), P("Historial, commits y entrega reproducible en otra laptop.", "SmallVox")],
+        ], colWidths=[31 * mm, 57 * mm, 72 * mm], style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), AMBER), ("BACKGROUND", (0, 1), (-1, -1), PAPER),
+            ("GRID", (0, 0), (-1, -1), 0.5, LINE), ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ])),
+        Spacer(1, 7 * mm),
+        P("Decisiones honestas", "H2Vox"),
+        *bullet_lines([
+            "YouTube se descartó como fuente de reproducción; Spotify y Deezer cubren el flujo actual.",
+            "DuckDB es el warehouse de esta demo local, no una promesa de base transaccional multiusuario de producción.",
+            "Los datos empresariales de la cuenta admin son sintéticos y están preparados para enseñar el producto.",
+        ]),
+        PageBreak(),
+        P("Cómo sé que funciona", "H1Vox"),
+        P("La validación no se quedó en 'abre la pantalla'. Revisé el producto desde cuatro ángulos para poder defenderlo con tranquilidad.", "BodyVox"),
+        Table([
+            [P("Tipo", "CalloutVox"), P("Qué se comprobó", "CalloutVox")],
+            [P("Visual", "SmallVox"), P("Dark y light, contraste, contornos, menú, tablas, cards, reportes, responsive y reproductor fijo.", "SmallVox")],
+            [P("Funcional", "SmallVox"), P("Login, navegación personal/empresa, búsqueda, cola, Spotify/Deezer, auto-skip, permisos y reportes.", "SmallVox")],
+            [P("Automática", "SmallVox"), P("Tests del frontend y backend, lint y build para detectar regresiones antes de entregar.", "SmallVox")],
+            [P("Evidencia", "SmallVox"), P("Screenshots, logs, datos demo, documentación y commits que permiten repetir la entrega.", "SmallVox")],
+        ], colWidths=[34 * mm, 126 * mm], style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), AMBER), ("BACKGROUND", (0, 1), (-1, -1), PAPER),
+            ("GRID", (0, 0), (-1, -1), 0.5, LINE), ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ])),
+        Spacer(1, 8 * mm),
+        P("Mi respuesta corta", "H2Vox"),
+        P("'Primero describí el comportamiento en una spec; después hice el plan y las tareas, lo implementé por partes y lo validé con pruebas y revisión visual. Angular muestra la experiencia, FastAPI aplica las reglas, DuckDB guarda el catálogo y la analítica, y Spotify/Deezer resuelven el audio. Cada cierre queda respaldado por evidencia y por un commit.'", "CalloutVox"),
+        Spacer(1, 8 * mm),
+        P("Lo que sí y lo que no estoy diciendo", "H2Vox"),
+        *bullet_lines([
+            "Sí: es una demo académica completa, trazable y reproducible.",
+            "Sí: puedo explicar qué hace cada capa y por qué existe.",
+            "No: no la presento como streaming comercial licenciado ni como facturación real.",
+        ]),
+        Spacer(1, 10 * mm),
+        Waveform(width=160 * mm),
+    ]
+    build_doc(OUT / "voxmetriks-metodologia-stack.pdf", "Metodología y stack", story)
+
+
 if __name__ == "__main__":
     architecture_pdf()
     internal_pdf()
     fair_pdf()
     dfd_pdf()
+    methodology_pdf()
     for pdf in sorted(OUT.glob("voxmetriks-*.pdf")):
         print(f"created {pdf} ({pdf.stat().st_size} bytes)")
