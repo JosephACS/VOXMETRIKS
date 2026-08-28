@@ -215,6 +215,141 @@ class Waveform(Flowable):
         c.drawPath(path, fill=1, stroke=1)
 
 
+class DfdDiagram(Flowable):
+    """Small, print-friendly data-flow diagram using classic DFD shapes."""
+
+    def __init__(self, nodes: list[tuple[str, str, str, float, float]],
+                 flows: list[tuple[int, int, str]], width: float = 160 * mm,
+                 height: float = 82 * mm, dark: bool = False):
+        super().__init__()
+        self.nodes, self.flows = nodes, flows
+        self.width, self.height, self.dark = width, height, dark
+
+    def _arrow(self, c: canvas.Canvas, x1: float, y1: float, x2: float, y2: float,
+               label: str, label_dx: float = 0, label_dy: float = 2.2 * mm) -> None:
+        import math
+        c.setStrokeColor(AMBER_LIGHT if self.dark else AMBER)
+        c.setFillColor(AMBER_LIGHT if self.dark else AMBER)
+        c.setLineWidth(1)
+        c.line(x1, y1, x2, y2)
+        angle = math.atan2(y2 - y1, x2 - x1)
+        size = 2.2 * mm
+        path = c.beginPath()
+        path.moveTo(x2, y2)
+        path.lineTo(x2 - size * math.cos(angle - 0.45), y2 - size * math.sin(angle - 0.45))
+        path.lineTo(x2 - size * math.cos(angle + 0.45), y2 - size * math.sin(angle + 0.45))
+        path.close()
+        c.drawPath(path, fill=1, stroke=0)
+        if label:
+            c.setFillColor(colors.HexColor("#B8AF9D") if self.dark else MUTED)
+            c.setFont("Helvetica", 6.4)
+            c.drawCentredString((x1 + x2) / 2 + label_dx, (y1 + y2) / 2 + label_dy, label)
+
+    def draw(self) -> None:
+        c = self.canv
+        c.setFillColor(DARK if self.dark else CREAM)
+        c.roundRect(0, 0, self.width, self.height, 5 * mm, fill=1, stroke=0)
+        box_w, box_h = 36 * mm, 18 * mm
+        positions: list[tuple[float, float]] = []
+        for title, body, kind, x, y in self.nodes:
+            positions.append((x, y))
+        # Connectors first; node labels remain readable.
+        for flow in self.flows:
+            start, end, label = flow[:3]
+            label_dx = flow[3] if len(flow) > 3 else 0
+            label_dy = flow[4] if len(flow) > 4 else 2.2 * mm
+            x1, y1 = positions[start]
+            x2, y2 = positions[end]
+            self._arrow(c, x1, y1, x2, y2, label, label_dx, label_dy)
+        for title, body, kind, x, y in self.nodes:
+            fill = DARK_CARD if self.dark else PAPER
+            stroke = colors.HexColor("#674419") if self.dark else LINE
+            title_color = AMBER_LIGHT if self.dark else AMBER
+            body_color = colors.HexColor("#C2B8A6") if self.dark else MUTED
+            c.setFillColor(fill)
+            c.setStrokeColor(stroke)
+            c.setLineWidth(0.9)
+            if kind == "process":
+                c.roundRect(x - box_w / 2, y - box_h / 2, box_w, box_h, 4 * mm, fill=1, stroke=1)
+            elif kind == "store":
+                c.rect(x - box_w / 2, y - box_h / 2, box_w, box_h, fill=1, stroke=1)
+                c.line(x - box_w / 2 + 3 * mm, y - box_h / 2, x - box_w / 2 + 3 * mm, y + box_h / 2)
+            else:
+                c.rect(x - box_w / 2, y - box_h / 2, box_w, box_h, fill=1, stroke=1)
+            c.setFillColor(title_color)
+            c.setFont("Helvetica-Bold", 8)
+            c.drawCentredString(x, y + 2.6 * mm, title)
+            c.setFillColor(body_color)
+            c.setFont("Helvetica", 6.2)
+            c.drawCentredString(x, y - 3.4 * mm, body)
+
+
+def dfd_pdf() -> None:
+    story: list[Flowable] = cover(
+        "DFD y arquitectura explicable",
+        "Tres diagramas para contar el sistema: quién intercambia información, cómo se resuelve una reproducción y dónde vive cada dato.",
+        "Documento 04 / diagramas",
+    )
+    story += [
+        P("DFD nivel 0 - contexto", "H1Vox"),
+        P("Este primer dibujo resume el sistema como una caja: muestra quién habla con Voxmetriks y qué tipo de información cruza cada frontera.", "BodyVox"),
+        DfdDiagram([
+            ("Persona", "búsqueda y escucha", "external", 22 * mm, 42 * mm),
+            ("Voxmetriks", "catálogo + operación", "process", 80 * mm, 42 * mm),
+            ("Spotify / Deezer", "audio y preview", "external", 138 * mm, 62 * mm),
+            ("Equipo empresa", "KPIs y decisiones", "external", 138 * mm, 22 * mm),
+        ], [(0, 1, "buscar / reproducir", 0, 4 * mm),
+            (1, 0, "portada / estado", 0, -4 * mm),
+            (1, 2, "resolver audio", 0, 4 * mm),
+            (2, 1, "pista / preview", 0, -4 * mm),
+            (1, 3, "reportes", 0, 4 * mm),
+            (3, 1, "criterios / acciones", 0, -4 * mm)]),
+        Spacer(1, 4 * mm),
+        P("Lectura rápida: Voxmetriks es el punto de coordinación. El usuario no necesita conocer la fuente de audio y el equipo empresarial no necesita conocer el detalle de cada evento para tomar una decisión.", "SmallVox"),
+        P("DFD nivel 1 - reproducción", "H1Vox"),
+        P("Aquí abrimos la caja de Voxmetriks y seguimos una canción desde la búsqueda hasta el player. Los rectángulos con la marca D son almacenes de datos; los procesos son las cajas redondeadas.", "BodyVox"),
+        DfdDiagram([
+            ("Usuario", "consulta", "external", 17 * mm, 46 * mm),
+            ("1.1 Catálogo", "busca track", "process", 48 * mm, 46 * mm),
+            ("D1 DuckDB", "metadatos", "store", 48 * mm, 18 * mm),
+            ("1.2 Resolver", "Spotify -> Deezer", "process", 86 * mm, 46 * mm),
+            ("D2 Cache", "fuentes", "store", 86 * mm, 18 * mm),
+            ("1.3 Player", "play / pause", "process", 124 * mm, 46 * mm),
+            ("Cola", "auto-skip", "external", 145 * mm, 18 * mm),
+        ], [(0, 1, "título", 0, 3 * mm), (1, 2, "lee"),
+            (1, 3, "track", 0, 3 * mm), (3, 4, "guarda", 0, -3 * mm),
+            (3, 5, "fuente válida", 0, 3 * mm), (5, 6, "siguiente", 0, 3 * mm),
+            (6, 3, "reintenta", 0, -3 * mm)], dark=True),
+        Spacer(1, 4 * mm),
+        P("Regla importante: si Spotify no está conectado o no puede reproducir, se intenta Deezer. Si ambas fuentes fallan, la cola salta la canción y solo muestra un aviso breve cuando era una búsqueda individual.", "SmallVox"),
+        PageBreak(),
+        P("Diagrama de arquitectura por capas", "H1Vox"),
+        P("Este es el dibujo que usaría si me preguntan cómo está construido el producto sin entrar todavía en el detalle de cada tabla.", "BodyVox"),
+        DfdDiagram([
+            ("Fuentes", "PocketBase / Parquet", "external", 20 * mm, 50 * mm),
+            ("ELT", "Bronze -> Silver -> Gold", "process", 56 * mm, 50 * mm),
+            ("DuckDB", "app + dim + fact + agg", "store", 96 * mm, 50 * mm),
+            ("FastAPI", "reglas y permisos", "process", 136 * mm, 50 * mm),
+            ("Angular", "UI y player", "process", 96 * mm, 18 * mm),
+            ("Persona", "experiencia", "external", 136 * mm, 18 * mm),
+        ], [(0, 1, "ingesta"), (1, 2, "tablas"), (2, 3, "consulta"),
+            (3, 4, "API"), (4, 5, "pantalla"), (5, 4, "acciones")]),
+        Spacer(1, 7 * mm),
+        P("Qué digo en voz alta", "H2Vox"),
+        *bullet_lines([
+            "'La base central de la demo es un archivo DuckDB; ahí conviven la operación y la analítica.'",
+            "'Las tablas app_* representan el estado de la aplicación; dim_* describe el catálogo; fact_* registra hechos; agg_* acelera los reportes.'",
+            "'El pipeline transforma la fuente de catálogo y FastAPI aplica permisos antes de entregar datos a Angular.'",
+            "'El audio no se guarda en DuckDB: se resuelve en Spotify o Deezer y el player conserva el estado y la trazabilidad.'",
+        ]),
+        P("Leyenda", "H2Vox"),
+        P("Rectángulo = actor o sistema externo. Caja redondeada = proceso. Rectángulo con marca D = almacén de datos. Flecha = información que entra o sale.", "BodyVox"),
+        Spacer(1, 7 * mm),
+        Waveform(width=160 * mm),
+    ]
+    build_doc(OUT / "voxmetriks-dfd-arquitectura.pdf", "DFD y arquitectura", story)
+
+
 def header_footer(c: canvas.Canvas, doc: BaseDocTemplate, title: str, dark: bool = False) -> None:
     c.saveState()
     if dark:
@@ -507,5 +642,6 @@ if __name__ == "__main__":
     architecture_pdf()
     internal_pdf()
     fair_pdf()
+    dfd_pdf()
     for pdf in sorted(OUT.glob("voxmetriks-*.pdf")):
         print(f"created {pdf} ({pdf.stat().st_size} bytes)")

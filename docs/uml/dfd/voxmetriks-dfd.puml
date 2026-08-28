@@ -1,0 +1,65 @@
+@startuml voxmetriks-dfd
+title VOXMETRIKS - DFD de contexto y reproduccion
+skinparam backgroundColor #0B0C0B
+skinparam defaultFontName Inter
+skinparam shadowing false
+skinparam ArrowColor #E8A33D
+skinparam ArrowFontColor #A09A88
+skinparam rectangle {
+  BackgroundColor #17130C
+  BorderColor #674419
+  FontColor #F5F2EA
+}
+skinparam database {
+  BackgroundColor #17130C
+  BorderColor #674419
+  FontColor #F5F2EA
+}
+
+rectangle "Persona" as USER
+rectangle "Equipo empresa" as TEAM
+rectangle "Spotify / Deezer" as PROVIDER
+rectangle "Voxmetriks\nAngular + FastAPI" as APP
+database "D1 DuckDB\napp_* + dim_* + fact_* + agg_*" as DB
+database "D2 Cache de fuentes" as CACHE
+
+USER --> APP : busqueda / play
+APP --> USER : portada / estado
+TEAM --> APP : criterios / acciones
+APP --> TEAM : KPIs / reportes
+APP --> PROVIDER : resolver audio
+PROVIDER --> APP : pista completa / preview 30 s
+APP --> DB : leer y registrar
+DB --> APP : catalogo y metricas
+APP --> CACHE : guardar fuente
+CACHE --> APP : fuente conocida
+
+newpage
+title VOXMETRIKS - DFD nivel 1: auto-skip
+
+rectangle "Usuario" as U2
+rectangle "1.1 Catalogo" as P11
+database "D1 DuckDB" as D1
+rectangle "1.2 Resolver" as P12
+database "D2 Cache" as D2
+rectangle "1.3 Player" as P13
+rectangle "Cola" as Q2
+
+U2 --> P11 : titulo o artista
+P11 --> D1 : consulta de track
+D1 --> P11 : metadata y portada
+P11 --> P12 : track normalizado
+P12 --> D2 : consulta de fuente previa
+D2 --> P12 : fuente cacheada (si existe)
+P12 --> P13 : Spotify completo o Deezer preview
+P13 --> U2 : controles y estado
+P13 --> Q2 : fin o error
+Q2 --> P12 : siguiente track
+P12 --> Q2 : auto-skip si no hay fuente
+
+note right of D1
+  La app usa un unico archivo
+  DuckDB para demo local.
+  El audio nunca se guarda aqui.
+end note
+@enduml
