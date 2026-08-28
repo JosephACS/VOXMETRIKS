@@ -62,4 +62,27 @@ note right of D1
   DuckDB para demo local.
   El audio nunca se guarda aqui.
 end note
+
+newpage
+title VOXMETRIKS - Arquitectura por capas
+
+rectangle "Fuentes\nPocketBase / Parquet" as SRC
+rectangle "ELT\nBronze -> Silver -> Gold" as ELT
+database "DuckDB\napp_* + dim_* + fact_* + agg_*" as WH
+rectangle "FastAPI\nreglas y permisos" as API
+rectangle "Angular\nUI y player" as UI
+rectangle "Persona\nexperiencia" as END
+
+SRC --> ELT : ingesta
+ELT --> WH : tablas curadas
+WH --> API : consultas
+API --> UI : API
+UI --> END : pantalla
+END --> UI : acciones
+
+note bottom of WH
+  Operacion y analitica conviven en el warehouse.
+  El audio se resuelve en Spotify o Deezer;
+  DuckDB conserva metadatos, eventos y metricas.
+end note
 @enduml
