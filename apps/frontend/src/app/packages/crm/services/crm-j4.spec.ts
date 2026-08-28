@@ -8,6 +8,7 @@ import { CrmContextService } from './crm-context.service';
 import { crmAccessGuard } from '../guards/crm.guards';
 import { CRM_ROUTES } from '../crm.routes';
 import { APP_ROUTES } from '../../../app.routes';
+import { PRODUCT_ROUTES } from '../../../app.product.routes';
 import { CrmDashboardPageComponent } from '../pages/crm-dashboard.page';
 import { CrmProspectsListPageComponent } from '../pages/crm-prospects-list.page';
 import { CrmAuditPageComponent } from '../pages/crm-audit.page';
@@ -344,7 +345,7 @@ describe('CRM Routes registration (J4)', () => {
   it('APP_ROUTES includes CRM paths', () => {
     const layout = APP_ROUTES.find((r) => r.path === '' && r.children);
     const children = layout?.children ?? [];
-    const paths = new Set(children.map((c) => c.path));
+    const paths = new Set([...children, ...PRODUCT_ROUTES].map((c) => c.path));
     expect(paths.has('crm/dashboard')).toBe(true);
     expect(paths.has('crm/prospects')).toBe(true);
     expect(paths.has('crm/access-denied')).toBe(true);

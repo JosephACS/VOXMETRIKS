@@ -29,8 +29,8 @@ from tests.db_isolation import (
     restore_session_db,
 )
 
-os.environ.setdefault("AUTH_RATE_LIMIT", "0")
-os.environ.setdefault("GLOBAL_RATE_LIMIT", "0")
+os.environ["AUTH_RATE_LIMIT"] = "0"
+os.environ["GLOBAL_RATE_LIMIT"] = "0"
 os.environ.setdefault("LOG_TO_FILES", "false")
 # Never send real email during pytest (user .env may set smtp/resend).
 os.environ["EMAIL_PROVIDER"] = "console"
@@ -40,6 +40,10 @@ os.environ.setdefault("ORGANIZATION_INVITATION_DELIVERY_MODE", "local_once")
 os.environ["VOXMETRIKS_TEST_ISOLATION"] = "1"
 # Demo orgs stay hidden in list APIs during tests unless a test opts in.
 os.environ.setdefault("SHOW_DEMO_ORGANIZATIONS", "false")
+# Tests use academic mock checkout + optional identity bootstrap accounts.
+os.environ["PAYMENT_PROVIDER"] = "academic_mock"
+os.environ["SEED_DEMO_USERS"] = "true"
+os.environ["SEED_DEMO_CRM_USERS"] = "true"
 
 
 # Re-export for convenience (tests should prefer ``tests.db_isolation``).
@@ -230,7 +234,17 @@ def _configure_test_database() -> None:
     os.environ["RUN_ETL_ON_BOOT"] = "never"
     os.environ["SKIP_SYSTEM_BOOT"] = "1"
     # Session override survives fixtures that call ``get_settings.cache_clear()``.
-    forced = config_module.Settings(db_path=str(db_path))
+    forced = config_module.Settings(
+        environment="development",
+        db_path=str(db_path),
+        seed_demo_users=True,
+        seed_demo_crm_users=True,
+        payment_provider="academic_mock",
+        auth_rate_limit=0,
+        global_rate_limit=0,
+        max_app_users=0,
+        email_provider="console",
+    )
     remember_session_settings(forced)
     config_module.set_settings_override(forced)
     shutdown_duckdb_client()

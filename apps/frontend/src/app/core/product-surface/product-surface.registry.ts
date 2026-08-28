@@ -39,7 +39,7 @@ const personalLibrary: ProductSurfaceDefinition[] = [
   {
     id: 'personal.tracks',
     labelKey: 'nav.tracks',
-    iconId: 'catalog',
+    iconId: 'tracks',
     path: '/tracks',
     spaces: ['personal'],
     sectionId: 'space-library',
@@ -72,7 +72,7 @@ const personalLibrary: ProductSurfaceDefinition[] = [
   {
     id: 'personal.history',
     labelKey: 'nav.history',
-    iconId: 'activity',
+    iconId: 'history',
     path: '/history',
     spaces: ['personal'],
     sectionId: 'space-library',
@@ -995,8 +995,27 @@ export const PRODUCT_SURFACE_REGISTRY: readonly ProductSurfaceDefinition[] = [
   ...artist,
 ];
 
+/**
+ * Keep personal navigation compact while allowing organization owners to see
+ * every enterprise module their plan and permissions grant. The evaluator is
+ * still the source of truth for role and tier access.
+ */
+const FINAL_DEMO_HIDDEN_IDS = new Set([
+  'personal.activity',
+  'account.subscription',
+  'account.household',
+  'account.billing',
+  'entry.artist_claim',
+  'entry.organization_new',
+]);
+
+export function visibleInFinalDemoNavigation(surface: ProductSurfaceDefinition): boolean {
+  if (FINAL_DEMO_HIDDEN_IDS.has(surface.id)) return false;
+  return true;
+}
+
 export function productSurfacesForSpace(kind: ProductSurfaceDefinition['spaces'][number]): ProductSurfaceDefinition[] {
-  return PRODUCT_SURFACE_REGISTRY.filter((s) => s.spaces.includes(kind)).sort(
+  return PRODUCT_SURFACE_REGISTRY.filter((surface) => surface.spaces.includes(kind)).sort(
     (a, b) => a.order - b.order || a.id.localeCompare(b.id),
   );
 }

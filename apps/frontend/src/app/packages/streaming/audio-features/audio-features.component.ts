@@ -33,13 +33,13 @@ export class AudioFeaturesComponent implements OnInit {
   readonly lang = this.i18n.lang;
 
   readonly featureDefs: FeatureDef[] = [
-    { key: 'danceability', labelKey: 'audioFeatures.feature.danceability', helpKey: 'audioFeatures.help.danceability', color: '#1ed896' },
-    { key: 'energy', labelKey: 'audioFeatures.feature.energy', helpKey: 'audioFeatures.help.energy', color: '#7c3aed' },
+    { key: 'danceability', labelKey: 'audioFeatures.feature.danceability', helpKey: 'audioFeatures.help.danceability', color: '#e8a33d' },
+    { key: 'energy', labelKey: 'audioFeatures.feature.energy', helpKey: 'audioFeatures.help.energy', color: '#e8a33d' },
     { key: 'valence', labelKey: 'audioFeatures.feature.valence', helpKey: 'audioFeatures.help.valence', color: '#10b981' },
     { key: 'acousticness', labelKey: 'audioFeatures.feature.acousticness', helpKey: 'audioFeatures.help.acousticness', color: '#3b82f6' },
     { key: 'speechiness', labelKey: 'audioFeatures.feature.speechiness', helpKey: 'audioFeatures.help.speechiness', color: '#f59e0b' },
     { key: 'instrumentalness', labelKey: 'audioFeatures.feature.instrumentalness', helpKey: 'audioFeatures.help.instrumentalness', color: '#ec4899' },
-    { key: 'liveness', labelKey: 'audioFeatures.feature.liveness', helpKey: 'audioFeatures.help.liveness', color: '#6366f1' },
+    { key: 'liveness', labelKey: 'audioFeatures.feature.liveness', helpKey: 'audioFeatures.help.liveness', color: '#e8a33d' },
   ];
 
   isLoading = signal(true);

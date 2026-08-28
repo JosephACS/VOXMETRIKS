@@ -12,7 +12,11 @@ import type {
   ProductSurfaceDefinition,
   ProductSurfaceVerdict,
 } from './product-surface.models';
-import { PRODUCT_SURFACE_REGISTRY, productSurfacesForSpace } from './product-surface.registry';
+import {
+  PRODUCT_SURFACE_REGISTRY,
+  productSurfacesForSpace,
+  visibleInFinalDemoNavigation,
+} from './product-surface.registry';
 
 const TIER_RANK: Record<ProductOrganizationTier, number> = {
   onboarding: 1,
@@ -204,7 +208,9 @@ export function isSidebarEligibleSurface(surface: ProductSurfaceDefinition): boo
 
 /** Sidebar-eligible surfaces (exclude tab-only admin/catalog extras). */
 export function listVisibleSidebarSurfaces(ctx: ProductSurfaceContext): ProductSurfaceDefinition[] {
-  return listVisibleSurfaces(ctx).filter(isSidebarEligibleSurface);
+  return listVisibleSurfaces(ctx).filter(
+    (surface) => isSidebarEligibleSurface(surface) && visibleInFinalDemoNavigation(surface),
+  );
 }
 
 export interface ProductNavSection {

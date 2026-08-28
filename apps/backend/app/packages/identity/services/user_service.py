@@ -231,6 +231,14 @@ def register(
             return _issue_verification_code(conn, email)
         raise ValueError("email or username already exists")
 
+    max_users = max(0, int(get_settings().max_app_users or 0))
+    if max_users:
+        current_users = int(conn.execute("SELECT COUNT(*) FROM app_user").fetchone()[0])
+        if current_users >= max_users:
+            raise ValueError(
+                f"Se alcanzó el límite de {max_users} usuarios de esta entrega."
+            )
+
     _insert_user(
         conn,
         username=username,

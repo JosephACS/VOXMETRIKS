@@ -40,7 +40,7 @@ _REMASTER_BARE_RE = re.compile(
 _MULTI_SPACE_RE = re.compile(r"\s+")
 _PUNCT_SOFT_RE = re.compile(r"[\"'`´""'']+")
 _FEAT_IN_TITLE_RE = re.compile(
-    r"\s*[\(\[]?\s*(?:feat\.?|ft\.?|featuring|with)\s+.+?[\)\]]?\s*$",
+    r"\s*[\(\[]?\s*(?:\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b)\s+.+?[\)\]]?\s*$",
     re.IGNORECASE,
 )
 _SPEED_VERSION_RE = re.compile(

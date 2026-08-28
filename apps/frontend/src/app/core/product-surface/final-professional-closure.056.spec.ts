@@ -44,14 +44,12 @@ describe('Spec 056 final professional product closure', () => {
     platformRoles: new Set(['sales_manager']),
   });
 
-  it('exposes one sidebar entry per commercial domain', () => {
+  it('shows every authorized enterprise domain to the organization owner', () => {
     const paths = sidebarPaths(owner);
-    expect(paths.filter((p) => p.startsWith('/crm'))).toEqual(['/crm/dashboard']);
-    expect(paths.filter((p) => p.startsWith('/campaigns'))).toEqual(['/campaigns']);
-    expect(paths.filter((p) => p === '/customer-success' || p === '/support')).toEqual([
-      '/customer-success',
-    ]);
-    expect(paths.filter((p) => p.startsWith('/compliance'))).toEqual(['/compliance']);
+    expect(paths).toContain('/crm/dashboard');
+    expect(paths).toContain('/campaigns');
+    expect(paths).toContain('/customer-success');
+    expect(paths).toContain('/compliance');
   });
 
   it('keeps deep links authorized for the same hydrated session', () => {
@@ -71,13 +69,16 @@ describe('Spec 056 final professional product closure', () => {
       permissions: new Set(['compliance.view']),
     });
     expect(sidebarPaths(viewer)).toContain('/compliance');
+    expect(listVisibleContextTabs('compliance', viewer).map((s) => s.path)).toContain(
+      '/compliance',
+    );
     expect(listVisibleContextTabs('compliance', viewer).map((s) => s.path)).not.toContain(
       '/compliance/admin',
     );
     expect(evaluateProductPathAccess('/compliance/admin', viewer)).toBe('permission-denied');
   });
 
-  it('module chrome exposes CRM/CS/compliance tabs without sidebar clutter', () => {
+  it('module chrome exposes CRM/CS/compliance tabs from the enterprise navigation', () => {
     const crm = resolveModuleContext('/crm/prospects', owner);
     expect(crm?.moduleId).toBe('crm');
     expect(crm?.tabs.map((t) => t.path)).toEqual(
@@ -129,7 +130,7 @@ describe('Spec 056 final professional product closure', () => {
     );
   });
 
-  it('CRM staff identity still unlocks CRM hub', () => {
+  it('CRM staff identity keeps authorized access to its working area', () => {
     const staff = persona({
       activeSpace: 'organization',
       organizationId: 2,
@@ -137,5 +138,6 @@ describe('Spec 056 final professional product closure', () => {
       staffCapabilities: new Set([STAFF_CAPABILITY.shell]),
     });
     expect(sidebarPaths(staff)).toContain('/crm/dashboard');
+    expect(evaluateProductPathAccess('/crm/dashboard', staff)).toBe('allow');
   });
 });

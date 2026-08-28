@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
+import { CatalogCacheService } from '../../../core/services/catalog-cache.service';
 
 export interface SimpleReportColumn {
   key: string;
@@ -67,6 +69,7 @@ export interface SimpleReportData {
 export class SimpleReportsApiService {
   private readonly http = inject(HttpClient);
   private readonly orgCtx = inject(OrganizationContextService);
+  private readonly cache = inject(CatalogCacheService);
   private readonly base = `${environment.apiUrl}/reports/simple`;
 
   catalog(opts?: {
@@ -80,10 +83,11 @@ export class SimpleReportsApiService {
     if (opts?.module) params = params.set('module', opts.module);
     if (opts?.category) params = params.set('category', opts.category);
     if (opts?.q) params = params.set('q', opts.q);
-    return this.http.get<SimpleReportCatalogResponse>(`${this.base}/catalog`, {
+    const key = `simple-report-catalog:${this.orgCtx.organizationId() ?? 'none'}:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<SimpleReportCatalogResponse>(`${this.base}/catalog`, {
       params,
       headers: this.orgHeaders(),
-    });
+    }));
   }
 
   getData(
@@ -104,14 +108,27 @@ export class SimpleReportsApiService {
         if (v) params = params.set(k, v);
       }
     }
-    return this.http.get<SimpleReportData>(`${this.base}/${reportId}/data`, {
+    const key = `simple-report-data:${this.orgCtx.organizationId() ?? 'none'}:${reportId}:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<SimpleReportData>(`${this.base}/${reportId}/data`, {
       params,
       headers: this.orgHeaders(),
-    });
+    }), 30_000);
   }
 
   private orgHeaders(): Record<string, string> {
     const orgId = this.orgCtx.organizationId();
     return orgId ? { 'X-Organization-Id': String(orgId) } : {};
+  }
+
+  private cachedGet<T>(key: string, request: () => Observable<T>, ttlMs = 60_000): Observable<T> {
+    const cached = this.cache.get<T>(key, ttlMs);
+    if (cached !== null) return of(cached);
+    return request().pipe(
+      tap((value) => this.cache.set(key, value, ttlMs)),
+      catchError((error) => {
+        this.cache.invalidate(key);
+        return throwError(() => error);
+      }),
+    );
   }
 }

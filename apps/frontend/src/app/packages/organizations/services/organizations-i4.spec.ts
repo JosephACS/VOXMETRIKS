@@ -9,6 +9,7 @@ import {
 import { OrganizationContextService } from './organization-context.service';
 import { ORGANIZATIONS_ROUTES } from '../organizations.routes';
 import { APP_ROUTES } from '../../../app.routes';
+import { PRODUCT_ROUTES } from '../../../app.product.routes';
 
 describe('OrganizationsApiService (I4)', () => {
   let api: OrganizationsApiService;
@@ -281,7 +282,7 @@ describe('Organizations routes (I4)', () => {
   it('registers key organization paths under dashboard layout', () => {
     const layout = APP_ROUTES.find((r) => r.path === '' && r.children);
     const children = layout?.children ?? [];
-    const paths = new Set(children.map((c) => c.path));
+    const paths = new Set([...children, ...PRODUCT_ROUTES].map((c) => c.path));
     for (const required of [
       'organizations/new',
       'organizations/onboarding',

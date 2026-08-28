@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener, DestroyRef, ViewEncapsulation } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -29,7 +29,6 @@ import {
   isProductFinalSection,
   isStaffIdentity,
   showPlatformOpsInPrimaryNav,
-  showReportingSection,
   homePathForRole,
   normalizeIdentityRole,
   pathRequiresOrgHydrate,
@@ -39,10 +38,13 @@ import { resolveModuleContext, type ModuleContextView } from '../../shared/navig
 import { ModuleContextChromeComponent } from '../../shared/components/module-context-chrome.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SpaceContextService } from '../../core/spaces/space-context.service';
+import { homePathForSpace } from '../../core/spaces/space.models';
 import { spaceNavIconMarkup } from '../../core/spaces/space-nav.icons';
 import { spaceNavSectionsFor } from '../../core/spaces/space-nav.config';
 import { productUserDisplayName } from '../../shared/utils/product-presentation.util';
 import { SpaceSelectorComponent } from '../../shared/components/space-selector/space-selector.component';
+import { TrackCoverService } from '../../shared/services/track-cover.service';
+import { CoverArtService } from '../../shared/services/cover-art.service';
 
 interface NavItemConfig {
   path: string;
@@ -96,7 +98,12 @@ interface NavGroupView {
     ModuleContextChromeComponent,
   ],
   templateUrl: './dashboard-layout.component.html',
-  styleUrls: ['./dashboard-layout.component.css'],
+  styleUrls: [
+    './dashboard-layout.component.css',
+    '../../shared/styles/catalog-page-shared.css',
+    '../../shared/styles/listener-surface.css',
+  ],
+  encapsulation: ViewEncapsulation.None,
   animations: [routeFadeAnimation],
 })
 export class DashboardLayoutComponent implements OnInit, OnDestroy {
@@ -108,6 +115,10 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   router = inject(Router);
   private favorites = inject(FavoritesService);
   private history = inject(HistoryService);
+  private trackCovers = inject(TrackCoverService);
+  private coverArt = inject(CoverArtService);
+  readonly recentHistory = toSignal(this.history.history$, { initialValue: [] });
+  readonly recentCoverUrls = signal<Record<number, string>>({});
   private destroyRef = inject(DestroyRef);
   private platformEvents = inject(PlatformEventsService);
   private orgCtx = inject(OrganizationContextService);
@@ -117,6 +128,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   sidebarOpen = signal(false);
   sidebarCollapsed = signal(this.readCollapsedPref());
+  navQuery = signal('');
   /** Spec 043 hotfix — block routed pages until org preference is restored when required. */
   orgContextHydrating = signal(false);
   orgHydrateFailed = signal(false);
@@ -139,8 +151,8 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   householdOwner = signal(false);
   private resizeHandler = () => this.checkScreenSize();
 
-  private static readonly COLLAPSE_KEY = 'voxmetrik_sidebar_collapsed';
-  private static readonly NAV_GROUPS_KEY = 'voxmetrik_nav_groups_open';
+  private static readonly COLLAPSE_KEY = 'voxmetrik_navigation_dock_v3';
+  private static readonly NAV_GROUPS_KEY = 'voxmetrik_nav_groups_open_v2';
 
   /** Spec 043 — flat role nav: ≤4 groups, no duplicate section titles. */
   private readonly navGroupConfig: NavGroupConfig[] = [
@@ -173,7 +185,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     { id: 'results', titleKey: 'nav.group.results', sectionIds: ['reporting'] },
   ];
 
-  /** Reduced presentation nav for demo.business — hides technical / ops modules only in UI. */
+  /** Reduced presentation nav — hides technical / ops modules only in UI. */
   private readonly presentationNavGroupConfig: NavGroupConfig[] = [
     { id: 'personal', titleKey: 'nav.group.presentation.personal', sectionIds: ['main', 'personalAccount'] },
     { id: 'sales', titleKey: 'nav.group.presentation.sales', sectionIds: ['crm'] },
@@ -183,7 +195,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     { id: 'results', titleKey: 'nav.group.presentation.results', sectionIds: ['businessAnalytics'] },
   ];
 
-  /** Spec 031 — demo.artist: career, publishing, own rights & results. */
+  /** Spec 031 — artist portal: career, publishing, own rights & results. */
   private readonly presentationArtistNavGroupConfig: NavGroupConfig[] = [
     { id: 'career', titleKey: 'nav.group.artistCareer', sectionIds: ['artistPortal'] },
     { id: 'publishing', titleKey: 'nav.group.artistPublishing', sectionIds: ['artistPublishing'] },
@@ -277,19 +289,15 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     return email.includes('demo@') || this.userPlan().toLowerCase() === 'demo';
   });
 
-  /** Account flagged for reduced presentation menu (demo.business). */
+  /** Account flagged for reduced presentation menu (presentation_nav preference). */
   isPresentationDemo = computed(() => {
     const user = this.auth.getUser();
-    const username = (user?.username ?? '').toLowerCase();
-    if (username === 'demo.business') return true;
     return user?.preferences?.presentation_nav === true;
   });
 
-  /** Spec 031 artist portal mode (demo.artist / presentation_role artist). */
+  /** Spec 031 artist portal mode (presentation_role artist). */
   isArtistPortalDemo = computed(() => {
     const user = this.auth.getUser();
-    const username = (user?.username ?? '').toLowerCase();
-    if (username === 'demo.artist') return true;
     const role = (user?.preferences?.presentation_role ?? '').toLowerCase();
     return role === 'artist' || role === 'artist_portal';
   });
@@ -346,7 +354,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         {
           path: '/dashboard',
           labelKey: 'nav.analyticsHub',
-          icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+          icon: this.svgIcon('<path d="M3 13h8V3H3z"/><path d="M13 21h8V11h-8z"/><path d="M3 21h8v-6H3z"/><path d="M13 9h8V3h-8z"/>'),
         },
         {
           path: '/insights/analytics',
@@ -356,7 +364,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         {
           path: '/insights/tracks',
           labelKey: 'nav.topTracks',
-          icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+          icon: this.svgIcon('<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/>'),
         },
       ],
     },
@@ -364,12 +372,12 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       id: 'music',
       titleKey: 'nav.section.music',
       items: [
-        { path: '/tracks', labelKey: 'nav.tracks', icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>') },
+        { path: '/tracks', labelKey: 'nav.tracks', icon: this.svgIcon('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v4"/>') },
         { path: '/artists', labelKey: 'nav.artists', icon: this.svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
         { path: '/genres', labelKey: 'nav.genres', icon: this.svgIcon('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>') },
         { path: '/playlists', labelKey: 'nav.playlists', icon: this.svgIcon('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>') },
         { path: '/liked', labelKey: 'nav.liked', icon: this.svgIcon('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>') },
-        { path: '/history', labelKey: 'nav.history', icon: this.svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>') },
+        { path: '/history', labelKey: 'nav.history', icon: this.svgIcon('<polyline points="3 7 3 2 8 2"/><path d="M3.05 11a9 9 0 1 0 2.13-5.82L3 7"/><polyline points="12 7 12 12 15 14"/>') },
         { path: '/activity', labelKey: 'nav.activity', icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>') },
         { path: '/audio-features', labelKey: 'nav.audioFeatures', icon: this.svgIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>') },
       ],
@@ -381,7 +389,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         {
           path: '/catalog',
           labelKey: 'nav.catalogHub',
-          icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+          icon: this.svgIcon('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>'),
         },
       ],
     },
@@ -420,7 +428,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       id: 'analytics',
       titleKey: 'nav.section.analytics',
       items: [
-        { path: '/analytics', labelKey: 'nav.analytics', icon: this.svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>') },
+        { path: '/analytics', labelKey: 'nav.analytics', icon: this.svgIcon('<polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/>') },
         { path: '/trending', labelKey: 'nav.trending', icon: this.svgIcon('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>') },
         { path: '/comparatives', labelKey: 'nav.comparatives', icon: this.svgIcon('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>') },
       ],
@@ -785,11 +793,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
           labelKey: 'nav.platformOps.dashboard',
           icon: this.svgIcon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
         },
-        {
-          path: '/platform-ops/audio-unresolved',
-          labelKey: 'nav.platformOps.audioUnresolved',
-          icon: this.svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
-        },
       ],
     },
   ];
@@ -849,7 +852,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     this.householdOwner();
 
     const sections = this.navSections();
-    const engineer = this.auth.hasEngineerAccess();
     const hasOrg = this.orgCtx.hasOrganization();
     const orgPerm = (code: string) => this.orgCtx.hasPermission(code);
     const canOrg = (
@@ -860,7 +862,6 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     const artistPortal = this.isArtistPortalDemo();
     const financeNav = this.isFinancePresentationDemo();
     const platformAdminRole = this.crmCtx.roles().includes('platform_admin');
-    const platformAdmin = engineer || platformAdminRole;
     const navCtx: NavAccessContext = {
       identityRole: this.userRole(),
       platformAdmin: platformAdminRole,
@@ -1163,6 +1164,100 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     return [];
   });
 
+  /** One searchable navigation model for every role and product space. */
+  displayedNavGroups = computed((): NavGroupView[] => {
+    const query = this.foldForSearch(this.navQuery());
+    const groups = this.visibleNavGroups();
+    if (!query) return groups;
+    return groups
+      .map((group) => ({
+        ...group,
+        sections: group.sections
+          .map((section) => ({
+            ...section,
+            items: section.items.filter((item) =>
+              this.foldForSearch(`${group.title} ${section.title} ${item.label}`).includes(query),
+            ),
+          }))
+          .filter((section) => section.items.length > 0),
+      }))
+      .filter((group) => group.sections.length > 0);
+  });
+
+  /** The collapsed rail is a quick-access menu, not the entire sitemap. */
+  collapsedNavItems = computed((): NavItem[] => {
+    const all = this.visibleNavGroups().flatMap((group) =>
+      group.sections.flatMap((section) => section.items),
+    );
+    const unique = [...new Map(all.map((item) => [item.path, item])).values()];
+    const isPersonal = this.spaceCtx.activeSpace()?.kind === 'personal';
+    const personalPriority = [
+      '/discover',
+      '/search',
+      '/tracks',
+      '/playlists',
+      '/liked',
+      '/account/plans',
+    ];
+    const compact = isPersonal
+      ? personalPriority
+          .map((path) => unique.find((item) => item.path === path))
+          .filter((item): item is NavItem => !!item)
+      : unique.slice(0, 6);
+    const url = this.router.url.split('?')[0];
+    const active = unique.find((item) =>
+      item.exact ? url === item.path : url === item.path || url.startsWith(`${item.path}/`),
+    );
+    if (active && !compact.some((item) => item.path === active.path)) compact.push(active);
+    return compact;
+  });
+
+  /** Contextual shortcuts in the top command bar — no duplicated menu tree. */
+  quickAccessItems = computed((): NavItem[] => {
+    const all = this.visibleNavGroups().flatMap((group) =>
+      group.sections.flatMap((section) => section.items),
+    );
+    const unique = [...new Map(all.map((item) => [item.path, item])).values()];
+    const kind = this.spaceCtx.activeSpace()?.kind ?? this.predictSpaceNavKind()?.kind;
+    const priorities: Record<string, string[]> = {
+      personal: ['/search', '/recommendations', '/liked', '/account/plans'],
+      organization: [
+        '/business-analytics',
+        '/customer-success',
+        '/reports',
+        '/workpanel',
+        '/crm/dashboard',
+        '/billing/invoices',
+      ],
+      data_ops: ['/workpanel', '/elt-pipeline', '/explorer', '/complex-reports'],
+      platform_admin: ['/workpanel', '/organizations', '/users', '/simple-reports'],
+    };
+    return (priorities[kind ?? 'personal'] ?? priorities['personal'])
+      .map((path) => unique.find((item) => item.path === path))
+      .filter((item): item is NavItem => !!item)
+      .slice(0, 3);
+  });
+
+  activeModuleLabel = computed(() => {
+    const url = this.moduleContextUrl().split('?')[0];
+    const item = this.visibleNavGroups()
+      .flatMap((group) => group.sections.flatMap((section) => section.items))
+      .find((candidate) =>
+        candidate.exact
+          ? url === candidate.path
+          : url === candidate.path || url.startsWith(`${candidate.path}/`),
+      );
+    return item?.label ?? this.activeSpaceLabel();
+  });
+
+  private foldForSearch(value: string): string {
+    return (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
   /** Predict space kind for stable sidebar before bootstrap completes. */
   private predictSpaceNavKind(): {
     kind: 'personal' | 'organization' | 'data_ops' | 'platform_admin';
@@ -1214,20 +1309,41 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   userInitial = computed(() => this.userName().charAt(0).toUpperCase());
+  activeSpaceLabel = computed(() => this.spaceCtx.activeSpace()?.label ?? 'VOXMETRIKS');
   avatarGradient = computed(() => {
     const id = this.auth.getUser()?.id ?? 0;
     const gradients = [
-      'linear-gradient(135deg, #1ed896, #148f5e)',
-      'linear-gradient(135deg, #3b82f6, #1e3a8a)',
-      'linear-gradient(135deg, #a855f7, #6b21a8)',
+      'linear-gradient(135deg, #f0b555, #b5650a)',
+      'linear-gradient(135deg, #e8a33d, #8f4f05)',
+      'linear-gradient(135deg, #ffd58a, #c97d1e)',
     ];
     return gradients[id % gradients.length];
   });
+
+  historyCover(trackId: number): string {
+    return this.recentCoverUrls()[trackId] || this.coverArt.gradientFor(trackId);
+  }
+
+  historyInitial(title?: string | null): string {
+    return this.coverArt.initialFor(title ?? '');
+  }
 
   ngOnInit() {
     this.checkScreenSize();
     window.addEventListener('resize', this.resizeHandler);
     this.history.reload();
+    this.history.history$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((items) => {
+        items.slice(0, 3).forEach((item) => {
+          this.trackCovers.cover$(item.id_track)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((url) => {
+              if (!url) return;
+              this.recentCoverUrls.update((current) => ({ ...current, [item.id_track]: url }));
+            });
+        });
+      });
     this.favorites.refreshIds();
     // Staff: keep Principal + technical admin groups open so engineering tools are discoverable.
     if (this.auth.hasEngineerAccess()) {
@@ -1307,6 +1423,39 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     return homePathForRole(this.auth.role());
   }
 
+  /** Brand navigation follows the active product space, not only identity role. */
+  brandHomePath(): string {
+    const activeSpace = this.spaceCtx.activeSpace();
+    if (activeSpace) return homePathForSpace(activeSpace);
+    return this.roleHomePath();
+  }
+
+  businessHomePath(): string {
+    const organizationId = this.orgCtx.organizationId() ?? this.orgCtx.organizations()[0]?.id;
+    return organizationId != null ? `/organizations/${organizationId}` : '/business';
+  }
+
+  isExperienceAreaActive(area: 'home' | 'search' | 'music' | 'business' | 'account'): boolean {
+    const path = this.router.url.split('?')[0];
+    if (area === 'home') return path === '/discover' || path === '/';
+    if (area === 'search') return path === '/search';
+    if (area === 'music') {
+      return [
+        '/tracks', '/artists', '/genres', '/playlists', '/liked', '/history',
+        '/activity', '/audio-features', '/recommendations',
+      ].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+    }
+    if (area === 'account') {
+      return path === '/users' || path === '/settings' || path.startsWith('/account/');
+    }
+    return [
+      '/organizations', '/business-analytics', '/reports', '/simple-reports',
+      '/complex-reports', '/workpanel', '/crm', '/subscriptions', '/billing',
+      '/customer-success', '/support', '/campaigns', '/royalties', '/payouts',
+      '/compliance', '/catalog', '/catalog-rights', '/artist-space', '/artist-profiles',
+    ].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  }
+
   canManageHousehold(): boolean {
     return this.householdOwner();
   }
@@ -1342,6 +1491,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
   isNavGroupOpen(groupId: string): boolean {
     if (this.sidebarCollapsed()) return true;
+    if (this.navQuery().trim()) return true;
     const state = this.expandedNavGroups();
     if (state[groupId] != null) return state[groupId];
     // Compact product nav (classic + space ids) stays open; only the old demo "admin" pack stays closed.
@@ -1386,21 +1536,22 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
         return {
           principal: true,
           library: true,
-          account: true,
-          management: true,
-          results: true,
-          data: true,
+          account: false,
+          management: false,
+          results: false,
+          data: false,
           music: true,
           admin: false,
           'space-main': true,
           'space-library': true,
-          'space-account': true,
+          'space-account': false,
+          'space-entry': false,
           'space-org-main': true,
-          'space-org-plan': true,
-          'space-org-crm': true,
-          'space-org-growth': true,
-          'space-org-rights': true,
-          'space-org-cs': true,
+          'space-org-plan': false,
+          'space-org-crm': false,
+          'space-org-growth': false,
+          'space-org-rights': false,
+          'space-org-cs': false,
           'space-data': true,
           'space-platform': true,
           'space-artist': true,
@@ -1410,21 +1561,22 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       return {
         principal: true,
         library: true,
-        account: true,
-        management: true,
-        results: true,
-        data: true,
+        account: false,
+        management: false,
+        results: false,
+        data: false,
         music: true,
         admin: false,
         'space-main': true,
         'space-library': true,
-        'space-account': true,
+        'space-account': false,
+        'space-entry': false,
         'space-org-main': true,
-        'space-org-plan': true,
-        'space-org-crm': true,
-        'space-org-growth': true,
-        'space-org-rights': true,
-        'space-org-cs': true,
+        'space-org-plan': false,
+        'space-org-crm': false,
+        'space-org-growth': false,
+        'space-org-rights': false,
+        'space-org-cs': false,
         'space-data': true,
         'space-platform': true,
         'space-artist': true,
@@ -1477,24 +1629,29 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     this.sidebarOpen.update((v) => !v);
   }
 
+  toggleAppNavigation(): void {
+    this.toggleSidebar();
+  }
+
   toggleSidebarCollapse() {
     this.sidebarCollapsed.update((v) => {
       const next = !v;
       localStorage.setItem(DashboardLayoutComponent.COLLAPSE_KEY, String(next));
+      if (next) this.navQuery.set('');
       return next;
     });
   }
 
   closeSidebar() {
-    if (window.innerWidth >= 1024) return;
     this.sidebarOpen.set(false);
   }
 
   private readCollapsedPref(): boolean {
     try {
-      return localStorage.getItem(DashboardLayoutComponent.COLLAPSE_KEY) === 'true';
+      const stored = localStorage.getItem(DashboardLayoutComponent.COLLAPSE_KEY);
+      return stored == null ? true : stored === 'true';
     } catch {
-      return false;
+      return true;
     }
   }
 
@@ -1511,17 +1668,19 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     this.auth.persistDarkMode(this.ui.isVisuallyDark());
   }
 
+  onNavSearch(value: string): void {
+    this.navQuery.set(value);
+  }
+
   toggleUserMenu(e: Event) {
     e.stopPropagation();
     this.userMenuOpen.update((v) => !v);
   }
 
   checkScreenSize() {
-    if (window.innerWidth >= 1024) {
-      this.sidebarOpen.set(true);
-    } else {
-      this.sidebarOpen.set(false);
-    }
+    // Navigation is an on-demand module drawer on every viewport. Keeping it
+    // closed avoids stealing horizontal space from dashboards and reports.
+    this.sidebarOpen.set(false);
   }
 
   logout() {

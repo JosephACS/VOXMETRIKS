@@ -16,12 +16,12 @@ import { DataSourceBadgeComponent } from '../../../shared/components/data-source
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 const COVER_GRADIENTS = [
-  'linear-gradient(135deg, #1ed896, #148f5e)',
+  'linear-gradient(135deg, #e8a33d, #f0b555)',
   'linear-gradient(135deg, #3b82f6, #1e40af)',
   'linear-gradient(135deg, #10b981, #047857)',
   'linear-gradient(135deg, #ec4899, #9d174d)',
   'linear-gradient(135deg, #f59e0b, #b45309)',
-  'linear-gradient(135deg, #6366f1, #312e81)',
+  'linear-gradient(135deg, #e8a33d, #17130c)',
   'linear-gradient(135deg, #ef4444, #991b1b)',
   'linear-gradient(135deg, #14b8a6, #0f766e)',
 ];
@@ -100,8 +100,8 @@ export class TrendingComponent implements OnInit {
   popDistribution = computed(() => {
     const t = this.tracks();
     const buckets = [
-      { label: '90+', min: 90, color: '#1ed896', count: 0 },
-      { label: '70', min: 70, color: '#7c3aed', count: 0 },
+      { label: '90+', min: 90, color: '#e8a33d', count: 0 },
+      { label: '70', min: 70, color: '#e8a33d', count: 0 },
       { label: '50', min: 50, color: '#3b82f6', count: 0 },
       { label: '<50', min: 0, color: '#64748b', count: 0 },
     ];

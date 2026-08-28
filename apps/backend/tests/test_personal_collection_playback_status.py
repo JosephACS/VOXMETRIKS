@@ -30,10 +30,10 @@ def _seed(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("INSERT INTO dim_track VALUES (10, 'Ok Song', 1, 1, 200000, 80)")
     conn.execute("INSERT INTO dim_track VALUES (11, 'Broken Song', 1, 1, 180000, 50)")
     conn.execute(
-        "INSERT INTO app_track_audio_source VALUES (10, 'youtube', 'ok', 0, 'aaaaaaaaaaa', 'aaaaaaaaaaa', NULL, NULL, 1.0, CURRENT_TIMESTAMP)"
+        "INSERT INTO app_track_audio_source VALUES (10, 'deezer', 'ok', 0, NULL, 'dz-aaaaaaaa', 'https://cdn.test/preview.mp3', NULL, 1.0, CURRENT_TIMESTAMP)"
     )
     conn.execute(
-        "INSERT INTO app_track_audio_source VALUES (11, 'youtube', 'not_found', 3, 'bbbbbbbbbbb', 'bbbbbbbbbbb', NULL, 'unavailable:test', 0.0, CURRENT_TIMESTAMP)"
+        "INSERT INTO app_track_audio_source VALUES (11, 'deezer', 'not_found', 3, NULL, 'dz-bbbbbbbb', NULL, 'unavailable:test', 0.0, CURRENT_TIMESTAMP)"
     )
     conn.execute("INSERT INTO app_favorite VALUES (1, 10, CURRENT_TIMESTAMP), (1, 11, CURRENT_TIMESTAMP)")
 

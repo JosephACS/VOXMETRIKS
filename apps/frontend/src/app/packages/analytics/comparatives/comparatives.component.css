@@ -8,12 +8,12 @@
 
 .insight-badge {
   padding: 0.3rem 0.75rem;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(232, 163, 61, 0.1);
+  border: 1px solid rgba(232, 163, 61, 0.25);
   border-radius: 2rem;
   font-size: 0.68rem;
   font-weight: 600;
-  color: #a78bfa;
+  color: #e8a33d;
 }
 
 .page-subtitle {
@@ -148,7 +148,7 @@
 }
 
 .leg-item.pop .leg-dot { background: var(--accent); }
-.leg-item.en .leg-dot { background: #7c3aed; }
+.leg-item.en .leg-dot { background: #e8a33d; }
 
 /* Scatter */
 .scatter-list {
@@ -188,7 +188,7 @@
 
 .sc-fill { height: 100%; border-radius: 2px; }
 .sc-bar.pop .sc-fill { background: var(--accent); }
-.sc-bar.en .sc-fill { background: #7c3aed; }
+.sc-bar.en .sc-fill { background: #e8a33d; }
 
 .sc-tracks {
   font-size: 0.65rem;
@@ -347,7 +347,7 @@
 
 .gc-fill { height: 100%; border-radius: 2px; }
 .gc-fill.pop { background: var(--accent); }
-.gc-fill.en { background: #7c3aed; }
+.gc-fill.en { background: #e8a33d; }
 
 .gc-m-val {
   font-family: var(--font-mono);
@@ -419,9 +419,9 @@
 }
 
 .retry-btn {
-  border: 1px solid rgba(30, 216, 150, 0.35);
+  border: 1px solid rgba(232, 163, 61, 0.35);
   border-radius: 999px;
-  background: rgba(30, 216, 150, 0.08);
+  background: rgba(232, 163, 61, 0.08);
   color: var(--accent);
   cursor: pointer;
   font-weight: 700;
@@ -429,7 +429,7 @@
 }
 
 .retry-btn:hover {
-  background: rgba(30, 216, 150, 0.16);
+  background: rgba(232, 163, 61, 0.16);
   color: #fff;
 }
 

@@ -130,4 +130,16 @@ describe('CheckoutJourneyPage', () => {
     expect(page.pan).toBe('');
     expect(page.cvv).toBe('');
   });
+
+  it('fills a safe demonstration card without real payment data', () => {
+    page.selectBrand('visa');
+    page.fillDemoCard();
+
+    expect(page.pan).toBe('4242424242424242');
+    expect(page.cvv).toBe('123');
+    expect(page.expMonth).toBe(12);
+    expect(page.expYear).toBeGreaterThan(new Date().getFullYear());
+    expect(page.planLabel('premium_individual')).toBe('Premium Individual');
+    expect(page.periodLabel('monthly')).toBe('Mensual');
+  });
 });

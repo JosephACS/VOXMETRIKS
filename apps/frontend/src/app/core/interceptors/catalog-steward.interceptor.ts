@@ -3,9 +3,17 @@ import { inject } from '@angular/core';
 import { throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
-function isCatalogStewardMutation(url: string, method: string): boolean {
+export function isCatalogStewardMutation(url: string, method: string): boolean {
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase())) return false;
   const path = url.replace(/^https?:\/\/[^/]+/, '');
+
+  // These are listener playback operations, not manual catalog management.
+  // Playback-source mutations are owned by the backend; catalog edits remain
+  // restricted to the catalog steward.
+  if (
+    /\/api\/v1\/tracks\/(?:music-search\/adopt|\d+\/audio-source\/failure)(?:\/|\?|$)/.test(path)
+  ) return false;
+
   return /\/api\/v1\/(artists|genres|tracks)(\/|\?|$)/.test(path);
 }
 

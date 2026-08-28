@@ -14,14 +14,23 @@ import { RepeatMode } from '../../models/player.models';
 
 function isStaffReportsPath(url: string): boolean {
   const path = (url || '').split('?')[0];
-  return (
-    path === '/reports' ||
-    path.startsWith('/reports/') ||
-    path === '/simple-reports' ||
-    path.startsWith('/simple-reports') ||
-    path === '/complex-reports' ||
-    path.startsWith('/complex-reports')
-  );
+  const enterprisePrefixes = [
+    '/reports',
+    '/simple-reports',
+    '/complex-reports',
+    '/organizations',
+    '/subscriptions',
+    '/billing',
+    '/business-analytics',
+    '/workpanel',
+    '/crm',
+    '/customer-success',
+    '/campaigns',
+    '/royalties',
+    '/payouts',
+    '/compliance',
+  ];
+  return enterprisePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 @Component({
@@ -46,7 +55,7 @@ export class PlayerBarComponent {
     { initialValue: this.router.url },
   );
 
-  /** Compact staff mini-player on report routes (listener keeps full bar elsewhere). */
+  /** Compact mini-player on administrative surfaces; music pages keep the full player. */
   readonly staffReportsSurface = computed(() => isStaffReportsPath(this.url() || ''));
   readonly staffIdle = computed(() => this.staffReportsSurface() && !this.playback.currentTrack());
   readonly staffCompact = computed(() => this.staffReportsSurface() && !!this.playback.currentTrack());

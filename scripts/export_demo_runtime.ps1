@@ -118,7 +118,7 @@ try {
 } catch {
     $msg = $_.Exception.Message
     if ($msg -match 'being used by another process|cannot access|IOException|locking|locked') {
-        Write-Error 'DB_LOCKED - stop the demo backend (.\scripts\stop_demo.ps1) and retry export.'
+        Write-Error 'DB_LOCKED - stop the backend (.\scripts\stop.ps1) and retry export.'
         exit 3
     }
     Write-Error "DuckDB copy failed: $msg"
@@ -202,9 +202,9 @@ Integrity:
   Existing destinations are copied to *.bak.<TIMESTAMP> first.
 
 After restore:
-  1. .\scripts\setup_demo.ps1
-  2. .\scripts\start_demo.ps1
-  3. .\scripts\verify_demo.ps1
+  1. .\scripts\setup.ps1
+  2. .\scripts\start.ps1
+  3. .\scripts\verify.ps1
 
 Never paste DEMO_ACCOUNT_PASSWORD into chat, docs, or screenshots.
 "@

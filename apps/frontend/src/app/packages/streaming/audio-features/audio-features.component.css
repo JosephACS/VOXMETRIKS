@@ -30,17 +30,17 @@
 .mock-badge,
 .live-badge {
   padding: 0.4rem 0.875rem;
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(232, 163, 61, 0.12);
+  border: 1px solid rgba(232, 163, 61, 0.25);
   border-radius: 2rem;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #a78bfa;
+  color: #e8a33d;
 }
 
 .live-badge {
-  background: rgba(30, 216, 150, 0.1);
-  border-color: rgba(30, 216, 150, 0.25);
+  background: rgba(232, 163, 61, 0.1);
+  border-color: rgba(232, 163, 61, 0.25);
   color: #6ee7b7;
 }
 
@@ -76,7 +76,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.kpi-value.kpi-purple { color: #a78bfa; }
+.kpi-value.kpi-accent { color: var(--accent); }
 .kpi-value.kpi-green { color: #34d399; }
 
 .content-grid {
@@ -160,7 +160,7 @@
 }
 
 .data-table tbody tr.selected {
-  background: rgba(30, 216, 150, 0.08);
+  background: rgba(232, 163, 61, 0.08);
   border-left: 2px solid var(--accent);
 }
 
@@ -182,9 +182,9 @@
 }
 
 .retry-btn {
-  border: 1px solid rgba(30, 216, 150, 0.35);
+  border: 1px solid rgba(232, 163, 61, 0.35);
   border-radius: 999px;
-  background: rgba(30, 216, 150, 0.08);
+  background: rgba(232, 163, 61, 0.08);
   color: var(--accent);
   cursor: pointer;
   font-weight: 700;
@@ -192,7 +192,7 @@
 }
 
 .retry-btn:hover {
-  background: rgba(30, 216, 150, 0.16);
+  background: rgba(232, 163, 61, 0.16);
   color: #fff;
 }
 

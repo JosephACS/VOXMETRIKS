@@ -125,8 +125,8 @@ import { productArtistDisplayName } from '../../../shared/utils/product-presenta
         border-radius: 50%;
         display: grid;
         place-items: center;
-        background: color-mix(in srgb, var(--vx-accent, #1ed896) 16%, transparent);
-        color: var(--vx-accent, #1ed896);
+        background: color-mix(in srgb, var(--vx-accent, #e8a33d) 16%, transparent);
+        color: var(--vx-accent, #e8a33d);
         font-weight: 700;
       }
       .artist-row__body {

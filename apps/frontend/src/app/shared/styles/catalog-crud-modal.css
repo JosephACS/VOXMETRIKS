@@ -27,7 +27,7 @@
   background: var(--spotify-base); border: 1px solid var(--border); border-radius: 0.5rem;
   color: var(--text); font-size: 0.9rem; padding: 0.65rem 0.875rem; outline: none; width: 100%;
 }
-.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,216,150,0.1); }
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232, 163, 61,0.1); }
 .form-error {
   color: #ef4444; font-size: 0.813rem; margin-top: 0.5rem;
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);

@@ -8,7 +8,7 @@ import { GeneroPopularidad } from '../../../shared/models/api.models';
 import { DataSourceBadgeComponent } from '../../../shared/components/data-source-badge/data-source-badge.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
-const GENRE_COLORS = ['#1ed896', '#148f5e', '#38bdf8', '#b794f6', '#f472b6', '#fbbf24', '#6366f1', '#ef4444'];
+const GENRE_COLORS = ['#e8a33d', '#f0b555', '#38bdf8', '#e8a33d', '#f472b6', '#fbbf24', '#e8a33d', '#ef4444'];
 
 @Component({
   selector: 'app-comparatives',

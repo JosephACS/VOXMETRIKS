@@ -64,7 +64,7 @@ pipeline:
 	cd $(ROOT) && python analytics/elt/pipelines/elt_pipeline.py
 
 # ── Spec 048 Airflow (separate from application compose) ─────────────────────
-# Maintenance: stop application (`make down` / start_demo) before airflow-trigger.
+# Maintenance: stop application (`make down` / start.ps1) before airflow-trigger.
 
 airflow-up:
 	@if [ ! -f "$(AIRFLOW_DIR)/.env" ]; then \

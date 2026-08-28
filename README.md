@@ -7,14 +7,14 @@
 
 **Plataforma de catálogo musical + analytics** — SPA Angular, API FastAPI y warehouse DuckDB (Medallion ELT).
 
-**Estado:** demo / beta controlada (Release Candidate documental). No es un servicio de streaming con licencia comercial propia; la reproducción usa YouTube + Audius + audio demo.
+**Estado:** aplicación operativa local / despliegue académico controlado. La experiencia visible reproduce únicamente mediante la cuenta Spotify autorizada por el usuario (OAuth PKCE + Web Playback SDK); requiere Spotify Premium y no usa un Client Secret en el navegador.
 
-Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform` (con adaptadores legacy).
+Tras **spec 014** (estabilización): monorepo `apps/` + `analytics/elt` canónico; dominios técnicos `identity` / `catalog` / `engagement` / `analytics` / `ai` / `platform`.
 
-**Capa empresarial (specs 016–028):** implementada con deuda aceptada — **024** Executive Reporting · **025** Customer Success & Support · cierre **028** → `ENTERPRISE_SYSTEM_CLOSED_WITH_ACCEPTED_DEBT`.
-**Suscripciones personales B2C (spec 029):** Free / Premium Individual / Duo / Familiar — `CLOSED_WITH_ACCEPTED_DEBT`. Separadas de planes empresariales.
-Cuentas demo locales: seed opt-in (`DEMO_ACCOUNT_PASSWORD` / `.env.example`). Detalle de estado: [`docs/STATUS.md`](docs/STATUS.md).
-Royalties/Payouts: **OUT_OF_SCOPE** (simulado). Specs históricas: [`.specify/history/`](.specify/history/README.md).
+**Capa empresarial (specs 016–028):** implementada — reporting, CRM, billing (proveedor por defecto `manual_transfer`; `academic_mock` solo fuera de producción), customer success.
+**Suscripciones personales B2C (spec 029):** Free / Premium Individual / Duo / Familiar.
+Primer admin: `python apps/backend/scripts/bootstrap_admin.py` (`BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD`). Detalle: [`docs/STATUS.md`](docs/STATUS.md).
+Royalties/Payouts: **OUT_OF_SCOPE** (sin transferencias bancarias reales). Specs históricas: [`.specify/history/`](.specify/history/README.md).
 
 ---
 
@@ -37,9 +37,9 @@ flowchart LR
 | `infrastructure/airflow` | Orquestación Airflow 3.3 (LocalExecutor, demo) | **Parcial** — código en repo; runtime pendiente de smoke Docker |
 | `apps/backend/app/etl` | Refresh runtime / tests | **Parcial** (adaptador; no rebuild completo) |
 | `playback-core` | Dirección futura del player | **Parcial** / propuesto V2 |
-| Organizations / CRM / billing / subscriptions | 016–019 | **Implementado** (MOCK payment; deuda aceptada) |
+| Organizations / CRM / billing / subscriptions | 016–019 | **Implementado** (`PAYMENT_PROVIDER=manual_transfer` por defecto) |
 | Artists / catalog-rights / campaigns / biz-analytics | 020–023 | **Implementado** |
-| Compliance / platform-ops | 026–027 | **Implementado** (integraciones MOCK) |
+| Compliance / platform-ops | 026–027 | **Implementado** |
 | Executive Reporting / Decisions | 024 | **IMPLEMENTED** (`/api/v1/reports`, `/business-decisions`) |
 | Customer Success / Support | 025 | **IMPLEMENTED** (`/customer-success`, `/support`) |
 | Royalties / Payouts | — | **OUT_OF_SCOPE** (futuro; no son 024/025) |
@@ -50,8 +50,20 @@ Detalle: [docs/STATUS.md](docs/STATUS.md) · Specs históricas: [.specify/histor
 
 ## Cómo ejecutar
 
+```powershell
+# Windows (recomendado)
+.\scripts\setup.ps1
+# Warehouse: PocketBase + dataset, luego:
+#   .\apps\backend\.venv\Scripts\python.exe analytics\elt\pipelines\elt_pipeline.py
+# Primer admin:
+#   $env:BOOTSTRAP_ADMIN_EMAIL="ops@example.com"
+#   $env:BOOTSTRAP_ADMIN_PASSWORD="..."
+#   .\apps\backend\.venv\Scripts\python.exe apps\backend\scripts\bootstrap_admin.py
+.\scripts\start.ps1
+```
+
 ```bash
-# Dependencias
+# Dependencias (alternativa)
 make install
 cd apps/frontend && npm install && cd ../..
 
@@ -81,10 +93,10 @@ Equivalente: `make up`. Frontend en `:8080`, API en `:8000` (diagnóstico; el na
 
 Stack **separado** en `infrastructure/airflow/compose.yml` (no sustituye el Compose de aplicación). Airflow solo coordina; el ELT autoritativo sigue en `analytics/elt/pipelines/elt_pipeline.py`. **Docker es requerido** para el runtime Airflow; la aceptación exige smoke real (SC-003).
 
-**Mantenimiento DuckDB (single-writer):** detén la app (`make down` / `start_demo.ps1`) antes de disparar el DAG. No ejecutes Airflow y backend contra el mismo warehouse a la vez.
+**Mantenimiento DuckDB (single-writer):** detén la app (`make down` / `start.ps1`) antes de disparar el DAG. No ejecutes Airflow y backend contra el mismo warehouse a la vez.
 
 ```bash
-make down                 # o detener start_demo
+make down                 # o detener start.ps1
 # cp infrastructure/airflow/.env.example → .env y editar placeholders (obligatorio)
 make airflow-up           # UI http://localhost:8081 — falla si .env tiene replace-me
 make airflow-list         # debe listar voxmetriks_elt
@@ -97,12 +109,15 @@ CLI por etapas (mismo adaptador que el DAG): `python analytics/elt/pipelines/orc
 
 Guía completa: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
-### Credenciales demo (solo development)
+### Primer acceso
 
-| Usuario | Password | Rol |
-|---------|----------|-----|
-| `demo` | `demo123` | user |
-| `admin` | `admin123` | admin |
+1. Regístrate en la UI (`/register`) o crea un admin:
+   ```powershell
+   $env:BOOTSTRAP_ADMIN_EMAIL="ops@example.com"
+   $env:BOOTSTRAP_ADMIN_PASSWORD="TuPasswordSeguro12"
+   .\apps\backend\.venv\Scripts\python.exe apps\backend\scripts\bootstrap_admin.py
+   ```
+2. Seeds DEV opcionales: ver `apps/backend/.env.development.example` (nunca en producción).
 
 ---
 

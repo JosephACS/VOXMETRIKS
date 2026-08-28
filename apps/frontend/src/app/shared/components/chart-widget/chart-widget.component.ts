@@ -206,7 +206,7 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
     const type = this.type();
     const labels = this.labels();
     const seriesInput = this.series();
-    const palette = ['#3BCF9A', '#1F8A68', '#4A9B8C', '#6B8F88', '#8A9A94', '#A8B5AF', '#3D5A56', '#88C9B0'];
+    const palette = ['#e8a33d', '#f0b555', '#f0b555', '#5F72C9', '#B8B3C2', '#7A849D', '#4B5268', '#9BCBFF'];
     const animDuration = 450;
     const darkBg = this.chartSurfaceColor();
     const isLight =
@@ -297,7 +297,7 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
         markPoint = {
           symbol: 'circle',
           symbolSize: 10,
-          itemStyle: { color: darkBg, borderColor: '#3BCF9A', borderWidth: 2 },
+          itemStyle: { color: darkBg, borderColor: '#e8a33d', borderWidth: 2 },
           label: { show: false },
           data: [{ coord: [peakIdx, values[peakIdx]], name: 'Pico' }],
         };
@@ -316,8 +316,8 @@ export class ChartWidgetComponent implements AfterViewInit, OnDestroy {
           isAreaLine && (s.yAxisIndex ?? i) === 0
             ? {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(59,207,154,0.22)' },
-                  { offset: 1, color: 'rgba(59,207,154,0)' },
+                  { offset: 0, color: 'rgba(232, 163, 61,0.22)' },
+                  { offset: 1, color: 'rgba(232, 163, 61,0)' },
                 ]),
               }
             : undefined,

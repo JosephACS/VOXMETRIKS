@@ -51,12 +51,12 @@ interface RecentItem extends ListenRecord {
 }
 
 const COVER_GRADIENTS = [
-  'linear-gradient(135deg, #1ed896 0%, #7c3aed 100%)',
+  'linear-gradient(135deg, #e8a33d 0%, #e8a33d 100%)',
   'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
   'linear-gradient(135deg, #10b981 0%, #047857 100%)',
   'linear-gradient(135deg, #ec4899 0%, #9d174d 100%)',
   'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
-  'linear-gradient(135deg, #6366f1 0%, #312e81 100%)',
+  'linear-gradient(135deg, var(--accent, #e8a33d) 0%, #17130c 100%)',
   'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)',
   'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
 ];
@@ -173,7 +173,7 @@ export class UsersComponent implements OnInit {
         counts.set(h.artist, (counts.get(h.artist) ?? 0) + 1);
       }
     }
-    const colors = ['#1ed896', '#7c3aed', '#10b981', '#3b82f6', '#ec4899'];
+    const colors = ['#e8a33d', '#e8a33d', '#10b981', '#3b82f6', '#ec4899'];
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -182,8 +182,8 @@ export class UsersComponent implements OnInit {
 
   topGenres = computed((): TopItem[] => {
     const genre = this.profile()?.favorite_genre;
-    if (!genre) return [{ name: 'Sin datos', value: 0, color: '#1ed896' }];
-    return [{ name: genre, value: 100, color: '#1ed896' }];
+    if (!genre) return [{ name: 'Sin datos', value: 0, color: '#e8a33d' }];
+    return [{ name: genre, value: 100, color: '#e8a33d' }];
   });
 
   activities = computed((): ActivityItem[] => {

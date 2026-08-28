@@ -1,7 +1,9 @@
-"""Resolve playable audio sources for catalog tracks (multi-provider).
+"""Resolve playable audio sources for catalog tracks through Deezer.
 
-Results are cached in ``app_track_audio_source``. The frontend plays via
-YouTube IFrame, HTML5 stream URLs (Audius), or local demo fallback.
+Results are cached in ``app_track_audio_source``. The consumer frontend plays
+Spotify full-track playback is handled client-side through the Web Playback
+SDK; Deezer's public track preview is the no-auth fallback. Legacy YouTube
+candidate helpers remain available only for administrative migration tools.
 We never download or re-host copyrighted audio.
 """
 
@@ -72,8 +74,8 @@ def _schedule_resolve(track_id: int, skip_provider: Optional[str] = None) -> Non
 
     def _job() -> None:
         try:
-            # Do not hold using_write_conn across YouTube/Audius network I/O —
-            # that blocked the shared DuckDB lock and starved Home API reads.
+            # Do not hold using_write_conn across provider network I/O —
+            # that would block the shared DuckDB lock and starve Home API reads.
             get_audio_resolver().resolve_background(
                 track_id, force=False, skip_provider=skip_provider
             )
@@ -99,7 +101,8 @@ def get_audio_source_response(
 ) -> Optional[Dict[str, Any]]:
     """Return cached audio source or schedule background resolution on miss.
 
-    Priority 1: ``local_published`` (Spec 031) — never overwrite with YouTube/Audius.
+    Priority 1: ``local_published`` (Spec 031) — never overwrite with external
+    resolver results.
     """
     migrate_audio_source_columns(conn)
 
@@ -124,16 +127,20 @@ def get_audio_source_response(
 
     query = build_search_query(ctx.track_name, ctx.artist_name)
 
-    if not force:
-        if cached and is_cache_usable(cached):
-            cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
-            excluded = {
-                part.strip()
-                for part in str(exclude_source_ref or "").split(",")
-                if part.strip()
-            }
-            if not (excluded and cached_ref in excluded):
-                return _api_dict(cached)
+    if (
+        not force
+        and cached
+        and cached.get("provider") == "deezer"
+        and is_cache_usable(cached)
+    ):
+        cached_ref = cached.get("source_ref")
+        excluded = {
+            part.strip()
+            for part in str(exclude_source_ref or "").split(",")
+            if part.strip()
+        }
+        if not (excluded and cached_ref in excluded):
+            return _api_dict(cached)
 
     if async_resolve and not force:
         _schedule_resolve(track_id, skip_provider=skip_provider)
@@ -193,26 +200,11 @@ def report_source_failure(
 ) -> None:
     """Increment failure count when frontend playback fails.
 
-    Also warm ranked YouTube alternates so the immediate exclude/fallback
-    request can reuse candidates without a second flaky Data API search.
+    Spotify playback failures are recorded against the active Deezer fallback;
+    legacy provider alternates are intentionally not warmed anymore.
     """
     migrate_audio_source_columns(conn)
     mark_failure(conn, track_id)
-    cached = read_cache(conn, track_id)
-    if not cached or cached.get("provider") != "youtube":
-        return
-    from .audio.resolver import build_track_context
-    from .audio.youtube_provider import YouTubeProvider, _ALTERNATE_IDS
-
-    if _ALTERNATE_IDS.get(track_id):
-        return
-    ctx = build_track_context(conn, track_id)
-    if ctx is None:
-        return
-    try:
-        YouTubeProvider().warm_alternates(ctx)
-    except Exception:  # noqa: BLE001 — warming must not break failure reporting
-        logger.exception("Failed warming YouTube alternates for track %s", track_id)
 
 
 def list_unresolved_audio(
@@ -377,7 +369,7 @@ def persist_validated_youtube_source(
         raise ValueError("Invalid YouTube URL or video ID")
     resolved = ResolvedSource(
         track_id=track_id,
-        provider="youtube",
+        provider="deezer",
         status=STATUS_OK,
         source_ref=vid,
         youtube_video_id=vid,
@@ -410,7 +402,9 @@ def mark_audio_unavailable(
         return None
     resolved = ResolvedSource(
         track_id=track_id,
-        provider="youtube",
+        # Negative cache entries belong to the active fallback provider so
+        # the Spotify/Deezer-only hygiene pass does not delete them.
+        provider="deezer",
         status=STATUS_NOT_FOUND,
         query=f"unavailable:{reason}",
         confidence_score=0.0,

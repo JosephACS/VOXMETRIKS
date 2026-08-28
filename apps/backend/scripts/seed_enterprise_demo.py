@@ -1,7 +1,7 @@
 """Optional enterprise demo seed — Spec 028 polish / VOXMETRIKS Demo org.
 
 Canonical organization:
-  display_name=VOXMETRIKS Demo, slug=voxmetriks-demo, country=EC,
+  display_name=Voxmetriks Studio, slug=voxmetriks-studio, country=EC,
   timezone=America/Guayaquil, currency=USD, type=label,
   is_demo=TRUE, is_test=FALSE
 
@@ -30,13 +30,15 @@ if str(_BACKEND) not in sys.path:
 _DEMO_BANNER = """
 ====================================================================
   VOXMETRIKS DEMO SEED - SYNTHETIC / ACADEMIC DATA
-  Org: voxmetriks-demo - Opt-in only. Not for production.
+  Org: voxmetriks-studio - Opt-in only. Not for production.
 ====================================================================
 """
 
-ORG_SLUG = "voxmetriks-demo"
-ORG_DISPLAY = "VOXMETRIKS Demo"
+ORG_SLUG = "voxmetriks-studio"
+ORG_DISPLAY = "Voxmetriks Studio"
 LEGACY_SLUG = "enterprise-demo-s028"
+DEMO_PLAN_CODE = "enterprise"
+DEMO_MONTHLY_AMOUNT = 499.00
 
 
 def _table_exists(conn, table: str) -> bool:
@@ -137,17 +139,17 @@ def seed_enterprise_demo() -> dict[str, object]:
             skipped.append("app_organization")
             return result
 
-            existing = conn.execute(
+        existing = conn.execute(
             "SELECT id FROM app_organization WHERE slug = ?", [ORG_SLUG]
-            ).fetchone()
+        ).fetchone()
         legacy = None
         if not existing:
             legacy = conn.execute(
                 "SELECT id FROM app_organization WHERE slug = ?", [LEGACY_SLUG]
             ).fetchone()
 
-            if existing:
-                org_id = int(existing[0])
+        if existing:
+            org_id = int(existing[0])
         elif legacy:
             org_id = int(legacy[0])
             try:
@@ -164,7 +166,9 @@ def seed_enterprise_demo() -> dict[str, object]:
                 if _has_column(conn, "app_organization", "country_code"):
                     sets.insert(2, "country_code = 'EC'")
                 if _has_column(conn, "app_organization", "is_demo"):
-                    sets.append("is_demo = TRUE")
+                    # Keep the seeded enterprise workspace visible to the demo
+                    # account without requiring SHOW_DEMO_ORGANIZATIONS=true.
+                    sets.append("is_demo = FALSE")
                 if _has_column(conn, "app_organization", "is_test"):
                     sets.append("is_test = FALSE")
                 conn.execute(
@@ -174,8 +178,8 @@ def seed_enterprise_demo() -> dict[str, object]:
                 entities["organization_migrated_from_legacy"] = LEGACY_SLUG
             except Exception:
                 skipped.append("legacy_org_migrate")
-            else:
-                org_id = _next_id(conn, "app_organization")
+        else:
+            org_id = _next_id(conn, "app_organization")
             cols = (
                 "id, display_name, slug, organization_type, country_code, timezone, "
                 "default_currency, status, created_by, created_at, updated_at"
@@ -186,7 +190,7 @@ def seed_enterprise_demo() -> dict[str, object]:
             params = [org_id, ORG_DISPLAY, ORG_SLUG, admin_id, now, now]
             if _has_column(conn, "app_organization", "is_demo"):
                 cols += ", is_demo"
-                vals += ", TRUE"
+                vals += ", FALSE"
             if _has_column(conn, "app_organization", "is_test"):
                 cols += ", is_test"
                 vals += ", FALSE"
@@ -198,7 +202,7 @@ def seed_enterprise_demo() -> dict[str, object]:
                 flag_sets = ["updated_at = ?"]
                 flag_params: list = [now]
                 if _has_column(conn, "app_organization", "is_demo"):
-                    flag_sets.append("is_demo = TRUE")
+                    flag_sets.append("is_demo = FALSE")
                 if _has_column(conn, "app_organization", "is_test"):
                     flag_sets.append("is_test = FALSE")
                 if _has_column(conn, "app_organization", "country_code"):
@@ -220,14 +224,14 @@ def seed_enterprise_demo() -> dict[str, object]:
 
         # Membership + owner (+ administrator)
         member_id: int | None = None
-            if _table_exists(conn, "app_organization_member"):
-                member = conn.execute(
+        if _table_exists(conn, "app_organization_member"):
+            member = conn.execute(
                     "SELECT id FROM app_organization_member WHERE organization_id = ? AND user_id = ?",
                     [org_id, admin_id],
-                ).fetchone()
-                if not member:
+            ).fetchone()
+            if not member:
                 member_id = _next_id(conn, "app_organization_member")
-                    conn.execute(
+                conn.execute(
                         """
                         INSERT INTO app_organization_member
                             (id, organization_id, user_id, status, created_by, created_at, updated_at)
@@ -252,17 +256,17 @@ def seed_enterprise_demo() -> dict[str, object]:
                 pref = conn.execute(
                     "SELECT user_id FROM app_user_organization_preference WHERE user_id = ?",
                     [admin_id],
-                        ).fetchone()
+                ).fetchone()
                 if pref:
-                            conn.execute(
-                                """
+                    conn.execute(
+                        """
                         UPDATE app_user_organization_preference
                         SET active_organization_id = ?, updated_at = ?, updated_by = ?
                         WHERE user_id = ?
                         """,
                         [org_id, now, admin_id, admin_id],
-                            )
-        else:
+                    )
+                else:
                     conn.execute(
                         """
                         INSERT INTO app_user_organization_preference
@@ -277,7 +281,7 @@ def seed_enterprise_demo() -> dict[str, object]:
         else:
             skipped.append("app_user_organization_preference")
 
-        # ── Plan + subscription (Professional monthly USD 99) ─────────────
+        # ── Plan + subscription (Enterprise monthly USD 499) ──────────────
         plan_id: int | None = None
         price_id: int | None = None
         if _table_exists(conn, "app_plan"):
@@ -288,14 +292,14 @@ def seed_enterprise_demo() -> dict[str, object]:
 
             ensure_commercial_catalog(conn)
             plan_row = conn.execute(
-                "SELECT id FROM app_plan WHERE code = 'professional' AND status = 'active'"
+                f"SELECT id FROM app_plan WHERE code = '{DEMO_PLAN_CODE}' AND status = 'active'"
             ).fetchone()
             if plan_row:
                 plan_id = int(plan_row[0])
             result["plan_id"] = plan_id
             if plan_id and _table_exists(conn, "app_plan_price"):
                 price_id = get_active_price_id(
-                    conn, plan_code="professional", billing_period="monthly", currency="USD"
+                    conn, plan_code=DEMO_PLAN_CODE, billing_period="monthly", currency="USD"
                 )
                 if price_id is None:
                     price_id = _next_id(conn, "app_plan_price")
@@ -303,9 +307,9 @@ def seed_enterprise_demo() -> dict[str, object]:
                         """
                         INSERT INTO app_plan_price
                             (id, plan_id, currency, billing_period, amount, status, created_at, updated_at)
-                        VALUES (?, ?, 'USD', 'monthly', 99.00, 'active', ?, ?)
+                        VALUES (?, ?, 'USD', 'monthly', ?, 'active', ?, ?)
                         """,
-                        [price_id, plan_id, now, now],
+                        [price_id, plan_id, DEMO_MONTHLY_AMOUNT, now, now],
                     )
                 result["plan_price_id"] = price_id
         else:
@@ -323,11 +327,11 @@ def seed_enterprise_demo() -> dict[str, object]:
                 sub_id = _next_id(conn, "app_subscription")
                 price_id = result.get("plan_price_id")  # type: ignore[assignment]
                 try:
-                conn.execute(
-                    """
-                    INSERT INTO app_subscription
+                    conn.execute(
+                        """
+                        INSERT INTO app_subscription
                             (id, organization_id, plan_id, plan_price_id, status, billing_currency,
-                         activation_source, access_state, created_at, updated_at)
+                             activation_source, access_state, created_at, updated_at)
                         VALUES (?, ?, ?, ?, 'active', 'USD', 'demo_seed_synthetic', 'full', ?, ?)
                         """,
                         [sub_id, org_id, plan_id, price_id, now, now],
@@ -674,7 +678,8 @@ def seed_enterprise_demo() -> dict[str, object]:
             # Paid invoice
             try:
                 inv = conn.execute(
-                    "SELECT id FROM app_invoice WHERE invoice_number = 'DEMO-INV-PAID-001'"
+                    "SELECT id FROM app_invoice WHERE invoice_number = 'DEMO-STUDIO-INV-PAID-001' AND organization_id = ?",
+                    [org_id],
                 ).fetchone()
                 if inv:
                     paid_invoice_id = int(inv[0])
@@ -687,7 +692,7 @@ def seed_enterprise_demo() -> dict[str, object]:
                              invoice_number, currency, status, subtotal, total,
                              amount_paid, amount_due, period_start, period_end, due_date,
                              issued_at, paid_at, voided_at, notes, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, 'DEMO-INV-PAID-001', 'USD', 'paid',
+                        VALUES (?, ?, ?, ?, 'DEMO-STUDIO-INV-PAID-001', 'USD', 'paid',
                                 99.00, 99.00, 99.00, 0, CURRENT_DATE - INTERVAL 30 DAY,
                                 CURRENT_DATE, CURRENT_DATE - INTERVAL 20 DAY,
                                 ?, ?, NULL,
@@ -716,7 +721,8 @@ def seed_enterprise_demo() -> dict[str, object]:
             # Pending / issued invoice
             try:
                 inv2 = conn.execute(
-                    "SELECT id FROM app_invoice WHERE invoice_number = 'DEMO-INV-PENDING-002'"
+                    "SELECT id FROM app_invoice WHERE invoice_number = 'DEMO-STUDIO-INV-PENDING-002' AND organization_id = ?",
+                    [org_id],
                 ).fetchone()
                 if inv2:
                     pending_invoice_id = int(inv2[0])
@@ -729,7 +735,7 @@ def seed_enterprise_demo() -> dict[str, object]:
                              invoice_number, currency, status, subtotal, total,
                              amount_paid, amount_due, period_start, period_end, due_date,
                              issued_at, paid_at, voided_at, notes, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, 'DEMO-INV-PENDING-002', 'USD', 'issued',
+                        VALUES (?, ?, ?, ?, 'DEMO-STUDIO-INV-PENDING-002', 'USD', 'issued',
                                 99.00, 99.00, 0, 99.00, CURRENT_DATE, CURRENT_DATE + INTERVAL 30 DAY,
                                 CURRENT_DATE + INTERVAL 14 DAY, ?, NULL, NULL,
                                 '[SYNTHETIC] demo_seed pending invoice', ?, ?)

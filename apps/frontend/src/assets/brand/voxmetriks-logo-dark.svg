@@ -1,9 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 48" fill="none" role="img" aria-label="VOXMETRIKS">
-  <rect width="48" height="48" rx="12" fill="rgba(30,216,150,0.12)"/>
-  <path d="M12 34 L24 12 L36 34" stroke="#1ed896" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M17.5 34 L24 22 L30.5 34" stroke="rgba(255,255,255,0.88)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="19" y="28" width="2.2" height="5" rx="1.1" fill="#1ed896"/>
-  <rect x="23" y="25.5" width="2.2" height="7.5" rx="1.1" fill="#1ed896"/>
-  <rect x="27" y="27" width="2.2" height="6" rx="1.1" fill="#1ed896"/>
-  <text x="64" y="32" fill="#ffffff" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="2.4">VOXMETRIKS</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 72" fill="none" role="img" aria-label="VOXMETRIKS — Music Intelligence">
+  <defs>
+    <mask id="vx-lockup-wave-cut">
+      <rect width="120" height="120" fill="white"/>
+      <path d="M34 55c8 0 7-13 14-13 8 0 7 27 14 27s7-20 14-20c6 0 6 9 13 9" stroke="black" stroke-width="6" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g transform="translate(2.5 2.5) scale(0.56)">
+    <rect x="6" y="6" width="108" height="108" rx="31" fill="#f5f2ea"/>
+    <rect x="6.75" y="6.75" width="106.5" height="106.5" rx="30.25" stroke="#1a1712" stroke-opacity="0.12" stroke-width="1.5"/>
+    <path d="M20 18h16l24 59 24-59h16L68 101c-2.8 7.2-13.2 7.2-16 0L20 18Z" fill="#1a1712" mask="url(#vx-lockup-wave-cut)" transform="translate(0 1) scale(1 0.98)"/>
+  </g>
+  <text x="84" y="33" fill="#f5f2ea" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="740" letter-spacing="3">VOXMETRIKS</text>
+  <path d="M85 43H110" stroke="#a09a88" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="118" y="47" fill="#a09a88" font-family="Inter, Arial, sans-serif" font-size="7.5" font-weight="620" letter-spacing="2.5">MUSIC INTELLIGENCE</text>
 </svg>

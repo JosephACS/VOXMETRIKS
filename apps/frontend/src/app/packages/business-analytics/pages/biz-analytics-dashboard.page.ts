@@ -74,6 +74,37 @@ interface AttentionItem {
             <p class="st-hero__why">{{ strategicSummary }}</p>
           </section>
 
+          @if (withDataCount === 0 && attentionCount === 0) {
+            <section class="st-empty-dashboard" aria-label="Primeros pasos">
+              <div class="st-empty-dashboard__copy">
+                <span class="st-empty-dashboard__signal" aria-hidden="true"></span>
+                <p class="st-kicker">Primeros pasos</p>
+                <h2>Tu panel ya está preparado</h2>
+                <p>
+                  Empieza con una acción sencilla. Los indicadores se completarán automáticamente
+                  a medida que tu organización registre actividad.
+                </p>
+              </div>
+              <div class="st-start-grid">
+                <a routerLink="/catalog">
+                  <span>01</span>
+                  <strong>Revisar catálogo</strong>
+                  <small>Confirma la música y sus datos.</small>
+                </a>
+                <a routerLink="/customer-success">
+                  <span>02</span>
+                  <strong>Gestionar clientes</strong>
+                  <small>Organiza el seguimiento comercial.</small>
+                </a>
+                <a routerLink="/reports">
+                  <span>03</span>
+                  <strong>Explorar informes</strong>
+                  <small>Conoce todos los análisis disponibles.</small>
+                </a>
+              </div>
+            </section>
+          }
+
           @if (attentionItems.length) {
             <section class="st-panel" aria-label="Requieren atención">
               <h2 class="st-panel__title">Requieren atención</h2>
@@ -92,6 +123,7 @@ interface AttentionItem {
             </section>
           }
 
+          @if (withDataCount > 0 || attentionCount > 0) {
           <section class="st-panel" aria-label="Objetivos">
             <h2 class="st-panel__title">Objetivos</h2>
             @if (!objectives.length) {
@@ -128,7 +160,9 @@ interface AttentionItem {
               </ul>
             }
           </section>
+          }
 
+          @if (keyKpiCards[0]?.id !== 'empty') {
           <section class="st-panel" aria-label="KPI clave">
             <h2 class="st-panel__title">KPI clave</h2>
             <div class="st-kpis">
@@ -144,6 +178,7 @@ interface AttentionItem {
               }
             </div>
           </section>
+          }
 
           <section class="st-panel st-links" aria-label="Profundizar">
             <h2 class="st-panel__title">Profundizar</h2>
@@ -221,15 +256,15 @@ export class BizAnalyticsDashboardPage implements OnInit {
   }
 
   get strategicHeadline(): string {
-    if (!this.objectives.length) return 'Sin datos';
+    if (!this.objectives.length) return 'Listo para comenzar';
     if (this.attentionCount > 0) return 'Requiere atención';
     if (this.withDataCount > 0) return 'En curso';
-    return 'Sin datos';
+    return 'Listo para comenzar';
   }
 
   get strategicSummary(): string {
-    if (!this.objectives.length) {
-      return 'No hay objetivos con datos para este periodo.';
+    if (!this.objectives.length || this.withDataCount === 0) {
+      return 'Los indicadores aparecerán automáticamente cuando registres actividad.';
     }
     const parts: string[] = [];
     if (this.withDataCount) {

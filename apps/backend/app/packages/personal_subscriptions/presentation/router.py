@@ -487,11 +487,41 @@ def admin_metrics(
     }
 
 
-@personal_router.post("/admin/demo-seed")
-def admin_demo_seed(
+@personal_router.post("/admin/dev-seed")
+@personal_router.post("/admin/demo-seed", include_in_schema=False)
+def admin_dev_seed(
     _admin=Depends(require_platform_permission("ops.manage")),
     conn=Depends(get_write_conn),
 ):
+    """Opt-in DEV personal-subscription seed (not available in production).
+
+    Requires ``VOXMETRIKS_SEED_DEMO_ACCOUNTS=1`` and ``ops.manage``.
+    ``POST /admin/demo-seed`` remains a deprecated alias of this handler.
+    """
+    import os
+
+    from fastapi import HTTPException
+
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    if settings.is_production:
+        raise HTTPException(status_code=404, detail="Not found")
+    if os.environ.get("VOXMETRIKS_SEED_DEMO_ACCOUNTS", "").strip() not in (
+        "1",
+        "true",
+        "TRUE",
+        "yes",
+        "YES",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "seed_disabled",
+                "message": "Set VOXMETRIKS_SEED_DEMO_ACCOUNTS=1 for DEV seed (forbidden in production).",
+            },
+        )
+
     from app.packages.personal_subscriptions.application.seed_demo import seed_personal_demo
 
     return seed_personal_demo(conn)

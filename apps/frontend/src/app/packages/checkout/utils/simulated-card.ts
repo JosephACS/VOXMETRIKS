@@ -19,7 +19,7 @@ const EXACT_TOKEN_BY_PAN: Record<string, string> = {
   '371449635398431': 'sim_tok_declined',
 };
 
-/** Suggested demo PAN per brand (success path). */
+/** Documented test PAN per brand (success path; DEV/tests / tokenization). */
 export const DEMO_PAN_BY_BRAND: Record<CardBrand, string> = {
   visa: '4242424242424242',
   mastercard: '5555555555554444',

@@ -84,24 +84,6 @@ export interface UnresolvedAudioList {
   offset: number;
 }
 
-export interface AudioCandidate {
-  video_id: string;
-  title: string;
-  duration_sec?: number;
-  channel_title?: string;
-  query?: string;
-  score?: number;
-  accepted?: boolean;
-}
-
-export interface AudioCandidatesResponse {
-  track_id: number;
-  track_name: string;
-  artist_name: string;
-  duration_ms?: number | null;
-  candidates: AudioCandidate[];
-}
-
 export interface OperationalIncident {
   id: number;
   title: string;

@@ -14,6 +14,13 @@ def test_catalogs_endpoint(client: TestClient):
     body = cats.json()
     assert any(t["code"] == "label" for t in body["organization_types"])
     assert any(c["code"] == "EC" for c in body["countries"])
+    assert len(body["countries"]) >= 30
+    assert {"BR", "CA", "GB", "JP", "IN"} <= {
+        country["code"] for country in body["countries"]
+    }
+    assert {"BRL", "CAD", "GBP", "JPY", "INR"} <= {
+        currency["code"] for currency in body["currencies"]
+    }
 
 
 def test_create_defaults_intent_and_journey(

@@ -49,11 +49,11 @@
 }
 
 .tab-btn.active {
-  background: rgba(30, 216, 150, 0.18);
-  border-color: rgba(30, 216, 150, 0.55);
-  color: var(--accent, #1ed896);
+  background: rgba(232, 163, 61, 0.18);
+  border-color: rgba(232, 163, 61, 0.55);
+  color: var(--accent, #e8a33d);
   font-weight: 700;
-  box-shadow: 0 2px 10px rgba(30, 216, 150, 0.12);
+  box-shadow: 0 2px 10px rgba(232, 163, 61, 0.12);
 }
 
 .tab-count {
@@ -65,8 +65,8 @@
 }
 
 .tab-btn.active .tab-count {
-  background: rgba(30, 216, 150, 0.22);
-  color: var(--accent, #1ed896);
+  background: rgba(232, 163, 61, 0.22);
+  color: var(--accent, #e8a33d);
 }
 
 .source-note {
@@ -127,16 +127,16 @@
 
 .section-desc code {
   font-size: 0.68rem;
-  color: #a78bfa;
+  color: #e8a33d;
 }
 
 .meta-badge {
   padding: 0.25rem 0.6rem;
   border-radius: 1rem;
   font-size: 0.68rem;
-  background: rgba(124, 58, 237, 0.12);
-  color: #a78bfa;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(232, 163, 61, 0.12);
+  color: #e8a33d;
+  border: 1px solid rgba(232, 163, 61, 0.25);
 }
 
 .ghost-btn {
@@ -181,7 +181,7 @@
 
 a.timeline-row:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(30, 216, 150, 0.2);
+  border-color: rgba(232, 163, 61, 0.2);
 }
 
 .timeline-row.static { cursor: default; }
@@ -201,8 +201,8 @@ a.timeline-row:hover {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid rgba(30, 216, 150, 0.35);
-  background: rgba(30, 216, 150, 0.12);
+  border: 1px solid rgba(232, 163, 61, 0.35);
+  background: rgba(232, 163, 61, 0.12);
   color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
@@ -254,8 +254,8 @@ a.timeline-row:hover {
   flex-shrink: 0;
 }
 
-.event-dot.stream { background: var(--accent, #1ed896); }
-.event-dot.audit { background: #a78bfa; }
+.event-dot.stream { background: var(--accent, #e8a33d); }
+.event-dot.audit { background: #e8a33d; }
 
 .event-icon {
   display: flex;
@@ -432,7 +432,7 @@ a.timeline-row:hover {
 
 .stage-layer {
   font-size: 0.65rem;
-  color: #a78bfa;
+  color: #e8a33d;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -478,7 +478,7 @@ a.timeline-row:hover {
 }
 
 .search-link {
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   text-decoration: none;
   font-weight: 500;
 }

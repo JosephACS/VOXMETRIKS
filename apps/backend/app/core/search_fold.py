@@ -46,6 +46,13 @@ def ensure_search_fold(conn: duckdb.DuckDBPyConnection) -> None:
         ).fetchone()[0]
     )
     if pending:
+        # DuckDB can reject an UPDATE on an indexed table with a misleading
+        # duplicate-primary-key error while the secondary index is present.
+        # Rebuild the optional search index after the small incremental backfill.
+        try:
+            conn.execute("DROP INDEX IF EXISTS idx_dim_track_search_fold")
+        except Exception as exc:
+            logger.warning("search_fold index could not be prepared for backfill: %s", exc)
         rows = conn.execute(
             """
             SELECT dt.id_track, dt.nombre_track, da.nombre_artista, dg.nombre_genero

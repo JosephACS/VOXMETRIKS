@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { SearchComponent } from './search.component';
@@ -49,33 +49,16 @@ describe('TracksService music-search contracts', () => {
     });
   });
 
-  it('adoptYoutubeResult posts require_preferred when requested', () => {
-    svc.adoptYoutubeResult('vid', 7, { requirePreferred: true }).subscribe();
-    const first = http.expectOne(`${environment.apiUrl}/tracks/music-search/adopt`);
-    expect(first.request.body).toEqual({
-      video_id: 'vid',
-      track_id: 7,
-      require_preferred: true,
-    });
-    first.flush({ track_id: 1, created: true, video_id: 'vid' });
-
-    svc.adoptYoutubeResult('vid').subscribe();
-    const second = http.expectOne(`${environment.apiUrl}/tracks/music-search/adopt`);
-    expect(second.request.body).toEqual({ video_id: 'vid' });
-    second.flush({ track_id: 2, created: true, video_id: 'vid' });
-  });
 });
 
 describe('SearchComponent music-core flows', () => {
   let fixture: ComponentFixture<SearchComponent>;
   let component: SearchComponent;
   let musicSearch: ReturnType<typeof vi.fn>;
-  let adoptYoutubeResult: ReturnType<typeof vi.fn>;
   let playTrack: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     musicSearch = vi.fn();
-    adoptYoutubeResult = vi.fn();
     playTrack = vi.fn();
 
     TestBed.overrideComponent(SearchComponent, {
@@ -106,7 +89,7 @@ describe('SearchComponent music-core flows', () => {
           provide: ActivatedRoute,
           useValue: { queryParamMap: of(convertToParamMap({})) },
         },
-        { provide: TracksService, useValue: { musicSearch, adoptYoutubeResult } },
+        { provide: TracksService, useValue: { musicSearch } },
         {
           provide: ArtistsService,
           useValue: {
@@ -133,10 +116,10 @@ describe('SearchComponent music-core flows', () => {
     fixture.detectChanges();
   });
 
-  it('falls back local → YouTube when local total is 0', async () => {
+  it('keeps typing search local so provider lookups are only used on submit', async () => {
     vi.useFakeTimers();
-    musicSearch
-      .mockImplementationOnce((_q: string, _p: number, _l: number, allowExternal: boolean) => {
+    musicSearch.mockImplementation(
+      (_q: string, _p: number, _l: number, allowExternal: boolean) => {
         expect(allowExternal).toBe(false);
         return of({
           query: 'rare song',
@@ -147,93 +130,32 @@ describe('SearchComponent music-core flows', () => {
           missing_local: [],
           external_available: true,
         });
-      })
-      .mockImplementationOnce((_q: string, _p: number, _l: number, allowExternal: boolean) => {
-        expect(allowExternal).toBe(true);
-        return of({
-          query: 'rare song',
-          phase: 'external',
-          message: 'Buscando en YouTube…',
-          local: { items: [], total: 0, page: 1, limit: 20 },
-          external: [{ video_id: 'yt1', title: 'Rare Song' }],
-          missing_local: [],
-          external_available: true,
-        });
-      });
+      },
+    );
 
     component.runSearch('rare song', false);
-    await vi.advanceTimersByTimeAsync(400); // first local pass
-    await vi.advanceTimersByTimeAsync(400); // auto YouTube fallback debounce
+    await vi.advanceTimersByTimeAsync(400);
     fixture.detectChanges();
 
-    expect(musicSearch).toHaveBeenCalledTimes(2);
-    expect(component.externalResults()).toHaveLength(1);
-    expect(component.phase()).toBe('external');
+    expect(musicSearch).toHaveBeenCalledTimes(1);
+    expect(component.phase()).toBe('local_empty');
+    expect(component.uiState()).toBe('empty');
     vi.useRealTimers();
   });
 
-  it('compatible adopt sends requirePreferred when exactly one missing local', () => {
-    component.missingLocal.set([{ id_track: 42, nombre_track: 'Local Hit' }]);
-    adoptYoutubeResult.mockReturnValue(
-      of({
-        track_id: 42,
-        created: false,
-        video_id: 'vid',
-        title: 'Local Hit',
-        channel_title: 'Artist',
-      }),
-    );
-
-    component.playExternal({ video_id: 'vid', title: 'Local Hit', channel_title: 'Artist' });
-
-    expect(adoptYoutubeResult).toHaveBeenCalledWith('vid', 42, { requirePreferred: true });
-    expect(playTrack).toHaveBeenCalled();
-    expect(component.hasError()).toBe(false);
-  });
-
-  it('retries adopt once without track_id after 409 TRACK_SOURCE_MISMATCH', () => {
-    component.missingLocal.set([{ id_track: 7, nombre_track: 'Mismatch' }]);
-    adoptYoutubeResult
-      .mockReturnValueOnce(
-        throwError(() => ({
-          status: 409,
-          error: { detail: { code: 'TRACK_SOURCE_MISMATCH' } },
-        })),
-      )
-      .mockReturnValueOnce(
-        of({
-          track_id: 100,
-          created: true,
-          video_id: 'vid',
-          title: 'Independent',
-        }),
-      );
-
-    component.playExternal({ video_id: 'vid', title: 'Independent' });
-
-    expect(adoptYoutubeResult).toHaveBeenNthCalledWith(1, 'vid', 7, { requirePreferred: true });
-    expect(adoptYoutubeResult).toHaveBeenNthCalledWith(2, 'vid');
-    expect(component.trackResults().some((r) => r.id_track === 100)).toBe(true);
-    expect(component.hasError()).toBe(false);
-  });
-
-  it('surfaces final error when adopt and 409-retry both fail', () => {
-    component.missingLocal.set([{ id_track: 7, nombre_track: 'Bad' }]);
-    adoptYoutubeResult
-      .mockReturnValueOnce(
-        throwError(() => ({
-          status: 409,
-          error: { detail: { code: 'TRACK_SOURCE_MISMATCH' } },
-        })),
-      )
-      .mockReturnValueOnce(throwError(() => ({ status: 500, error: { detail: 'boom' } })));
-
-    component.playExternal({ video_id: 'vid', title: 'Fail' });
-
-    expect(adoptYoutubeResult).toHaveBeenCalledTimes(2);
-    expect(component.hasError()).toBe(true);
-    expect(component.errorMessage()).toContain('No fue posible preparar la canción');
-    expect(component.phase()).toBe('external_error');
+  it('does not surface external video search results', async () => {
+    vi.useFakeTimers();
+    musicSearch.mockReturnValue(of({
+      query: 'rare song',
+      phase: 'local_empty',
+      message: '',
+      local: { items: [], total: 0, page: 1, limit: 20 },
+      external: [{ video_id: 'ignored', title: 'Ignored video' }],
+    }));
+    component.runSearch('rare song', true);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(component.hasResults()).toBe(false);
+    vi.useRealTimers();
   });
 
   it('preserves AI naturalSearch mode alongside musicSearch', () => {
@@ -243,7 +165,7 @@ describe('SearchComponent music-core flows', () => {
     expect(typeof musicSearch).toBe('function');
   });
 
-  it('maps distinct ui states for initial / searching / empty / provider / results', () => {
+  it('maps distinct ui states for initial / searching / empty / results', () => {
     expect(component.uiState()).toBe('initial');
 
     component.isLoading.set(true);
@@ -254,9 +176,6 @@ describe('SearchComponent music-core flows', () => {
     component.searched.set(true);
     component.phase.set('local_empty');
     expect(component.uiState()).toBe('empty');
-
-    component.phase.set('external_unavailable');
-    expect(component.uiState()).toBe('provider_unavailable');
 
     component.phase.set('local');
     component.trackResults.set([{ id_track: 1, nombre_track: 'A' }]);

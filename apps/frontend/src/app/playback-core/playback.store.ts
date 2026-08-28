@@ -20,13 +20,14 @@ export class PlaybackStore {
   readonly muted = this.player.muted;
   readonly shuffle = this.player.shuffle;
   readonly repeatMode = this.player.repeatMode;
-  readonly repeat = this.player.repeat;
   readonly autoplay = this.player.autoplay;
   readonly autoplayLoading = this.player.autoplayLoading;
   readonly progressPct = this.player.progressPct;
   readonly audioMode = this.player.audioMode;
   readonly resolvePhase = this.player.resolvePhase;
   readonly playbackError = this.player.playbackError;
+  readonly skipNotice = this.player.skipNotice;
+  readonly queueExhausted = this.player.queueExhausted;
   readonly currentCover = this.player.currentCover;
   readonly expandedOpen = this.player.expandedOpen;
 

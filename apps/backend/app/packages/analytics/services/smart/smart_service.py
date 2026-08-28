@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 import duckdb
 
 from app.core.cache import cache_get, cache_set, make_cache_key, ttl_for
+from app.packages.analytics.services.history_service import _warehouse_user_id
 
 from .because_you import build_because_sections
 from .daily_mix import build_daily_mixes
@@ -15,8 +16,8 @@ from .home_composer import compose_home
 from .personalization_engine import build_musical_profile
 from .ranking_engine import RankingEngine
 from .similarity_engine import similar_artists, similar_tracks
+from .spotify_taste import rank_from_spotify_taste
 from .trending_modules import build_trending_modules
-from app.packages.analytics.services.history_service import _warehouse_user_id
 
 
 class SmartRecommendationService:
@@ -54,6 +55,26 @@ class SmartRecommendationService:
     def get_recommendations(self, user_id: int, *, limit: int = 20) -> List[Dict[str, Any]]:
         wh = _warehouse_user_id(user_id)
         return RankingEngine(self._conn).rank_for_user(user_id, wh, limit=limit)
+
+    def get_spotify_taste_recommendations(
+        self,
+        user_id: int,
+        *,
+        top_track_ids: List[str],
+        recent_track_ids: List[str],
+        saved_track_ids: List[str],
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        warehouse_user_id = _warehouse_user_id(user_id)
+        return rank_from_spotify_taste(
+            self._conn,
+            app_user_id=user_id,
+            warehouse_user_id=warehouse_user_id,
+            top_track_ids=top_track_ids,
+            recent_track_ids=recent_track_ids,
+            saved_track_ids=saved_track_ids,
+            limit=limit,
+        )
 
     def get_similar_tracks(self, track_id: int, *, limit: int = 12) -> List[Dict[str, Any]]:
         return similar_tracks(self._conn, track_id, limit=limit)

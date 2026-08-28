@@ -12,6 +12,7 @@ import { TrackCoverService } from '../shared/services/track-cover.service';
 import { StatsService } from '../packages/analytics/services/stats.service';
 import { ListenStatsService } from '../packages/streaming/services/listen-stats.service';
 import { PlayableTrack } from '../shared/models/player.models';
+import { SpotifyIntegrationService } from '../core/integrations/spotify/spotify-integration.service';
 import { nextIndex } from './playback-history';
 import {
   persistPlaybackSession,
@@ -26,7 +27,6 @@ function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
     artist: 'Test Artist',
     durationMs: 180_000,
     audioUrl: '',
-    youtubeVideoId: 'phase2TestVideo',
     coverGradient: 'linear-gradient(135deg, #111, #333)',
     ...overrides,
   };
@@ -35,26 +35,33 @@ function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
 function createMockEngine() {
   let tickFn: (() => void) | null = null;
   const engine = {
-    isYoutube: false,
+    isSpotify: false,
     loadedId: null as number | null,
     setVolume: vi.fn(),
     primeDemo: vi.fn(),
-    startYoutube: vi.fn(),
+    startSpotify: vi.fn((_uri: string, trackId: number) => {
+      engine.loadedId = trackId;
+      engine.isSpotify = true;
+      return Promise.resolve(true);
+    }),
     startDemo: vi.fn((_url: string, trackId: number, autoplay?: boolean) => {
       engine.loadedId = trackId;
       return Promise.resolve(autoplay !== false);
     }),
-    markLoaded: vi.fn((trackId: number, youtube?: boolean) => {
+    markSpotifyLoaded: vi.fn((trackId: number) => {
       engine.loadedId = trackId;
-      engine.isYoutube = !!youtube;
+      engine.isSpotify = true;
     }),
     pause: vi.fn(),
     playDemo: vi.fn(() => Promise.resolve(true)),
-    playYoutube: vi.fn(),
+    playSpotify: vi.fn(() => Promise.resolve(true)),
     seek: vi.fn((s: number) => s),
     getCurrentTime: vi.fn(() => 0),
     getDuration: vi.fn((_f: number) => 180),
-    stopAll: vi.fn(),
+    stopAll: vi.fn(() => {
+      engine.isSpotify = false;
+      engine.loadedId = null;
+    }),
     startTick: vi.fn((fn: () => void) => { tickFn = fn; }),
     destroy: vi.fn(),
     _tick: () => tickFn?.(),
@@ -96,19 +103,22 @@ describe('Playback Engine Phase 2', () => {
         {
           provide: TracksService,
           useValue: {
+            getTrackById: vi.fn((id: number) =>
+              of({ id_track: id, spotify_track_id: `spotify-${id}` }),
+            ),
             getAudioSource: vi.fn((id: number) =>
               of({
                 track_id: id,
-                provider: 'youtube',
+                provider: 'deezer',
                 status: 'ok',
-                youtube_video_id: 'phase2TestVideo',
-                playable_url: null,
+                playable_url: 'https://cdn.example.test/preview.mp3',
               }),
             ),
             getCover: vi.fn(() => of({ status: 'ok', image_url: null })),
             listTracks: vi.fn(() => of({ total: 0, page: 1, limit: 24, items: [] })),
           },
         },
+        { provide: SpotifyIntegrationService, useValue: { connected: () => true } },
         { provide: TrackCoverService, useValue: { cover$: () => of(null) } },
         { provide: StatsService, useValue: { getTopTracks: vi.fn(() => of([])) } },
         { provide: ListenStatsService, useValue: { tick: vi.fn() } },
@@ -223,33 +233,18 @@ describe('Playback Engine Phase 2', () => {
   });
 
   it('10. audio error does not block app — sets error then can retry', async () => {
-    const tracksApi = TestBed.inject(TracksService);
-    const getAudio = vi.mocked(tracksApi.getAudioSource);
-    getAudio.mockReturnValueOnce(
-      of({
-        track_id: 55,
-        provider: 'none',
-        status: 'not_found',
-        youtube_video_id: null,
-        playable_url: null,
-      }) as never,
-    );
-    getAudio.mockReturnValue(
-      of({
-        track_id: 55,
-        provider: 'youtube',
-        status: 'ok',
-        youtube_video_id: 'retryVideo',
-        playable_url: null,
-      }) as never,
-    );
+    mockEngine.startSpotify
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
 
-    controller.playTrack(sampleTrack({ id: 55, youtubeVideoId: '', audioUrl: '' }));
+    controller.playTrack(sampleTrack({ id: 55, audioUrl: '' }));
     await Promise.resolve();
-    expect(store.status()).toBe('error');
-    expect(store.playbackError()).toBeTruthy();
+    await Promise.resolve();
+    expect(store.status()).toBe('paused');
+    expect(store.skipNotice()).toBe('Canción no disponible');
 
     controller.retryCurrent();
+    await Promise.resolve();
     await Promise.resolve();
     expect(store.playbackError()).toBeNull();
     expect(store.status()).toBe('playing');

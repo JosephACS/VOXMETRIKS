@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   BusinessDecision,
@@ -10,21 +11,23 @@ import {
   Paginated,
   ReportDefinition,
 } from '../models/reporting.models';
+import { CatalogCacheService } from '../../../core/services/catalog-cache.service';
 
 const base = environment.apiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class ReportingApiService {
   private http = inject(HttpClient);
+  private cache = inject(CatalogCacheService);
 
   private orgHeaders(orgId: number) {
     return { 'X-Organization-Id': String(orgId) };
   }
 
   listDefinitions(orgId: number): Observable<Paginated<ReportDefinition>> {
-    return this.http.get<Paginated<ReportDefinition>>(`${base}/reports/definitions`, {
+    return this.cachedGet(`report-definitions:${orgId}`, () => this.http.get<Paginated<ReportDefinition>>(`${base}/reports/definitions`, {
       headers: this.orgHeaders(orgId),
-    });
+    }));
   }
 
   createDefinition(orgId: number, body: { code: string; title: string; description?: string }) {
@@ -50,15 +53,15 @@ export class ReportingApiService {
   }
 
   listExecutive(orgId: number): Observable<Paginated<ExecutiveReport>> {
-    return this.http.get<Paginated<ExecutiveReport>>(`${base}/reports/executive`, {
+    return this.cachedGet(`executive-reports:${orgId}`, () => this.http.get<Paginated<ExecutiveReport>>(`${base}/reports/executive`, {
       headers: this.orgHeaders(orgId),
-    });
+    }));
   }
 
   getExecutive(orgId: number, id: number) {
-    return this.http.get<ExecutiveReport>(`${base}/reports/executive/${id}`, {
+    return this.cachedGet(`executive-report:${orgId}:${id}`, () => this.http.get<ExecutiveReport>(`${base}/reports/executive/${id}`, {
       headers: this.orgHeaders(orgId),
-    });
+    }), 30_000);
   }
 
   approve(orgId: number, id: number) {
@@ -87,9 +90,9 @@ export class ReportingApiService {
   }
 
   listDecisions(orgId: number): Observable<Paginated<BusinessDecision>> {
-    return this.http.get<Paginated<BusinessDecision>>(`${base}/business-decisions`, {
+    return this.cachedGet(`business-decisions:${orgId}`, () => this.http.get<Paginated<BusinessDecision>>(`${base}/business-decisions`, {
       headers: this.orgHeaders(orgId),
-    });
+    }));
   }
 
   createDecision(orgId: number, body: { title: string; proposal: string; executive_report_id?: number }) {
@@ -99,9 +102,9 @@ export class ReportingApiService {
   }
 
   getDecision(orgId: number, id: number) {
-    return this.http.get<BusinessDecision>(`${base}/business-decisions/${id}`, {
+    return this.cachedGet(`business-decision:${orgId}:${id}`, () => this.http.get<BusinessDecision>(`${base}/business-decisions/${id}`, {
       headers: this.orgHeaders(orgId),
-    });
+    }), 30_000);
   }
 
   approveDecision(orgId: number, id: number) {
@@ -125,9 +128,9 @@ export class ReportingApiService {
   }
 
   listActions(orgId: number, id: number) {
-    return this.http.get<DecisionAction[]>(`${base}/business-decisions/${id}/actions`, {
+    return this.cachedGet(`decision-actions:${orgId}:${id}`, () => this.http.get<DecisionAction[]>(`${base}/business-decisions/${id}/actions`, {
       headers: this.orgHeaders(orgId),
-    });
+    }));
   }
 
   completeDecision(orgId: number, id: number) {
@@ -137,14 +140,26 @@ export class ReportingApiService {
   }
 
   listFollowUps(orgId: number, id: number) {
-    return this.http.get<DecisionFollowUp[]>(`${base}/business-decisions/${id}/follow-ups`, {
+    return this.cachedGet(`decision-followups:${orgId}:${id}`, () => this.http.get<DecisionFollowUp[]>(`${base}/business-decisions/${id}/follow-ups`, {
       headers: this.orgHeaders(orgId),
-    });
+    }));
   }
 
   addFollowUp(orgId: number, id: number, note: string) {
     return this.http.post<DecisionFollowUp>(`${base}/business-decisions/${id}/follow-ups`, { note }, {
       headers: this.orgHeaders(orgId),
     });
+  }
+
+  private cachedGet<T>(key: string, request: () => Observable<T>, ttlMs = 60_000): Observable<T> {
+    const cached = this.cache.get<T>(key, ttlMs);
+    if (cached !== null) return of(cached);
+    return request().pipe(
+      tap((value) => this.cache.set(key, value, ttlMs)),
+      catchError((error) => {
+        this.cache.invalidate(key);
+        return throwError(() => error);
+      }),
+    );
   }
 }

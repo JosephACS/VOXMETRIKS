@@ -17,6 +17,23 @@
     <span class="hero-chip" [attr.title]="'home.tip.localActivity' | t">{{ 'home.chip.explorer' | t: { level: explorerLevel() }:lang() }}</span>
   </div>
 
+  @if (summary(); as stats) {
+    <div class="hero-metrics" aria-label="Métricas del catálogo">
+      <span class="hero-metric">
+        <small>BPM</small>
+        <strong>{{ animatedBpm() || '—' }}</strong>
+      </span>
+      <span class="hero-metric">
+        <small>ENERGÍA</small>
+        <strong>{{ animatedEnergy() || '—' }}%</strong>
+      </span>
+      <span class="hero-metric">
+        <small>TRACKS</small>
+        <strong>{{ stats.total_tracks | number }}</strong>
+      </span>
+    </div>
+  }
+
   <div class="hero-toolbar">
     <a routerLink="/search" class="hero-search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -28,6 +45,17 @@
       <a routerLink="/genres" class="discover-chip">{{ 'home.discover.genres' | t:lang() }}</a>
     </nav>
   </div>
+
+  <svg class="vx-waveform hero-waveform" viewBox="0 0 640 96" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="hero-wave-fill" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stop-color="var(--accent)" stop-opacity=".16" />
+        <stop offset="1" stop-color="var(--accent-hover)" stop-opacity=".72" />
+      </linearGradient>
+    </defs>
+    <path d="M0 54 C44 20 72 78 112 48 S180 26 218 55 S285 78 326 42 S394 18 432 53 S500 78 540 47 S602 28 640 52 L640 96 L0 96 Z" fill="url(#hero-wave-fill)" />
+    <path d="M0 54 C44 20 72 78 112 48 S180 26 218 55 S285 78 326 42 S394 18 432 53 S500 78 540 47 S602 28 640 52" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".78" />
+  </svg>
 </header>
 
 @if (eventsOpen()) {

@@ -1,19 +1,19 @@
 import { Injectable, inject } from '@angular/core';
-import { YoutubeEngineService } from '../shared/services/youtube-engine.service';
 import {
   PlayerPlaybackEngine,
   PlaybackEngineHooks,
 } from '../shared/services/player/player-playback.engine';
+import { SpotifyPlaybackService } from '../core/integrations/spotify/spotify-playback.service';
 
-/** Injectable wrapper around the low-level audio engine (HTML5 + YouTube). */
+/** Injectable wrapper around Spotify Web Playback SDK + HTML Audio previews. */
 @Injectable({ providedIn: 'root' })
 export class PlaybackEngine {
-  private readonly yt = inject(YoutubeEngineService);
+  private readonly spotify = inject(SpotifyPlaybackService);
   private inner: PlayerPlaybackEngine | null = null;
 
   init(hooks: PlaybackEngineHooks): void {
     if (this.inner) this.inner.destroy();
-    this.inner = new PlayerPlaybackEngine(this.yt, hooks);
+    this.inner = new PlayerPlaybackEngine(this.spotify, hooks);
   }
 
   get instance(): PlayerPlaybackEngine {

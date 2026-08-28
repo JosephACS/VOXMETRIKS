@@ -10,7 +10,7 @@ import duckdb
 import pytest
 
 from app.core import schema_bootstrap
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings, set_settings_override
 from app.packages.billing.domain.providers import (
     MOCK_SCENARIOS,
     MockPaymentProvider,
@@ -75,6 +75,22 @@ def test_register_verify_wrong_expired_reuse_rate_limit(conn):
     resent = resend_verification(conn, email)
     assert resent["ok"] is True
     assert "If an unverified" in resent["message"]
+
+
+def test_controlled_release_caps_new_application_accounts(conn):
+    base = get_settings()
+    data = base.model_dump()
+    existing_users = int(conn.execute("SELECT COUNT(*) FROM app_user").fetchone()[0])
+    user_limit = existing_users + 1
+    data["max_app_users"] = user_limit
+    set_settings_override(Settings(**data))
+    try:
+        first = register(conn, "firstuser", "first@example.com", "secret123")
+        assert first["verification_required"] is True
+        with pytest.raises(ValueError, match=rf"límite de {user_limit} usuarios"):
+            register(conn, "seconduser", "second@example.com", "secret123")
+    finally:
+        set_settings_override(base)
 
 
 def test_resend_rate_limit_and_unknown_email(conn):

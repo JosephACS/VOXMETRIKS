@@ -701,7 +701,7 @@ export class ComplexReportsPage implements OnInit {
           data: useTopN
             ? collapsed.map((p) => p.value)
             : collapsed.map((p) => Math.round((p.value / compositionTotal) * 1000) / 10),
-          color: '#1ED896',
+          color: '#e8a33d',
         },
       ];
     }
@@ -716,7 +716,7 @@ export class ComplexReportsPage implements OnInit {
     if (viz === 'monthly-combo') {
       const values = series.map((p) => p.value);
       return [
-        { name: 'Ingreso mensual', data: values, color: '#1ed896', type: 'bar', yAxisIndex: 0 },
+        { name: 'Ingreso mensual', data: values, color: '#e8a33d', type: 'bar', yAxisIndex: 0 },
         {
           name: 'Acumulado',
           data: cumulativeValues(values),
@@ -747,7 +747,7 @@ export class ComplexReportsPage implements OnInit {
         return [...byStatus.entries()].map(([status, n], i) => ({
           name: humanizeStatusLabel(status),
           data: [Math.round((n / total) * 1000) / 10],
-          color: ['#1ED896', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
+          color: ['#e8a33d', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
             i % 8
           ],
         }));
@@ -755,7 +755,7 @@ export class ComplexReportsPage implements OnInit {
       return [...statuses].map((status, i) => ({
         name: humanizeStatusLabel(status),
         data: months.map((m) => map.get(`${m}||${status}`) ?? 0),
-        color: ['#1ED896', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
+        color: ['#e8a33d', '#149E74', '#2A9D8F', '#5EAAA8', '#7A8B87', '#A8B5B0', '#3D5A56', '#88C9B0'][
           i % 8
         ],
       }));
@@ -768,7 +768,7 @@ export class ComplexReportsPage implements OnInit {
             const v = Number(p.value) || 0;
             return v <= 1 ? v * 100 : v;
           }),
-          color: '#1ed896',
+          color: '#e8a33d',
         },
       ];
     }
@@ -781,7 +781,7 @@ export class ComplexReportsPage implements OnInit {
               ? 'Nuevas suscripciones'
               : 'Valor',
         data: series.map((p) => Number(p.value) || 0),
-        color: '#1ed896',
+        color: '#e8a33d',
       },
     ];
   }

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { I18nService } from '../../../../core/services/i18n.service';
@@ -32,6 +32,33 @@ export class HomeHeroComponent {
   readonly eventsLoading = signal(false);
   readonly eventsError = signal('');
   readonly eventsBreakdown = signal<EventsBreakdown | null>(null);
+  readonly animatedBpm = signal(0);
+  readonly animatedEnergy = signal(0);
+  private animationRun = 0;
+
+  constructor() {
+    effect(() => {
+      const summary = this.summary();
+      const bpm = Math.round(summary?.promedio_tempo ?? 0);
+      const energy = Math.round((summary?.promedio_energy ?? 0) * 100);
+      const run = ++this.animationRun;
+      const started = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const frame = (now: number) => {
+        if (run !== this.animationRun) return;
+        const elapsed = now - started;
+        const progress = Math.min(1, elapsed / 400);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        this.animatedBpm.set(Math.round(bpm * eased));
+        this.animatedEnergy.set(Math.round(energy * eased));
+        if (progress < 1) {
+          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(frame);
+          else setTimeout(() => frame(Date.now()), 16);
+        }
+      };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(frame);
+      else frame(Date.now());
+    });
+  }
 
   /** Prefer breakdown when loaded; otherwise summary classification totals. */
   readonly eventsCopyMode = computed<EventsCopyMode>(() => {

@@ -11,8 +11,10 @@ import { NotificationToastComponent } from './shared/components/notification-toa
   imports: [RouterOutlet, ConfirmDialogComponent, NotificationToastComponent],
   template: `
     <router-outlet></router-outlet>
-    <app-confirm-dialog />
-    <app-notification-toast />
+    @defer (on idle) {
+      <app-confirm-dialog />
+      <app-notification-toast />
+    }
   `,
 })
 export class App {

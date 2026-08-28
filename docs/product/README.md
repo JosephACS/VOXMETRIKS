@@ -4,6 +4,8 @@ Documentación de negocio consolidada desde la Spec histórica **015** (cerrada 
 
 | Documento | Contenido |
 |-----------|-----------|
+| [PRODUCT-DIRECTION.md](PRODUCT-DIRECTION.md) | Norte vigente, posicionamiento y definición de funcionalidad |
+| [SPOTIFY-INTEGRATION.md](SPOTIFY-INTEGRATION.md) | Señales de gusto, reproducción, configuración y límites de Spotify |
 | [BUSINESS-MODEL.md](BUSINESS-MODEL.md) | Definición B2B + rol del audio |
 | [PROCESS-MAP.md](PROCESS-MAP.md) | Mapa de procesos (diseñado / parcial / implementado) |
 | [OPERATIVE-TACTICAL-STRATEGIC.md](OPERATIVE-TACTICAL-STRATEGIC.md) | Tres niveles |

@@ -54,11 +54,27 @@ def migrate_audio_source_columns(conn: duckdb.DuckDBPyConnection) -> None:
         )
     except Exception:
         pass
+    # Hygiene for the Spotify/Deezer-only playback path: stale rows from old
+    # providers used to win the cache guard even though they can no longer be
+    # played by the active resolver. Removing them lets Deezer write a fresh,
+    # authoritative state on the next play.
+    try:
+        conn.execute(
+            "DELETE FROM app_track_audio_source "
+            "WHERE provider IS NOT NULL "
+            "AND lower(provider) NOT IN ('deezer', 'local_published')"
+        )
+    except Exception:
+        pass
 
 
 def read_cache(
     conn: duckdb.DuckDBPyConnection, track_id: int
 ) -> Optional[Dict[str, Any]]:
+    # Some isolated/demo databases are created from an older compact schema.
+    # Bring them up to the current shape before reading so catalog search can
+    # report playback status without depending on a separate boot migration.
+    migrate_audio_source_columns(conn)
     row = conn.execute(
         """
         SELECT track_id, provider, youtube_video_id, source_ref, playable_url,
@@ -116,7 +132,7 @@ def write_cache(
     ``local_published`` insert cannot be overwritten by an external provider
     that read an older row before upserting.
 
-    - Existing ``local_published`` is never replaced by YouTube/Audius/etc.
+    - Existing ``local_published`` is never replaced by an external provider.
     - A new ``local_published`` may replace an external source.
     - ``preserve_failure_count=True`` keeps the existing failure_count.
     - ``preserve_failure_count=False`` resets failure_count to 0 on update.

@@ -31,7 +31,7 @@
 }
 
 .period-tab.active {
-  background: var(--color-accent, #1ed896);
+  background: var(--color-accent, #e8a33d);
   color: #04140d;
   border-color: transparent;
 }
@@ -80,7 +80,7 @@
 .timeline-bar {
   width: 100%;
   min-height: 2px;
-  background: var(--color-accent, #1ed896);
+  background: var(--color-accent, #e8a33d);
   border-radius: 4px 4px 0 0;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .rank-item:hover {
-  background: color-mix(in srgb, var(--listener-accent, #1ed896) 6%, transparent);
+  background: color-mix(in srgb, var(--listener-accent, #e8a33d) 6%, transparent);
 }
 
 .rank {
@@ -184,7 +184,7 @@
 
 .genre-bar {
   height: 6px;
-  background: var(--color-accent, #1ed896);
+  background: var(--color-accent, #e8a33d);
   border-radius: 999px;
   margin-bottom: 0.75rem;
   max-width: 100%;
@@ -207,7 +207,7 @@
   display: inline-block;
   padding: 0.55rem 1rem;
   border-radius: 999px;
-  background: var(--color-accent, #1ed896);
+  background: var(--color-accent, #e8a33d);
   color: #04140d;
   text-decoration: none;
   border: none;

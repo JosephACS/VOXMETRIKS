@@ -102,7 +102,7 @@ sequenceDiagram
     participant API as FastAPI
     participant DB as DuckDB
 
-    U->>FE: Login (demo/demo123)
+    U->>FE: Login (cuenta registrada / admin bootstrap)
     FE->>API: POST /api/v1/users/login
     API->>DB: Validar app_user + app_session
     DB-->>API: Token Bearer

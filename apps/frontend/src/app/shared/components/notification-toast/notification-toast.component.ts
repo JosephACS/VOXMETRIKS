@@ -45,7 +45,7 @@ import { NotificationService } from '../../../core/services/notification.service
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
       animation: slideIn 0.2s ease;
     }
-    .toast--success { border-left: 3px solid #1ed896; }
+    .toast--success { border-left: 3px solid #e8a33d; }
     .toast--info { border-left: 3px solid #3b82f6; }
     .toast--warning { border-left: 3px solid #f59e0b; }
     .toast--error { border-left: 3px solid #ef4444; }

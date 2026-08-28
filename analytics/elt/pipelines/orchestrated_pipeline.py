@@ -110,7 +110,7 @@ def _open_writable():
         if _lock_error(exc):
             raise RuntimeError(
                 "DuckDB warehouse is locked by another process. "
-                "Stop the application runtime (start_demo.ps1 / `make down`) "
+                "Stop the application runtime (start.ps1 / `make down`) "
                 "before triggering the Airflow DAG. "
                 f"Path={elt.DB_PATH}"
             ) from exc
@@ -178,7 +178,7 @@ def stage_preflight(*, dag_run_id: str, ctl_run_id: int) -> Dict[str, Any]:
         if _lock_error(exc):
             raise RuntimeError(
                 "DuckDB warehouse is locked by another process. "
-                "Stop start_demo.ps1 / application compose before running Airflow. "
+                "Stop start.ps1 / application compose before running Airflow. "
                 f"Path={db_path}"
             ) from exc
         issues.append(f"Cannot open DuckDB at {db_path}: {exc}")

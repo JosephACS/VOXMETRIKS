@@ -1,37 +1,14 @@
 import { Routes } from '@angular/router';
-import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
-import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
-import { ProfilesLayoutComponent } from './layouts/profiles-layout/profiles-layout.component';
 import { authGuard, guestGuard, roleHomeRedirectGuard } from './core/guards/auth.guard';
 import { engineerGuard } from './core/guards/engineer.guard';
-import { staffCapabilityGuard } from './core/guards/staff-capability.guard';
-import {
-  withProductSurfaceGuard,
-} from './core/guards/with-product-surface-guard';
-import { ORGANIZATIONS_ROUTES } from './packages/organizations/organizations.routes';
-import { CRM_ROUTES } from './packages/crm/crm.routes';
-import { SUBSCRIPTIONS_ROUTES } from './packages/subscriptions/subscriptions.routes';
-import { BILLING_ROUTES } from './packages/billing/billing.routes';
-import { ROYALTIES_ROUTES } from './packages/royalties/royalties.routes';
-import { ARTIST_PROFILES_ROUTES } from './packages/artists/artists.routes';
-import { CATALOG_RIGHTS_ROUTES } from './packages/catalog-rights/catalog-rights.routes';
-import { CATALOG_PUBLISHING_ROUTES } from './packages/catalog-publishing/catalog-publishing.routes';
-import { CAMPAIGNS_ROUTES } from './packages/campaigns/campaigns.routes';
-import { BUSINESS_ANALYTICS_ROUTES } from './packages/business-analytics/business-analytics.routes';
-import { COMPLIANCE_ROUTES } from './packages/compliance/compliance.routes';
-import { PLATFORM_OPS_ROUTES } from './packages/platform-ops/platform-ops.routes';
-import { ARTIST_SPACE_ROUTES } from './packages/artist-space/artist-space.routes';
-import { REPORTING_ROUTES } from './packages/reporting/reporting.routes';
-import { SIMPLE_REPORTS_ROUTES } from './packages/simple-reports/simple-reports.routes';
-import { WORKPANEL_ROUTES } from './packages/workpanel/workpanel.routes';
-import { COMPLEX_REPORTS_ROUTES } from './packages/complex-reports/complex-reports.routes';
-import { CUSTOMER_SUCCESS_ROUTES } from './packages/customer-success/customer-success.routes';
-import { PERSONAL_ACCOUNT_ROUTES } from './packages/personal-account/personal-account.routes';
 
 export const APP_ROUTES: Routes = [
   {
     path: 'login',
-    component: AuthLayoutComponent,
+    loadComponent: () =>
+      import('./layouts/auth-layout/auth-layout.component').then(
+        (m) => m.AuthLayoutComponent,
+      ),
     canActivate: [guestGuard],
     children: [
       {
@@ -44,7 +21,10 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'account/profiles',
-    component: ProfilesLayoutComponent,
+    loadComponent: () =>
+      import('./layouts/profiles-layout/profiles-layout.component').then(
+        (m) => m.ProfilesLayoutComponent,
+      ),
     canActivate: [authGuard],
     children: [
       {
@@ -59,7 +39,10 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: '',
-    component: DashboardLayoutComponent,
+    loadComponent: () =>
+      import('./layouts/dashboard-layout/dashboard-layout.component').then(
+        (m) => m.DashboardLayoutComponent,
+      ),
     canActivate: [authGuard],
     children: [
       {
@@ -74,6 +57,11 @@ export const APP_ROUTES: Routes = [
       {
         path: 'dashboard',
         redirectTo: 'workpanel',
+        pathMatch: 'full',
+      },
+      {
+        path: 'home',
+        redirectTo: 'discover',
         pathMatch: 'full',
       },
       {
@@ -284,25 +272,19 @@ export const APP_ROUTES: Routes = [
             (m) => m.SettingsComponent,
           ),
       },
-      ...ORGANIZATIONS_ROUTES,
-      ...withProductSurfaceGuard(CRM_ROUTES),
-      ...withProductSurfaceGuard(SUBSCRIPTIONS_ROUTES),
-      ...withProductSurfaceGuard(BILLING_ROUTES),
-      ...withProductSurfaceGuard(ROYALTIES_ROUTES),
-      ...ARTIST_PROFILES_ROUTES,
-      ...CATALOG_RIGHTS_ROUTES,
-      ...CATALOG_PUBLISHING_ROUTES,
-      ...withProductSurfaceGuard(CAMPAIGNS_ROUTES),
-      ...withProductSurfaceGuard(BUSINESS_ANALYTICS_ROUTES),
-      ...withProductSurfaceGuard(COMPLIANCE_ROUTES),
-      ...PLATFORM_OPS_ROUTES,
-      ...ARTIST_SPACE_ROUTES,
-      ...withProductSurfaceGuard(REPORTING_ROUTES),
-      ...SIMPLE_REPORTS_ROUTES,
-      ...WORKPANEL_ROUTES,
-      ...COMPLEX_REPORTS_ROUTES,
-      ...withProductSurfaceGuard(CUSTOMER_SUCCESS_ROUTES),
-      ...PERSONAL_ACCOUNT_ROUTES,
+      {
+        path: 'integrations/spotify/callback',
+        title: 'Spotify | VOXMETRIKS',
+        loadComponent: () =>
+          import('./core/integrations/spotify/spotify-callback.page').then(
+            (m) => m.SpotifyCallbackPage,
+          ),
+      },
+      {
+        path: '',
+        loadChildren: () =>
+          import('./app.product.routes').then((m) => m.PRODUCT_ROUTES),
+      },
       {
         path: 'error/401',
         title: 'errors.401.title',

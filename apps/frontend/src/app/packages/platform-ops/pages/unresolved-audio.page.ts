@@ -1,13 +1,9 @@
 import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, of } from 'rxjs';
 import { PlatformOpsApiService } from '../services/platform-ops-api.service';
-import {
-  AudioCandidate,
-  UnresolvedAudioItem,
-} from '../models/platform-ops.models';
+import { UnresolvedAudioItem } from '../models/platform-ops.models';
 import { I18nService } from '../../../core/services/i18n.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { userFacingHttpError } from '../../../core/i18n/user-facing-error';
@@ -55,14 +51,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               {{ 'platformOps.audioUnresolved.manageHint' | t:lang() }}
             </p>
             <div class="manual-row">
-              <input
-                class="input grow"
-                [(ngModel)]="manualUrl"
-                [placeholder]="'platformOps.audioUnresolved.pasteUrl' | t:lang()"
-              />
-              <button type="button" class="btn" [disabled]="busy" (click)="saveManual()">
-                {{ 'platformOps.audioUnresolved.validateSave' | t:lang() }}
-              </button>
               <button type="button" class="btn" [disabled]="busy" (click)="reresolve()">
                 {{ 'platformOps.audioUnresolved.reresolve' | t:lang() }}
               </button>
@@ -116,49 +104,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
               <p class="msg">{{ actionMsg }}</p>
             }
 
-            <button type="button" class="btn btn-sm" [disabled]="busy" (click)="loadCandidates()">
-              {{ 'platformOps.audioUnresolved.loadCandidates' | t:lang() }}
-            </button>
-
-            @if (candidates.length) {
-              <ul class="candidates">
-                @for (c of candidates; track c.video_id) {
-                  <li>
-                    <div class="cand-meta">
-                      <strong>{{ c.title }}</strong>
-                      <span class="muted">
-                        {{ c.channel_title || '' }} · {{ c.duration_sec || '?' }}s · score
-                        {{ c.score ?? '—' }}
-                      </span>
-                    </div>
-                    <div class="cand-actions">
-                      <button type="button" class="btn btn-sm" (click)="preview(c)">
-                        {{ 'platformOps.audioUnresolved.listen' | t:lang() }}
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm"
-                        [disabled]="busy || c.accepted === false"
-                        (click)="pickCandidate(c)"
-                      >
-                        {{ 'platformOps.audioUnresolved.use' | t:lang() }}
-                      </button>
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-
-            @if (previewUrl) {
-              <div class="preview">
-                <iframe
-                  [src]="previewUrl"
-                  title="YouTube preview"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen
-                ></iframe>
-              </div>
-            }
           </app-enterprise-section-card>
         </div>
       }
@@ -226,10 +171,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
         min-width: 16rem;
         padding: 0.45rem 0.65rem;
       }
-      .input.grow {
-        flex: 1;
-        min-width: 12rem;
-      }
       .manual-row {
         display: flex;
         flex-wrap: wrap;
@@ -256,35 +197,6 @@ import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
       }
       tr.active {
         background: rgba(0, 0, 0, 0.04);
-      }
-      .candidates {
-        list-style: none;
-        padding: 0;
-        margin: 0.75rem 0 0;
-      }
-      .candidates li {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.6rem 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-      }
-      .cand-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-      }
-      .cand-actions {
-        display: flex;
-        gap: 0.35rem;
-        align-items: flex-start;
-      }
-      .preview iframe {
-        width: 100%;
-        max-width: 480px;
-        aspect-ratio: 16 / 9;
-        border: 0;
-        margin-top: 0.75rem;
       }
       .ref-col {
         opacity: 0.65;
@@ -317,7 +229,6 @@ export class UnresolvedAudioPage implements OnInit {
   private readonly api = inject(PlatformOpsApiService);
   private readonly i18n = inject(I18nService);
   private readonly notify = inject(NotificationService);
-  private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('managePanel') managePanel?: ElementRef<HTMLElement>;
 
@@ -331,9 +242,6 @@ export class UnresolvedAudioPage implements OnInit {
   items: UnresolvedAudioItem[] = [];
   total = 0;
   selected: UnresolvedAudioItem | null = null;
-  candidates: AudioCandidate[] = [];
-  manualUrl = '';
-  previewUrl: SafeResourceUrl | null = null;
   confirmUnavailable = false;
   unavailableReason = '';
   reasonError = '';
@@ -362,9 +270,6 @@ export class UnresolvedAudioPage implements OnInit {
 
   select(row: UnresolvedAudioItem): void {
     this.selected = row;
-    this.candidates = [];
-    this.previewUrl = null;
-    this.manualUrl = '';
     this.actionMsg = '';
     this.cancelUnavailable();
     setTimeout(() => {
@@ -375,64 +280,8 @@ export class UnresolvedAudioPage implements OnInit {
 
   clearSelection(): void {
     this.selected = null;
-    this.candidates = [];
-    this.previewUrl = null;
-    this.manualUrl = '';
     this.actionMsg = '';
     this.cancelUnavailable();
-  }
-
-  loadCandidates(): void {
-    if (!this.selected) return;
-    this.busy = true;
-    this.actionMsg = '';
-    this.api
-      .searchAudioCandidates(this.selected.track_id)
-      .pipe(
-        catchError((err) => {
-          this.actionMsg = userFacingHttpError(this.i18n, err);
-          return of(null);
-        }),
-      )
-      .subscribe((res) => {
-        this.busy = false;
-        this.candidates = res?.candidates || [];
-      });
-  }
-
-  preview(c: AudioCandidate): void {
-    const url = `https://www.youtube.com/embed/${c.video_id}`;
-    this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
-
-  pickCandidate(c: AudioCandidate): void {
-    this.manualUrl = c.video_id;
-    this.saveManual();
-  }
-
-  saveManual(): void {
-    if (!this.selected || !this.manualUrl.trim()) return;
-    this.busy = true;
-    this.actionMsg = '';
-    this.api
-      .saveManualAudio(this.selected.track_id, {
-        url: this.manualUrl.trim(),
-        validate: true,
-      })
-      .pipe(
-        catchError((err) => {
-          this.actionMsg = userFacingHttpError(this.i18n, err);
-          this.busy = false;
-          return of(null);
-        }),
-      )
-      .subscribe((res) => {
-        this.busy = false;
-        if (!res) return;
-        this.actionMsg = this.i18n.t('platformOps.audioUnresolved.saved');
-        this.notify.success(this.actionMsg);
-        this.load();
-      });
   }
 
   reresolve(): void {

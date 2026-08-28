@@ -6,7 +6,6 @@
 import {
   AppSpace,
   PersistedSpaceRef,
-  SpaceKind,
   dataOpsSpace,
   organizationSpace,
   personalSpace,

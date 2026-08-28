@@ -8,7 +8,7 @@
   overflow: hidden;
   border: 1px solid var(--listener-line, rgba(255,255,255,0.06));
   background:
-    radial-gradient(circle at 0% 100%, rgba(30,216,150,0.16), transparent 46%),
+    radial-gradient(circle at 0% 100%, rgba(232, 163, 61,0.16), transparent 46%),
     var(--listener-surface, rgba(24,24,24,0.92));
 }
 
@@ -49,7 +49,7 @@
   padding: 0.55rem 1.25rem;
   border: none;
   border-radius: 999px;
-  background: #1ed896;
+  background: #e8a33d;
   color: #000;
   font-weight: 700;
   cursor: pointer;
@@ -72,7 +72,7 @@
   color: inherit;
   transition: background 0.12s;
 }
-.track-row:hover { background: color-mix(in srgb, var(--accent, #1ed896) 8%, transparent); }
+.track-row:hover { background: color-mix(in srgb, var(--accent, #e8a33d) 8%, transparent); }
 .track-row.skel { height: 48px; margin-bottom: 0.25rem; animation: pulse 1.5s infinite; }
 
 .rank { width: 1.5rem; text-align: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
@@ -98,9 +98,9 @@
 .error-state span { color: #f87171; }
 
 .link-btn {
-  padding: 0.45rem 1rem; background: rgba(30,216,150,0.12);
-  border: 1px solid rgba(30,216,150,0.3); border-radius: 2rem;
-  color: #1ed896; text-decoration: none; font-size: 0.8125rem; font-weight: 600;
+  padding: 0.45rem 1rem; background: rgba(232, 163, 61,0.12);
+  border: 1px solid rgba(232, 163, 61,0.3); border-radius: 2rem;
+  color: #e8a33d; text-decoration: none; font-size: 0.8125rem; font-weight: 600;
   cursor: pointer;
 }
 

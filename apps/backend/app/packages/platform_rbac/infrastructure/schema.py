@@ -4,7 +4,8 @@ Tables: app_platform_role, app_platform_permission,
         app_platform_role_permission, app_user_platform_role.
 
 Idempotent CREATE IF NOT EXISTS + catalog seed.
-Demo CRM users seeded only when settings.seed_demo_crm_users is True.
+Optional DEV CRM bootstrap users only when settings.seed_demo_crm_users_enabled
+(SEED_DEMO_CRM_USERS + non-production). Never production.
 No CRM roles assigned to existing admin/engineer/demo users.
 """
 
@@ -38,7 +39,7 @@ PLATFORM_RBAC_TABLES = (
 
 
 def ensure_platform_rbac_tables(conn: duckdb.DuckDBPyConnection) -> None:
-    """Create platform RBAC tables, seed catalogs, and seed demo CRM users (idempotent)."""
+    """Create platform RBAC tables, seed catalogs, optional DEV CRM users."""
     if schema_ready():
         # Additive re-seed when tables exist (isolated DBs may lack them).
         try:
@@ -202,18 +203,26 @@ def _seed_platform_rbac_catalogs(conn: duckdb.DuckDBPyConnection) -> None:
 # ── Demo CRM users ────────────────────────────────────────────────────────────
 
 def _seed_demo_crm_users(conn: duckdb.DuckDBPyConnection) -> None:
-    """Seed sales_agent@voxmetrik.io / sales_manager@voxmetrik.io demo users.
+    """Optional DEV bootstrap: sales_agent@ / sales_manager@ (not production).
 
-    Only when seed_demo_crm_users is enabled (development, not production).
+    Only when seed_demo_crm_users_enabled. Prefer DEMO_ACCOUNT_PASSWORD when set;
+    local fallbacks never run in production paths.
     Does NOT assign CRM roles to existing admin/engineer/demo users.
     """
     from app.packages.identity.services.password_security import hash_password
+    import os
 
     now = utc_now()
+    shared = (
+        os.environ.get("DEMO_ACCOUNT_PASSWORD")
+        or os.environ.get("DEMO_PASSWORD")
+        or os.environ.get("VOXMETRIKS_DEMO_PASSWORD")
+        or ""
+    ).strip()
 
     crm_demo_users = [
-        ("sales_agent_demo", "sales_agent@voxmetrik.io", "demo123", "sales_agent"),
-        ("sales_manager_demo", "sales_manager@voxmetrik.io", "demo123", "sales_manager"),
+        ("sales_agent_demo", "sales_agent@voxmetrik.io", shared or "demo123", "sales_agent"),
+        ("sales_manager_demo", "sales_manager@voxmetrik.io", shared or "demo123", "sales_manager"),
     ]
 
     for username, email, pwd, platform_role_code in crm_demo_users:

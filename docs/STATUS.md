@@ -10,18 +10,18 @@
 |------|-------------------|
 | Identidad / sesiones / preferencias | `apps/backend` identity; login SPA |
 | Organizaciones + membresías + RBAC | recorrido profesional implementado (053); navegación por permisos en consolidación (054) |
-| Suscripciones org + planes | subscriptions; checkout profesional con pago simulado (052) |
+| Suscripciones org + planes | subscriptions; checkout con `PAYMENT_PROVIDER` (`manual_transfer` default; `academic_mock` solo tests/DEV) |
 | Billing (invoices, payments, refunds, credit notes, manual transfer) | billing; idempotencia org-scoped; orquestación checkout 052 |
-| Suscripciones personales B2C + household profiles | personal_subscriptions; profile security; checkout profesional 052 |
+| Suscripciones personales B2C + household profiles | personal_subscriptions; profile security; checkout 052 |
 | Catálogo / favoritos / playlists / búsqueda | streaming + catalog |
 | Reproducción (resolver + player) | playback-core / music player |
-| Unified Music Search (núcleo) | backend `/tracks/music-search`, adopt, repair-source; frontend local → YouTube → adopt; pruebas asociadas |
+| Búsqueda musical tolerante | backend `/tracks/music-search`; frontend sobre catálogo propio con coincidencia parcial y errores pequeños |
 | Artist Space profesional + publicación independiente | artist_space, identity_access y catalog_publishing (051) |
 | Catalog rights / contracts | catalog_rights |
 | Reportes simples / workpanel / complex | reports packages |
 | Business analytics / Estratégico AGG (049) | `agg_strategic_kpi_period`; overview OE-01…OE-08; dashboard Dirección estratégica; acceso CTA desde Reportes/Workpanel |
 | Navegación contextual consolidada | Listener: Descubrir/Buscar/Biblioteca/Config; Admin: Workpanel/Catálogo/Org/Reportes/Plan; Engineer: ELT/Workpanel/Explorer/Reportes |
-| Reproducción (resolver) | Catálogo = metadatos/portada; YouTube = fuente; matching con scoring; fallback silencioso |
+| Reproducción (resolver) | Catálogo = metadatos/portada; Spotify conectado = única fuente visible; sin fallback silencioso a video |
 | Platform ops (parcial) | platform_ops |
 | ELT DuckDB | `analytics/elt` (`elt_pipeline.py` canónico) |
 | Orquestación ELT Airflow (Spec 048) | DAG de ocho tareas + LocalExecutor; smoke Docker/Airflow verificado en CI |
@@ -38,7 +38,7 @@
 | Platform Admin journey | Spec 055 activa: consolidación de colas operativas y separación de diagnóstico avanzado |
 | Smart recommendations / AI helpers | Reglas locales; no LLM obligatorio |
 | Royalties | Simulado / diferido — no payouts reales |
-| Unified Music Search (alcance avanzado) | Núcleo implementado; pendiente smoke con API key/proveedor real y alcance avanzado no aprobado |
+| Búsqueda musical (alcance avanzado) | Núcleo implementado; la cobertura depende de los IDs Spotify disponibles en el catálogo |
 
 ## Decisiones diferidas (sin inventar parámetros)
 
@@ -52,7 +52,7 @@
 
 - Entorno académico / demo; DuckDB no es OLTP de producción.
 - Airflow es una capacidad académica/demo verificada en Docker CI; no se afirma HA ni producción.
-- Audio vía contrato YouTube Data API / proveedores aprobados + demos.
+- Audio del producto vía cuenta Spotify Premium autorizada; catálogo propio para inteligencia y presentación.
 - Docker opcional según host para la app; **Docker es requerido** para ejecutar el stack Airflow.
 - Sin métricas inventadas de cobertura, concurrencia o ROI.
 - DuckDB single-writer: no ejecutar aplicación y DAG Airflow contra el mismo warehouse a la vez.

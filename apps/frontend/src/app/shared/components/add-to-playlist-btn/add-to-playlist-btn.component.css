@@ -35,9 +35,9 @@
 
 .atp-btn:hover,
 .atp-btn.active {
-  border-color: rgba(30, 216, 150, 0.4);
-  color: var(--accent, #1ed896);
-  background: rgba(30, 216, 150, 0.08);
+  border-color: rgba(232, 163, 61, 0.4);
+  color: var(--accent, #e8a33d);
+  background: rgba(232, 163, 61, 0.08);
 }
 
 .atp-label {
@@ -54,7 +54,7 @@
   max-height: 240px;
   overflow-y: auto;
   padding: 0.5rem;
-  background: var(--shell-dropdown, var(--spotify-card, #1a1a2e));
+  background: var(--shell-dropdown, var(--spotify-card, #17130c));
   border: 1px solid var(--shell-border-strong, rgba(255, 255, 255, 0.1));
   border-radius: 0.5rem;
   box-shadow: var(--shadow-md, 0 12px 32px rgba(0, 0, 0, 0.45));
@@ -114,7 +114,7 @@
   display: block;
   padding: 0.5rem 0.625rem;
   font-size: 0.78rem;
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   text-decoration: none;
 }
 

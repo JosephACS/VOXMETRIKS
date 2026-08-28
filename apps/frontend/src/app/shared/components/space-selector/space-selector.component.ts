@@ -85,7 +85,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
         cursor: pointer;
       }
       .space-selector-btn:focus-visible {
-        outline: 2px solid #1ed896;
+        outline: 2px solid #e8a33d;
         outline-offset: 2px;
       }
       .space-selector-name {
@@ -148,12 +148,12 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       }
       .space-selector-item:hover,
       .space-selector-item:focus-visible {
-        background: var(--shell-hover-strong, color-mix(in srgb, #1ed896 12%, transparent));
+        background: var(--shell-hover-strong, color-mix(in srgb, #e8a33d 12%, transparent));
         outline: none;
       }
       .space-selector-item--active {
         font-weight: 700;
-        background: color-mix(in srgb, var(--accent, #1ed896) 18%, transparent);
+        background: color-mix(in srgb, var(--accent, #e8a33d) 18%, transparent);
       }
       .space-selector-item-row {
         display: flex;

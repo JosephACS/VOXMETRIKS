@@ -55,9 +55,9 @@ describe('prependRouteGuard (038 wiring helper)', () => {
   });
 });
 
-describe('app.routes.ts product-surface attachment (source contract)', () => {
+describe('lazy product routes surface attachment (source contract)', () => {
   it('wraps 038 demo packages and leaves platform-ops unwrapped', () => {
-    const src = readFileSync(join(here, '../../app.routes.ts'), 'utf8');
+    const src = readFileSync(join(here, '../../app.product.routes.ts'), 'utf8');
     for (const pkg of PRODUCT_SURFACE_WRAPPED_PACKAGES) {
       expect(src).toContain(`withProductSurfaceGuard(${pkg})`);
     }

@@ -41,6 +41,15 @@ _GOOD_TITLE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_TOPIC_CHANNEL_RE = re.compile(r"(?:-|–|—)\s*topic\s*$", re.IGNORECASE)
+_VEVO_CHANNEL_RE = re.compile(r"vevo\s*$", re.IGNORECASE)
+_OFFICIAL_MUSIC_RE = re.compile(
+    r"\b(official\s+(?:audio|video|music\s+video|lyric\s+video|visualizer)|"
+    r"provided\s+to\s+youtube)\b",
+    re.IGNORECASE,
+)
+_OFFICIAL_CHANNEL_RE = re.compile(r"\bofficial\s*$", re.IGNORECASE)
+
 _EXPLICIT_VARIANT_RE = re.compile(
     r"\b(live|cover|remix|karaoke|slowed|nightcore|sped[\s-]?up)\b",
     re.IGNORECASE,
@@ -54,6 +63,60 @@ _ISO8601_DURATION_RE = re.compile(
 _MIN_TITLE_SIM = 0.22
 _MIN_ARTIST_SCORE = 0.30
 _MIN_ACCEPT_SCORE = 25.0
+
+
+def youtube_music_origin(
+    *,
+    title: str = "",
+    channel_title: str = "",
+    category_id: str = "",
+    licensed_content: bool = False,
+) -> str:
+    """Classify high-confidence music-catalog videos returned by YouTube.
+
+    YouTube does not expose public ``isOnYouTubeMusic`` metadata.  These are
+    the public signals shared by the YouTube Music catalog: Music category,
+    Topic/Art Track channels, partner-claimed recordings, VEVO and explicit
+    official music uploads.
+    """
+    if str(category_id or "") != "10":
+        return ""
+    channel = channel_title or ""
+    video_title = title or ""
+    if _TOPIC_CHANNEL_RE.search(channel):
+        return "art_track"
+    if _VEVO_CHANNEL_RE.search(channel):
+        return "vevo"
+    if bool(licensed_content):
+        return "licensed"
+    if _OFFICIAL_MUSIC_RE.search(video_title):
+        return "official"
+    if _OFFICIAL_CHANNEL_RE.search(channel):
+        return "official_channel"
+    return ""
+
+
+def is_youtube_music_candidate(item: Dict[str, Any]) -> bool:
+    """Whether a Data API result has a reliable YouTube music-catalog signal."""
+    return bool(
+        item.get("music_origin")
+        or youtube_music_origin(
+            title=str(item.get("title") or ""),
+            channel_title=str(item.get("channel_title") or ""),
+            category_id=str(item.get("category_id") or ""),
+            licensed_content=bool(item.get("licensed_content")),
+        )
+    )
+
+
+def _music_origin_bonus(origin: str) -> float:
+    return {
+        "art_track": 70.0,
+        "vevo": 65.0,
+        "licensed": 55.0,
+        "official": 45.0,
+        "official_channel": 35.0,
+    }.get(origin or "", 0.0)
 
 
 def parse_iso8601_duration(raw: str) -> int:
@@ -112,6 +175,9 @@ def score_youtube_candidate(
     expected_artists: Optional[Sequence[str]] = None,
     channel_title: str = "",
     explicit_variant_ok: bool = False,
+    category_id: str = "",
+    licensed_content: bool = False,
+    music_origin: str = "",
 ) -> float:
     """Score a YouTube candidate.
 
@@ -161,6 +227,14 @@ def score_youtube_candidate(
     if _GOOD_TITLE_RE.search(title) or _GOOD_TITLE_RE.search(channel_title):
         score += 40.0
 
+    origin = music_origin or youtube_music_origin(
+        title=title,
+        channel_title=channel_title,
+        category_id=category_id,
+        licensed_content=licensed_content,
+    )
+    score += _music_origin_bonus(origin)
+
     bad = _BAD_TITLE_RE.search(title)
     if bad:
         token = (bad.group(1) or "").casefold()
@@ -206,6 +280,7 @@ def pick_best_youtube_candidate_detailed(
     expected_title: Optional[str] = None,
     expected_artists: Optional[Sequence[str]] = None,
     min_accept_score: Optional[float] = None,
+    allow_secondary_variants: bool = False,
 ) -> Optional[Dict[str, Any]]:
     best: Optional[Dict[str, Any]] = None
     best_score = -1.0
@@ -227,6 +302,10 @@ def pick_best_youtube_candidate_detailed(
             expected_title=expected_title,
             expected_artists=expected_artists,
             channel_title=item.get("channel_title") or item.get("uploader") or "",
+            explicit_variant_ok=allow_secondary_variants,
+            category_id=str(item.get("category_id") or ""),
+            licensed_content=bool(item.get("licensed_content")),
+            music_origin=str(item.get("music_origin") or ""),
         )
         if score < 0 or score < threshold:
             continue

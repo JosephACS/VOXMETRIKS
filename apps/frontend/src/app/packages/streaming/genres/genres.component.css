@@ -1,6 +1,6 @@
 .kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .kpi-card { background: var(--spotify-card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: border-color 200ms; }
-.kpi-card:hover { border-color: rgba(30,216,150,0.3); }
+.kpi-card:hover { border-color: rgba(232, 163, 61,0.3); }
 .kpi-icon {
   display: inline-flex;
   align-items: center;
@@ -11,7 +11,7 @@
   color: currentColor;
 }
 .kpi-icon :deep(svg) { width: 18px; height: 18px; }
-.kpi-primary { color: var(--accent); } .kpi-info { color: #60a5fa; } .kpi-warning { color: #f59e0b; } .kpi-secondary { color: #a78bfa; }
+.kpi-primary { color: var(--accent); } .kpi-info { color: #60a5fa; } .kpi-warning { color: #f59e0b; } .kpi-secondary { color: #e8a33d; }
 .kpi-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.2; }
 .kpi-label { font-size: 0.813rem; font-weight: 500; color: rgba(255,255,255,0.6); }
@@ -45,7 +45,7 @@
   grid-template-columns: 48px minmax(140px, 1.4fr) 72px 72px 130px 130px 120px 80px;
 }
 .data-row--clickable { cursor: pointer; }
-.data-row--clickable:hover { background: rgba(30,216,150,0.08); }
+.data-row--clickable:hover { background: rgba(232, 163, 61,0.08); }
 .data-row--clickable:hover .genre-name { color: var(--accent); }
 .col-rank { width: 48px; } .col-name { min-width: 160px; } .col-tracks,.col-artists { width: 80px; } .col-pop,.col-energy { min-width: 130px; } .col-bar { min-width: 120px; } .col-actions { width: 80px; text-align: right; }
 .genre-cell { display: flex; align-items: center; gap: 0.625rem; }
@@ -55,7 +55,7 @@
 .metric-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; min-width: 60px; }
 .metric-fill { height: 100%; border-radius: 999px; transition: width var(--motion-duration-slower) var(--motion-ease-out); transform-origin: left center; animation: vm-meter-grow var(--motion-duration-slower) var(--motion-ease-out) both; }
 .fill-pop { background: var(--chart-fill-h); }
-.fill-energy { background: linear-gradient(90deg, #148f5e, #1ed896); }
+.fill-energy { background: linear-gradient(90deg, #f0b555, #e8a33d); }
 .metric-val { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); white-space: nowrap; }
 .track-bar-wrap { width: 100%; }
 .track-bar { height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }

@@ -25,8 +25,9 @@ import {
   TrustedDevice,
 } from '../../personal-account/services/security-api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { SpotifyIntegrationService } from '../../../core/integrations/spotify/spotify-integration.service';
 
-type SettingsTab = 'profile' | 'preferences' | 'security' | 'api' | 'warehouse' | 'pipeline';
+type SettingsTab = 'profile' | 'preferences' | 'connections' | 'security' | 'api' | 'warehouse' | 'pipeline';
 
 @Component({
   selector: 'app-settings',
@@ -45,6 +46,7 @@ export class SettingsComponent implements OnInit {
   private securityApi = inject(SecurityApiService);
   private notifications = inject(NotificationService);
   private confirmDlg = inject(ConfirmDialogService);
+  readonly spotify = inject(SpotifyIntegrationService);
   ui = inject(UiPreferencesService);
 
   activeTab = signal<SettingsTab>('profile');
@@ -58,6 +60,7 @@ export class SettingsComponent implements OnInit {
   privacyPublic = signal(false);
   audioQuality = signal('high');
   favoriteGenre = signal('');
+  spotifyBusy = signal(false);
 
   passwordCurrent = signal('');
   passwordNew = signal('');
@@ -144,6 +147,11 @@ export class SettingsComponent implements OnInit {
 
   currentUser = computed(() => this.auth.state().user);
 
+  userInitial = computed(() => {
+    const value = this.currentUser()?.username?.trim() || this.currentUser()?.email?.trim() || 'U';
+    return value.charAt(0).toUpperCase();
+  });
+
   roleLabel = computed(() => {
     this.i18n.tick();
     const role = (this.currentUser()?.role ?? 'user').toLowerCase();
@@ -174,6 +182,7 @@ export class SettingsComponent implements OnInit {
   private readonly allTabs: { id: SettingsTab; labelKey: TranslationKey; iconKey: string }[] = [
     { id: 'profile', labelKey: 'settings.tab.profile', iconKey: 'user' },
     { id: 'preferences', labelKey: 'settings.tab.preferences', iconKey: 'settings' },
+    { id: 'connections', labelKey: 'settings.tab.connections', iconKey: 'link' },
     { id: 'security', labelKey: 'settings.tab.security', iconKey: 'lock' },
     { id: 'api', labelKey: 'settings.tab.api', iconKey: 'link' },
     { id: 'warehouse', labelKey: 'settings.tab.warehouse', iconKey: 'database' },
@@ -206,6 +215,11 @@ export class SettingsComponent implements OnInit {
 
   ngOnInit() {
     this.loadBusinessPreferences();
+    const settingsQuery = new URLSearchParams(window.location.search);
+    if (settingsQuery.get('tab') === 'connections') {
+      this.activeTab.set('connections');
+    }
+    void this.spotify.initializeFromCurrentUrl();
   }
 
   selectTab(tab: SettingsTab) {
@@ -238,6 +252,22 @@ export class SettingsComponent implements OnInit {
   onFavoriteGenreBlur() {
     const genre = this.favoriteGenre().trim();
     this.patchBusinessPreferences({ favorite_genre: genre || undefined });
+  }
+
+  async connectSpotify(): Promise<void> {
+    if (this.spotifyBusy()) return;
+    this.spotifyBusy.set(true);
+    try {
+      await this.spotify.connect();
+    } catch (error) {
+      this.spotifyBusy.set(false);
+      this.notifications.error('No pudimos conectar Spotify', error instanceof Error ? error.message : 'Revisa la configuración.');
+    }
+  }
+
+  disconnectSpotify(): void {
+    this.spotify.disconnect();
+    this.notifications.success('Spotify desconectado', 'Voxmetriks seguirá funcionando con sus datos y funciones internas.');
   }
 
   private loadBusinessPreferences() {

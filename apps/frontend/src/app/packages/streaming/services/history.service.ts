@@ -278,7 +278,7 @@ export class HistoryService {
    * Update playhead (`progress_ms`) and accumulate real listen time via wall-clock
    * deltas while this method is invoked (player only calls while playing).
    */
-  updateProgress(progressSec: number, durationSec?: number): void {
+  updateProgress(progressSec: number, _durationSec?: number): void {
     const identity = this.captureIdentity();
     if (!identity || !this.auth.isAuthenticated()) return;
 

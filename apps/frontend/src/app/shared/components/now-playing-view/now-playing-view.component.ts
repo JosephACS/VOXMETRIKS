@@ -1,6 +1,7 @@
 import { I18nService } from '../../../core/services/i18n.service';
 import { isAbortOrOfflineHttpError } from '../../../core/i18n/http-error-keys';
 import { Component, DestroyRef, inject, HostListener, effect, OnInit, signal, computed } from '@angular/core';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -25,6 +26,17 @@ import { RepeatMode } from '../../models/player.models';
   imports: [CommonModule, RouterModule, FavoriteBtnComponent, AddToPlaylistBtnComponent, TranslatePipe],
   templateUrl: './now-playing-view.component.html',
   styleUrls: ['./now-playing-view.component.css'],
+  animations: [
+    trigger('nowPlayingReveal', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translate3d(0, 28px, 0) scale(.985)' }),
+        animate('280ms cubic-bezier(.2,.82,.2,1)', style({ opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' })),
+      ]),
+      transition(':leave', [
+        animate('180ms ease-in', style({ opacity: 0, transform: 'translate3d(0, 18px, 0) scale(.99)' })),
+      ]),
+    ]),
+  ],
 })
 export class NowPlayingViewComponent implements OnInit {
   readonly lang = inject(I18nService).lang;
@@ -36,7 +48,6 @@ export class NowPlayingViewComponent implements OnInit {
   private historySvc = inject(HistoryService);
   private statsSvc = inject(StatsService);
   private destroyRef = inject(DestroyRef);
-
   playlists = signal<PlaylistSummary[]>([]);
   history = signal<HistoryEntry[]>([]);
   recommended = signal<PlayableTrack[]>([]);

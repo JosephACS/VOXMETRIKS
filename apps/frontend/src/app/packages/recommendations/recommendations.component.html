@@ -28,9 +28,63 @@
   } @else {
     <section class="kpi-grid">
       <app-kpi-card [label]="'recommendations.kpi.tracks' | t" [value]="kpiTracks()" iconKey="music" color="primary" [subtitle]="'recommendations.kpi.tracksSub' | t" />
-      <app-kpi-card [label]="'recommendations.kpi.score' | t" [value]="avgScore()" iconKey="target" color="info" [subtitle]="'recommendations.kpi.scoreSub' | t" />
-      <app-kpi-card [label]="'recommendations.kpi.genres' | t" [value]="kpiGenres()" iconKey="layers" color="warning" [subtitle]="'recommendations.kpi.genresSub' | t" />
-      <app-kpi-card [label]="'recommendations.kpi.moods' | t" [value]="moods().length" iconKey="chart" color="secondary" [subtitle]="'recommendations.kpi.moodsSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.score' | t" [value]="avgScore()" iconKey="target" color="primary" [subtitle]="'recommendations.kpi.scoreSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.genres' | t" [value]="kpiGenres()" iconKey="layers" color="primary" [subtitle]="'recommendations.kpi.genresSub' | t" />
+      <app-kpi-card [label]="'recommendations.kpi.moods' | t" [value]="moods().length" iconKey="chart" color="primary" [subtitle]="'recommendations.kpi.moodsSub' | t" />
+    </section>
+
+    <section class="panel spotify-mix-panel" data-testid="spotify-taste-mix">
+      <div class="panel-header spotify-mix-head">
+        <div>
+          <span class="spotify-source-label">SPOTIFY + VOXMETRIKS</span>
+          <h2>Tu mezcla conectada</h2>
+          <p class="panel-sub">Tus gustos reales de Spotify, ordenados con el historial, la similitud musical y el catálogo de Voxmetriks.</p>
+        </div>
+        @if (spotifyCoverage(); as coverage) {
+          <span class="coverage-chip">{{ coverage.match_percent }}% enlazado · {{ coverage.matched_catalog_tracks }}/{{ coverage.spotify_signals }}</span>
+        }
+      </div>
+
+      @if (!spotify.connected()) {
+        <div class="spotify-connect-card">
+          <div class="spotify-connect-icon" [innerHTML]="icon('music', 22)"></div>
+          <div>
+            <strong>Haz que estas recomendaciones se parezcan a ti</strong>
+            <span>Conecta Spotify y usaremos tu top, tus recientes y tu biblioteca. Voxmetriks seguirá explicando por qué aparece cada canción.</span>
+          </div>
+          <a routerLink="/settings" [queryParams]="{ tab: 'connections' }" class="spotify-connect-action">Conectar Spotify</a>
+        </div>
+      } @else if (spotifyLoading()) {
+        <p class="loading-msg">Preparando tu mezcla desde Spotify…</p>
+      } @else if (spotifyError()) {
+        <div class="spotify-connect-card spotify-connect-card--error">
+          <div>
+            <strong>No pudimos actualizar tu mezcla</strong>
+            <span>La sesión puede haber vencido o Spotify respondió temporalmente con error.</span>
+          </div>
+          <button type="button" class="spotify-connect-action" (click)="loadSpotifyMix()">Reintentar</button>
+        </div>
+      } @else if (spotifyMix().length) {
+        <div class="horizontal-scroll">
+          @for (item of spotifyMix(); track item.id_track) {
+            <div class="rec-card-wrap spotify-rec-card">
+              <app-media-card
+                [title]="displayTitle(item.nombre_track)"
+                [subtitle]="item.nombre_artista ?? '—'"
+                [gradient]="covers.gradientFor(item.id_track)"
+                [coverTrackId]="item.id_track"
+                [link]="'/tracks/' + item.id_track"
+                [track]="toPlayable(item)"
+                [queue]="spotifyMixPlayable()"
+                [badge]="(item.score ?? 0) * 100"
+                [meta]="item.reason"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="empty-inline">Todavía no encontramos suficientes coincidencias con el catálogo. Tu recomendación normal de Voxmetriks sigue disponible abajo.</p>
+      }
     </section>
 
     <div class="charts-row">

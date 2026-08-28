@@ -56,8 +56,9 @@ def _seed(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         """
         INSERT INTO app_track_audio_source VALUES
-          (10, 'youtube', 'ok', 0, 'dQw4w9WgXcQ', 'dQw4w9WgXcQ', NULL),
-          (11, 'youtube', 'error', 5, 'aaaaaaaaaaa', 'aaaaaaaaaaa', NULL)
+          (10, 'deezer', 'ok', 0, NULL, 'deezer-blinding-lights', 'https://cdn.test/preview.mp3'),
+          (11, 'youtube', 'error', 5, 'aaaaaaaaaaa', 'aaaaaaaaaaa', NULL),
+          (12, 'audius', 'ok', 0, NULL, 'audius:ghost', 'https://example.test/ghost.mp3')
         """
     )
 
@@ -91,7 +92,12 @@ def test_list_all_when_playable_false(conn: duckdb.DuckDBPyConnection) -> None:
 
 def test_playback_status_mapping() -> None:
     assert playback_status_for_cache(None) == "missing"
-    assert playback_status_for_cache({"status": "ok", "failure_count": 0}) == PLAYABLE
+    assert playback_status_for_cache(
+        {"provider": "deezer", "status": "ok", "failure_count": 0}
+    ) == PLAYABLE
+    assert playback_status_for_cache(
+        {"provider": "audius", "status": "ok", "failure_count": 0}
+    ) == "unavailable"
     assert playback_status_for_cache({"status": "error", "failure_count": 5}) == "failed"
 
 
@@ -100,6 +106,42 @@ def test_music_search_local_playable(conn: duckdb.DuckDBPyConnection) -> None:
     assert out["phase"] == "local"
     assert out["local"]["total"] >= 1
     assert out["external"] == []
+
+
+def test_music_search_recovers_small_typo(conn: duckdb.DuckDBPyConnection) -> None:
+    out = music_search(conn, "Bliding Ligths", allow_external=False)
+    assert out["phase"] == "local"
+    assert out["match_mode"] == "related"
+    assert out["local"]["items"][0]["id_track"] == 10
+
+
+@patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
+@patch("app.packages.catalog.services.music_search_service.get_settings")
+def test_explicit_related_search_keeps_local_results(
+    mock_settings: MagicMock,
+    mock_yt: MagicMock,
+    conn: duckdb.DuckDBPyConnection,
+) -> None:
+    mock_settings.return_value.youtube_api_key = "test-key"
+    mock_yt.return_value.search_query_candidates.return_value = [
+        {
+            "video_id": "eeeeeeeeeee",
+            "title": "Blinding Lights (Official Audio)",
+            "channel_title": "The Weeknd",
+            "duration_sec": 200,
+            "thumbnail": "https://i.ytimg.com/vi/eeeeeeeeeee/hqdefault.jpg",
+        }
+    ]
+    out = music_search(
+        conn,
+        "Blinding Lights",
+        allow_external=True,
+        include_related=True,
+    )
+    assert out["local"]["items"][0]["id_track"] == 10
+    assert out["external"] == []
+    assert out["catalog_source"] == "spotify"
+    assert out["audio_fallback"] == "deezer"
 
 
 @patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
@@ -121,10 +163,11 @@ def test_music_search_external_fallback(
         }
     ]
     out = music_search(conn, "Unknown Hit XYZ", allow_external=True)
-    assert out["phase"] == "external"
-    assert len(out["external"]) == 1
-    assert out["external"][0]["video_id"] == "bbbbbbbbbbb"
-    mock_yt.return_value.search_query_candidates.assert_called_once()
+    assert out["phase"] == "local_empty"
+    assert out["external"] == []
+    assert out["catalog_source"] == "spotify"
+    assert out["audio_fallback"] == "deezer"
+    mock_yt.return_value.search_query_candidates.assert_not_called()
 
 
 @patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
@@ -139,6 +182,7 @@ def test_music_search_skips_youtube_when_local(
     mock_yt.return_value.search_query_candidates.assert_not_called()
 
 
+@pytest.mark.skip(reason="legacy YouTube adoption retired")
 @patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
 @patch("app.packages.catalog.services.music_search_service.get_settings")
 def test_adopt_attaches_to_existing_missing_track(
@@ -165,6 +209,7 @@ def test_adopt_attaches_to_existing_missing_track(
     assert row is not None and int(row[0]) == 12
 
 
+@pytest.mark.skip(reason="legacy YouTube adoption retired")
 @patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
 @patch("app.packages.catalog.services.music_search_service.get_settings")
 def test_adopt_reuses_existing_video_id(

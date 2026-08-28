@@ -36,7 +36,7 @@ stop
 
 |Ops — Airflow Spec 048|
 start
-:Detener app\n(make down / start_demo);
+:Detener app\n(make down / start.ps1);
 :make airflow-up\ninfrastructure/airflow/compose.yml;
 note right
   LocalExecutor · metadata Postgres

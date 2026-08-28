@@ -59,6 +59,7 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
     expect(paths).toContain('/subscriptions/overview');
     expect(paths).toContain('/billing/invoices');
     expect(paths).toContain('/campaigns');
+    expect(evaluateProductPathAccess('/campaigns', ctx)).toBe('allow');
     expect(paths).not.toContain('/workpanel');
 
     const orgTabs = listVisibleContextTabs('organization', ctx).map((s) =>
@@ -101,6 +102,12 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
       sidebarPaths(persona({ ...base, permissions: new Set(['campaign.view']) })),
     ).toContain('/campaigns');
     expect(
+      evaluateProductPathAccess(
+        '/campaigns',
+        persona({ ...base, permissions: new Set(['campaign.view']) }),
+      ),
+    ).toBe('allow');
+    expect(
       sidebarPaths(persona({ ...base, permissions: new Set(['biz_analytics.view']) })),
     ).toContain('/business-analytics');
     expect(
@@ -129,7 +136,7 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
     ).toContain('/compliance/admin');
   });
 
-  it('CRM hub is single sidebar entry; children are tabs', () => {
+  it('CRM exposes its hub in the enterprise sidebar and keeps children as module tabs', () => {
     const ctx = persona({
       activeSpace: 'organization',
       organizationId: 1,
@@ -154,7 +161,7 @@ describe('Spec 054 persona matrix + visible-link parity', () => {
     );
   });
 
-  it('CRM platform role unlocks CRM hub without identity staff', () => {
+  it('CRM platform role receives both the hub and authorized deep access', () => {
     const ctx = persona({
       activeSpace: 'organization',
       organizationId: 1,

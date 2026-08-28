@@ -427,7 +427,7 @@ function fromComplex(r: ComplexCatalogItem): HubReportItem {
       }
       .hub-type-link:hover {
         color: var(--color-text, #fff);
-        border-color: rgba(30, 216, 150, 0.28);
+        border-color: rgba(232, 163, 61, 0.28);
       }
       .hub-search {
         position: relative;
@@ -627,8 +627,8 @@ export class ReportsHubPage implements OnInit {
         if (!items.length) {
           this.loadError.set(
             denied
-              ? 'El catálogo de informes simples/complejos requiere cuenta staff (admin o engineer). Prueba organization.owner, admin o engineer.'
-              : 'El catálogo de informes está vacío o no está disponible.',
+              ? 'No tienes acceso a los informes de esta organización. Pide al propietario que revise tu rol.'
+              : 'Todavía no hay informes disponibles para esta organización.',
           );
         }
       },

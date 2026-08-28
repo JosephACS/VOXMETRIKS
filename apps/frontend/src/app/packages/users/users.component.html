@@ -113,15 +113,15 @@
           <svg viewBox="0 0 360 100" class="activity-chart vm-chart" aria-hidden="true">
             <defs>
               <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#1ed896" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#1ed896" stop-opacity="0"/>
+                <stop offset="0%" stop-color="#e8a33d" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#e8a33d" stop-opacity="0"/>
               </linearGradient>
             </defs>
             <line x1="0" y1="88" x2="360" y2="88" class="chart-grid-line" stroke-width="1"/>
             <polygon [attr.points]="activityArea()" fill="url(#actGrad)"/>
-            <polyline [attr.points]="activityLine()" fill="none" stroke="#1ed896" stroke-width="2" stroke-linecap="round"/>
+            <polyline [attr.points]="activityLine()" fill="none" stroke="#e8a33d" stroke-width="2" stroke-linecap="round"/>
             @for (pt of activityPoints(); track pt.x) {
-              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" fill="#1ed896"/>
+              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" fill="#e8a33d"/>
             }
             @for (lbl of weekLabels; track lbl.x) {
               <text [attr.x]="lbl.x" y="98" class="chart-axis-label" font-size="8">{{ lbl.label }}</text>

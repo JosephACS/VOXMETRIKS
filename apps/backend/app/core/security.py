@@ -54,8 +54,8 @@ def configure_security(app: FastAPI) -> None:
     settings = get_settings()
     origins = settings.cors_origin_list
 
-    if settings.is_production and not origins:
-        logger.warning("Production mode without explicit CORS_ORIGINS — cross-origin disabled")
+    if settings.is_controlled_release and not origins:
+        logger.warning("Controlled release without explicit CORS_ORIGINS — cross-origin disabled")
 
     app.add_middleware(GlobalRateLimitMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)

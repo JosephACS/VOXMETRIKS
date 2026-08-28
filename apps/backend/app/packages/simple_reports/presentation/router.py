@@ -7,11 +7,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.packages.identity.services.auth_deps import require_staff_identity
 from app.packages.simple_reports.presentation.dependencies import (
-    get_current_role,
     require_simple_report_access,
 )
+from app.packages.reporting.presentation.dependencies import resolve_staff_or_org_report_access
 from app.packages.simple_reports.presentation.schemas import (
     ReportColumnOut,
     ReportFilterOut,
@@ -66,12 +65,14 @@ def catalog(
     module: Optional[str] = Query(default=None, description="business_module filter"),
     category: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None, description="search title/description"),
-    user_id: int = Depends(require_staff_identity),
-    role: str = Depends(get_current_role),
+    access: dict = Depends(resolve_staff_or_org_report_access),
 ) -> SimpleReportCatalogResponse:
+    role = str(access["access_role"])
     items = []
     for r in all_reports():
         if role not in ACCESS_ROLES.get(r.access, {"admin"}):
+            continue
+        if access.get("organization_access") and not r.org_scoped:
             continue
         if area and r.area.lower() != area.lower():
             continue
@@ -104,29 +105,29 @@ def list_alias(
     module: Optional[str] = Query(default=None),
     category: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None),
-    user_id: int = Depends(require_staff_identity),
-    role: str = Depends(get_current_role),
+    access: dict = Depends(resolve_staff_or_org_report_access),
 ) -> SimpleReportCatalogResponse:
     return catalog(
         area=area,
         module=module,
         category=category,
         q=q,
-        user_id=user_id,
-        role=role,
+        access=access,
     )
 
 @simple_reports_router.get("/{report_id}", response_model=SimpleReportCatalogItem)
 def get_definition(
     report_id: str,
-    role: str = Depends(get_current_role),
-    user_id: int = Depends(require_staff_identity),
+    access: dict = Depends(resolve_staff_or_org_report_access),
 ) -> SimpleReportCatalogItem:
     r = get_report(report_id)
     if r is None:
         raise HTTPException(status_code=404, detail="Informe no encontrado")
+    role = str(access["access_role"])
     if role not in ACCESS_ROLES.get(r.access, {"admin"}):
         raise HTTPException(status_code=403, detail="No autorizado para este informe")
+    if access.get("organization_access") and not r.org_scoped:
+        raise HTTPException(status_code=403, detail="Informe disponible solo para administración de plataforma")
     return _to_catalog_item(r)
 
 

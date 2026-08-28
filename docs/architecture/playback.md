@@ -11,10 +11,16 @@
 | Playback core / resolver | `apps/frontend/src/app/playback-core/` |
 | Disponibilidad / listening API | `apps/backend` listening + playback helpers |
 
-## Proveedores de audio
+## Fuente de audio del producto
 
-Orden típico de resolución: YouTube → Audius → audio demo local.  
-**No** es un servicio de streaming comercial licenciado.
+El flujo normal usa únicamente Spotify Web Playback SDK con OAuth PKCE. El
+catálogo y el warehouse aportan metadatos, estadísticas y recomendaciones; no
+se presentan como fuente de audio. Cuando Spotify no está conectado o no hay
+una coincidencia reproducible, el reproductor termina con un mensaje claro y no
+cae silenciosamente en YouTube, video, Audius ni audio demo.
+
+**No** es un servicio de streaming comercial licenciado: cada usuario reproduce
+desde su cuenta Spotify autorizada y Premium.
 
 ## Notas
 

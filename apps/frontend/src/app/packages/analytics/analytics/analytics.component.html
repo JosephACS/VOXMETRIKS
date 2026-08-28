@@ -52,7 +52,7 @@
 
       <div class="kpi-card" [title]="'analytics.kpi.tracksTip' | t"><div class="kpi-icon kpi-orange" [innerHTML]="icon('music', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ totalTracks() | number }}</span><span class="kpi-label">{{ 'analytics.kpi.tracks' | t:lang() }}</span></div></div>
 
-      <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">{{ 'analytics.kpi.avgPop' | t:lang() }}</span></div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-accent" [innerHTML]="icon('star', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgPop() }}</span><span class="kpi-label">{{ 'analytics.kpi.avgPop' | t:lang() }}</span></div></div>
 
       <div class="kpi-card"><div class="kpi-icon kpi-blue" [innerHTML]="icon('zap', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ avgEnergy() }}%</span><span class="kpi-label">{{ 'analytics.kpi.avgEnergy' | t:lang() }}</span></div></div>
 
@@ -64,7 +64,7 @@
 
         <div class="kpi-card" [title]="'analytics.kpi.completionTip' | t"><div class="kpi-icon kpi-blue" [innerHTML]="icon('trend-up', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.completion_rate ?? 0 }}%</span><span class="kpi-label">{{ 'analytics.kpi.completion' | t:lang() }}</span></div></div>
 
-        <div class="kpi-card"><div class="kpi-icon kpi-purple" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">{{ 'analytics.kpi.session' | t:lang() }}</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon kpi-accent" [innerHTML]="icon('clock', 18)"></div><div class="kpi-body"><span class="kpi-value">{{ e.avg_session_time_min ?? 0 }}m</span><span class="kpi-label">{{ 'analytics.kpi.session' | t:lang() }}</span></div></div>
 
       }
 

@@ -144,6 +144,44 @@
   background: var(--spotify-card-hover);
 }
 
+/* Light mode needs a real edge against the warm canvas; low-opacity fills
+ * alone made tables and controls visually disappear. */
+html[data-theme='light'] .vx-enterprise .btn,
+html[data-theme='light'] .vx-enterprise button.btn,
+html[data-theme='light'] .vx-enterprise .org-btn,
+html[data-theme='light'] .vx-enterprise .crm-btn,
+html[data-theme='light'] .vx-enterprise .tab,
+html[data-theme='light'] .vx-enterprise [role='tab'] {
+  border-color: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+html[data-theme='light'] .vx-enterprise .btn--secondary,
+html[data-theme='light'] .vx-enterprise .btn--ghost,
+html[data-theme='light'] .vx-enterprise .org-btn--ghost,
+html[data-theme='light'] .vx-enterprise .crm-btn--ghost {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+html[data-theme='light'] .vx-enterprise .btn--secondary:hover:not(:disabled),
+html[data-theme='light'] .vx-enterprise .btn--ghost:hover:not(:disabled),
+html[data-theme='light'] .vx-enterprise .org-btn--ghost:hover:not(:disabled),
+html[data-theme='light'] .vx-enterprise .crm-btn--ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+html[data-theme='light'] .vx-enterprise .table-card,
+html[data-theme='light'] .vx-enterprise .data-table,
+html[data-theme='light'] .vx-enterprise .org-table,
+html[data-theme='light'] .vx-enterprise .crm-table,
+html[data-theme='light'] .vx-enterprise .enterprise-section-card,
+html[data-theme='light'] .vx-enterprise .section-card {
+  border-color: var(--border);
+  box-shadow: 0 14px 34px rgba(77, 52, 18, 0.07);
+}
+
 html[data-theme='light'] .vx-card,
 html[data-theme='light'] .kpi-card,
 html[data-theme='light'] .crm-stat,
@@ -429,7 +467,7 @@ html[data-theme='light'] .kpi-card:hover {
 .badge--full,
 .org-badge--active,
 .crm-badge--active {
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
   background: var(--accent-dim);
   color: var(--accent);
 }
@@ -507,7 +545,7 @@ html[data-theme='light'] .kpi-card:hover {
 .org-alert--ok,
 .success {
   background: var(--accent-dim);
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
   color: var(--accent);
 }
 
@@ -746,13 +784,13 @@ html[data-theme='light'] .kpi-card:hover {
 }
 
 .plan-card--recommended {
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
   box-shadow: var(--shadow-glow);
 }
 
 .plan-card--current {
-  border-color: rgba(30, 216, 150, 0.65);
-  background: linear-gradient(180deg, rgba(30, 216, 150, 0.08) 0%, var(--spotify-card) 42%);
+  border-color: rgba(232, 163, 61, 0.65);
+  background: linear-gradient(180deg, rgba(232, 163, 61, 0.08) 0%, var(--spotify-card) 42%);
 }
 
 .plan-card__ribbons {
@@ -1225,7 +1263,7 @@ html[data-theme='light'] .kpi-card:hover {
 }
 
 .ent-list > li.internal {
-  border-color: rgba(30, 216, 150, 0.22);
+  border-color: rgba(232, 163, 61, 0.22);
 }
 
 .back-link {
@@ -1352,9 +1390,9 @@ html[data-theme='light'] .org-badge--closed {
 }
 
 .badge--linked {
-  background: rgba(30, 216, 150, 0.12);
+  background: rgba(232, 163, 61, 0.12);
   color: var(--accent);
-  border: 1px solid rgba(30, 216, 150, 0.28);
+  border: 1px solid rgba(232, 163, 61, 0.28);
 }
 
 .badge--unlinked {
@@ -1384,7 +1422,7 @@ html[data-theme='light'] .org-badge--closed {
 }
 
 .artist-card:hover {
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -1394,7 +1432,7 @@ html[data-theme='light'] .org-badge--closed {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 30% 20%, rgba(30, 216, 150, 0.22), transparent 55%),
+    radial-gradient(circle at 30% 20%, rgba(232, 163, 61, 0.22), transparent 55%),
     linear-gradient(160deg, #121212, #0a1612);
   font-size: 2.5rem;
   font-weight: 700;
@@ -1523,7 +1561,7 @@ html[data-theme='light'] .org-badge--closed {
 
 .vx-chip-action:hover,
 .vx-chip-action:focus-visible {
-  border-color: rgba(30, 216, 150, 0.4);
+  border-color: rgba(232, 163, 61, 0.4);
   color: var(--accent);
   outline: none;
 }

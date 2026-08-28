@@ -1,16 +1,14 @@
 @import './styles/motion.css';
 @import './styles/typography.css';
 @import './app/shared/styles/enterprise-page-shared.css';
-@import './app/shared/styles/catalog-page-shared.css';
-@import './app/shared/styles/listener-surface.css';
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
   transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease;
+    background-color var(--motion-duration-normal) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 html,
@@ -21,34 +19,34 @@ body,
 .sidebar,
 .page-content {
   transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease;
+    background-color var(--motion-duration-normal) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 :root {
-  /* VOXMETRIKS dark — mineral graphite, not flat black / Spotify clone */
-  --vx-bg: #0C1110;
-  --vx-canvas: #0C1110;
-  --vx-surface: #141B18;
-  --vx-surface-elevated: #1C2622;
-  --vx-surface-subtle: #101614;
-  --vx-border: rgba(214, 228, 220, 0.09);
-  --vx-border-subtle: rgba(214, 228, 220, 0.055);
-  --vx-text: #E7EDEA;
-  --vx-text-secondary: rgba(231, 237, 234, 0.68);
-  --vx-text-disabled: rgba(231, 237, 234, 0.36);
-  --vx-fg: #E7EDEA;
-  --vx-muted: rgba(231, 237, 234, 0.55);
-  --vx-accent: #3BCF9A;
-  --vx-success: #3BCF9A;
-  --vx-warning: #E0B04A;
-  --vx-error: #E06B62;
-  --vx-info: #6BB8D6;
-  --btn-on-accent: #0A1210;
-  --accent-hover: #4AD9A8;
+  /* VOXMETRIKS Monochrome Signal — graphite, ivory and one electric accent. */
+  --vx-bg: #0B0D12;
+  --vx-canvas: #0B0D12;
+  --vx-surface: #141720;
+  --vx-surface-elevated: #1B1F2A;
+  --vx-surface-subtle: #10131A;
+  --vx-border: rgba(235, 232, 241, 0.11);
+  --vx-border-subtle: rgba(235, 232, 241, 0.065);
+  --vx-text: #F6F3FB;
+  --vx-text-secondary: rgba(246, 243, 251, 0.7);
+  --vx-text-disabled: rgba(246, 243, 251, 0.38);
+  --vx-fg: #F6F3FB;
+  --vx-muted: rgba(246, 243, 251, 0.56);
+  --vx-accent: #e8a33d;
+  --vx-success: #47C98B;
+  --vx-warning: #F2B84B;
+  --vx-error: #F06D72;
+  --vx-info: #7CB9FF;
+  --btn-on-accent: #0C0918;
+  --accent-hover: #f0b555;
   --control-height: 2.5rem;
-  --control-radius: 0.5rem;
+  --control-radius: 0.7rem;
   --vx-space-1: 4px;
   --vx-space-2: 8px;
   --vx-space-3: 12px;
@@ -58,8 +56,8 @@ body,
   --vx-space-7: 32px;
   --vx-space-8: 40px;
   --vx-radius-sm: 6px;
-  --vx-radius-md: 10px;
-  --vx-radius-lg: 14px;
+  --vx-radius-md: 12px;
+  --vx-radius-lg: 16px;
   --vx-font-page: 1.5rem;
   --vx-font-section: 0.8125rem;
   --vx-font-card: 0.9375rem;
@@ -68,39 +66,38 @@ body,
   --vx-font-label: 0.7rem;
   --vx-font-table: 0.8125rem;
 
-  --bg-base:       #0C1110;
-  --bg-surface:    #141B18;
-  --bg-card:       rgba(28, 38, 34, 0.92);
+  --bg-base:       #0B0D12;
+  --bg-surface:    #141720;
+  --bg-card:       rgba(27, 31, 42, 0.94);
   --border:        var(--vx-border);
   --border-subtle: var(--vx-border-subtle);
-  --text:          #E7EDEA;
-  --text-muted:    rgba(231, 237, 234, 0.48);
-  --accent:        #3BCF9A;
-  --accent-dim:    rgba(59, 207, 154, 0.14);
-  --purple:        #B79AE8;
-  --blue:          #6BB8D6;
-  --green:         #3BCF9A;
-  --red:           #E06B62;
-  --radius:        0.375rem;
-  --radius-lg:     0.5rem;
+  --text:          #F6F3FB;
+  --text-muted:    rgba(246, 243, 251, 0.5);
+  --accent:        #e8a33d;
+  --accent-dim:    rgba(232, 163, 61, 0.14);
+  --blue:          #f0b555;
+  --green:         #47C98B;
+  --red:           #F06D72;
+  --radius:        0.6rem;
+  --radius-lg:     0.85rem;
   /* Global fixed player bar — keep in sync with app-player-bar height */
   --player-height: 88px;
 
-  --color-surface:    rgba(28, 38, 34, 0.95);
-  --color-surface-2:  rgba(36, 48, 43, 0.98);
-  --color-surface-3:  rgba(231, 237, 234, 0.05);
+  --color-surface:    rgba(27, 31, 42, 0.96);
+  --color-surface-2:  rgba(35, 40, 54, 0.98);
+  --color-surface-3:  rgba(246, 243, 251, 0.05);
   /* Alias used by older menus/selectors (avoid dark fallback + light text clash). */
   --surface:          var(--color-surface);
   --color-border:     var(--vx-border);
-  --color-border-hover: rgba(59, 207, 154, 0.38);
-  --color-text:       #E7EDEA;
-  --color-text-secondary: rgba(231, 237, 234, 0.64);
-  --color-text-muted: rgba(231, 237, 234, 0.42);
-  --color-primary:    #3BCF9A;
-  --color-info:       #6BB8D6;
-  --color-warning:    #E0B04A;
-  --color-danger:     #E06B62;
-  --color-success:    #3BCF9A;
+  --color-border-hover: rgba(232, 163, 61, 0.46);
+  --color-text:       #F6F3FB;
+  --color-text-secondary: rgba(246, 243, 251, 0.66);
+  --color-text-muted: rgba(246, 243, 251, 0.44);
+  --color-primary:    #e8a33d;
+  --color-info:       #7CB9FF;
+  --color-warning:    #F2B84B;
+  --color-danger:     #F06D72;
+  --color-success:    #47C98B;
   --color-skeleton-base: rgba(255, 255, 255, 0.04);
   --color-skeleton-shimmer: rgba(255, 255, 255, 0.08);
   --font-sans: 'Inter', sans-serif;
@@ -110,38 +107,38 @@ body,
   --spacing-lg: 0.875rem;
   /* Motion tokens: see styles/motion.css (--transition, --transition-fast, --ease-*) */
 
-  --glass-bg: rgba(20, 27, 24, 0.88);
-  --glass-border: rgba(214, 228, 220, 0.08);
+  --glass-bg: rgba(20, 23, 32, 0.9);
+  --glass-border: rgba(235, 232, 241, 0.09);
   --glass-blur: blur(14px);
   --shadow-sm: 0 2px 10px rgba(4, 8, 7, 0.38);
   --shadow-md: 0 10px 28px rgba(4, 8, 7, 0.48);
-  --shadow-glow: 0 0 0 1px rgba(59, 207, 154, 0.12), 0 10px 32px rgba(4, 8, 7, 0.5);
+  --shadow-glow: 0 0 0 1px rgba(232, 163, 61, 0.16), 0 10px 32px rgba(4, 6, 12, 0.52);
 
   --page-pad-x: 1.125rem;
   --page-pad-y: 1rem;
   --section-gap: 0.875rem;
   --panel-pad: 1rem 1.125rem;
 
-  /* Surface aliases (legacy spotify-* names — mineral VOX, not a clone) */
-  --spotify-black:   #0A0E0C;
-  --spotify-base:    #0C1110;
-  --spotify-card:    #1C2622;
-  --spotify-card-hover: #24302B;
-  --spotify-elevated: #1A221E;
-  --spotify-muted:   #A8B5AF;
-  --accent-glow:     rgba(59, 207, 154, 0.16);
-  --chart-fill:      linear-gradient(180deg, #3BCF9A 0%, #1F8A68 100%);
-  --chart-stroke:    #3BCF9A;
-  --chart-fill-h:    linear-gradient(90deg, #3BCF9A, #1F8A68);
+  /* Compatibility aliases for older components; new work uses --vx-* tokens. */
+  --spotify-black:   #090B10;
+  --spotify-base:    #0B0D12;
+  --spotify-card:    #1B1F2A;
+  --spotify-card-hover: #252A38;
+  --spotify-elevated: #17130c;
+  --spotify-muted:   #B8B3C2;
+  --accent-glow:     rgba(232, 163, 61, 0.2);
+  --chart-fill:      linear-gradient(180deg, #e8a33d 0%, #f0b555 100%);
+  --chart-stroke:    #e8a33d;
+  --chart-fill-h:    linear-gradient(90deg, #e8a33d, #f0b555);
 
   /* Shell layout (sidebar, topbar, player) */
   --shell-bg:        var(--bg-base);
-  --shell-sidebar:   #0A0E0C;
-  --shell-topbar:    rgba(12, 17, 16, 0.92);
-  --shell-player:    rgba(22, 30, 27, 0.92);
+  --shell-sidebar:   #090B10;
+  --shell-topbar:    rgba(11, 13, 18, 0.92);
+  --shell-player:    rgba(18, 21, 29, 0.94);
   --shell-overlay:   rgba(6, 10, 9, 0.62);
-  --shell-dropdown:  #1C2622;
-  --shell-elevated:  #141B18;
+  --shell-dropdown:  #1B1F2A;
+  --shell-elevated:  #141720;
   --shell-hover:           rgba(255, 255, 255, 0.06);
   --shell-hover-strong:    rgba(255, 255, 255, 0.1);
   --shell-fg:              #ffffff;
@@ -153,27 +150,35 @@ body,
   --shell-tooltip:         #282828;
   --shell-progress-track:  rgba(255, 255, 255, 0.08);
   --row-hover:       rgba(255, 255, 255, 0.025);
-  --hero-gradient:   linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(18,18,18,0.95) 52%, transparent 100%);
+  --hero-gradient:   linear-gradient(135deg, rgba(232, 163, 61,0.14) 0%, rgba(20,23,32,0.97) 52%, rgba(240, 181, 85,0.05) 100%);
+  --home-hero-bg:
+    radial-gradient(circle at 88% 12%, rgba(240, 181, 85, 0.14), transparent 42%),
+    radial-gradient(circle at 18% 0%, rgba(232, 163, 61, 0.18), transparent 38%),
+    linear-gradient(145deg, #1B1E29 0%, #12151D 52%, #0C0E14 100%);
+  --home-hero-title: #F6F3FB;
+  --home-hero-muted: rgba(246, 243, 251, 0.68);
+  --home-hero-control: rgba(255, 255, 255, 0.045);
+  --home-hero-line: rgba(255, 255, 255, 0.1);
   --rail-bg:         rgba(18, 18, 18, 0.75);
   --section-bg:      rgba(255, 255, 255, 0.02);
   --chip-bg:         rgba(255, 255, 255, 0.04);
-  --play-btn-bg:     #E7EDEA;
-  --play-btn-fg:     #0A1210;
-  --np-panel-bg:     linear-gradient(180deg, #1C2622 0%, #141B18 42%, #0C1110 100%);
+  --play-btn-bg:     #F6F3FB;
+  --play-btn-fg:     #11131A;
+  --np-panel-bg:     linear-gradient(180deg, #211b11 0%, #15130c 42%, #0b0c0b 100%);
   --np-backdrop:     rgba(6, 10, 9, 0.72);
 }
 
-/* ── Tema claro — VOX Light (blanco limpio, tipografía oscura, alto contraste) ── */
+/* ── VOX Light — smoked ivory: the same atmosphere as dark, with daylight contrast. ── */
 html[data-theme='light'] {
   color-scheme: light;
 
-  /* Hierarchy: soft canvas → white cards → subtle rails */
-  --vx-canvas: #F3F6F4;
-  --vx-surface-subtle: #E8EEEB;
-  --vx-surface: #FFFFFF;
+  /* Full daylight theme: every shell surface participates in the same palette. */
+  --vx-canvas: #F2F1F5;
+  --vx-surface-subtle: #ECEAF1;
+  --vx-surface: #FAF9FC;
   --vx-surface-elevated: #FFFFFF;
-  --vx-border: rgba(10, 18, 15, 0.14);
-  --vx-border-subtle: rgba(10, 18, 15, 0.09);
+  --vx-border: rgba(181, 101, 10, 0.14);
+  --vx-border-subtle: rgba(181, 101, 10, 0.08);
 
   --bg-base:       var(--vx-canvas);
   --bg-surface:    var(--vx-surface);
@@ -182,90 +187,102 @@ html[data-theme='light'] {
   --border-subtle: var(--vx-border-subtle);
 
   /* Near-black primary + solid secondary/muted (WCAG-friendly on white) */
-  --text:          #070C0A;
-  --text-muted:    #3A4741;
-  --accent:        #0A8F65;
-  --accent-dim:    rgba(10, 143, 101, 0.12);
-  --accent-glow:   rgba(10, 143, 101, 0.18);
+  --text:          #1a1712;
+  --text-muted:    #514A5C;
+  --accent:        #b5650a;
+  --accent-dim:    rgba(181, 101, 10, 0.12);
+  --accent-glow:   rgba(181, 101, 10, 0.15);
 
   --color-surface:    var(--vx-surface);
   --color-surface-2:  var(--vx-surface-elevated);
-  --color-surface-3:  rgba(10, 16, 14, 0.04);
+  --color-surface-3:  rgba(181, 101, 10, 0.055);
   --surface:          var(--vx-surface-elevated);
   --color-border:     var(--vx-border);
-  --color-border-hover: rgba(10, 143, 101, 0.45);
-  --color-text:       #070C0A;
-  --color-text-secondary: #24302B;
-  --color-text-muted: #3A4741;
-  --color-primary:    #0A8F65;
-  --color-success:    #0A8F65;
-  --color-warning:    #A87412;
-  --color-error:      #B83A30;
-  --color-danger:     #B83A30;
-  --color-info:       #2F6B80;
+  --color-border-hover: rgba(181, 101, 10, 0.46);
+  --color-text:       #1a1712;
+  --color-text-secondary: #4b4438;
+  --color-text-muted: #514A5C;
+  --color-primary:    #b5650a;
+  --color-success:    #137A50;
+  --color-warning:    #9A650A;
+  --color-error:      #B43E47;
+  --color-danger:     #B43E47;
+  --color-info:       #b5650a;
   --btn-on-accent:    #FFFFFF;
-  --accent-hover:     #087A56;
+  --accent-hover:     #d68b1f;
   --color-skeleton-base: rgba(10, 16, 14, 0.06);
   --color-skeleton-shimmer: rgba(10, 16, 14, 0.11);
 
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(10, 18, 15, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(181, 101, 10, 0.15);
 
   --spotify-black:   var(--vx-surface-subtle);
   --spotify-base:    var(--vx-canvas);
   --spotify-card:    var(--vx-surface);
-  --spotify-card-hover: #F7FAF8;
+  --spotify-card-hover: #fff2dd;
   --spotify-elevated: var(--vx-surface-elevated);
-  --spotify-muted:   #3A4741;
+  --spotify-muted:   #7a725f;
 
-  --shadow-sm: 0 1px 2px rgba(10, 18, 15, 0.06), 0 1px 1px rgba(10, 18, 15, 0.04);
-  --shadow-md: 0 10px 28px rgba(10, 18, 15, 0.1), 0 2px 6px rgba(10, 18, 15, 0.05);
-  --shadow-glow: 0 0 0 1px rgba(10, 143, 101, 0.16), 0 8px 22px rgba(10, 18, 15, 0.08);
+  --shadow-sm: 0 1px 2px rgba(90, 56, 12, 0.07), 0 7px 18px rgba(90, 56, 12, 0.045);
+  --shadow-md: 0 18px 42px rgba(90, 56, 12, 0.14), 0 4px 10px rgba(90, 56, 12, 0.055);
+  --shadow-glow: 0 0 0 1px rgba(181, 101, 10, 0.16), 0 8px 22px rgba(28, 24, 38, 0.08);
 
   --shell-bg:        var(--vx-canvas);
-  --shell-sidebar:   #FFFFFF;
-  --shell-topbar:    rgba(255, 255, 255, 0.92);
-  --shell-player:    rgba(255, 255, 255, 0.96);
-  --shell-overlay:   rgba(10, 18, 15, 0.36);
-  --shell-dropdown:  #FFFFFF;
+  --shell-sidebar:   rgba(248, 247, 252, 0.98);
+  --shell-topbar:    rgba(250, 249, 252, 0.9);
+  --shell-player:    rgba(251, 250, 255, 0.96);
+  --shell-overlay:   rgba(22, 17, 38, 0.3);
+  --shell-dropdown:  #f4ecdd;
   --shell-elevated:  #FFFFFF;
-  --shell-hover:           rgba(10, 16, 14, 0.05);
-  --shell-hover-strong:    rgba(10, 16, 14, 0.09);
-  --shell-fg:              #070C0A;
-  --shell-fg-muted:        #2C3833;
-  --shell-fg-subtle:       #3A4741;
-  --shell-border:          rgba(10, 18, 15, 0.12);
-  --shell-border-strong:   rgba(10, 18, 15, 0.2);
-  --shell-control-bg:      #F0F4F2;
+  --shell-hover:           rgba(181, 101, 10, 0.065);
+  --shell-hover-strong:    rgba(181, 101, 10, 0.12);
+  --shell-fg:              #1a1712;
+  --shell-fg-muted:        #6f6756;
+  --shell-fg-subtle:       #696171;
+  --shell-border:          rgba(181, 101, 10, 0.12);
+  --shell-border-strong:   rgba(181, 101, 10, 0.25);
+  --shell-control-bg:      rgba(181, 101, 10, 0.045);
   --shell-tooltip:         #FFFFFF;
   --shell-progress-track:  rgba(10, 16, 14, 0.12);
-  --row-hover:       rgba(10, 143, 101, 0.08);
-  --hero-gradient:   linear-gradient(135deg, rgba(10,143,101,0.1) 0%, rgba(255,255,255,0.96) 54%, transparent 100%);
-  --rail-bg:         rgba(255, 255, 255, 0.94);
-  --section-bg:      rgba(10, 16, 14, 0.028);
-  --chip-bg:         #EAF0ED;
-  --play-btn-bg:     #0A100E;
+  --row-hover:       rgba(181, 101, 10, 0.08);
+  --hero-gradient:   linear-gradient(135deg, rgba(181, 101, 10,0.14) 0%, rgba(255,255,255,0.94) 54%, rgba(240, 181, 85,0.12) 100%);
+  --home-hero-bg:
+    radial-gradient(circle at 88% 12%, rgba(240, 181, 85, 0.24), transparent 42%),
+    radial-gradient(circle at 18% 0%, rgba(232, 163, 61, 0.2), transparent 38%),
+    linear-gradient(145deg, #FFFFFF 0%, #fffdf8 52%, #EEF3FC 100%);
+  --home-hero-title: #1a1712;
+  --home-hero-muted: #514A5C;
+  --home-hero-control: rgba(181, 101, 10, 0.055);
+  --home-hero-line: rgba(181, 101, 10, 0.12);
+  --rail-bg:         rgba(255, 255, 255, 0.9);
+  --section-bg:      rgba(181, 101, 10, 0.035);
+  --chip-bg:         #fff2dd;
+  --play-btn-bg:     #1a1712;
   --play-btn-fg:     #FFFFFF;
-  --np-panel-bg:     linear-gradient(180deg, #FFFFFF 0%, #F5F8F6 48%, #F3F6F4 100%);
+  --np-panel-bg:
+    radial-gradient(circle at 50% 42%, rgba(232, 163, 61, 0.15), transparent 36rem),
+    radial-gradient(circle at 92% 8%, rgba(240, 181, 85, 0.14), transparent 28rem),
+    linear-gradient(180deg, #FFFFFF 0%, #fffdf8 56%, #fff2dd 100%);
   --np-backdrop:     rgba(10, 18, 15, 0.28);
 
   --vx-bg: var(--vx-canvas);
-  --vx-text: #070C0A;
-  --vx-text-secondary: #24302B;
-  --vx-text-disabled: #6B7872;
-  --vx-fg: #070C0A;
-  --vx-muted: #3A4741;
-  --vx-accent: #0A8F65;
-  --vx-success: #0A8F65;
-  --vx-warning: #A87412;
-  --vx-error: #B83A30;
+  --vx-text: #1a1712;
+  --vx-text-secondary: #4b4438;
+  --vx-text-disabled: #a89f8c;
+  --vx-fg: #1a1712;
+  --vx-muted: #514A5C;
+  --vx-accent: #b5650a;
+  --vx-success: #137A50;
+  --vx-warning: #9A650A;
+  --vx-error: #B43E47;
 }
 
 html[data-theme='light'] body {
   background: var(--bg-base);
   background-image:
-    radial-gradient(ellipse 78% 52% at 48% -18%, rgba(10, 143, 101, 0.07), transparent),
-    radial-gradient(ellipse 42% 36% at 100% 0%, rgba(10, 18, 15, 0.03), transparent);
+    radial-gradient(ellipse 76% 58% at 42% -14%, rgba(181, 101, 10, 0.12), transparent 64%),
+    radial-gradient(ellipse 46% 42% at 100% 4%, rgba(240, 181, 85, 0.1), transparent 68%),
+    linear-gradient(150deg, #F8F7FA 0%, #F0EFF4 52%, #F5F3F8 100%);
   color: var(--text);
 }
 
@@ -278,8 +295,8 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 }
 
 html[data-theme='light'] ::selection {
-  background: rgba(10, 143, 101, 0.28);
-  color: #06100C;
+  background: rgba(181, 101, 10, 0.22);
+  color: #1a1712;
 }
 
 html[data-theme='light'] .vx-table tbody tr:hover,
@@ -292,7 +309,7 @@ html[data-theme='light'] .glass-panel:hover {
 }
 
 html[data-theme='light'] .data-table thead tr {
-  background: rgba(18, 25, 22, 0.035) !important;
+  background: rgba(181, 101, 10, 0.045) !important;
 }
 
 html[data-theme='light'] .page-meta {
@@ -376,7 +393,7 @@ html[data-theme='light'] .modal {
 }
 
 html[data-theme='light'] .data-row:hover {
-  background: rgba(10, 143, 101, 0.08) !important;
+  background: rgba(181, 101, 10, 0.075) !important;
 }
 
 html[data-theme='light'] .genre-name,
@@ -399,6 +416,290 @@ html[data-theme='light'] .catalog-note {
   color: var(--color-text-secondary) !important;
 }
 
+/* Light is daylight, not a blank white sheet: it preserves depth and signal. */
+html[data-theme='light'] {
+  --vx-canvas: #E9EAF1;
+  --vx-surface-subtle: #EFF0F5;
+  --vx-surface: #F8F8FB;
+  --vx-surface-elevated: #FFFFFF;
+  --bg-base: #E9EAF1;
+  --shell-bg: #E9EAF1;
+  --shell-sidebar: rgba(249, 249, 252, 0.96);
+  --shell-topbar: rgba(248, 248, 251, 0.86);
+  --glass-bg: rgba(252, 252, 255, 0.8);
+  --section-bg: rgba(181, 101, 10, 0.035);
+}
+
+html[data-theme='light'] body {
+  background-image:
+    radial-gradient(ellipse 64% 52% at 12% -12%, rgba(181, 101, 10, 0.16), transparent 66%),
+    radial-gradient(ellipse 48% 38% at 102% 2%, rgba(73, 145, 217, 0.14), transparent 68%),
+    linear-gradient(145deg, #F2F2F7 0%, #E8E9F0 52%, #F0F1F5 100%);
+}
+
+/* ── Amber editorial system ─────────────────────────────────────────────── */
+html:not([data-theme='light']) {
+  color-scheme: dark;
+  --vx-bg: #0b0c0b;
+  --vx-canvas: #0b0c0b;
+  --vx-surface: #17130c;
+  --vx-surface-elevated: #211b11;
+  --vx-surface-subtle: #11100c;
+  --vx-border: rgba(255, 255, 255, 0.06);
+  --vx-border-subtle: rgba(255, 255, 255, 0.04);
+  --vx-text: #f5f2ea;
+  --vx-fg: #f5f2ea;
+  --vx-text-secondary: #a09a88;
+  --vx-muted: #a09a88;
+  --vx-accent: #e8a33d;
+  --vx-success: #e8a33d;
+  --vx-warning: #f0b555;
+  --text: #f5f2ea;
+  --text-muted: #a09a88;
+  --accent: #e8a33d;
+  --accent-hover: #f0b555;
+  --accent-dim: rgba(232, 163, 61, 0.14);
+  --accent-glow: rgba(232, 163, 61, 0.2);
+  --bg-base: #0b0c0b;
+  --bg-surface: #17130c;
+  --bg-card: #131410;
+  --color-primary: #e8a33d;
+  --color-border-hover: rgba(240, 181, 85, 0.5);
+  --home-hero-bg: #17130c;
+  --home-hero-title: #f5f2ea;
+  --home-hero-muted: #a09a88;
+  --home-hero-control: rgba(255, 255, 255, 0.05);
+  --home-hero-line: rgba(255, 255, 255, 0.1);
+  --play-btn-bg: linear-gradient(145deg, #f0b555, #c97d1e);
+  --play-btn-fg: #1a1208;
+  --shadow-glow: 0 16px 42px rgba(232, 163, 61, 0.2);
+  --hero-gradient: #17130c;
+  --shell-bg: #0b0c0b;
+  --shell-sidebar: #0d0e0c;
+  --shell-topbar: rgba(11, 12, 11, 0.94);
+  --shell-player: rgba(23, 19, 12, 0.96);
+  --shell-elevated: #17130c;
+  --shell-dropdown: #211b11;
+  --shell-hover: rgba(232, 163, 61, 0.08);
+  --shell-hover-strong: rgba(232, 163, 61, 0.14);
+  --shell-border: rgba(255, 255, 255, 0.06);
+  --shell-border-strong: rgba(255, 255, 255, 0.12);
+  --chart-stroke: #e8a33d;
+  --chart-fill: linear-gradient(180deg, #f0b555 0%, #b5650a 100%);
+  --chart-fill-h: linear-gradient(90deg, #e8a33d, #f0b555);
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --vx-bg: #f3f1ea;
+  --vx-canvas: #f3f1ea;
+  --vx-surface: linear-gradient(145deg, #fffdf8 0%, #fff2dd 100%);
+  --vx-surface-elevated: #fffdf8;
+  --vx-surface-subtle: #eee9de;
+  --vx-border: rgba(181, 101, 10, 0.1);
+  --vx-border-subtle: rgba(181, 101, 10, 0.07);
+  --vx-text: #1a1712;
+  --vx-fg: #1a1712;
+  --vx-text-secondary: #7a725f;
+  --vx-muted: #7a725f;
+  --text: #1a1712;
+  --text-muted: #7a725f;
+  --accent: #b5650a;
+  --accent-hover: #d68b1f;
+  --accent-dim: rgba(181, 101, 10, 0.1);
+  --accent-glow: rgba(181, 101, 10, 0.15);
+  --bg-base: #f3f1ea;
+  --bg-surface: #fffdf8;
+  --bg-card: #ffffff;
+  --color-primary: #b5650a;
+  --color-border-hover: rgba(181, 101, 10, 0.34);
+  --home-hero-bg: linear-gradient(145deg, #fffdf8 0%, #fff2dd 100%);
+  --home-hero-title: #1a1712;
+  --home-hero-muted: #7a725f;
+  --home-hero-control: rgba(181, 101, 10, 0.06);
+  --home-hero-line: rgba(181, 101, 10, 0.14);
+  --play-btn-bg: linear-gradient(145deg, #d88925, #a65a08);
+  --play-btn-fg: #fffdf8;
+  --shadow-glow: 0 16px 42px rgba(181, 101, 10, 0.15);
+  --shell-bg: #f3f1ea;
+  --shell-sidebar: #eee9de;
+  --shell-topbar: rgba(255, 253, 248, 0.94);
+  --shell-player: rgba(255, 253, 248, 0.97);
+  --shell-elevated: #fffdf8;
+  --shell-dropdown: #fff2dd;
+  --shell-hover: rgba(181, 101, 10, 0.07);
+  --shell-hover-strong: rgba(181, 101, 10, 0.12);
+  --shell-border: rgba(181, 101, 10, 0.1);
+  --shell-border-strong: rgba(181, 101, 10, 0.2);
+  --chart-stroke: #b5650a;
+  --chart-fill: linear-gradient(180deg, #d88925 0%, #b5650a 100%);
+  --chart-fill-h: linear-gradient(90deg, #b5650a, #d88925);
+}
+
+html:not([data-theme='light']) body,
+html[data-theme='light'] body {
+  background-color: var(--vx-bg);
+  background-image: none;
+  color: var(--text);
+}
+
+.vx-card,
+.vx-panel,
+.home-hero,
+.media-cover,
+.player-bar,
+.np-panel {
+  border-radius: 22px;
+  border-color: var(--vx-border);
+}
+
+.home-hero {
+  padding: 32px;
+  border-radius: 22px;
+  background: var(--home-hero-bg);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.28);
+}
+
+.hero-glow {
+  width: 440px;
+  height: 440px;
+  top: -68%;
+  right: -4%;
+  background: radial-gradient(circle, rgba(232, 163, 61, 0.2), transparent 67%);
+}
+
+.hero-waveform,
+.np-waveform {
+  display: block;
+  width: 100%;
+  pointer-events: none;
+}
+
+.hero-waveform {
+  height: 72px;
+  margin-top: 8px;
+  opacity: .9;
+}
+
+.np-waveform {
+  height: 48px;
+  max-width: 520px;
+  margin: -4px auto 0;
+}
+
+.card-waveform {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  width: calc(100% - 24px);
+  height: 30px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.media-card:hover .card-waveform,
+.media-card.is-previewing .card-waveform {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mini-waveform {
+  width: 148px;
+  height: 28px;
+  flex: 0 1 148px;
+  opacity: .7;
+  pointer-events: none;
+}
+
+.play-overlay,
+.play-btn,
+.np-ctrl.play {
+  background: var(--play-btn-bg) !important;
+  color: var(--play-btn-fg) !important;
+  box-shadow: 0 14px 32px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+
+.play-overlay:hover,
+.play-btn:hover:not(:disabled),
+.np-ctrl.play:hover {
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent)) !important;
+  box-shadow: 0 18px 40px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .55);
+}
+
+.np-source-note {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font: 500 .66rem/1.3 var(--font-mono);
+  letter-spacing: .02em;
+}
+
+.hero-chip--accent,
+.hero-chip,
+.discover-chip,
+.vx-chip,
+.events-pill {
+  border-radius: 999px;
+}
+
+/* 2026 visual direction — black canvas, warm white type, one amber signal.
+   Kept after legacy compatibility rules so every routed surface shares the
+   same atmosphere without repainting its business logic. */
+html:not([data-theme='light']) {
+  color-scheme: dark;
+  --vx-bg: #07080C;
+  --vx-canvas: #07080C;
+  --vx-surface-subtle: #0B0D13;
+  --vx-surface: #10131B;
+  --vx-surface-elevated: #161A24;
+  --vx-border: rgba(244, 241, 250, 0.105);
+  --vx-border-subtle: rgba(244, 241, 250, 0.06);
+  --vx-text: #F8F6FC;
+  --vx-text-secondary: rgba(248, 246, 252, 0.68);
+  --vx-muted: rgba(248, 246, 252, 0.5);
+  --vx-accent: #e8a33d;
+  --bg-base: #07080C;
+  --bg-surface: #10131B;
+  --bg-card: rgba(16, 19, 27, 0.9);
+  --text: #F8F6FC;
+  --text-muted: rgba(248, 246, 252, 0.5);
+  --accent: #e8a33d;
+  --accent-hover: #f0b555;
+  --accent-dim: rgba(232, 163, 61, 0.14);
+  --shell-bg: #07080C;
+  --shell-sidebar: rgba(8, 9, 14, 0.96);
+  --shell-topbar: rgba(8, 9, 14, 0.84);
+  --shell-player: rgba(12, 14, 20, 0.94);
+  --shell-dropdown: #151821;
+  --shell-elevated: #11141C;
+  --shell-border: rgba(244, 241, 250, 0.07);
+  --shell-border-strong: rgba(244, 241, 250, 0.13);
+  --shell-control-bg: rgba(244, 241, 250, 0.045);
+  --shadow-sm: 0 9px 28px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 28px 80px rgba(0, 0, 0, 0.48);
+}
+
+html:not([data-theme='light']) body {
+  background-color: #07080C;
+  background-image:
+    radial-gradient(ellipse 62% 48% at 42% -14%, rgba(232, 163, 61, 0.095), transparent 68%),
+    radial-gradient(ellipse 42% 38% at 104% 20%, rgba(83, 144, 224, 0.045), transparent 72%),
+    linear-gradient(rgba(255,255,255,.013) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.013) 1px, transparent 1px),
+    #07080C;
+  background-size: auto, auto, 64px 64px, 64px 64px, auto;
+  background-attachment: fixed;
+}
+
+html:not([data-theme='light']) ::selection {
+  color: #090A0F;
+  background: var(--accent-hover);
+}
+
 html[data-theme='light'] .chart-axis-label {
   fill: var(--text-muted) !important;
 }
@@ -415,7 +716,7 @@ html[data-theme='light'] .kpi-row .kpi-card:hover {
   border-color: var(--shell-border-strong) !important;
 }
 
-/* Light: cards blancas con sombra suave (más legibles que el flat mineral) */
+/* Light: mineral panels retain the depth and atmosphere of the dark theme. */
 html[data-theme='light'] .glass-panel,
 html[data-theme='light'] .vx-panel,
 html[data-theme='light'] .vx-card,
@@ -428,15 +729,13 @@ html[data-theme='light'] .sub-card,
 html[data-theme='light'] .modal,
 html[data-theme='light'] .wp-kpi,
 html[data-theme='light'] .wp-panel,
-html[data-theme='light'] .st-hero,
 html[data-theme='light'] .st-kpi {
-  background: var(--vx-surface) !important;
+  background: linear-gradient(145deg, var(--vx-surface-elevated), var(--vx-surface)) !important;
   border-color: var(--vx-border) !important;
   box-shadow: var(--shadow-sm) !important;
   color: var(--text);
 }
 
-html[data-theme='light'] .glass-panel:hover,
 html[data-theme='light'] .vx-card:hover,
 html[data-theme='light'] .kpi-card:hover,
 html[data-theme='light'] .chart-card:hover,
@@ -549,15 +848,59 @@ body,
   transition: var(--motion-transition-surface);
 }
 
+/* Structural panels (tables, lists and forms) must stay visually stable while
+   the pointer crosses their children. Only the concrete row/card under the
+   cursor receives hover feedback. */
+html[data-theme='light'] .glass-panel:hover {
+  border-color: var(--shell-border-strong) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* The theme changes on the live UI. Avoid browser page snapshots, which can
+   look like a partially filled image on Chromium-based browsers. */
+html.theme-changing body {
+  opacity: 0.94;
+  pointer-events: none;
+  transition: opacity 75ms cubic-bezier(0.4, 0, 1, 1) !important;
+}
+
+html.theme-changing.theme-changed body {
+  opacity: 1;
+  transition: opacity 145ms var(--motion-ease-standard) !important;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-base);
   background-image:
-    radial-gradient(ellipse 70% 48% at 46% -18%, rgba(59, 207, 154, 0.07), transparent 58%),
-    radial-gradient(ellipse 42% 32% at 100% 0%, rgba(231, 237, 234, 0.035), transparent 55%);
+    radial-gradient(ellipse 70% 48% at 46% -18%, rgba(232, 163, 61, 0.09), transparent 58%),
+    radial-gradient(ellipse 42% 32% at 100% 0%, rgba(240, 181, 85, 0.045), transparent 55%);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Native scrolling first: compositor-friendly momentum on every browser. */
+.page-content,
+.sidebar-nav,
+.table-scroll,
+[class*='scroll-container'] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel,
+  .panel,
+  .topbar,
+  .player-bar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 button, a, input, select, textarea, [role="button"] {
@@ -581,14 +924,66 @@ a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; }
 
-::selection { background: rgba(59, 207, 154, 0.28); color: #E7EDEA; }
+::selection { background: rgba(232, 163, 61, 0.32); color: #F6F3FB; }
 
 .form-input,
 .form-select,
 .search-input,
 textarea.form-input {
-  min-height: var(--control-height);
+  min-height: 2.75rem;
   border-radius: var(--control-radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--vx-surface-subtle) 78%, var(--vx-surface));
+  color: var(--text);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.form-input:hover,
+.form-select:hover,
+.search-input:hover,
+textarea.form-input:hover {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.form-input:focus,
+.form-select:focus,
+.search-input:focus,
+textarea.form-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+  background: var(--vx-surface-subtle);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  transform: translateY(-1px);
+}
+
+.form-select,
+select.form-input {
+  appearance: none;
+  padding-right: 2.4rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.btn,
+.btn-primary,
+.btn-secondary {
+  border-radius: 0.72rem;
+  min-height: 2.55rem;
+  font-weight: 650;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.btn:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 :focus-visible {
@@ -633,12 +1028,14 @@ textarea.form-input {
 
 .glass-panel,
 .panel {
-  background: var(--glass-bg);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.018), transparent 42%),
+    var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .vx-page-header,
@@ -647,15 +1044,15 @@ textarea.form-input {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: var(--section-gap);
+  margin-bottom: calc(var(--section-gap) + 0.2rem);
   flex-wrap: wrap;
 }
 
 .vx-page-header h1,
 .page-header h1 {
-  font-size: 1.375rem;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   margin: 0;
   line-height: 1.2;
 }
@@ -670,7 +1067,7 @@ textarea.form-input {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.625rem;
+  gap: 0.75rem;
   margin-bottom: var(--section-gap);
 }
 
@@ -819,11 +1216,20 @@ textarea.form-input {
 }
 
 .glass-panel {
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .glass-panel:hover {
-  border-color: var(--shell-border-strong, rgba(255, 255, 255, 0.1));
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--shell-border-strong, rgba(255, 255, 255, 0.1)));
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+html[data-theme='light'] .glass-panel,
+html[data-theme='light'] .panel {
+  background:
+    linear-gradient(145deg, rgba(181, 101, 10, 0.045), transparent 42%),
+    color-mix(in srgb, var(--vx-surface-elevated) 70%, var(--vx-surface));
+  box-shadow: 0 14px 34px rgba(90, 56, 12, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 @media (max-width: 768px) {
@@ -943,7 +1349,7 @@ textarea.form-input {
   box-shadow: 0 0 0 3px var(--accent-dim) !important;
 }
 
-/* ── Spotify-style unified module theme ── */
+/* ── VOXMETRIKS unified module surfaces ── */
 .page .kpi-card,
 .kpi-row .kpi-card,
 .analytics-grid .kpi-card,
@@ -952,7 +1358,7 @@ textarea.form-input {
 .kpi-card:not(app-kpi-card .kpi-card) {
   background: var(--spotify-card) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   transition: var(--motion-transition-interactive);
 }
 
@@ -970,7 +1376,7 @@ textarea.form-input {
   color: var(--accent) !important;
 }
 
-.kpi-purple { color: #b794f6 !important; }
+.kpi-accent { color: var(--accent) !important; }
 .kpi-blue { color: var(--color-info) !important; }
 
 .e-bar,
@@ -990,7 +1396,7 @@ textarea.form-input {
 
 .top-artist-avatar,
 .artist-avatar-initials {
-  background: linear-gradient(135deg, var(--accent) 0%, #1F8A68 100%) !important;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--color-info) 100%) !important;
   color: var(--btn-on-accent) !important;
 }
 
@@ -1138,4 +1544,133 @@ html[data-theme='light'] .org-selector-link {
   :root {
     --player-height: 72px;
   }
+}
+
+/* Final daylight canvas override (kept at EOF so legacy body rules cannot flatten it). */
+html[data-theme='light'] body {
+  background-color: #E9EAF1;
+  background-image:
+    radial-gradient(ellipse 64% 52% at 12% -12%, rgba(181, 101, 10, 0.16), transparent 66%),
+    radial-gradient(ellipse 48% 38% at 102% 2%, rgba(73, 145, 217, 0.14), transparent 68%),
+    linear-gradient(145deg, #F2F2F7 0%, #E8E9F0 52%, #F0F1F5 100%);
+}
+
+/* Final brand lock: the active visual language is amber, including legacy
+   compatibility tokens that are still consumed by routed components. */
+html:not([data-theme='light']) {
+  --font-body: 'Inter', sans-serif;
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --vx-bg: #0b0c0b;
+  --vx-canvas: #0b0c0b;
+  --vx-surface: #17130c;
+  --vx-surface-elevated: #211b11;
+  --vx-surface-subtle: #11100c;
+  --vx-border: rgba(255, 255, 255, .06);
+  --vx-border-subtle: rgba(255, 255, 255, .04);
+  --vx-text: #f5f2ea;
+  --vx-fg: #f5f2ea;
+  --vx-text-secondary: #a09a88;
+  --vx-muted: #a09a88;
+  --text: #f5f2ea;
+  --bg-elevated: #17130c;
+  --bg-card: #131410;
+  --text-primary: #f5f2ea;
+  --text-secondary: #a09a88;
+  --text-tertiary: #6b6e66;
+  --text-muted: #a09a88;
+  --accent: #e8a33d;
+  --accent-hover: #f0b555;
+  --accent-dim: rgba(232, 163, 61, .14);
+  --accent-glow: rgba(232, 163, 61, .2);
+  --bg-base: #0b0c0b;
+  --bg-surface: #17130c;
+  --bg-card: #131410;
+  --color-primary: #e8a33d;
+  --border: rgba(255, 255, 255, .06);
+  --shell-fg: #f5f2ea;
+  --shell-fg-muted: #a09a88;
+  --shell-bg: #0b0c0b;
+  --shell-sidebar: #0d0e0c;
+  --shell-topbar: rgba(11, 12, 11, .94);
+  --shell-player: rgba(23, 19, 12, .96);
+  --shell-elevated: #17130c;
+  --shell-dropdown: #211b11;
+  --shell-hover: rgba(232, 163, 61, .08);
+  --shell-hover-strong: rgba(232, 163, 61, .14);
+  --shell-border: rgba(255, 255, 255, .06);
+  --shell-border-strong: rgba(255, 255, 255, .12);
+  --shell-control-bg: rgba(255, 255, 255, .05);
+  --spotify-base: #17130c;
+  --spotify-card: #131410;
+  --spotify-card-hover: #1d1a12;
+  --glass-bg: rgba(19, 20, 16, .94);
+  --glass-border: rgba(255, 255, 255, .06);
+  --row-hover: rgba(232, 163, 61, .045);
+  --play-btn-bg: linear-gradient(145deg, #f0b555, #c97d1e);
+  --play-btn-fg: #1a1208;
+}
+
+html[data-theme='light'] {
+  --font-body: 'Inter', sans-serif;
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --vx-bg: #f3f1ea;
+  --vx-canvas: #f3f1ea;
+  --vx-surface: #fffdf8;
+  --vx-surface-elevated: #fffdf8;
+  --vx-surface-subtle: #f4ecdd;
+  --vx-border: rgba(181, 101, 10, .1);
+  --vx-border-subtle: rgba(181, 101, 10, .07);
+  --vx-text: #1a1712;
+  --vx-fg: #1a1712;
+  --vx-text-secondary: #7a725f;
+  --vx-muted: #7a725f;
+  --text: #1a1712;
+  --bg-elevated: linear-gradient(160deg, #fffdf8, #fff2dd);
+  --bg-card: #ffffff;
+  --text-primary: #1a1712;
+  --text-secondary: #7a725f;
+  --text-tertiary: #a89f8c;
+  --text-muted: #7a725f;
+  --accent: #b5650a;
+  --accent-hover: #d68b1f;
+  --accent-dim: rgba(181, 101, 10, .1);
+  --accent-glow: rgba(181, 101, 10, .15);
+  --bg-base: #f3f1ea;
+  --bg-surface: #fffdf8;
+  --bg-card: #ffffff;
+  --color-primary: #b5650a;
+  --border: rgba(181, 101, 10, .1);
+  --shell-fg: #1a1712;
+  --shell-fg-muted: #7a725f;
+  --shell-bg: #f3f1ea;
+  --shell-sidebar: #eee9de;
+  --shell-topbar: rgba(255, 253, 248, .94);
+  --shell-player: rgba(255, 253, 248, .97);
+  --shell-elevated: #fffdf8;
+  --shell-dropdown: #fff2dd;
+  --shell-hover: rgba(181, 101, 10, .07);
+  --shell-hover-strong: rgba(181, 101, 10, .12);
+  --shell-border: rgba(181, 101, 10, .1);
+  --shell-border-strong: rgba(181, 101, 10, .2);
+  --shell-control-bg: rgba(181, 101, 10, .06);
+  --spotify-base: #fffdf8;
+  --spotify-card: #ffffff;
+  --spotify-card-hover: #fff8eb;
+  --glass-bg: rgba(255, 253, 248, .94);
+  --glass-border: rgba(181, 101, 10, .1);
+  --row-hover: rgba(181, 101, 10, .035);
+  --play-btn-bg: linear-gradient(145deg, #d88925, #a65a08);
+  --play-btn-fg: #fffdf8;
+}
+
+html:not([data-theme='light']) body {
+  background-color: #0b0c0b;
+  background-image: none;
+}
+
+html[data-theme='light'] body {
+  background-color: #f3f1ea;
+  background-image: none;
 }

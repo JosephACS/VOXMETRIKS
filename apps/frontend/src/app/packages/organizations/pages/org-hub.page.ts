@@ -25,17 +25,6 @@ import {
   styleUrls: ['../styles/workspace-settings.css'],
   template: `
     <div class="vx-enterprise ws-page" data-testid="org-workspace">
-      <header class="ws-head">
-        <p class="ws-kicker">Organización</p>
-        <h1 class="ws-title">{{ orgName() }}</h1>
-        <p class="ws-sub">
-          Este es el espacio de tu empresa o sello (por ejemplo Horizonte Musical). Desde aquí
-          se gestiona la identidad del negocio, el plan contratado y el acceso al trabajo en
-          equipo: clientes, facturación y módulos que el plan habilite. No es el espacio personal
-          de escucha ni el Artist Space.
-        </p>
-      </header>
-
       @if (!orgId()) {
         <app-enterprise-org-required />
       } @else if (loading()) {
@@ -43,245 +32,224 @@ import {
       } @else if (error()) {
         <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       } @else {
-        <section class="ws-section" aria-label="Identidad">
-          <h2 class="ws-section__title">Espacio de trabajo</h2>
-          <div class="ws-identity">
-            <p class="ws-identity__name">{{ orgName() }}</p>
+        <header class="ws-hero">
+          <span class="ws-hero__glow ws-hero__glow--one" aria-hidden="true"></span>
+          <span class="ws-hero__glow ws-hero__glow--two" aria-hidden="true"></span>
+          <div class="ws-hero__content">
             <div class="ws-meta">
               <span class="ws-pill">{{ orgStatusLabel() }}</span>
-              @if (org()?.slug) {
-                <span class="ws-pill ws-pill--muted">{{ orgSlugLabel() }}</span>
-              }
               @if (planName()) {
-                <span class="ws-pill ws-pill--muted">Plan {{ planName() }}</span>
+                <span class="ws-pill ws-pill--glass">Plan {{ planName() }}</span>
               }
             </div>
-            <dl class="ws-dl">
-              @if (org()?.legal_name) {
-                <div>
-                  <dt>Nombre legal</dt>
-                  <dd>{{ org()!.legal_name }}</dd>
-                </div>
-              }
-              @if (org()?.default_currency) {
-                <div>
-                  <dt>Moneda</dt>
-                  <dd>{{ org()!.default_currency }}</dd>
-                </div>
-              }
-              @if (org()?.timezone) {
-                <div>
-                  <dt>Zona horaria</dt>
-                  <dd>{{ org()!.timezone }}</dd>
-                </div>
-              }
-              @if (org()?.country_code) {
-                <div>
-                  <dt>País</dt>
-                  <dd>{{ org()!.country_code }}</dd>
-                </div>
-              }
-              @if (myRolesLabel()) {
-                <div>
-                  <dt>Tu rol</dt>
-                  <dd>{{ myRolesLabel() }}</dd>
-                </div>
-              }
-            </dl>
-          </div>
-        </section>
-
-        <section class="ws-section" aria-label="Plan">
-          <h2 class="ws-section__title">Plan</h2>
-          @if (!subscription()) {
-            <p class="ws-empty">Sin datos de suscripción para esta organización.</p>
-            <div class="ws-actions" style="margin-top: 0.75rem">
-              <a class="primary" routerLink="/subscriptions/select-plan">Elegir plan</a>
-              <a routerLink="/subscriptions/overview">Ver plan y facturación</a>
-            </div>
-          } @else {
-            <dl class="ws-dl">
-              <div>
-                <dt>Plan</dt>
-                <dd>{{ planName() || 'Sin datos' }}</dd>
-              </div>
-              <div>
-                <dt>Estado</dt>
-                <dd>{{ humanSubStatus(subscription()!.status) }}</dd>
-              </div>
-              @if (periodLabel()) {
-                <div>
-                  <dt>Periodo</dt>
-                  <dd>{{ periodLabel() }}</dd>
-                </div>
-              }
-              @if (renewalLabel()) {
-                <div>
-                  <dt>Renovación</dt>
-                  <dd>{{ renewalLabel() }}</dd>
-                </div>
-              }
-            </dl>
-            <div class="ws-actions" style="margin-top: 0.85rem">
-              <a class="primary" routerLink="/subscriptions/overview">Ver plan y facturación</a>
-              <a routerLink="/subscriptions/plans">Cambiar plan</a>
-              <a routerLink="/billing/invoices">Ver facturas</a>
-            </div>
-          }
-        </section>
-
-        <section class="ws-section" aria-label="Acciones">
-          <h2 class="ws-section__title">Acciones</h2>
-          <div class="ws-actions">
-            @if (canManageMembers()) {
-              <a class="primary" [routerLink]="['/organizations', orgId(), 'members']">Gestionar miembros</a>
-            } @else {
-              <a
-                class="primary"
-                routerLink="/organizations/onboarding"
-                [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
-                >Activar plan para gestionar equipo</a
-              >
-            }
-            <a [routerLink]="['/organizations', orgId(), 'settings']">Actualizar configuración</a>
-            @if (canInvite() && canManageMembers()) {
-              <a [routerLink]="['/organizations', orgId(), 'invitations']">Invitaciones</a>
-            } @else if (canInvite() && !canManageMembers()) {
-              <a
-                routerLink="/organizations/onboarding"
-                [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
-                >Invitaciones (requiere plan operacional)</a
-              >
-            }
-            @if (canRoles() && canManageMembers()) {
-              <a [routerLink]="['/organizations', orgId(), 'roles']">Roles</a>
-            }
-            <a routerLink="/billing/invoices">Revisar pagos</a>
-          </div>
-          @if (!canManageMembers()) {
-            <p class="ws-empty" style="margin-top: 0.75rem">
-              La gestión avanzada de miembros e invitaciones está disponible desde el plan
-              operacional de la organización. Con el plan actual puedes completar el onboarding y
-              elegir un plan.
+            <p class="ws-kicker">Centro empresarial</p>
+            <h1 class="ws-title">{{ orgName() }}</h1>
+            <p class="ws-sub">
+              Controla el equipo, los clientes, los reportes y la facturación desde un solo lugar.
             </p>
-          }
+            <div class="ws-actions ws-hero__actions">
+              <a class="primary" routerLink="/business-analytics">Abrir panel</a>
+              <a routerLink="/reports">Ver reportes</a>
+              @if (canManageMembers()) {
+                <a [routerLink]="['/organizations', orgId(), 'members']">Gestionar equipo</a>
+              }
+            </div>
+          </div>
+        </header>
+
+        <section class="ws-kpis" aria-label="Resumen de la organización">
+          <article class="ws-kpi">
+            <span class="ws-kpi__icon" aria-hidden="true">E</span>
+            <div>
+              <p class="ws-kpi__label">Equipo</p>
+              <p class="ws-kpi__value">{{ memberTotal() }}</p>
+              <p class="ws-kpi__hint">{{ memberTotal() === 1 ? 'miembro activo' : 'miembros registrados' }}</p>
+            </div>
+          </article>
+          <article class="ws-kpi">
+            <span class="ws-kpi__icon" aria-hidden="true">P</span>
+            <div>
+              <p class="ws-kpi__label">Plan actual</p>
+              <p class="ws-kpi__value ws-kpi__value--text">{{ planName() || 'Sin plan' }}</p>
+              <p class="ws-kpi__hint">{{ subscription() ? humanSubStatus(subscription()!.status) : 'Requiere configuración' }}</p>
+            </div>
+          </article>
+          <article class="ws-kpi">
+            <span class="ws-kpi__icon" aria-hidden="true">F</span>
+            <div>
+              <p class="ws-kpi__label">Facturación</p>
+              <p class="ws-kpi__value">{{ invoiceTotal() }}</p>
+              <p class="ws-kpi__hint">{{ pendingInvoiceCount() ? pendingInvoiceCount() + ' por revisar' : 'sin pendientes recientes' }}</p>
+            </div>
+          </article>
+          <article class="ws-kpi">
+            <span class="ws-kpi__icon" aria-hidden="true">R</span>
+            <div>
+              <p class="ws-kpi__label">Tu acceso</p>
+              <p class="ws-kpi__value ws-kpi__value--text">{{ myRolesLabel() || 'Miembro' }}</p>
+              <p class="ws-kpi__hint">Permisos del espacio</p>
+            </div>
+          </article>
         </section>
 
-        <section class="ws-section" aria-label="Miembros">
-          <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap">
-            <h2 class="ws-section__title" style="margin:0">Miembros</h2>
-            @if (canManageMembers()) {
-              <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Ver todos</a>
-            } @else {
+        <div class="ws-dashboard-grid">
+          <section class="ws-section ws-section--operations" aria-label="Operación empresarial">
+            <div class="ws-section-head">
+              <div>
+                <p class="ws-section__eyebrow">Accesos principales</p>
+                <h2 class="ws-section__heading">Tu operación</h2>
+              </div>
+              <span class="ws-section__badge">Todo conectado</span>
+            </div>
+            <div class="ws-module-grid">
+              <a class="ws-module ws-module--accent" routerLink="/business-analytics">
+                <span class="ws-module__mark" aria-hidden="true">01</span>
+                <strong>Panel de negocio</strong>
+                <span>Objetivos, alertas e indicadores clave.</span>
+                <em>Abrir panel →</em>
+              </a>
+              <a class="ws-module" routerLink="/reports">
+                <span class="ws-module__mark" aria-hidden="true">02</span>
+                <strong>Informes</strong>
+                <span>Reportes simples y análisis avanzados.</span>
+                <em>Ver informes →</em>
+              </a>
+              <a class="ws-module" routerLink="/customer-success">
+                <span class="ws-module__mark" aria-hidden="true">03</span>
+                <strong>Clientes</strong>
+                <span>Seguimiento, soporte y relaciones.</span>
+                <em>Gestionar clientes →</em>
+              </a>
+              <a class="ws-module" routerLink="/campaigns">
+                <span class="ws-module__mark" aria-hidden="true">04</span>
+                <strong>Campañas</strong>
+                <span>Acciones, resultados y rendimiento.</span>
+                <em>Ver campañas →</em>
+              </a>
+            </div>
+          </section>
+
+          <aside class="ws-section ws-section--status" aria-label="Estado del espacio">
+            <p class="ws-section__eyebrow">Estado del espacio</p>
+            <h2 class="ws-section__heading">Todo bajo control</h2>
+            <ul class="ws-checklist">
+              <li><span></span><div><strong>Organización activa</strong><small>{{ orgSlugLabel() }}</small></div></li>
+              <li><span></span><div><strong>Plan {{ planName() || 'pendiente' }}</strong><small>{{ subscription() ? humanSubStatus(subscription()!.status) : 'Configura un plan' }}</small></div></li>
+              <li [class.is-pending]="!canManageMembers()"><span></span><div><strong>Acceso de equipo</strong><small>{{ canManageMembers() ? 'Listo para administrar' : 'Completa el plan' }}</small></div></li>
+            </ul>
+            @if (!canManageMembers()) {
               <a
-                class="ws-link"
+                class="ws-status-cta"
                 routerLink="/organizations/onboarding"
                 [queryParams]="{ organization_id: orgId(), reason: 'plan' }"
-                >Ver plan</a
+                >Completar configuración</a
               >
+            } @else {
+              <a class="ws-status-cta" [routerLink]="['/organizations', orgId(), 'settings']">Configurar espacio</a>
             }
-          </div>
-          @if (!members().length) {
-            <p class="ws-empty" style="margin-top:0.75rem">No hay miembros para mostrar.</p>
-          } @else {
-            <ul class="ws-rows">
-              @for (m of members(); track m.id) {
-                <li>
-                  <div>
-                    <p class="ws-row__title">
-                      {{ memberLabel(m) }}
-                      @if (m.user_id === currentUserId) {
-                        <span class="ws-pill ws-pill--muted" style="margin-left:0.35rem">Tú</span>
-                      }
-                    </p>
-                    <p class="ws-row__meta">
-                      Estado: {{ humanMemberStatus(m.status) }}
-                      @if (memberRolesLabel(m)) {
-                        · {{ memberRolesLabel(m) }}
-                      }
-                    </p>
-                  </div>
-                  <div class="ws-row__side">
-                    @if (canManageMembers()) {
-                      <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Gestionar</a>
-                    }
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </section>
+          </aside>
+        </div>
 
-        <section class="ws-section" aria-label="Facturación">
-          <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap">
-            <h2 class="ws-section__title" style="margin:0">Facturación</h2>
-            <a class="ws-link" routerLink="/billing/invoices">Ver facturas</a>
-          </div>
-          @if (!invoices().length) {
-            <p class="ws-empty" style="margin-top:0.75rem">No hay facturas registradas.</p>
-          } @else {
-            <ul class="ws-rows">
-              @for (inv of invoices(); track inv.id) {
-                <li>
-                  <div>
-                    <p class="ws-row__title">{{ invoiceLabel(inv) }}</p>
-                    <p class="ws-row__meta">
-                      {{ invoiceDate(inv) }}
-                      @if (inv.due_date) {
-                        · Vence {{ formatDate(inv.due_date) }}
-                      }
-                    </p>
-                  </div>
-                  <div class="ws-row__side">
-                    <span class="ws-invoice-amount">{{ formatMoney(inv.total, inv.currency) }}</span>
-                    <span
-                      class="ws-pill"
-                      [class.ws-pill--warn]="invoiceTone(inv.status) === 'warn'"
-                      [class.ws-pill--danger]="invoiceTone(inv.status) === 'danger'"
-                      [class.ws-pill--muted]="invoiceTone(inv.status) === 'muted'"
-                      >{{ humanInvoiceStatus(inv.status) }}</span
-                    >
-                    <a class="ws-link" [routerLink]="['/billing/invoices', inv.id]">Ver factura</a>
-                  </div>
-                </li>
+        <div class="ws-split-grid">
+          <section class="ws-section" aria-label="Miembros">
+            <div class="ws-section-head ws-section-head--compact">
+              <div>
+                <p class="ws-section__eyebrow">Personas y permisos</p>
+                <h2 class="ws-section__heading">Equipo</h2>
+              </div>
+              @if (canManageMembers()) {
+                <a class="ws-link" [routerLink]="['/organizations', orgId(), 'members']">Ver todo</a>
               }
-            </ul>
-          }
-        </section>
+            </div>
+            @if (!members().length) {
+              <div class="ws-empty-state">
+                <strong>Aún no hay miembros</strong>
+                <span>Invita a tu equipo cuando estés listo.</span>
+              </div>
+            } @else {
+              <ul class="ws-rows">
+                @for (m of members().slice(0, 4); track m.id) {
+                  <li>
+                    <span class="ws-avatar" aria-hidden="true">{{ memberInitial(m) }}</span>
+                    <div>
+                      <p class="ws-row__title">
+                        {{ memberLabel(m) }}
+                        @if (m.user_id === currentUserId) {
+                          <span class="ws-pill ws-pill--muted">Tú</span>
+                        }
+                      </p>
+                      <p class="ws-row__meta">{{ memberRolesLabel(m) || 'Miembro' }} · {{ humanMemberStatus(m.status) }}</p>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="ws-inline-actions">
+              @if (canInvite() && canManageMembers()) {
+                <a [routerLink]="['/organizations', orgId(), 'invitations']">Invitar personas</a>
+              }
+              @if (canRoles() && canManageMembers()) {
+                <a [routerLink]="['/organizations', orgId(), 'roles']">Roles y permisos</a>
+              }
+            </div>
+          </section>
 
-        <section class="ws-section" aria-label="Configuración">
-          <h2 class="ws-section__title">Configuración</h2>
-          <ul class="ws-rows">
-            <li>
+          <section class="ws-section" aria-label="Facturación">
+            <div class="ws-section-head ws-section-head--compact">
               <div>
-                <p class="ws-row__title">Perfil de organización</p>
-                <p class="ws-row__meta">Nombre, moneda y datos básicos</p>
+                <p class="ws-section__eyebrow">Plan y pagos</p>
+                <h2 class="ws-section__heading">Facturación</h2>
               </div>
-              <div class="ws-row__side">
-                <a class="ws-link" [routerLink]="['/organizations', orgId(), 'settings']">Abrir</a>
+              <a class="ws-link" routerLink="/billing/invoices">Ver todo</a>
+            </div>
+            @if (!invoices().length) {
+              <div class="ws-empty-state">
+                <strong>Todo al día</strong>
+                <span>No hay facturas registradas.</span>
               </div>
-            </li>
-            <li>
-              <div>
-                <p class="ws-row__title">Perfil de facturación</p>
-                <p class="ws-row__meta">Datos fiscales y contacto de cobro</p>
-              </div>
-              <div class="ws-row__side">
-                <a class="ws-link" routerLink="/billing/profile">Abrir</a>
-              </div>
-            </li>
+            } @else {
+              <ul class="ws-rows">
+                @for (inv of invoices().slice(0, 4); track inv.id) {
+                  <li>
+                    <div>
+                      <p class="ws-row__title">{{ invoiceLabel(inv) }}</p>
+                      <p class="ws-row__meta">{{ invoiceDate(inv) }}</p>
+                    </div>
+                    <div class="ws-row__side">
+                      <span class="ws-invoice-amount">{{ formatMoney(inv.total, inv.currency) }}</span>
+                      <span class="ws-pill" [class.ws-pill--warn]="invoiceTone(inv.status) === 'warn'" [class.ws-pill--danger]="invoiceTone(inv.status) === 'danger'" [class.ws-pill--muted]="invoiceTone(inv.status) === 'muted'">{{ humanInvoiceStatus(inv.status) }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="ws-inline-actions">
+              <a routerLink="/subscriptions/overview">Plan y suscripción</a>
+              <a routerLink="/billing/profile">Datos de facturación</a>
+            </div>
+          </section>
+        </div>
+
+        <section class="ws-section ws-section--profile" aria-label="Datos de la organización">
+          <div class="ws-section-head ws-section-head--compact">
+            <div>
+              <p class="ws-section__eyebrow">Información del espacio</p>
+              <h2 class="ws-section__heading">Datos de la organización</h2>
+            </div>
+            <a class="ws-link" [routerLink]="['/organizations', orgId(), 'settings']">Editar</a>
+          </div>
+          <dl class="ws-dl">
+            <div><dt>Nombre legal</dt><dd>{{ org()?.legal_name || 'Sin registrar' }}</dd></div>
+            <div><dt>País</dt><dd>{{ org()?.country_code || 'Sin registrar' }}</dd></div>
+            <div><dt>Moneda</dt><dd>{{ org()?.default_currency || 'USD' }}</dd></div>
+            <div><dt>Zona horaria</dt><dd>{{ org()?.timezone || 'Sin registrar' }}</dd></div>
+          </dl>
+          <div class="ws-inline-actions">
             @if (canAudit()) {
-              <li>
-                <div>
-                  <p class="ws-row__title">Auditoría</p>
-                  <p class="ws-row__meta">Historial de cambios del espacio</p>
-                </div>
-                <div class="ws-row__side">
-                  <a class="ws-link" [routerLink]="['/organizations', orgId(), 'audit']">Abrir</a>
-                </div>
-              </li>
+              <a [routerLink]="['/organizations', orgId(), 'audit']">Ver actividad</a>
             }
-          </ul>
+            <a routerLink="/compliance">Privacidad y cumplimiento</a>
+          </div>
         </section>
       }
     </div>
@@ -301,8 +269,14 @@ export class OrgHubPage implements OnInit {
   readonly org = signal<Organization | null>(null);
   readonly members = signal<Membership[]>([]);
   readonly invoices = signal<Invoice[]>([]);
+  readonly memberTotal = signal(0);
+  readonly invoiceTotal = signal(0);
   readonly subscription = signal<Subscription | null>(null);
   readonly planName = signal<string | null>(null);
+
+  readonly pendingInvoiceCount = computed(
+    () => this.invoices().filter((inv) => ['issued', 'draft', 'partially_paid', 'pending', 'past_due', 'failed'].includes((inv.status || '').toLowerCase())).length,
+  );
 
   readonly orgId = computed(() => {
     const fromRoute = Number(this.route.snapshot.paramMap.get('id'));
@@ -365,6 +339,11 @@ export class OrgHubPage implements OnInit {
     const email = m.user?.email?.trim();
     if (email) return email;
     return `Usuario ${m.user_id}`;
+  }
+
+  memberInitial(m: Membership): string {
+    const value = this.memberLabel(m).trim();
+    return (value[0] || 'M').toUpperCase();
   }
 
   memberRolesLabel(m: Membership): string | null {
@@ -486,7 +465,9 @@ export class OrgHubPage implements OnInit {
     forkJoin({
       org: this.api.get(id).pipe(catchError(() => of(fromCtx))),
       members: this.api.listMembers(id, 1, 8).pipe(catchError(() => of({ items: [], page: 1, limit: 8, total: 0 }))),
-      invoices: this.billing.listInvoices(id, { page: 1, page_size: 6 }).pipe(catchError(() => of({ items: [] as Invoice[] }))),
+      invoices: this.billing.listInvoices(id, { page: 1, page_size: 6 }).pipe(
+        catchError(() => of({ items: [] as Invoice[], total: 0, page: 1, page_size: 6 })),
+      ),
       subscriptions: this.subs.listSubscriptions(id, { page: 1, limit: 10 }).pipe(
         catchError(() => of({ items: [] as Subscription[] })),
       ),
@@ -496,9 +477,11 @@ export class OrgHubPage implements OnInit {
         const org = res.org || fromCtx || null;
         this.org.set(org);
         this.members.set(res.members.items || []);
+        this.memberTotal.set(res.members.total || res.members.items?.length || 0);
 
         const invItems = res.invoices.items ?? [];
         this.invoices.set(invItems.slice(0, 6));
+        this.invoiceTotal.set(res.invoices.total || invItems.length || 0);
 
         const subs = res.subscriptions.items || [];
         const active =

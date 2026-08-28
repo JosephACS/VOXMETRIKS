@@ -144,10 +144,9 @@ def test_catalog_and_unknown_report(client: TestClient):
         assert "columns" in payload
         assert "data_classification" in payload
 
-        def _deny():
-            raise HTTPException(status_code=403, detail="Staff role required")
-
-        app.dependency_overrides[require_staff_identity] = _deny
+        # A personal listener without an active organization remains denied.
+        get_current_role = deps[2]
+        app.dependency_overrides[get_current_role] = lambda: "user"
         limited = client.get("/api/v1/reports/simple/catalog")
         assert limited.status_code == 403
     finally:

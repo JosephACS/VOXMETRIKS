@@ -17,7 +17,9 @@ class TestHealth:
         data = response.json()
         assert data["app"] == "VOXMETRIK_V2"
         assert data["version"] == "2.0.0"
-        assert data["docs"] == "/docs"
+        assert data["docs"] in ("/docs", None)
+        docs_response = client.get("/docs")
+        assert docs_response.status_code == (200 if data["docs"] else 404)
         assert data["health"] == "/health"
 
     def test_health_returns_schema(self, client: TestClient) -> None:

@@ -15,6 +15,10 @@ import duckdb
 
 from app.core.database import transactional
 from app.core.time_util import utc_now
+from app.packages.billing.domain.providers import (
+    configured_payment_is_simulated,
+    require_configured_payment_provider,
+)
 from app.packages.personal_subscriptions.application.catalog import (
     OWNER_TYPE_USER,
     ensure_personal_catalog,
@@ -28,6 +32,24 @@ from app.packages.personal_subscriptions.domain.errors import (
 from app.packages.personal_subscriptions.infrastructure.schema import (
     ensure_personal_subscription_tables,
 )
+
+
+def _checkout_payment_provider() -> str:
+    try:
+        return require_configured_payment_provider()
+    except ValueError as exc:
+        raise CheckoutError(str(exc), code="validation_error") from exc
+
+
+def _require_simulated_checkout() -> str:
+    provider = _checkout_payment_provider()
+    if not configured_payment_is_simulated():
+        raise CheckoutError(
+            "Simulated card checkout requires PAYMENT_PROVIDER=academic_mock "
+            "(non-production / tests only). Default manual_transfer is ops recording, not card simulation.",
+            code="validation_error",
+        )
+    return provider
 
 CHECKOUT_STATUSES = frozenset(
     {
@@ -175,7 +197,7 @@ def _map_session(conn: duckdb.DuckDBPyConnection, row: tuple) -> dict[str, Any]:
         "updated_at": updated_at,
         "expires_at": expires_at,
         "completed_at": completed_at,
-        "is_simulated": True,
+        "is_simulated": configured_payment_is_simulated(),
         "payment_method": None,
     }
     if out["payment_method_id"]:
@@ -233,6 +255,7 @@ def create_checkout(
 ) -> dict[str, Any]:
     ensure_personal_subscription_tables(conn)
     ensure_personal_catalog(conn)
+    _checkout_payment_provider()
     if not idempotency_key or not idempotency_key.strip():
         raise CheckoutError("idempotency_key is required", code="validation_error")
     key = idempotency_key.strip()
@@ -443,6 +466,7 @@ def attach_payment_method(
     is_default: bool = True,
 ) -> dict[str, Any]:
     ensure_personal_subscription_tables(conn)
+    provider = _require_simulated_checkout()
     if not re.fullmatch(r"\d{4}", str(last4 or "")):
         raise CheckoutError("last4 must be exactly four digits", code="validation_error")
     if not simulation_token or simulation_token not in SIM_TOKEN_SCENARIO:
@@ -472,11 +496,12 @@ def attach_payment_method(
                 id, user_id, provider_code, brand, last4, exp_month, exp_year,
                 display_label, token_ref, simulation_token, is_default, status,
                 created_at, updated_at
-            ) VALUES (?, ?, 'mock', ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
             """,
             [
                 mid,
                 user_id,
+                provider,
                 brand.strip().lower(),
                 last4,
                 int(exp_month),
@@ -515,6 +540,7 @@ def confirm_checkout(
     idempotency_key: str,
 ) -> dict[str, Any]:
     ensure_personal_subscription_tables(conn)
+    provider = _require_simulated_checkout()
     if not idempotency_key or not idempotency_key.strip():
         raise CheckoutError("idempotency_key is required", code="validation_error")
     confirm_key = idempotency_key.strip()
@@ -575,7 +601,7 @@ def confirm_checkout(
             INSERT INTO personal_payment_attempt (
                 id, invoice_id, user_id, amount, currency, status, provider_code,
                 is_mock, idempotency_key, scenario, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, 'created', 'mock', TRUE, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, 'created', ?, TRUE, ?, ?, ?, ?)
             """,
             [
                 attempt_id,
@@ -583,6 +609,7 @@ def confirm_checkout(
                 user_id,
                 _quantize(session["amount"]),
                 str(session["currency"]),
+                provider,
                 confirm_key,
                 scenario,
                 now,

@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  Directed host-compatibility checks for start_demo.ps1 / stop_demo.ps1 / demo_runtime_common.ps1.
+  Directed host-compatibility checks for start.ps1 / stop.ps1 / runtime_common.ps1.
 
   A full start/stop
   B foreign port refusal
@@ -24,17 +24,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$CommonScript = Join-Path $RepoRoot 'scripts\demo_runtime_common.ps1'
-$StartScript = Join-Path $RepoRoot 'scripts\start_demo.ps1'
-$StopScript = Join-Path $RepoRoot 'scripts\stop_demo.ps1'
-$PidDir = Join-Path $RepoRoot 'scripts\.demo-pids'
+$CommonScript = Join-Path $RepoRoot 'scripts\runtime_common.ps1'
+$StartScript = Join-Path $RepoRoot 'scripts\start.ps1'
+$StopScript = Join-Path $RepoRoot 'scripts\stop.ps1'
+$PidDir = Join-Path $RepoRoot 'scripts\.runtime-pids'
 $VenvPython = (Resolve-Path -LiteralPath (Join-Path $RepoRoot 'apps\backend\.venv\Scripts\python.exe')).Path
 $NodeExe = (Get-Command node.exe -ErrorAction Stop).Source
 
 . $CommonScript
 
 if (-not (Test-Path -LiteralPath $StartScript)) {
-    throw "start_demo.ps1 not found at $StartScript"
+    throw "start.ps1 not found at $StartScript"
 }
 $Failed = 0
 
@@ -62,20 +62,20 @@ function Clear-TestPidDirResidue {
         $p = Join-Path $PidDir $n
         if (Test-Path -LiteralPath $p) { $paths += $p }
     }
-    Clear-DemoSessionArtifacts -ArtifactPaths $paths -PidDir $PidDir
+    Clear-RuntimeSessionArtifacts -ArtifactPaths $paths -PidDir $PidDir
 }
 
 # --- E: productive empty Owned + cleanup (must call common helpers; no -or $true) ---
 try {
     $owned = New-Object 'System.Collections.Generic.List[object]'
-    $records = @(Get-DemoOwnedRecordsArray -OwnedList $owned)
+    $records = @(Get-RuntimeOwnedRecordsArray -OwnedList $owned)
     $recordsOk = ($records.Count -eq 0)
 
     $tmpDir = Join-Path $env:TEMP ("voxmetriks-demo-e-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
     $artifact = Join-Path $tmpDir 'session-empty-marker.txt'
     Set-Content -LiteralPath $artifact -Value 'x' -Encoding ASCII
-    Clear-DemoSessionArtifacts -ArtifactPaths @($artifact) -PidDir $tmpDir
+    Clear-RuntimeSessionArtifacts -ArtifactPaths @($artifact) -PidDir $tmpDir
     $cleanupOk = (-not (Test-Path -LiteralPath $artifact)) -and (-not (Test-Path -LiteralPath $tmpDir))
 
     $atThrew = $false
@@ -106,10 +106,10 @@ try {
     Set-Content -LiteralPath (Join-Path $PidDir 'backend.out.log') -Value 'log' -Encoding ASCII
 
     # Direct cleanup with poisoned list (common helper containment).
-    Clear-DemoSessionArtifacts -ArtifactPaths @($innocent, (Join-Path $PidDir 'backend.out.log'), $manifest) -PidDir $PidDir
+    Clear-RuntimeSessionArtifacts -ArtifactPaths @($innocent, (Join-Path $PidDir 'backend.out.log'), $manifest) -PidDir $PidDir
     $innocentAfterDirect = (Test-Path -LiteralPath $innocent) -and ((Get-Content -LiteralPath $innocent -Raw) -match 'keep-me')
 
-    # Recreate poisoned manifest and run stop_demo whitelist cleanup path.
+    # Recreate poisoned manifest and run stop whitelist cleanup path.
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     (@{
         artifacts = @($innocent)
@@ -135,7 +135,7 @@ try {
     Clear-TestPidDirResidue
     $probeC = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $handleC = Get-DemoProcessHandleInfo -ProcessId ([int]$probeC.Id)
+    $handleC = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeC.Id)
     if (-not $handleC) { throw "Could not read handle for probe PID $($probeC.Id)" }
 
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
@@ -169,7 +169,7 @@ try {
     Clear-TestPidDirResidue
     $probeD = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $handleD = Get-DemoProcessHandleInfo -ProcessId ([int]$probeD.Id)
+    $handleD = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeD.Id)
     if (-not $handleD) { throw "Could not read handle for probe PID $($probeD.Id)" }
 
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
@@ -203,7 +203,7 @@ try {
     Clear-TestPidDirResidue
     $probeI = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $handleI = Get-DemoProcessHandleInfo -ProcessId ([int]$probeI.Id)
+    $handleI = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeI.Id)
     if (-not $handleI) { throw "Could not read handle for probe PID $($probeI.Id)" }
 
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
@@ -253,7 +253,7 @@ try {
     Clear-TestPidDirResidue
     $probeJ = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $handleJ = Get-DemoProcessHandleInfo -ProcessId ([int]$probeJ.Id)
+    $handleJ = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeJ.Id)
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     @{
         pid              = [int]$probeJ.Id
@@ -278,7 +278,7 @@ try {
     Clear-TestPidDirResidue
     $probeK = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $handleK = Get-DemoProcessHandleInfo -ProcessId ([int]$probeK.Id)
+    $handleK = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeK.Id)
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     @{
         pid              = [int]$probeK.Id
@@ -304,7 +304,7 @@ try {
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     $outL = Join-Path $PidDir 'backend.out.log'
     $errL = Join-Path $PidDir 'backend.err.log'
-    $reqL = Get-DemoBackendShutdownRequestPath -PidDir $PidDir
+    $reqL = Get-RuntimeBackendShutdownRequestPath -PidDir $PidDir
     # Probe watches the canonical shutdown file and emits the lifespan marker.
     $pyL = @"
 import sys, time
@@ -315,14 +315,14 @@ while not req.is_file():
 print('VOXMETRIK_V2 shutdown complete', flush=True)
 sys.stdout.flush()
 "@
-    $probeL = Start-DemoDetachedProcess `
+    $probeL = Start-RuntimeDetachedProcess `
         -FilePath $VenvPython `
         -ArgumentList @('-c', $pyL) `
         -WorkingDirectory (Join-Path $RepoRoot 'apps\backend') `
         -StdoutLog $outL `
         -StderrLog $errL
     Start-Sleep -Milliseconds 500
-    $handleL = Get-DemoProcessHandleInfo -ProcessId ([int]$probeL.Id)
+    $handleL = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeL.Id)
     if (-not $handleL) { throw "venv probe handle missing for PID $($probeL.Id)" }
 
     @{
@@ -346,7 +346,7 @@ sys.stdout.flush()
     Write-Result 'L-correct-venv-launcher-stops' $false $_.Exception.Message
 } finally {
     if ($probeL -and (Get-Process -Id $probeL.Id -ErrorAction SilentlyContinue)) {
-        Stop-DemoVerifiedLauncher -ProcessId ([int]$probeL.Id) | Out-Null
+        Stop-RuntimeVerifiedLauncher -ProcessId ([int]$probeL.Id) | Out-Null
     }
     Clear-TestPidDirResidue
 }
@@ -358,14 +358,14 @@ try {
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     $outN = Join-Path $PidDir 'backend.out.log'
     $errN = Join-Path $PidDir 'backend.err.log'
-    $probeN = Start-DemoDetachedProcess `
+    $probeN = Start-RuntimeDetachedProcess `
         -FilePath $VenvPython `
         -ArgumentList @('-c', 'import time; time.sleep(120)') `
         -WorkingDirectory (Join-Path $RepoRoot 'apps\backend') `
         -StdoutLog $outN `
         -StderrLog $errN
     Start-Sleep -Milliseconds 400
-    $handleN = Get-DemoProcessHandleInfo -ProcessId ([int]$probeN.Id)
+    $handleN = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeN.Id)
     @{
         pid              = [int]$handleN.Pid
         kind             = 'launcher-backend'
@@ -377,8 +377,8 @@ try {
         requireWmiToStop = $false
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $PidDir 'backend.launcher.json') -Encoding ASCII
 
-    # Short timeout via direct helper (stop_demo uses 20s; directed gate uses helper).
-    $grN = Stop-DemoBackendGracefulOrForce -ProcessId ([int]$handleN.Pid) -PidDir $PidDir -TimeoutSec 3
+    # Short timeout via direct helper (stop uses 20s; directed gate uses helper).
+    $grN = Stop-RuntimeBackendGracefulOrForce -ProcessId ([int]$handleN.Pid) -PidDir $PidDir -TimeoutSec 3
     $goneN = -not [bool](Get-Process -Id $probeN.Id -ErrorAction SilentlyContinue)
     $okN = (-not $grN.Ok) -and $grN.Forced -and $goneN
     Write-Result 'N-graceful-timeout-force' $okN ("ok=$($grN.Ok) forced=$($grN.Forced) gone=$goneN detail=$($grN.Detail)")
@@ -386,28 +386,28 @@ try {
     Write-Result 'N-graceful-timeout-force' $false $_.Exception.Message
 } finally {
     if ($probeN -and (Get-Process -Id $probeN.Id -ErrorAction SilentlyContinue)) {
-        Stop-DemoVerifiedLauncher -ProcessId ([int]$probeN.Id) | Out-Null
+        Stop-RuntimeVerifiedLauncher -ProcessId ([int]$probeN.Id) | Out-Null
     }
     Clear-TestPidDirResidue
 }
 
-# --- O: stop_demo exit 1 after force (timeout path via shortened wait is covered by N;
-#     here verify stop_demo reports incomplete when graceful marker missing after force) ---
+# --- O: stop exit 1 after force (timeout path via shortened wait is covered by N;
+#     here verify stop reports incomplete when graceful marker missing after force) ---
 $probeO = $null
 try {
     Clear-TestPidDirResidue
     New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
     $outO = Join-Path $PidDir 'backend.out.log'
     $errO = Join-Path $PidDir 'backend.err.log'
-    # Ignore shutdown request — stop_demo must force and exit 1.
-    $probeO = Start-DemoDetachedProcess `
+    # Ignore shutdown request — stop must force and exit 1.
+    $probeO = Start-RuntimeDetachedProcess `
         -FilePath $VenvPython `
         -ArgumentList @('-c', 'import time; time.sleep(120)') `
         -WorkingDirectory (Join-Path $RepoRoot 'apps\backend') `
         -StdoutLog $outO `
         -StderrLog $errO
     Start-Sleep -Milliseconds 400
-    $handleO = Get-DemoProcessHandleInfo -ProcessId ([int]$probeO.Id)
+    $handleO = Get-RuntimeProcessHandleInfo -ProcessId ([int]$probeO.Id)
     @{
         pid              = [int]$handleO.Pid
         kind             = 'launcher-backend'
@@ -420,8 +420,8 @@ try {
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $PidDir 'backend.launcher.json') -Encoding ASCII
 
     # Patch timeout by pre-creating a "stuck" situation: call stop with env? We use helper
-    # to force the same exit semantics as stop_demo incomplete path.
-    $grO = Stop-DemoBackendGracefulOrForce -ProcessId ([int]$handleO.Pid) -PidDir $PidDir -TimeoutSec 2
+    # to force the same exit semantics as stop incomplete path.
+    $grO = Stop-RuntimeBackendGracefulOrForce -ProcessId ([int]$handleO.Pid) -PidDir $PidDir -TimeoutSec 2
     $exitSim = if (-not $grO.Ok) { 1 } else { 0 }
     $okO = ($exitSim -eq 1) -and $grO.Forced
     Write-Result 'O-force-reports-unhealthy' $okO ("exitSim=$exitSim forced=$($grO.Forced)")
@@ -429,7 +429,7 @@ try {
     Write-Result 'O-force-reports-unhealthy' $false $_.Exception.Message
 } finally {
     if ($probeO -and (Get-Process -Id $probeO.Id -ErrorAction SilentlyContinue)) {
-        Stop-DemoVerifiedLauncher -ProcessId ([int]$probeO.Id) | Out-Null
+        Stop-RuntimeVerifiedLauncher -ProcessId ([int]$probeO.Id) | Out-Null
     }
     Clear-TestPidDirResidue
 }
@@ -437,11 +437,11 @@ try {
 # --- P: frontend-fail cleanup path prefers graceful backend helper ---
 try {
     $startText = Get-Content -LiteralPath $StartScript -Raw
-    $hasGracefulCleanup = ($startText -match 'Stop-DemoSessionOwnedRecords') -and `
+    $hasGracefulCleanup = ($startText -match 'Stop-RuntimeSessionOwnedRecords') -and `
         ($startText -match 'PidDir') -and `
         ($startText -match 'Stop-OwnedSessionProcesses')
     $commonText = Get-Content -LiteralPath $CommonScript -Raw
-    $sessionUsesGraceful = ($commonText -match 'Stop-DemoBackendGracefulOrForce') -and `
+    $sessionUsesGraceful = ($commonText -match 'Stop-RuntimeBackendGracefulOrForce') -and `
         ($commonText -match 'launcher-backend')
     Write-Result 'P-frontend-fail-cleanup-graceful-first' ($hasGracefulCleanup -and $sessionUsesGraceful) (
         "startHas=$hasGracefulCleanup commonHas=$sessionUsesGraceful"
@@ -458,7 +458,7 @@ try {
     $errLog = Join-Path $logDir 'child.err.log'
     $markerOut = 'VOXMETRIKS_STDOUT_MARKER_42'
     $markerErr = 'VOXMETRIKS_STDERR_MARKER_99'
-    $child = Start-DemoDetachedProcess `
+    $child = Start-RuntimeDetachedProcess `
         -FilePath $VenvPython `
         -ArgumentList @(
             '-c',
@@ -473,7 +473,7 @@ try {
     $okM = ($outText -match [regex]::Escape($markerOut)) -and ($errText -match [regex]::Escape($markerErr))
     Write-Result 'M-real-stdout-stderr-logs' $okM ("outHas=$($outText -match $markerOut); errHas=$($errText -match $markerErr)")
     if (Get-Process -Id $child.Id -ErrorAction SilentlyContinue) {
-        Stop-DemoVerifiedLauncher -ProcessId ([int]$child.Id) | Out-Null
+        Stop-RuntimeVerifiedLauncher -ProcessId ([int]$child.Id) | Out-Null
     }
 } catch {
     Write-Result 'M-real-stdout-stderr-logs' $false $_.Exception.Message
@@ -537,7 +537,7 @@ try {
     }
     Start-Sleep -Seconds 1
     $forcePid = Get-PortListenerPid -Port 8011 -ForceNetstat
-    Write-Result 'F-force-netstat-productive' ($null -ne $forcePid) ("ForceNetstat pid=$forcePid via demo_runtime_common.ps1")
+    Write-Result 'F-force-netstat-productive' ($null -ne $forcePid) ("ForceNetstat pid=$forcePid via runtime_common.ps1")
 } catch {
     Write-Result 'F-force-netstat-productive' $false $_.Exception.Message
 } finally {
@@ -553,14 +553,14 @@ $arbG = $null
 try {
     Clear-TestPidDirResidue
 
-    function Get-DemoProcessWmiInfo {
+    function Get-RuntimeProcessWmiInfo {
         param([int]$ProcessId)
         return $null
     }
 
     $ownG = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 90') -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
-    $ownHandle = Get-DemoProcessHandleInfo -ProcessId ([int]$ownG.Id)
+    $ownHandle = Get-RuntimeProcessHandleInfo -ProcessId ([int]$ownG.Id)
     if (-not $ownHandle) { throw "No handle for owned probe $($ownG.Id)" }
 
     $ownedList = New-Object 'System.Collections.Generic.List[object]'
@@ -573,7 +573,7 @@ try {
         SessionOwned   = $true
     }) | Out-Null
 
-    $null = Stop-DemoSessionOwnedRecords -OwnedList $ownedList
+    $null = Stop-RuntimeSessionOwnedRecords -OwnedList $ownedList
     Start-Sleep -Milliseconds 400
     $ownGone = -not [bool](Get-Process -Id $ownG.Id -ErrorAction SilentlyContinue)
 
@@ -589,8 +589,8 @@ try {
     }
     if (-not $arbPid) { throw 'Arbitrary listener on 8012 not observed' }
 
-    $arbHandle = Get-DemoProcessHandleInfo -ProcessId $arbPid
-    $arbWmi = Get-DemoProcessWmiInfo -ProcessId $arbPid
+    $arbHandle = Get-RuntimeProcessHandleInfo -ProcessId $arbPid
+    $arbWmi = Get-RuntimeProcessWmiInfo -ProcessId $arbPid
     $strictOk = Test-StrictPortWorkerIdentity -WmiInfo $arbWmi -HandleInfo $arbHandle -Kind 'backend' `
         -RepoRootLower 'c:\tmp' -VenvDirLower 'c:\tmp\.venv' -VenvPythonLower 'c:\tmp\.venv\python.exe' `
         -FrontendDirLower 'c:\tmp\frontend'
@@ -649,9 +649,9 @@ if ($SkipFullStart -or -not $envReady) {
     Write-Result 'A-full-start-stop' $okA ("start=$startCode be=$be fe=$fe stop=$stopCode p8000=$p8000 p4200=$p4200 pidDirGone=$pidDirGone shutdownLog=$shutdownInLog")
     Write-Result 'A-graceful-shutdown-marker' $shutdownInLog ("stopExit=$stopCode")
     if (-not $okA) {
-        Write-Host '--- start_demo output (tail) ---'
+        Write-Host '--- start output (tail) ---'
         ($startOut -split "`n" | Select-Object -Last 40) -join "`n" | Write-Host
-        Write-Host '--- stop_demo output (tail) ---'
+        Write-Host '--- stop output (tail) ---'
         ($stopOut -split "`n" | Select-Object -Last 30) -join "`n" | Write-Host
     }
 }
@@ -661,5 +661,5 @@ if ($Failed -gt 0) {
     Write-Host "FAILED checks: $Failed"
     exit 1
 }
-Write-Host 'All directed demo-runtime host compatibility checks passed.'
+Write-Host 'All directed runtime host compatibility checks passed.'
 exit 0

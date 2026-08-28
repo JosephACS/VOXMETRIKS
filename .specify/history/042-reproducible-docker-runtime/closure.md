@@ -22,8 +22,8 @@ Orquestación cloud.
 ## Evidencia (código/pruebas)
 
 - `compose.yml`
-- `scripts/start_demo.ps1`
-- `scripts/stop_demo.ps1`
+- `scripts/start.ps1`
+- `scripts/stop.ps1`
 - `docs/STATUS.md`
 
 ## Commits relevantes

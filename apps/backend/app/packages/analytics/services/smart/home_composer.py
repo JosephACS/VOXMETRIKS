@@ -8,6 +8,7 @@ import duckdb
 
 from app.packages.analytics.services.history_service import _warehouse_user_id
 from app.packages.catalog.services.cover_art_service import cover_urls_for_tracks
+from app.packages.catalog.services.tracks.playback_availability import playable_track_sql
 
 from .because_you import build_because_sections
 from .daily_mix import build_daily_mixes
@@ -33,6 +34,24 @@ def _attach_cover_urls(conn: duckdb.DuckDBPyConnection, tracks: List[Dict[str, A
     return out
 
 
+def _only_playable(
+    conn: duckdb.DuckDBPyConnection, tracks: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Keep Home rails aligned with the Spotify-backed consumer catalog."""
+    ids = [int(t["id_track"]) for t in tracks if t.get("id_track") is not None]
+    if not ids:
+        return []
+    placeholders = ", ".join("?" for _ in ids)
+    predicate = playable_track_sql(conn)
+    rows = conn.execute(
+        f"SELECT dt.id_track FROM dim_track dt "
+        f"WHERE dt.id_track IN ({placeholders}) AND ({predicate})",
+        ids,
+    ).fetchall()
+    allowed = {int(row[0]) for row in rows}
+    return [t for t in tracks if int(t.get("id_track") or -1) in allowed]
+
+
 def _enrich_sections(
     conn: duckdb.DuckDBPyConnection, sections: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
@@ -41,7 +60,9 @@ def _enrich_sections(
         s = dict(section)
         tracks = s.get("tracks") or []
         if isinstance(tracks, list) and tracks:
-            s["tracks"] = _attach_cover_urls(conn, tracks)
+            s["tracks"] = _attach_cover_urls(conn, _only_playable(conn, tracks))
+            if not s["tracks"]:
+                continue
         enriched.append(s)
     return enriched
 

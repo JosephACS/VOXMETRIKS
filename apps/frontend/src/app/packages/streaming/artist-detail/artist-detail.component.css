@@ -40,15 +40,15 @@
 
 .hero-banner {
   height: 160px;
-  background: linear-gradient(135deg, #1a1040 0%, #0f1225 40%, #1a0a2e 100%);
+  background: linear-gradient(135deg, #211b11 0%, #15130c 40%, #0b0c0b 100%);
   position: relative;
 }
 
 .hero-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 20% 100%, rgba(30, 216, 150, 0.25), transparent),
-              radial-gradient(ellipse 50% 60% at 80% 20%, rgba(124, 58, 237, 0.2), transparent);
+  background: radial-gradient(ellipse 60% 80% at 20% 100%, rgba(232, 163, 61, 0.25), transparent),
+              radial-gradient(ellipse 50% 60% at 80% 20%, rgba(232, 163, 61, 0.2), transparent);
 }
 
 .hero-mesh {
@@ -142,7 +142,7 @@
 }
 .btn-play:hover {
   transform: scale(1.03);
-  box-shadow: 0 6px 20px rgba(30, 216, 150, 0.35);
+  box-shadow: 0 6px 20px rgba(232, 163, 61, 0.35);
 }
 
 .hero-quick-stats {

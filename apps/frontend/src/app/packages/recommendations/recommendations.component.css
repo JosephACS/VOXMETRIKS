@@ -32,7 +32,7 @@
 .page-subtitle--human {
   margin-top: 0.15rem;
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
 }
 
 .header-badges {
@@ -50,14 +50,14 @@
 }
 
 .badge-demo {
-  background: rgba(124, 58, 237, 0.12);
-  border-color: rgba(124, 58, 237, 0.25);
-  color: #a78bfa;
+  background: rgba(232, 163, 61, 0.12);
+  border-color: rgba(232, 163, 61, 0.25);
+  color: #e8a33d;
 }
 
 .badge-live {
-  background: rgba(30, 216, 150, 0.1);
-  border-color: rgba(30, 216, 150, 0.25);
+  background: rgba(232, 163, 61, 0.1);
+  border-color: rgba(232, 163, 61, 0.25);
   color: var(--accent);
 }
 
@@ -68,15 +68,15 @@
   padding: 0.875rem 1rem;
   margin-bottom: 1.25rem;
   border-radius: var(--radius-lg);
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.28);
+  background: rgba(232, 163, 61, 0.1);
+  border: 1px solid rgba(232, 163, 61, 0.28);
 }
 
 .synthetic-banner p {
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #c4b5fd;
+  color: #b5650a;
 }
 
 .synthetic-icon {
@@ -87,8 +87,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(124, 58, 237, 0.25);
-  color: #a78bfa;
+  background: rgba(232, 163, 61, 0.25);
+  color: #e8a33d;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -120,8 +120,8 @@
   margin-top: 1rem;
   padding: 0.45rem 1rem;
   border-radius: 999px;
-  border: 1px solid rgba(30, 216, 150, 0.3);
-  background: rgba(30, 216, 150, 0.12);
+  border: 1px solid rgba(232, 163, 61, 0.3);
+  background: rgba(232, 163, 61, 0.12);
   color: var(--accent);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -187,8 +187,8 @@
 }
 
 .badge-ai {
-  background: rgba(30, 216, 150, 0.1);
-  border-color: rgba(30, 216, 150, 0.25);
+  background: rgba(232, 163, 61, 0.1);
+  border-color: rgba(232, 163, 61, 0.25);
   color: var(--accent);
 }
 
@@ -212,6 +212,88 @@
   box-shadow: var(--shadow-sm);
 }
 
+.spotify-mix-panel {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 18rem),
+    radial-gradient(circle at 12% 115%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 22rem),
+    var(--glass-bg);
+}
+
+.spotify-mix-head { align-items: flex-start; }
+.spotify-source-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+
+.spotify-mix-head h2 { color: var(--text); font-size: 1rem; }
+.coverage-chip {
+  padding: 0.42rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 0.66rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.spotify-connect-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--accent) 6%, var(--glass-bg));
+}
+
+.spotify-connect-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 0.8rem;
+  color: #1a1208;
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  box-shadow: 0 8px 22px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.spotify-connect-card > div:nth-child(2),
+.spotify-connect-card--error > div:first-child { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.spotify-connect-card strong { color: var(--text); font-size: 0.82rem; }
+.spotify-connect-card span { color: var(--text-muted); font-size: 0.72rem; line-height: 1.45; }
+.spotify-connect-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  color: #1a1208;
+  box-shadow: 0 8px 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.spotify-rec-card { flex-basis: 164px; }
+
+@media (max-width: 680px) {
+  .spotify-connect-card { align-items: flex-start; flex-wrap: wrap; }
+  .spotify-connect-action { width: 100%; }
+  .coverage-chip { white-space: normal; }
+}
+
 .panel-header {
   display: flex;
   align-items: baseline;
@@ -225,12 +307,12 @@
   font-size: 0.875rem;
   font-weight: 600;
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text);
 }
 
 .panel-meta {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -265,13 +347,13 @@
 
 .genre-label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .genre-bar-track {
   height: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -287,7 +369,7 @@
 .genre-score {
   font-size: 0.75rem;
   font-family: 'JetBrains Mono', monospace;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   text-align: right;
 }
 
@@ -322,7 +404,7 @@
 .for-you-card {
   flex: 0 0 260px;
   scroll-snap-align: start;
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--text) 2.5%, var(--color-surface));
   border: 1px solid var(--border-subtle, var(--spotify-base));
   border-radius: 0.75rem;
   overflow: hidden;
@@ -337,7 +419,7 @@
 
 .fy-artwork {
   height: 100px;
-  background: linear-gradient(135deg, var(--accent, var(--accent)), rgba(124, 58, 237, 0.6));
+  background: linear-gradient(135deg, var(--accent, var(--accent)), rgba(232, 163, 61, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,7 +441,7 @@
 
 .fy-artist {
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-muted);
   margin: 0 0 0.75rem;
 }
 
@@ -374,7 +456,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
 }
 
 .score-value {
@@ -393,9 +475,9 @@
 .tag {
   font-size: 0.65rem;
   padding: 0.2rem 0.5rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
   border-radius: 0.25rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
 }
 
 /* Artists grid */
@@ -409,14 +491,14 @@
   display: flex;
   gap: 1rem;
   padding: 1.125rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--accent) 3%, var(--spotify-card));
   border: 1px solid var(--border-subtle, var(--spotify-base));
   border-radius: 0.75rem;
   transition: border-color 0.2s;
 }
 
 .artist-card:hover {
-  border-color: rgba(30, 216, 150, 0.3);
+  border-color: rgba(232, 163, 61, 0.3);
 }
 
 .artist-avatar {
@@ -446,7 +528,7 @@
 
 .artist-genre {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   display: block;
   margin-bottom: 0.625rem;
 }
@@ -467,7 +549,7 @@
 
 .metric-label {
   font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
 }
 
 .affinity-badge {
@@ -475,8 +557,8 @@
   font-size: 0.68rem;
   font-weight: 600;
   padding: 0.2rem 0.5rem;
-  background: rgba(124, 58, 237, 0.15);
-  color: #a78bfa;
+  background: rgba(232, 163, 61, 0.15);
+  color: #e8a33d;
   border-radius: 0.25rem;
 }
 
@@ -493,9 +575,10 @@
   align-items: flex-start;
   gap: 0.35rem;
   padding: 1.25rem;
-  border: 2px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  color: #fff;
+  background: color-mix(in srgb, var(--accent) 6%, var(--spotify-card));
+  color: var(--text);
   cursor: pointer;
   text-align: left;
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
@@ -504,12 +587,14 @@
 
 .mood-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .mood-card.selected {
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--spotify-card));
+  box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .mood-icon {
@@ -552,7 +637,7 @@
   color: var(--text-muted);
   text-align: center;
   padding: 0.75rem;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--border);
   border-radius: 0.5rem;
 }
 
@@ -572,8 +657,8 @@
 
 .mood-results-badge {
   padding: 0.35rem 0.75rem;
-  background: rgba(30, 216, 150, 0.15);
-  border: 1px solid rgba(30, 216, 150, 0.35);
+  background: rgba(232, 163, 61, 0.15);
+  border: 1px solid rgba(232, 163, 61, 0.35);
   border-radius: 2rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -610,24 +695,24 @@
   display: block;
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 3%, var(--color-surface));
   text-decoration: none;
   color: inherit;
   transition: transform 0.15s, border-color 0.15s;
-  border-left: 3px solid var(--accent, #1ed896);
+  border-left: 3px solid var(--accent, #e8a33d);
 }
 
 .mood-track-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--color-border-hover);
 }
 
 .mood-track-card h3 {
   font-size: 0.875rem;
   font-weight: 600;
   margin: 0 0 0.25rem;
-  color: #fff;
+  color: var(--text);
 }
 
 .mt-artist {
@@ -664,7 +749,7 @@
   text-align: left;
   padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--border-subtle, var(--spotify-base));
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -673,23 +758,23 @@
 
 .data-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
 .data-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--row-hover);
 }
 
 .col-rank {
   font-family: 'JetBrains Mono', monospace;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   width: 2.5rem;
 }
 
 .col-song {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text);
 }
 
 .col-pop {
@@ -699,9 +784,9 @@
 .genre-chip {
   font-size: 0.72rem;
   padding: 0.2rem 0.5rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
   border-radius: 0.25rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
 }
 
 .trend-badge {
@@ -716,8 +801,8 @@
 }
 
 .trend-up {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
 }
 
 .trend-down {
@@ -726,8 +811,29 @@
 }
 
 .trend-stable {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.45);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text-muted);
+}
+
+/* El tema claro conserva profundidad; no convierte analitica musical en una hoja blanca. */
+:host-context(html[data-theme='light']) .panel {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(232, 163, 61, 0.1), transparent 19rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 233, 0.95));
+  border-color: rgba(181, 101, 10, 0.14);
+  box-shadow: 0 16px 36px rgba(75, 47, 16, 0.09), 0 2px 8px rgba(75, 47, 16, 0.04);
+}
+
+:host-context(html[data-theme='light']) .spotify-mix-panel {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(181, 101, 10, 0.15), transparent 22rem),
+    radial-gradient(circle at 0% 110%, rgba(181, 101, 10, 0.13), transparent 24rem),
+    linear-gradient(145deg, #fff 0%, #fff7e9 100%);
+}
+
+:host-context(html[data-theme='light']) .spotify-source-label,
+:host-context(html[data-theme='light']) .coverage-chip {
+  color: var(--accent);
 }
 
 @media (max-width: 640px) {

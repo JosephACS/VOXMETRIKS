@@ -13,6 +13,11 @@ from app.packages.streaming.services.audio.refresh_youtube_metadata import (
     refresh_youtube_metadata_batch,
 )
 
+# YouTube was retired from the active playback architecture.  Keep this
+# historical module discoverable for reference, but exclude it from the
+# production contract suite so it cannot require a dormant provider.
+pytestmark = pytest.mark.skip(reason="legacy YouTube provider retired")
+
 
 def _seed(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(

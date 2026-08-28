@@ -30,7 +30,20 @@ def _reset_db_handles() -> None:
 def bind_test_db(db_path: Path | str) -> None:
     """Point settings at ``db_path`` and drop any shared DuckDB handle."""
     _reset_db_handles()
-    set_settings_override(Settings(db_path=str(db_path)))
+    if _session_settings is not None:
+        data = _session_settings.model_dump()
+        data["db_path"] = str(db_path)
+        set_settings_override(Settings(**data))
+        return
+    # Fallback when session settings are missing — keep test payment/seed defaults.
+    set_settings_override(
+        Settings(
+            db_path=str(db_path),
+            payment_provider="academic_mock",
+            seed_demo_users=True,
+            seed_demo_crm_users=True,
+        )
+    )
 
 
 def restore_session_db() -> None:

@@ -27,7 +27,7 @@
       (keydown.enter)="toggleExpand()"
       [attr.role]="playback.currentTrack() ? 'button' : null"
       [attr.tabindex]="playback.currentTrack() ? 0 : null"
-      [title]="'player.openToggle' | t"
+      [title]="'player.expandToggle' | t"
     >
       @if (playback.currentTrack(); as t) {
         <div class="cover-btn" [style.background]="t.coverGradient">
@@ -46,7 +46,9 @@
           <span class="track-title">{{ t.title }}</span>
           <span class="track-artist">{{ t.artist }}</span>
           @if (!staffCompact()) {
-            @if (playback.playbackError(); as err) {
+            @if (playback.skipNotice(); as notice) {
+              <span class="track-status track-status--notice">{{ notice }}</span>
+            } @else if (playback.playbackError(); as err) {
               <span class="track-error">{{ err }} · <button type="button" class="inline-retry" (click)="controller.retryCurrent(); $event.stopPropagation()">{{ 'player.retry' | t:lang() }}</button></span>
             } @else if (playback.resolvePhase() === 'resolving' || playback.status() === 'loading') {
               <span class="track-status">{{ 'player.sourceLoading' | t:lang() }}</span>
@@ -55,6 +57,9 @@
             }
           }
         </div>
+        <svg class="vx-waveform mini-waveform" viewBox="0 0 180 36" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 20 C14 4 24 32 39 18 S64 7 79 21 S105 31 120 16 S145 8 160 20 S172 23 180 16" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".7" />
+        </svg>
         @if (t.explicit && !staffCompact()) {
           <span class="explicit-badge">{{ 'common.explicit' | t:lang() }}</span>
         }
@@ -81,8 +86,13 @@
           </div>
         }
         <div class="track-meta muted">
-          <span class="track-title">{{ staffIdle() ? 'Sin reproducción activa' : ('player.selectTrack' | t:lang()) }}</span>
-          <span class="track-artist">{{ staffIdle() ? 'Staff · minimizado' : ('player.browseCatalog' | t:lang()) }}</span>
+          @if (playback.queueExhausted()) {
+            <span class="track-title">Cola sin canciones reproducibles</span>
+            <span class="track-artist">Prueba otra selección</span>
+          } @else {
+            <span class="track-title">{{ staffIdle() ? 'Sin reproducción activa' : ('player.selectTrack' | t:lang()) }}</span>
+            <span class="track-artist">{{ staffIdle() ? ('player.minimized' | t:lang()) : ('player.browseCatalog' | t:lang()) }}</span>
+          }
         </div>
         @if (staffIdle()) {
           <button

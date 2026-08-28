@@ -172,7 +172,7 @@ export function useReleaseStatusComposition(
 }
 
 export const VOX_ANALYTIC_PALETTE = [
-  '#1ED896',
+  '#e8a33d',
   '#149E74',
   '#2A9D8F',
   '#5EAAA8',
@@ -346,7 +346,6 @@ export function buildReportInsight(
     if (!lead || v <= 0) return null;
     const total = series.reduce((a, p) => a + (Number(p.value) || 0), 0);
     const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-    const kind = reportId.includes('genre') ? 'género' : 'artista';
     return `${formatShortLabel(lead.label)} lidera con el ${pct} % de las reproducciones del ranking.`;
   }
 

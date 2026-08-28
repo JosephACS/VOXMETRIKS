@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, finalize, map, of, share } from 'rxjs';
+import { Observable, catchError, finalize, map, of, share } from 'rxjs';
 import { PlayableTrack, PlaybackStatus, RepeatMode, AudioResolvePhase } from '../models/player.models';
 import { CoverArtService } from './cover-art.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
@@ -13,8 +13,7 @@ import { QueueManager } from '../../playback-core/queue.manager';
 import { PlaybackEngine } from '../../playback-core/playback.engine';
 import { cycleRepeatMode } from '../../playback-core/playback-history';
 import { AudioResolver } from '../../playback-core/resolver/audio.resolver';
-import { RESOLVE_FRIENDLY_ERROR } from '../../playback-core/resolver/resolved-source.model';
-import { isGenericDemoAudioUrl } from '../config/demo-audio.config';
+import { isGenericToneAudioUrl } from '../config/generic-tone-audio.config';
 import {
   clearPersistedSession,
   persistPlaybackSession,
@@ -48,9 +47,14 @@ export class MusicPlayerService {
   private autoplayFetch$: Observable<PlayableTrack[]> | null = null;
   private autoplayPage = 1;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private skipNoticeTimer: ReturnType<typeof setTimeout> | null = null;
   private restoredSession = false;
   /** Position to seek after user resumes a restored session (browser autoplay policy). */
   private pendingRestoreTime = 0;
+  /** Track ids that failed during the current playback run. Autoplay will not retry them. */
+  private readonly unavailableTrackIds = new Set<number>();
+  /** Keeps queue semantics after failed items are removed and only one item remains. */
+  private queuePlaybackActive = false;
 
   private readonly prefs = readPlaybackPrefs();
 
@@ -63,15 +67,17 @@ export class MusicPlayerService {
   muted = signal(this.prefs.muted);
   shuffle = signal(this.prefs.shuffle);
   repeatMode = signal<RepeatMode>(this.prefs.repeatMode);
-  /** @deprecated use repeatMode — true when not off */
-  repeat = computed(() => this.repeatMode() !== 'off');
   autoplay = signal(this.prefs.autoplay);
   autoplayLoading = signal(false);
   playbackError = signal<string | null>(null);
+  /** Brief, non-blocking notice for a one-off track that has no source. */
+  skipNotice = signal<string | null>(null);
+  /** True when every track in a finite queue failed to resolve. */
+  queueExhausted = signal(false);
   queue = signal<PlayableTrack[]>([]);
   queueIndex = signal(0);
   expandedOpen = signal(false);
-  audioMode = signal<'youtube' | 'stream' | 'preview' | 'loading'>('loading');
+  audioMode = signal<'spotify' | 'stream' | 'preview' | 'loading'>('loading');
   /** User-facing resolve lifecycle (idle → resolving → ready/playing | unavailable). */
   resolvePhase = signal<AudioResolvePhase>('idle');
   currentCover = signal<string | null>(null);
@@ -88,9 +94,6 @@ export class MusicPlayerService {
     return d > 0 ? Math.min(100, (this.currentTime() / d) * 100) : 0;
   });
 
-  /** @deprecated use signals */
-  state$ = new BehaviorSubject({ playing: false });
-
   private get engine() {
     return this.playbackEngine.instance;
   }
@@ -98,22 +101,14 @@ export class MusicPlayerService {
   constructor() {
     this.playbackEngine.init({
       onEnded: () => this.onEnded(),
-      onYtPlay: () => this.setStatus('playing'),
-      onYtPause: () => this.setStatus('paused'),
-      onYtEnded: () => this.onEnded(),
-      onYtError: () => {
-        const t = this.currentTrack();
-        if (!this.engine.isYoutube || !t) return;
-        // Prefer the id the engine was playing — currentTrack may be cleared mid-recovery.
-        const playingId = this.engine.currentYoutubeVideoId;
-        const withId =
-          playingId && t.youtubeVideoId !== playingId
-            ? { ...t, youtubeVideoId: playingId }
-            : t;
-        this.handleAudioFailure(withId, 'youtube');
+      onSpotifyPlay: () => this.setStatus('playing'),
+      onSpotifyPause: () => {
+        if (this.status() !== 'loading') this.setStatus('paused');
       },
-      onYtBuffering: () => {
-        if (this.status() !== 'error') this.setStatus('buffering');
+      onSpotifyEnded: () => this.onEnded(),
+      onSpotifyError: () => {
+        const track = this.currentTrack();
+        if (track && this.engine.isSpotify) this.fallbackFromSpotify(track, this.playbackToken);
       },
       onDemoMetadata: (d) => this.duration.set(d),
       onDemoWaiting: () => {
@@ -139,6 +134,10 @@ export class MusicPlayerService {
   }
 
   setQueue(tracks: PlayableTrack[], startIndex = 0) {
+    this.queuePlaybackActive = tracks.length > 1;
+    this.queueExhausted.set(false);
+    this.unavailableTrackIds.clear();
+    this.clearSkipNotice();
     this.queueState.setAll(tracks, startIndex);
     this.syncQueueSignal();
     this.schedulePersist();
@@ -153,7 +152,11 @@ export class MusicPlayerService {
   playTrack(track: PlayableTrack, queue?: PlayableTrack[]) {
     this.restoredSession = false;
     this.playbackError.set(null);
+    this.queueExhausted.set(false);
+    this.unavailableTrackIds.clear();
+    this.clearSkipNotice();
     if (queue?.length) {
+      this.queuePlaybackActive = queue.length > 1;
       const idx = queue.findIndex((q) => q.id === track.id);
       if (idx >= 0) {
         this.setQueue(queue, idx);
@@ -162,11 +165,13 @@ export class MusicPlayerService {
     }
     const inQueue = this.queueState.findIndex(track.id);
     if (inQueue >= 0 && this.queueState.items.length > 1) {
+      this.queuePlaybackActive = true;
       const jumped = this.queueState.jumpTo(inQueue);
       this.syncQueueSignal();
       if (jumped) this.loadTrack(jumped, true);
       return;
     }
+    this.queuePlaybackActive = false;
     this.queueState.setSingle(track);
     this.syncQueueSignal();
     this.loadTrack(track, true);
@@ -178,6 +183,7 @@ export class MusicPlayerService {
       return;
     }
     this.queueState.insertNext(track);
+    this.queuePlaybackActive = this.queueState.items.length > 1;
     this.syncQueueSignal();
     this.schedulePersist();
   }
@@ -185,6 +191,7 @@ export class MusicPlayerService {
   addToQueue(track: PlayableTrack): boolean {
     const added = this.queueState.addToEndUnique(track);
     if (added) {
+      this.queuePlaybackActive = this.queueState.items.length > 1;
       this.syncQueueSignal();
       this.schedulePersist();
     }
@@ -194,6 +201,7 @@ export class MusicPlayerService {
   removeFromQueue(index: number): boolean {
     const ok = this.queueState.removeAt(index);
     if (ok) {
+      this.queuePlaybackActive = this.queueState.items.length > 1;
       this.syncQueueSignal();
       this.schedulePersist();
     }
@@ -212,14 +220,7 @@ export class MusicPlayerService {
   clearPendingQueue() {
     if (!this.currentTrack()) return;
     this.queueState.trimToCurrent();
-    this.syncQueueSignal();
-    this.schedulePersist();
-  }
-
-  clearQueue() {
-    const cur = this.currentTrack();
-    if (cur) this.queueState.trimToCurrent();
-    else this.queueState.clear();
+    this.queuePlaybackActive = false;
     this.syncQueueSignal();
     this.schedulePersist();
   }
@@ -248,8 +249,10 @@ export class MusicPlayerService {
       this.loadTrack(track, true, { userInitiated: true, restorePosition: restorePos || undefined });
       return;
     }
-    if (this.engine.isYoutube) {
-      this.engine.playYoutube();
+    if (this.engine.isSpotify) {
+      void this.engine.playSpotify().then((ok) => {
+        if (!ok) this.fallbackFromSpotify(track, this.playbackToken);
+      });
       if (this.pendingRestoreTime > 0) {
         const pos = this.pendingRestoreTime;
         this.pendingRestoreTime = 0;
@@ -332,15 +335,6 @@ export class MusicPlayerService {
     this.persistPrefs();
   }
 
-  toggleRepeat() {
-    this.cycleRepeat();
-  }
-
-  toggleAutoplay() {
-    this.autoplay.update((v) => !v);
-    this.persistPrefs();
-  }
-
   retryCurrent() {
     const track = this.currentTrack();
     if (!track) return;
@@ -360,7 +354,8 @@ export class MusicPlayerService {
 
   toggleExpandedView() {
     if (!this.currentTrack()) return;
-    this.expandedOpen.update((v) => !v);
+    if (this.expandedOpen()) this.closeExpandedView();
+    else this.openExpandedView();
   }
 
   clearCover() {
@@ -369,6 +364,8 @@ export class MusicPlayerService {
 
   stopPlayback() {
     this.cancelScheduledPersist();
+    this.clearSkipNotice();
+    this.unavailableTrackIds.clear();
     this.history.completeCurrent(this.currentTime() || undefined);
     this.playbackToken++;
     this.audioResolver.cancel();
@@ -376,6 +373,7 @@ export class MusicPlayerService {
     this.engine.stopAll();
     this.queueState.clear();
     this.queueState.clearHistory();
+    this.queuePlaybackActive = false;
     this.syncQueueSignal();
     this.currentTrack.set(null);
     this.currentCover.set(null);
@@ -385,6 +383,7 @@ export class MusicPlayerService {
     this.audioMode.set('loading');
     this.resolvePhase.set('idle');
     this.playbackError.set(null);
+    this.queueExhausted.set(false);
     this.expandedOpen.set(false);
     this.pendingRestoreTime = 0;
     clearPersistedSession();
@@ -407,11 +406,6 @@ export class MusicPlayerService {
   private setStatus(playing: PlaybackStatus) {
     this.status.set(playing);
     this.isPlaying.set(playing === 'playing');
-    this.state$.next({ playing: playing === 'playing' });
-  }
-
-  private setPlaying(playing: boolean) {
-    this.setStatus(playing ? 'playing' : 'paused');
   }
 
   private applyVolume() {
@@ -471,6 +465,7 @@ export class MusicPlayerService {
 
     this.engine.stopAll();
     this.currentTrack.set(track);
+    this.currentCover.set(null);
     if (!options.restorePosition) this.currentTime.set(0);
     this.duration.set(track.durationMs ? track.durationMs / 1000 : 0);
     this.playbackError.set(null);
@@ -485,7 +480,6 @@ export class MusicPlayerService {
     });
 
     const token = ++this.playbackToken;
-    // Keep prior cover until a new one resolves — never flash empty placeholder.
     this.coverSvc.cover$(track.id).subscribe((url) => {
       if (token === this.playbackToken && url) this.currentCover.set(url);
     });
@@ -500,10 +494,10 @@ export class MusicPlayerService {
         this.setStatus('loading');
         this.resolvePhase.set('resolving');
       },
-      onYoutube: (videoId) => this.startYt(track, videoId, shouldAutoplay, options, token),
+      onSpotify: (uri) => this.startSpotify(track, uri, shouldAutoplay, options, token),
       onStream: (streamUrl) => this.startStream(track, streamUrl, shouldAutoplay, options, token),
       onPreview: (previewUrl) => this.startPreview(track, previewUrl, shouldAutoplay, options, token),
-      onNotFound: () => this.failPlayback(track, token, 'unavailable'),
+      onNotFound: (reason) => this.failPlayback(track, token, 'unavailable', reason),
       onTrackUpdated: (updated) => {
         if (token === this.playbackToken) this.currentTrack.set(updated);
       },
@@ -513,24 +507,37 @@ export class MusicPlayerService {
     this.schedulePersist();
   }
 
-  private startYt(
+  private startSpotify(
     track: PlayableTrack,
-    videoId: string,
+    uri: string,
     autoplay: boolean,
     options: LoadOptions = {},
     token?: number,
-  ) {
+  ): void {
     if (token != null && token !== this.playbackToken) return;
-    this.audioMode.set('youtube');
+    const spotifyTrackId = uri.split(':').pop() || track.spotifyTrackId;
+    const updated = { ...track, spotifyTrackId, spotifyUri: uri };
+    this.currentTrack.set(updated);
+    this.audioMode.set('spotify');
     this.resolvePhase.set(autoplay ? 'playing' : 'ready');
-    this.engine.markLoaded(track.id, true);
-    this.engine.startYoutube(videoId, autoplay);
-    if (options.restorePosition && options.restorePosition > 0) {
-      this.engine.seek(options.restorePosition);
-      this.currentTime.set(options.restorePosition);
-    }
-    if (autoplay) this.setStatus('playing');
-    else this.setStatus('paused');
+    this.playbackError.set(null);
+    this.engine.markSpotifyLoaded(track.id);
+    void this.engine.startSpotify(uri, track.id, autoplay).then((ok) => {
+      if (token != null && token !== this.playbackToken) return;
+      if (!ok) {
+        this.fallbackFromSpotify(updated, token ?? this.playbackToken);
+        return;
+      }
+      if (options.restorePosition && options.restorePosition > 0) {
+        this.currentTime.set(this.engine.seek(options.restorePosition));
+      }
+      this.setStatus(autoplay ? 'playing' : 'paused');
+    });
+  }
+
+  private fallbackFromSpotify(track: PlayableTrack, token: number): void {
+    if (token !== this.playbackToken || this.currentTrack()?.id !== track.id || this.audioMode() !== 'spotify') return;
+    this.failPlayback(track, token, 'unavailable');
   }
 
   private startPreview(
@@ -541,7 +548,7 @@ export class MusicPlayerService {
     token?: number,
   ) {
     if (token != null && token !== this.playbackToken) return;
-    if (isGenericDemoAudioUrl(previewUrl)) {
+    if (isGenericToneAudioUrl(previewUrl)) {
       this.failPlayback(track, token, 'unavailable');
       return;
     }
@@ -571,7 +578,6 @@ export class MusicPlayerService {
     if (token != null && token !== this.playbackToken) return;
     this.audioMode.set('stream');
     this.resolvePhase.set(autoplay ? 'playing' : 'ready');
-    this.engine.markLoaded(track.id, false);
     this.engine.startDemo(streamUrl, track.id, autoplay).then((ok) => {
       if (token != null && token !== this.playbackToken) return;
       if (!ok && autoplay) {
@@ -585,8 +591,8 @@ export class MusicPlayerService {
     });
   }
 
-  private handleAudioFailure(track: PlayableTrack, source: 'youtube' | 'stream' | 'preview') {
-    if (source === 'youtube' || source === 'stream') {
+  private handleAudioFailure(track: PlayableTrack, source: 'spotify' | 'stream' | 'preview') {
+    if (source === 'spotify') {
       const token = this.playbackToken;
       this.resolvePhase.set('resolving');
       this.audioResolver.recoverFromPlaybackError(track, source, {
@@ -595,15 +601,9 @@ export class MusicPlayerService {
           this.setStatus('loading');
           this.resolvePhase.set('resolving');
         },
-        onYoutube: (videoId) => {
-          const latest = this.currentTrack();
-          const withId = { ...(latest && latest.id === track.id ? latest : track), youtubeVideoId: videoId };
-          if (token === this.playbackToken) this.currentTrack.set(withId);
-          this.startYt(withId, videoId, true, {}, token);
-        },
         onStream: (url) => this.startStream(track, url, true, {}, token),
         onPreview: (url) => this.startPreview(track, url, true, {}, token),
-        onNotFound: () => this.failPlayback(track, token, 'unavailable'),
+        onNotFound: (reason) => this.failPlayback(track, token, 'unavailable', reason),
         onTrackUpdated: (updated) => {
           if (token === this.playbackToken) this.currentTrack.set(updated);
         },
@@ -613,20 +613,101 @@ export class MusicPlayerService {
     this.failPlayback(track, this.playbackToken, 'failed');
   }
 
-  private failPlayback(_track: PlayableTrack, token?: number, phase: AudioResolvePhase = 'unavailable') {
+  private failPlayback(
+    track: PlayableTrack,
+    token?: number,
+    phase: AudioResolvePhase = 'unavailable',
+    reason = 'source_unavailable',
+  ) {
     if (token != null && token !== this.playbackToken) return;
+
+    this.unavailableTrackIds.add(track.id);
     this.history.completeCurrent(this.currentTime() || undefined);
+    this.engine.stopAll();
     this.audioMode.set('loading');
     this.resolvePhase.set(phase);
-    this.playbackError.set(RESOLVE_FRIENDLY_ERROR);
-    this.setStatus('error');
-    if (this.queue().length > 1 || this.autoplay()) {
-      window.setTimeout(() => {
-        if (this.status() === 'error' && (token == null || token === this.playbackToken)) {
-          this.next();
-        }
-      }, 1200);
+    // A missing source is a recoverable navigation event, never a blocking
+    // player error. The queue path immediately loads the next item below.
+    this.playbackError.set(null);
+
+    const currentIndex = this.queueState.findIndex(track.id);
+    const queueContext = this.queuePlaybackActive;
+    const hasUpcoming =
+      currentIndex >= 0 && currentIndex < this.queueState.items.length - 1;
+
+    console.info('[MusicPlayer] skipped unavailable track', {
+      trackId: track.id,
+      title: track.title,
+      artist: track.artist,
+      reason,
+      queue: queueContext,
+    });
+
+    if (hasUpcoming) {
+      this.queueState.removeAt(currentIndex);
+      this.syncQueueSignal();
+      this.schedulePersist();
+      const nextTrack = this.queueState.current;
+      if (nextTrack) {
+        this.queueExhausted.set(false);
+        this.loadTrack(nextTrack, true, { skipHistory: true });
+        return;
+      }
     }
+
+    // Autoplay may still provide a fresh candidate after the finite queue is
+    // exhausted. Failed ids are filtered out so an empty catalog cannot loop.
+    if (this.autoplay() && queueContext && currentIndex >= 0) {
+      this.queueState.removeAt(currentIndex);
+      this.syncQueueSignal();
+      this.schedulePersist();
+      this.continueWithAutoplay(true);
+      return;
+    }
+
+    if (queueContext) {
+      this.showQueueExhausted();
+      return;
+    }
+
+    // One-off search: preserve the selected cover and show only a short toast.
+    this.setStatus('paused');
+    this.currentTime.set(0);
+    this.showSkipNotice('Canción no disponible');
+  }
+
+  private showSkipNotice(message: string): void {
+    if (this.skipNoticeTimer !== null) clearTimeout(this.skipNoticeTimer);
+    this.skipNotice.set(message);
+    this.skipNoticeTimer = setTimeout(() => {
+      this.skipNoticeTimer = null;
+      this.skipNotice.set(null);
+    }, 2800);
+  }
+
+  private clearSkipNotice(): void {
+    if (this.skipNoticeTimer !== null) {
+      clearTimeout(this.skipNoticeTimer);
+      this.skipNoticeTimer = null;
+    }
+    this.skipNotice.set(null);
+  }
+
+  private showQueueExhausted(): void {
+    this.queueState.clear();
+    this.queuePlaybackActive = false;
+    this.syncQueueSignal();
+    this.currentTrack.set(null);
+    this.currentCover.set(null);
+    this.currentTime.set(0);
+    this.duration.set(0);
+    this.audioMode.set('loading');
+    this.resolvePhase.set('unavailable');
+    this.playbackError.set(null);
+    this.queueExhausted.set(true);
+    this.setStatus('paused');
+    this.showSkipNotice('No pudimos reproducir ninguna canción de esta cola');
+    this.schedulePersist();
   }
 
   private onEnded() {
@@ -673,8 +754,9 @@ export class MusicPlayerService {
     if (!this.autoplay()) return;
     if (this.queueState.upcomingCount() >= MusicPlayerService.AUTOPLAY_MIN_UPCOMING) return;
     this.fetchAutoplayCandidates().subscribe((tracks) => {
-      if (!tracks.length) return;
-      const added = this.queueState.appendUnique(tracks);
+      const candidates = this.filterUnavailable(tracks);
+      if (!candidates.length) return;
+      const added = this.queueState.appendUnique(candidates);
       if (added.length) {
         this.syncQueueSignal();
         this.schedulePersist();
@@ -682,20 +764,25 @@ export class MusicPlayerService {
     });
   }
 
-  private continueWithAutoplay() {
+  private continueWithAutoplay(afterUnavailable = false) {
     this.autoplayLoading.set(true);
     this.fetchAutoplayCandidates().subscribe({
       next: (tracks) => {
-        const added = this.queueState.appendUnique(tracks);
+        const added = this.queueState.appendUnique(this.filterUnavailable(tracks));
         if (added.length) {
           this.syncQueueSignal();
           this.schedulePersist();
         }
-        this.advanceWrapping();
+        if (added.length || !afterUnavailable) this.advanceWrapping();
+        else this.showQueueExhausted();
       },
-      error: () => this.advanceWrapping(),
+      error: () => (afterUnavailable ? this.showQueueExhausted() : this.advanceWrapping()),
       complete: () => this.autoplayLoading.set(false),
     });
+  }
+
+  private filterUnavailable(tracks: PlayableTrack[]): PlayableTrack[] {
+    return tracks.filter((track) => !this.unavailableTrackIds.has(track.id));
   }
 
   private advanceWrapping() {
@@ -712,7 +799,16 @@ export class MusicPlayerService {
     if (this.autoplayFetch$) return this.autoplayFetch$;
     const size = MusicPlayerService.AUTOPLAY_FETCH_SIZE;
     const page = this.autoplayPage;
-    this.autoplayFetch$ = this.tracksSvc.listTracks(page, size).pipe(
+    // Autoplay should prefer already verified sources. Catalog pages themselves
+    // request the complete Spotify-backed dataset and resolve Deezer on demand.
+    this.autoplayFetch$ = this.tracksSvc.listTracks(
+      page,
+      size,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    ).pipe(
       map((res) => {
         const total = res?.total ?? 0;
         const totalPages = Math.max(1, Math.ceil(total / size));
@@ -743,23 +839,29 @@ export class MusicPlayerService {
     this.restoredSession = true;
     if (session.queue.length) {
       this.queueState.restoreQueue(session.queue, session.queueIndex, session.playbackHistory ?? []);
+      this.queuePlaybackActive = session.queue.length > 1;
     } else {
       this.queueState.setSingle(session.track);
+      this.queuePlaybackActive = false;
     }
     this.syncQueueSignal();
 
-    this.currentTrack.set(session.track);
+    const restoredTrack = session.track;
+    this.currentTrack.set(restoredTrack);
+    this.currentCover.set(null);
+    this.coverSvc.cover$(restoredTrack.id).subscribe((url) => {
+      if (this.currentTrack()?.id === restoredTrack.id && url) this.currentCover.set(url);
+    });
     this.currentTime.set(session.currentTime ?? 0);
     this.duration.set(session.track.durationMs ? session.track.durationMs / 1000 : 0);
     this.pendingRestoreTime = session.currentTime ?? 0;
     this.setStatus('paused');
 
-    if (session.track.youtubeVideoId) {
-      this.audioMode.set('youtube');
+    if (session.track.spotifyUri) {
+      this.audioMode.set('spotify');
       this.resolvePhase.set('ready');
-      this.engine.startYoutube(session.track.youtubeVideoId, false);
-      this.engine.markLoaded(session.track.id, true);
-    } else if (session.track.audioUrl && !isGenericDemoAudioUrl(session.track.audioUrl)) {
+      this.engine.markSpotifyLoaded(session.track.id);
+    } else if (session.track.audioUrl && !isGenericToneAudioUrl(session.track.audioUrl)) {
       this.audioMode.set('stream');
       this.resolvePhase.set('ready');
       this.engine.primeDemo(session.track.audioUrl);

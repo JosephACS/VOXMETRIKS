@@ -15,7 +15,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--vx-accent, var(--accent, #1ed896));
+  color: var(--vx-accent, var(--accent, #e8a33d));
 }
 
 .cat-title {
@@ -90,7 +90,7 @@
 
 .cat-search:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 55%, transparent);
+  border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 55%, transparent);
 }
 
 .cat-select {
@@ -121,7 +121,7 @@
 }
 
 .cat-actions a.primary {
-  background: var(--vx-accent, var(--accent, #1ed896));
+  background: var(--vx-accent, var(--accent, #e8a33d));
   color: var(--btn-on-accent, #0A1210);
   border-color: transparent;
 }
@@ -155,7 +155,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   text-decoration: none;
-  color: var(--vx-accent, var(--accent, #1ed896));
+  color: var(--vx-accent, var(--accent, #e8a33d));
 }
 
 .cat-list {
@@ -187,7 +187,7 @@
   overflow: hidden;
   flex-shrink: 0;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--vx-accent, #1ed896) 18%, #1a1a1a), #121212 70%);
+    linear-gradient(145deg, color-mix(in srgb, var(--vx-accent, #e8a33d) 18%, #1a1a1a), #121212 70%);
   display: grid;
   place-items: center;
   border: 1px solid var(--vx-border-subtle, rgba(255, 255, 255, 0.08));
@@ -240,8 +240,8 @@
 }
 
 .cat-badge--published {
-  background: color-mix(in srgb, var(--vx-accent, #1ed896) 16%, transparent);
-  color: var(--vx-accent, #1ed896);
+  background: color-mix(in srgb, var(--vx-accent, #e8a33d) 16%, transparent);
+  color: var(--vx-accent, #e8a33d);
 }
 
 .cat-badge--review {
@@ -267,7 +267,7 @@
 .cat-artist-initial {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--vx-accent, #1ed896);
+  color: var(--vx-accent, #e8a33d);
 }
 
 @media (max-width: 640px) {

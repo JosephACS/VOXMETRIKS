@@ -56,7 +56,6 @@ export const ARTIST_GENRE_CATALOG: readonly CatalogOption[] = [
 export const ARTIST_IDENTIFIER_SYSTEMS: readonly CatalogOption[] = [
   { value: 'spotify', label: 'Spotify' },
   { value: 'apple_music', label: 'Apple Music' },
-  { value: 'youtube', label: 'YouTube' },
   { value: 'deezer', label: 'Deezer' },
   { value: 'audius', label: 'Audius' },
   { value: 'isni', label: 'ISNI' },

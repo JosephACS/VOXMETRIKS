@@ -24,8 +24,8 @@
 }
 .pl-tab:hover { color: var(--text); }
 .pl-tab--active {
-  background: rgba(30, 216, 150, 0.16);
-  color: #1ed896;
+  background: rgba(232, 163, 61, 0.16);
+  color: #e8a33d;
 }
 .pl-catalog-toolbar {
   display: flex;
@@ -190,7 +190,7 @@
 .hero-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 0% 100%, rgba(124,58,237,0.15), transparent);
+  background: radial-gradient(ellipse 60% 80% at 0% 100%, rgba(232,163,61,0.15), transparent);
   pointer-events: none;
 }
 
@@ -224,7 +224,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #1ed896, #148f5e);
+  background: linear-gradient(135deg, #e8a33d, #f0b555);
   border: none;
   border-radius: 2rem;
   color: #fff;
@@ -283,8 +283,8 @@
 }
 
 .pl-suggestion:hover {
-  border-color: rgba(30, 216, 150, 0.45);
-  background: rgba(30, 216, 150, 0.05);
+  border-color: rgba(232, 163, 61, 0.45);
+  background: rgba(232, 163, 61, 0.05);
   transform: translateY(-1px);
 }
 
@@ -300,8 +300,8 @@
   font-weight: 400;
   line-height: 1;
   color: var(--accent);
-  background: rgba(30, 216, 150, 0.1);
-  border: 1px solid rgba(30, 216, 150, 0.25);
+  background: rgba(232, 163, 61, 0.1);
+  border: 1px solid rgba(232, 163, 61, 0.25);
 }
 
 .pl-suggestion-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
@@ -370,7 +370,7 @@
   padding: 0.55rem 1.25rem;
   border: none;
   border-radius: 999px;
-  background: #1ed896;
+  background: #e8a33d;
   color: #000;
   font-weight: 700;
   font-size: 0.875rem;
@@ -420,5 +420,5 @@ html[data-theme='light'] .tracks-section {
 }
 
 .pl-card:hover {
-  border-color: color-mix(in srgb, var(--accent, #1ed896) 28%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #e8a33d) 28%, transparent);
 }

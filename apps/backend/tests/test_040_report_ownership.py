@@ -83,6 +83,7 @@ def test_listener_cannot_list_enterprise_catalog(client: TestClient):
     app.dependency_overrides[require_staff_identity] = _deny
     try:
         resp = client.get("/api/v1/reports/simple/catalog")
-        assert resp.status_code == 403
+        # Authentication is evaluated before the staff-role dependency.
+        assert resp.status_code == 401
     finally:
         app.dependency_overrides.clear()

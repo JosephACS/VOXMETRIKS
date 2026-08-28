@@ -24,7 +24,7 @@ import { environment } from '../../../environments/environment';
 /** Minimum length accepted by the backend password policy. */
 const MIN_PASSWORD_LENGTH = 8;
 
-/** Shipped demo/seed credentials — refuse them for new or reset passwords. */
+/** Common/weak passwords — refuse them for new or reset passwords. */
 const FORBIDDEN_PASSWORDS = new Set(['demo123', 'admin123', 'password', '12345678']);
 
 function notCommonPassword(control: AbstractControl): ValidationErrors | null {

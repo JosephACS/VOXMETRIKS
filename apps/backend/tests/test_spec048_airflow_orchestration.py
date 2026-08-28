@@ -62,8 +62,11 @@ def _isolated_env(tmp_path: Path) -> dict:
     env["PYTHONPATH"] = os.pathsep.join(
         [str(ROOT), str(ROOT / "analytics"), env.get("PYTHONPATH", "")]
     )
-    env.pop("POCKETBASE_EMAIL", None)
-    env.pop("POCKETBASE_PASSWORD", None)
+    # Keep explicit empty values so dotenv cannot repopulate credentials from
+    # the checkout's .env inside the subprocess. The stage must be isolated
+    # from a developer's live PocketBase session.
+    env["POCKETBASE_EMAIL"] = ""
+    env["POCKETBASE_PASSWORD"] = ""
     return env
 
 

@@ -240,6 +240,27 @@ def get_provider(code: str) -> PaymentProvider:
     raise ValueError(f"Unknown payment provider code={code!r}")
 
 
+def require_configured_payment_provider() -> str:
+    """Return configured PAYMENT_PROVIDER; reject academic_mock in production.
+
+    Raises ``ValueError`` with a clear message when production forbids mock.
+    Callers should map that to their domain ValidationError / CheckoutError.
+    """
+    cfg = get_settings()
+    code = cfg.resolved_payment_provider
+    if cfg.is_production and code == "academic_mock":
+        raise ValueError(
+            "PAYMENT_PROVIDER=academic_mock is forbidden in production; "
+            "use manual_transfer (real card gateways are not configured)."
+        )
+    return code
+
+
+def configured_payment_is_simulated() -> bool:
+    """True when settings select the academic mock (never invent Stripe)."""
+    return get_settings().payment_is_simulated
+
+
 def event_payload_dict(event: SimulatedProviderEvent) -> dict[str, Any]:
     return {
         "provider_event_id": event.provider_event_id,

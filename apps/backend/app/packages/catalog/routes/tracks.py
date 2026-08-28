@@ -56,7 +56,7 @@ def list_tracks(
     cursor:         Optional[str]  = Query(None, description="Keyset cursor from prior response"),
     use_cursor:     bool           = Query(False, description="Use cursor pagination instead of OFFSET"),
     include_total:  bool           = Query(False, description="Include total count on first cursor page"),
-    playable_only:  bool           = Query(True, description="Consumer default: only tracks with usable audio"),
+    playable_only:  bool           = Query(False, description="Filter to tracks with an already verified audio source"),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     if use_cursor or cursor is not None:
@@ -90,7 +90,7 @@ def search_tracks_route(
     limit: int = Query(20, ge=1, le=100),
     cursor: Optional[str] = Query(None),
     use_cursor: bool = Query(False),
-    playable_only: bool = Query(True, description="Consumer default: only playable tracks"),
+    playable_only: bool = Query(False, description="Filter to tracks with an already verified audio source"),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     try:
@@ -115,19 +115,26 @@ def search_tracks_route(
     return PaginatedResponse(total=total, page=page, limit=limit, items=items)
 
 
-@router.get("/music-search", summary="Unified local + YouTube music search")
+@router.get("/music-search", summary="Spotify-backed catalog search")
 def music_search_route(
     q: str = Query(..., min_length=2, max_length=120),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=50),
     allow_external: bool = Query(True),
+    include_related: bool = Query(False),
     user_id: int = Depends(require_user_id),
     conn: duckdb.DuckDBPyConnection = Depends(get_conn),
 ):
     from app.packages.catalog.services.music_search_service import music_search
 
     return music_search(
-        conn, q, page=page, limit=limit, allow_external=allow_external, user_id=user_id
+        conn,
+        q,
+        page=page,
+        limit=limit,
+        allow_external=allow_external,
+        include_related=include_related,
+        user_id=user_id,
     )
 
 
@@ -345,7 +352,7 @@ def track_audio_source_failure(
 @router.get(
     "/{track_id}/cover",
     response_model=CoverArt,
-    summary="Resolve real cover-art image (iTunes) for a track",
+    summary="Resolve source-bound cover art for a track",
 )
 def track_cover(
     track_id: int,

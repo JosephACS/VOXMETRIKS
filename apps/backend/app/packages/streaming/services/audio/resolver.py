@@ -1,4 +1,9 @@
-"""Central multi-provider audio resolver."""
+"""Central Deezer preview resolver for the consumer catalog.
+
+Spotify full-track playback is intentionally handled in the browser through
+the Web Playback SDK. The backend only resolves the no-auth Deezer preview
+fallback (and local published audio).
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,6 @@ from typing import List, Optional, Sequence
 
 import duckdb
 
-from .audius_provider import AudiusProvider
 from .base import AudioProvider
 from .cache import (
     STATUS_ERROR,
@@ -18,15 +22,14 @@ from .cache import (
     read_cache,
     write_cache,
 )
+from .deezer_provider import DeezerProvider
 from .logging_util import log_resolution
 from .models import ResolutionLog, ResolvedSource, TrackContext
-from .youtube_provider import YouTubeProvider
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_CHAIN: List[AudioProvider] = [
-    YouTubeProvider(),
-    AudiusProvider(),
+    DeezerProvider(),
 ]
 
 
@@ -64,7 +67,7 @@ def build_track_context(
 
 
 class AudioResolver:
-    """Resolve playable audio via ordered provider fallback + cache."""
+    """Resolve playable audio through Deezer preview, with cache."""
 
     def __init__(self, providers: Optional[Sequence[AudioProvider]] = None) -> None:
         self._providers = list(providers or _DEFAULT_CHAIN)
@@ -100,9 +103,13 @@ class AudioResolver:
                     )
                 )
                 return self._from_cache(cached)
-            if cached and is_cache_usable(cached):
+            if (
+                cached
+                and self._can_reuse_cached_provider(cached.get("provider"))
+                and is_cache_usable(cached)
+            ):
                 # Cached source is among excluded refs — must re-resolve.
-                cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
+                cached_ref = cached.get("source_ref")
                 if excludes and cached_ref in excludes:
                     pass
                 else:
@@ -127,8 +134,7 @@ class AudioResolver:
             existing = read_cache(conn, track_id)
             if existing and existing.get("provider") == "local_published":
                 return self._from_cache(existing)
-            # Never poison a playable cache with a negative/partial result
-            # (e.g. skip_provider=youtube → Audius not_found must not wipe YouTube ok).
+            # Never poison a playable cache with an ambiguous provider failure.
             if (
                 result.status != STATUS_OK
                 and existing
@@ -150,6 +156,7 @@ class AudioResolver:
     ) -> Optional[ResolvedSource]:
         """Resolve without holding the DB lock across provider network I/O."""
         from app.core.database import get_connection
+
         from .cache import migrate_audio_source_columns
 
         conn = get_connection()
@@ -160,8 +167,14 @@ class AudioResolver:
             return None
         if not force:
             cached = read_cache(conn, track_id)
-            if cached and is_cache_usable(cached):
-                cached_ref = cached.get("youtube_video_id") or cached.get("source_ref")
+            if cached and cached.get("provider") == "local_published":
+                return self._from_cache(cached)
+            if (
+                cached
+                and self._can_reuse_cached_provider(cached.get("provider"))
+                and is_cache_usable(cached)
+            ):
+                cached_ref = cached.get("source_ref")
                 if not (excludes and cached_ref in excludes):
                     return self._from_cache(cached)
 
@@ -193,10 +206,12 @@ class AudioResolver:
         skip = {skip_provider} if skip_provider else set()
         last_not_found: Optional[ResolvedSource] = None
         track_id = ctx.track_id
+        providers_tried: list[str] = []
 
         for provider in self._providers:
             if provider.name in skip:
                 continue
+            providers_tried.append(provider.name)
             try:
                 result = provider.resolve(ctx)
             except Exception as exc:
@@ -233,8 +248,22 @@ class AudioResolver:
             last_not_found = result
 
         if last_not_found:
+            logger.info(
+                "audio_source_unavailable track_id=%s title=%r artist=%r providers=%s",
+                ctx.track_id,
+                ctx.track_name,
+                ctx.artist_name,
+                ",".join(providers_tried),
+            )
             return last_not_found
 
+        logger.info(
+            "audio_source_unavailable track_id=%s title=%r artist=%r providers=%s",
+            ctx.track_id,
+            ctx.track_name,
+            ctx.artist_name,
+            ",".join(providers_tried),
+        )
         return ResolvedSource(
             track_id=track_id,
             provider=self._providers[-1].name if self._providers else "none",
@@ -254,6 +283,17 @@ class AudioResolver:
             query=cached.get("query"),
             confidence_score=cached.get("confidence_score"),
         )
+
+    def _can_reuse_cached_provider(self, provider: Optional[str]) -> bool:
+        """Only reuse sources that belong to the active provider chain.
+
+        Older builds could have cached external sources. They remain valid for
+        an explicit/custom resolver, but the default chain only reuses Deezer
+        previews or providers explicitly supplied by the caller.
+        """
+        if provider == "deezer":
+            return True
+        return bool(provider and any(item.name == provider for item in self._providers))
 
 
 _default_resolver = AudioResolver()

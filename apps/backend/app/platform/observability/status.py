@@ -62,8 +62,8 @@ class PlatformStatusService:
         settings = get_settings()
         return {
             "status": "ok",
-            "youtube_configured": bool(settings.youtube_api_key.strip()),
-            "providers": ["youtube", "audius", "demo"],
+            "spotify_configured": bool(getattr(settings, "spotify_client_id", "").strip()),
+            "providers": ["spotify", "deezer"],
             "cache_domain": "audio_resolver",
         }
 

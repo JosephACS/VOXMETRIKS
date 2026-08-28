@@ -1,31 +1,52 @@
-<div class="app-shell" data-testid="app-shell"
-  [class.sidebar-open]="sidebarOpen()"
-  [class.sidebar-collapsed]="sidebarCollapsed()">
+<div class="app-shell" data-testid="app-shell" [class.sidebar-open]="sidebarOpen()">
 
-  <aside class="sidebar" [class.open]="sidebarOpen()">
+  <nav class="experience-rail" aria-label="Áreas principales de VOXMETRIKS">
+    <a class="experience-rail__brand" [routerLink]="brandHomePath()" aria-label="Inicio de VOXMETRIKS">
+      <img src="/assets/brand/voxmetriks-mark.svg?v=mono4" width="38" height="38" alt="" />
+    </a>
+
+    <button type="button" class="experience-rail__item experience-rail__menu"
+      (click)="toggleAppNavigation()" [class.active]="sidebarOpen()" aria-label="Abrir todos los módulos">
+      <span class="experience-rail__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+      </span>
+      <span>Menú</span>
+    </button>
+
+    <div class="experience-rail__primary">
+      <a class="experience-rail__item" [routerLink]="brandHomePath()" [class.active]="isExperienceAreaActive('home')">
+        <span class="experience-rail__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>
+        <span>Inicio</span>
+      </a>
+      <a class="experience-rail__item" routerLink="/search" [class.active]="isExperienceAreaActive('search')">
+        <span class="experience-rail__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
+        <span>Buscar</span>
+      </a>
+      <a class="experience-rail__item" routerLink="/tracks" [class.active]="isExperienceAreaActive('music')">
+        <span class="experience-rail__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path class="rail-wave" d="M3 13h2l2-6 3 11 3-14 3 11 2-5h3"/></svg></span>
+        <span>Música</span>
+      </a>
+      <a class="experience-rail__item" [routerLink]="businessHomePath()" [class.active]="isExperienceAreaActive('business')">
+        <span class="experience-rail__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V7l8-4 8 4v14"/><path d="M8 11h2m4 0h2M8 15h2m4 0h2M9 21v-3h6v3"/></svg></span>
+        <span>Empresa</span>
+      </a>
+    </div>
+
+    <a class="experience-rail__item experience-rail__account" routerLink="/users" [class.active]="isExperienceAreaActive('account')">
+      <span class="experience-rail__avatar" [style.background]="avatarGradient()">{{ userInitial() }}</span>
+      <span>Cuenta</span>
+    </a>
+  </nav>
+
+  <aside class="sidebar module-drawer" [class.open]="sidebarOpen()" aria-label="Navegación por módulos">
     <div class="sidebar-brand">
       <div class="brand-logo" title="VOXMETRIKS">
-        <img src="/assets/images/voxmetrik-icon.webp" width="28" height="28" alt="VOXMETRIKS" class="brand-favicon" />
+        <img src="/assets/brand/voxmetriks-mark.svg?v=mono4" width="32" height="32" alt="VOXMETRIKS" class="brand-favicon" />
       </div>
       <div class="brand-text">
-        <span class="brand-name">VOXMETRIKS</span>
-        <span class="brand-version">v2.0</span>
+        <span class="brand-version">CENTRO DE NAVEGACIÓN</span>
+        <span class="brand-name">Explora Voxmetriks</span>
       </div>
-      <button
-        type="button"
-        class="sidebar-collapse-btn"
-        (click)="toggleSidebarCollapse()"
-        [attr.aria-label]="sidebarCollapsed() ? ('shell.expandMenu' | t) : ('shell.collapseMenu' | t)"
-        [title]="sidebarCollapsed() ? ('shell.expandMenu' | t) : ('shell.collapseMenu' | t)"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          @if (sidebarCollapsed()) {
-            <polyline points="9 18 15 12 9 6"/>
-          } @else {
-            <polyline points="15 18 9 12 15 6"/>
-          }
-        </svg>
-      </button>
       <button type="button" class="sidebar-close-btn" (click)="closeSidebar()" [attr.aria-label]="'shell.closeMenu' | t">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -34,49 +55,80 @@
       </button>
     </div>
 
+      <label class="sidebar-search">
+        <span class="sidebar-search__icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </span>
+        <input
+          type="search"
+          [value]="navQuery()"
+          (input)="onNavSearch($any($event.target).value)"
+          placeholder="Buscar una sección"
+          aria-label="Buscar una sección del menú"
+        />
+        @if (navQuery()) {
+          <button type="button" (click)="onNavSearch('')" aria-label="Limpiar búsqueda">×</button>
+        }
+      </label>
+
     <nav class="sidebar-nav" data-testid="app-sidebar-nav">
-      @for (group of visibleNavGroups(); track group.id) {
-        <div class="nav-group" [class.is-open]="isNavGroupOpen(group.id)">
-          <button
-            type="button"
-            class="nav-group-toggle"
-            (click)="toggleNavGroup(group.id, $event)"
-            [attr.aria-expanded]="isNavGroupOpen(group.id)"
-            [title]="group.title"
-          >
-            <span class="nav-group-title">{{ group.title }}</span>
-            <span class="nav-group-chevron" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </span>
-          </button>
-          @if (isNavGroupOpen(group.id) || sidebarCollapsed()) {
-            <div class="nav-group-body">
-              @for (section of group.sections; track section.id) {
-                <div class="nav-section">
-                  @for (item of section.items; track item.path + ':' + item.label) {
-                    <a
-                      class="nav-item"
-                      [routerLink]="item.path"
-                      routerLinkActive="active"
-                      [routerLinkActiveOptions]="{ exact: item.exact }"
-                      [title]="item.label"
-                      [attr.aria-label]="item.label"
-                      (click)="closeSidebar()"
-                    >
-                      <span class="nav-icon" [innerHTML]="safeSvg(item.icon)"></span>
-                      <span class="nav-label">{{ item.label }}</span>
-                      <span class="nav-indicator"></span>
-                    </a>
-                  }
-                </div>
-              }
-            </div>
+        @for (group of displayedNavGroups(); track group.id) {
+          <div class="nav-group" [class.is-open]="isNavGroupOpen(group.id)">
+            <button type="button" class="nav-group-toggle" (click)="toggleNavGroup(group.id, $event)"
+              [attr.aria-expanded]="isNavGroupOpen(group.id)" [title]="group.title">
+              <span class="nav-group-title">{{ group.title }}</span>
+              <span class="nav-group-chevron" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </button>
+            @if (isNavGroupOpen(group.id)) {
+              <div class="nav-group-body">
+                @for (section of group.sections; track section.id) {
+                  <div class="nav-section">
+                    @for (item of section.items; track item.path + ':' + item.label) {
+                      <a class="nav-item" [routerLink]="item.path" routerLinkActive="active"
+                        [routerLinkActiveOptions]="{ exact: item.exact }" [title]="item.label"
+                        [attr.aria-label]="item.label" (click)="closeSidebar()">
+                        <span class="nav-icon" [innerHTML]="safeSvg(item.icon)"></span>
+                        <span class="nav-label">{{ item.label }}</span>
+                        <span class="nav-indicator"></span>
+                      </a>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @empty {
+          <p class="sidebar-search-empty">No encontramos esa sección.</p>
+        }
+    </nav>
+
+    @if (!navQuery() && recentHistory().length) {
+      <section class="sidebar-continue" aria-label="Continuar escuchando">
+        <div class="sidebar-continue__head">
+          <span>Continuar escuchando</span>
+          <a routerLink="/history" (click)="closeSidebar()">Ver todo</a>
+        </div>
+        <div class="sidebar-continue__list">
+          @for (item of recentHistory().slice(0, 3); track item.id_track) {
+            <a class="sidebar-continue__card" [routerLink]="['/tracks', item.id_track]" (click)="closeSidebar()">
+              <span class="sidebar-continue__cover" [style.background]="historyCover(item.id_track)">
+                @if (recentCoverUrls()[item.id_track]; as coverUrl) {
+                  <img [src]="coverUrl" [alt]="item.nombre_track" />
+                } @else {
+                  {{ historyInitial(item.nombre_track) }}
+                }
+              </span>
+              <span class="sidebar-continue__copy">
+                <strong>{{ item.nombre_track }}</strong>
+                <small>{{ item.nombre_artista || 'Artista desconocido' }}</small>
+              </span>
+            </a>
           }
         </div>
-      }
-    </nav>
+      </section>
+    }
   </aside>
 
   @if (sidebarOpen()) {
@@ -85,13 +137,40 @@
 
   <div class="main-content">
     <header class="topbar">
-      <button type="button" class="menu-btn" (click)="toggleSidebar()" [attr.aria-label]="'shell.openMenu' | t">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
+      <a class="topbar-brand" [routerLink]="brandHomePath()" aria-label="Ir al inicio de VOXMETRIKS">
+        <img src="/assets/brand/voxmetriks-mark.svg?v=mono4" width="32" height="32" alt="" />
+        <span>
+          <strong>VOXMETRIKS</strong>
+          <small>MUSIC INTELLIGENCE</small>
+        </span>
+      </a>
+
+      <button type="button" class="menu-btn" (click)="toggleAppNavigation()" [attr.aria-label]="'shell.openMenu' | t">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>
+          <rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
         </svg>
+        <span>Menú</span>
       </button>
+
+      <div class="topbar-context" aria-live="polite">
+        <span class="topbar-context__signal" aria-hidden="true"></span>
+        <span class="topbar-context__copy">
+          <span class="topbar-context__eyebrow">{{ activeSpaceLabel() }}</span>
+          <strong>{{ activeModuleLabel() }}</strong>
+        </span>
+      </div>
+
+      @if (quickAccessItems().length) {
+        <nav class="topbar-shortcuts" aria-label="Accesos directos">
+          @for (item of quickAccessItems(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.exact }">
+              <span [innerHTML]="safeSvg(item.icon)"></span>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+        </nav>
+      }
 
       <div class="topbar-profile">
         @if (showSpaceSelector()) {
@@ -105,7 +184,7 @@
           data-testid="theme-toggle-btn"
           [attr.aria-label]="themeToggleAria()"
           [attr.title]="themeToggleAria()"
-          (click)="toggleTheme()"
+        (click)="toggleTheme()"
         >
           @if (isDarkTheme()) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -136,6 +215,21 @@
                   <span class="ud-plan">{{ userPlan() }}</span>
                 </span>
               </div>
+              <a
+                routerLink="/account/plans"
+                class="ud-item ud-item--commerce"
+                data-testid="account-plan-payments-link"
+                (click)="userMenuOpen.set(false)"
+              >
+                <span class="ud-commerce-icon" aria-hidden="true">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/></svg>
+                </span>
+                <span class="ud-item-copy">
+                  <strong>{{ 'personal.accountHub.menuTitle' | t:lang() }}</strong>
+                  <small>{{ 'personal.accountHub.menuHint' | t:lang() }}</small>
+                </span>
+                <svg class="ud-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
               <a routerLink="/users" class="ud-item" (click)="userMenuOpen.set(false)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 {{ 'shell.myProfile' | t:lang() }}

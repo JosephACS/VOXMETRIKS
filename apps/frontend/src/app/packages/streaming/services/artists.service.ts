@@ -1,16 +1,26 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, defer, from, map, of } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { SpotifyIntegrationService } from '../../../core/integrations/spotify/spotify-integration.service';
 import {
   Artista, ArtistaCreate, ArtistaUpdate,
   ArtistCoverArt, ArtistStats, TopArtista, PaginatedResponse,
   ArtistSearchParams, DeleteResponse,
 } from '../../../shared/models/api.models';
 
+export interface ExternalArtistResult {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  source: 'spotify' | 'deezer';
+}
+
 @Injectable({ providedIn: 'root' })
 export class ArtistsService {
   private readonly http = inject(HttpClient);
+  private readonly spotify = inject(SpotifyIntegrationService);
   private readonly API_URL = `${environment.apiUrl}/catalog/artists`;
 
   listArtists(page = 1, limit = 50, search?: string): Observable<PaginatedResponse<Artista>> {
@@ -56,5 +66,31 @@ export class ArtistsService {
 
   deleteArtist(id: number): Observable<DeleteResponse> {
     return this.http.delete<DeleteResponse>(`${this.API_URL}/${id}`);
+  }
+
+  /** Local artists are always resolved by the caller first; this is the external fallback. */
+  searchExternal(name: string, limit = 6): Observable<ExternalArtistResult[]> {
+    const query = name.trim();
+    if (!query) return of([]);
+    return defer(() => from(this.spotify.searchArtists(query, limit))).pipe(
+      switchMap((spotifyArtists) =>
+        spotifyArtists.length
+          ? of(spotifyArtists)
+          : defer(() => fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(query)}&limit=${limit}`)).pipe(
+              switchMap((response) => response.ok ? from(response.json()) : of({ data: [] })),
+              map((payload: { data?: Array<{ id?: number; name?: string; picture_medium?: string }> }) =>
+                (payload.data ?? [])
+                  .filter((artist): artist is { id: number; name: string; picture_medium?: string } => !!artist.id && !!artist.name)
+                  .map((artist) => ({
+                    id: String(artist.id),
+                    name: artist.name,
+                    imageUrl: artist.picture_medium,
+                    source: 'deezer' as const,
+                  })),
+              ),
+            ),
+      ),
+      catchError(() => of([])),
+    );
   }
 }

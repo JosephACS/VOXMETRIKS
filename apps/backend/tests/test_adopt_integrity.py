@@ -223,6 +223,7 @@ def test_adopt_creates_new_when_no_compatible(
     assert row is not None and int(row[0]) == out["track_id"]
 
 
+@pytest.mark.skip(reason="legacy YouTube association repair retired")
 @patch("app.packages.catalog.services.music_search_service.YouTubeProvider")
 @patch("app.packages.catalog.services.music_search_service.get_settings")
 def test_repair_moves_mismatched_source(

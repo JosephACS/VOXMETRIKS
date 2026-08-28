@@ -1,19 +1,21 @@
 /**
  * Voxmetrik — Design Motion System
  * Tokens y utilidades reutilizables. Sin colores ni tipografía nuevos.
- * Inspiración: Spotify, Apple Music, Linear, Vercel, Raycast, Notion.
+ * Inspiración: Linear, Vercel, Raycast, Notion y patrones de Uiverse.io.
+ * Los patrones Uiverse se adaptaron al lenguaje visual propio de Voxmetriks;
+ * no se copian como componentes aislados. Fuente: https://uiverse.io/ (MIT).
  */
 
 :root {
   /* ── Duraciones ── */
   --motion-duration-instant: 0ms;
-  --motion-duration-fast: 150ms;
-  --motion-duration-normal: 180ms;
-  --motion-duration-slow: 320ms;
-  --motion-duration-slower: 400ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 170ms;
+  --motion-duration-slow: 230ms;
+  --motion-duration-slower: 300ms;
 
   /* ── Curvas de easing ── */
-  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0.82, 0.2, 1);
   --motion-ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
   --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -121,6 +123,46 @@
 @keyframes vm-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Uiverse-inspired: pulso de señal, destello de acción y entrada escalonada. */
+@keyframes vm-signal-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--vx-accent) 13%, transparent),
+      0 0 14px color-mix(in srgb, var(--vx-accent) 68%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px color-mix(in srgb, var(--vx-accent) 0%, transparent),
+      0 0 24px color-mix(in srgb, var(--vx-accent) 88%, transparent);
+  }
+}
+
+@keyframes vm-action-sheen {
+  from { transform: translateX(-150%) skewX(-18deg); }
+  to { transform: translateX(350%) skewX(-18deg); }
+}
+
+@keyframes vm-journey-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes vm-active-marker {
+  0%, 100% { transform: scaleY(0.72); opacity: 0.72; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes vm-theme-icon-arrive {
+  from { opacity: 0.35; transform: rotate(-16deg) scale(0.82); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
 }
 
 /* Barras-medidor: crecen de 0 → valor real al aparecer (scaleX = GPU-friendly,
@@ -400,6 +442,116 @@ app-kpi-card .kpi-value-num {
   animation: vm-reveal var(--motion-duration-normal) var(--motion-ease-standard) both;
 }
 
+/* ── Signal motion (adaptado de patrones de interacción Uiverse) ── */
+
+.topbar-context__signal {
+  animation: vm-signal-pulse 2.4s var(--motion-ease-in-out) infinite;
+}
+
+.brand-logo,
+app-brand-mark {
+  transition:
+    transform var(--motion-duration-normal) var(--motion-ease-standard),
+    filter var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+.brand-logo:hover,
+app-brand-mark:hover {
+  transform: translateY(-1px) rotate(-1deg);
+  filter: drop-shadow(0 7px 14px color-mix(in srgb, var(--vx-accent) 24%, transparent));
+}
+
+.nav-item.active .nav-indicator {
+  transform-origin: center;
+  animation: vm-active-marker 1.8s var(--motion-ease-in-out) infinite;
+}
+
+.theme-toggle-btn svg,
+.topbar-theme-btn svg {
+  animation: vm-theme-icon-arrive var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+/* Destello breve solo al interactuar: conserva legibilidad y no distrae en reposo. */
+.btn-primary,
+.submit-btn,
+.wp-cta--primary {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-primary::after,
+.submit-btn::after,
+.wp-cta--primary::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: -45% auto -45% -35%;
+  width: 28%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: translateX(-150%) skewX(-18deg);
+}
+
+.btn-primary:hover:not(:disabled)::after,
+.btn-primary:focus-visible:not(:disabled)::after,
+.submit-btn:hover:not(:disabled)::after,
+.submit-btn:focus-visible:not(:disabled)::after,
+.wp-cta--primary:hover::after,
+.wp-cta--primary:focus-visible::after {
+  animation: vm-action-sheen 620ms var(--motion-ease-standard) 1;
+}
+
+/* La ruta recomendada cuenta una secuencia, por eso entra paso a paso. */
+.wp-journey {
+  animation: vm-journey-arrive 420ms var(--motion-ease-standard) both;
+}
+
+.wp-journey__step {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  opacity: 0;
+  animation: vm-journey-arrive 420ms var(--motion-ease-standard) both;
+}
+
+.wp-journey__step:nth-child(1) { animation-delay: 80ms; }
+.wp-journey__step:nth-child(2) { animation-delay: 140ms; }
+.wp-journey__step:nth-child(3) { animation-delay: 200ms; }
+.wp-journey__step:nth-child(4) { animation-delay: 260ms; }
+
+.wp-journey__step::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(
+    circle at 12% 50%,
+    color-mix(in srgb, var(--vx-accent) 18%, transparent),
+    transparent 48%
+  );
+  transform: scale(0.76);
+  transition:
+    opacity var(--motion-duration-normal) var(--motion-ease-standard),
+    transform var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+.wp-journey__step:hover::before,
+.wp-journey__step:focus-visible::before {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+.wp-journey__step .wp-journey__arrow {
+  transition: transform var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+.wp-journey__step:hover .wp-journey__arrow,
+.wp-journey__step:focus-visible .wp-journey__arrow {
+  transform: translateX(4px);
+}
+
 /* Stagger en filas de tabla y tarjetas de grid */
 .table-widget tbody tr,
 .genre-cards-grid > *,
@@ -443,7 +595,16 @@ app-kpi-card .kpi-value-num {
   .modal-backdrop > .modal,
   .user-dropdown,
   .play-btn svg,
-  .np-ctrl.play svg {
+  .np-ctrl.play svg,
+  .topbar-context__signal,
+  .nav-item.active .nav-indicator,
+  .theme-toggle-btn svg,
+  .topbar-theme-btn svg,
+  .wp-journey,
+  .wp-journey__step,
+  .btn-primary::after,
+  .submit-btn::after,
+  .wp-cta--primary::after {
     animation: none !important;
   }
 
@@ -451,5 +612,16 @@ app-kpi-card .kpi-value-num {
   .card-hover:hover,
   app-kpi-card .kpi-card:hover {
     transform: none !important;
+  }
+
+  .brand-logo:hover,
+  app-brand-mark:hover,
+  .wp-journey__step:hover .wp-journey__arrow,
+  .wp-journey__step:focus-visible .wp-journey__arrow {
+    transform: none !important;
+  }
+
+  .wp-journey__step {
+    opacity: 1;
   }
 }

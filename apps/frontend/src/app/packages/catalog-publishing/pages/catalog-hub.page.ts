@@ -106,7 +106,7 @@ interface TrackPreview {
                         } @else {
                           <img
                             class="cat-cover__mark"
-                            src="/assets/images/voxmetrik-icon.webp"
+                            src="/assets/brand/voxmetriks-mark.svg"
                             alt=""
                           />
                         }
@@ -155,7 +155,7 @@ interface TrackPreview {
                         } @else {
                           <img
                             class="cat-cover__mark"
-                            src="/assets/images/voxmetrik-icon.webp"
+                            src="/assets/brand/voxmetriks-mark.svg"
                             alt=""
                           />
                         }
@@ -368,7 +368,7 @@ export class CatalogHubPage implements OnInit {
     if (parent && !parent.querySelector('.cat-cover__mark')) {
       const mark = document.createElement('img');
       mark.className = 'cat-cover__mark';
-      mark.src = '/assets/images/voxmetrik-icon.webp';
+      mark.src = '/assets/brand/voxmetriks-mark.svg';
       mark.alt = '';
       parent.appendChild(mark);
     }

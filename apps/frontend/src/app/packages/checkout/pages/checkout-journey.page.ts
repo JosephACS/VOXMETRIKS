@@ -69,10 +69,13 @@ function newIdempotencyKey(prefix: string): string {
       } @else if (fatalError()) {
         <app-enterprise-error-state [message]="fatalError()!" (retry)="bootstrap()" />
       } @else {
+        <div class="checkout-layout">
+          <div class="checkout-flow">
         @if (ui().disclosureSeen) {
-          <p class="alert alert--info" role="status" data-testid="checkout-simulated-notice">
-            {{ 'checkout.simulatedNotice' | t:lang() }}
-          </p>
+          <div class="checkout-notice" role="status" data-testid="checkout-simulated-notice">
+            <span class="checkout-notice__icon" aria-hidden="true">✓</span>
+            <span>{{ 'checkout.simulatedNotice' | t:lang() }}</span>
+          </div>
         }
 
         <nav class="checkout-steps" aria-label="Checkout steps">
@@ -92,17 +95,17 @@ function newIdempotencyKey(prefix: string): string {
 
         @switch (ui().step) {
           @case ('review') {
-            <section class="vx-card" data-testid="checkout-review">
+            <section class="vx-card checkout-card" data-testid="checkout-review">
               <h2>{{ 'checkout.review.heading' | t:lang() }}</h2>
               @if (ui().session; as s) {
                 <dl class="checkout-summary">
                   <div>
                     <dt>{{ 'checkout.review.plan' | t:lang() }}</dt>
-                    <dd>{{ s.plan_code || s.plan_id }}</dd>
+                    <dd>{{ planLabel(s.plan_code || s.plan_id) }}</dd>
                   </div>
                   <div>
                     <dt>{{ 'checkout.review.period' | t:lang() }}</dt>
-                    <dd>{{ s.billing_period }}</dd>
+                    <dd>{{ periodLabel(s.billing_period) }}</dd>
                   </div>
                   <div>
                     <dt>{{ 'checkout.review.amount' | t:lang() }}</dt>
@@ -123,7 +126,7 @@ function newIdempotencyKey(prefix: string): string {
             </section>
           }
           @case ('billing') {
-            <section class="vx-card">
+            <section class="vx-card checkout-card">
               <p class="muted">{{ 'checkout.billing.skipped' | t:lang() }}</p>
               <button type="button" class="btn btn--primary" (click)="dispatch({ type: 'GO_STEP', step: 'payment' })">
                 {{ 'checkout.continuePayment' | t:lang() }}
@@ -131,7 +134,7 @@ function newIdempotencyKey(prefix: string): string {
             </section>
           }
           @case ('payment') {
-            <section class="vx-card pay-panel" data-testid="checkout-payment">
+            <section class="vx-card checkout-card pay-panel" data-testid="checkout-payment">
               <h2>{{ 'checkout.payment.heading' | t:lang() }}</h2>
               @if (ui().attachedMethod; as m) {
                 <p class="muted">
@@ -139,6 +142,8 @@ function newIdempotencyKey(prefix: string): string {
                 </p>
               }
 
+              <div class="payment-grid">
+                <div class="payment-visual">
               <div class="brand-picker" role="radiogroup" [attr.aria-label]="'checkout.payment.brand' | t:lang()">
                 @for (b of brands; track b.id) {
                   <button
@@ -168,12 +173,12 @@ function newIdempotencyKey(prefix: string): string {
                 </div>
               </div>
 
-              <p class="pay-hint" data-testid="checkout-demo-hint">
-                {{ 'checkout.payment.demoHint' | t:lang() }}
-                <button type="button" class="pay-hint__fill" (click)="fillDemoCard()">
-                  {{ formatPanDisplay(demoPan(), cardBrand) }}
-                </button>
-              </p>
+              <button type="button" class="demo-fill" (click)="fillDemoCard()">
+                <span aria-hidden="true">✦</span>
+                {{ 'checkout.demo.autofill' | t:lang() }}
+              </button>
+              <p class="payment-hint">{{ 'checkout.demo.dataHint' | t:lang() }}</p>
+                </div>
 
               <form class="vx-form pay-form" (ngSubmit)="submitPayment()" novalidate>
                 <div class="form-field">
@@ -260,10 +265,11 @@ function newIdempotencyKey(prefix: string): string {
                   }
                 </div>
               </form>
+              </div>
             </section>
           }
           @case ('processing') {
-            <section class="vx-card" aria-busy="true">
+            <section class="vx-card checkout-card" aria-busy="true">
               <app-enterprise-loading-skeleton [rows]="2" />
               <p>{{ 'checkout.processingMessage' | t:lang() }}</p>
               <button type="button" class="btn btn--secondary" (click)="pollSession()">
@@ -272,7 +278,7 @@ function newIdempotencyKey(prefix: string): string {
             </section>
           }
           @case ('result') {
-            <section class="vx-card" data-testid="checkout-result">
+            <section class="vx-card checkout-card" data-testid="checkout-result">
               <h2>{{ resultTitle() }}</h2>
               <p>{{ resultBody() }}</p>
               @if (ui().session; as s) {
@@ -309,35 +315,133 @@ function newIdempotencyKey(prefix: string): string {
             </section>
           }
         }
+          </div>
+          <aside class="checkout-aside" aria-label="Información de la demostración">
+            <span class="checkout-aside__badge">{{ 'checkout.demo.badge' | t:lang() }}</span>
+            <div class="checkout-aside__mark" aria-hidden="true">V</div>
+            <h2>{{ 'checkout.demo.title' | t:lang() }}</h2>
+            <p>{{ 'checkout.demo.body' | t:lang() }}</p>
+            <ul>
+              <li>{{ 'checkout.demo.pointCharge' | t:lang() }}</li>
+              <li>{{ 'checkout.demo.pointData' | t:lang() }}</li>
+              <li>{{ 'checkout.demo.pointAccess' | t:lang() }}</li>
+            </ul>
+          </aside>
+        </div>
       }
     </div>
   `,
   styles: [
     `
-      .checkout-steps {
+      .checkout-journey-page {
+        width: 100%;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding-bottom: calc(2rem + 88px);
+      }
+      .checkout-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+        gap: 1rem;
+        align-items: start;
+      }
+      .checkout-flow {
+        min-width: 0;
+        display: grid;
+        gap: 1rem;
+      }
+      .checkout-notice {
         display: flex;
-        flex-wrap: wrap;
+        align-items: center;
         gap: 0.75rem;
-        margin-bottom: 1rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+        border-radius: 1rem;
+        color: var(--text);
+        background: color-mix(in srgb, var(--accent-dim) 70%, var(--spotify-card));
         font-size: 0.875rem;
+        line-height: 1.45;
+      }
+      .checkout-notice__icon {
+        display: grid;
+        place-items: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        color: var(--text-on-accent, #0c0b14);
+        background: var(--accent);
+        font-weight: 800;
+      }
+      .checkout-steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.45rem;
+        font-size: 0.75rem;
+      }
+      .checkout-steps span {
+        padding: 0.62rem 0.7rem;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        color: var(--spotify-muted);
+        background: var(--spotify-card);
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .checkout-steps .active {
-        font-weight: 600;
-        text-decoration: underline;
-        color: var(--accent, #0d9f70);
+        border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+        color: var(--text);
+        background: var(--accent-dim);
+        box-shadow: inset 0 -2px 0 var(--accent);
+        font-weight: 700;
+      }
+      .checkout-card {
+        padding: clamp(1.15rem, 2.5vw, 1.7rem);
+        border-radius: 1.25rem;
+        border: 1px solid var(--border);
+        background:
+          linear-gradient(150deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 45%),
+          var(--spotify-card);
+        box-shadow: var(--shadow-sm);
+      }
+      .checkout-card h2 {
+        margin: 0 0 1rem;
+        color: var(--text);
+        font-size: 1.2rem;
+        letter-spacing: -0.02em;
       }
       .checkout-summary {
         display: grid;
-        gap: 0.5rem;
-        margin: 1rem 0;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 1.1rem 0;
       }
       .checkout-summary div {
         display: flex;
-        gap: 0.75rem;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 0;
+        padding: 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.9rem;
+        background: color-mix(in srgb, var(--spotify-card) 72%, transparent);
       }
       .checkout-summary dt {
-        font-weight: 600;
-        min-width: 6rem;
+        color: var(--spotify-muted);
+        font-size: 0.67rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .checkout-summary dd {
+        margin: 0;
+        overflow: hidden;
+        color: var(--text);
+        font-size: 1rem;
+        font-weight: 700;
+        text-overflow: ellipsis;
       }
       .pay-panel h2 {
         margin-bottom: 0.85rem;
@@ -368,7 +472,7 @@ function newIdempotencyKey(prefix: string): string {
       }
       .brand-chip.active {
         border-color: var(--accent, #0d9f70);
-        background: var(--accent-dim, rgba(13, 159, 112, 0.12));
+        background: var(--accent-dim, rgba(232, 163, 61, 0.12));
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #0d9f70) 22%, transparent);
       }
       .brand-chip__mark {
@@ -388,10 +492,10 @@ function newIdempotencyKey(prefix: string): string {
         margin: 0 0 1rem;
         padding: 1.1rem 1.15rem 1rem;
         border-radius: 1rem;
-        min-height: 8.5rem;
+        min-height: 9rem;
         color: #f4f8f6;
         background:
-          radial-gradient(ellipse 70% 80% at 100% 0%, rgba(30, 216, 150, 0.28), transparent 55%),
+          radial-gradient(ellipse 70% 80% at 100% 0%, rgba(232, 163, 61, 0.28), transparent 55%),
           linear-gradient(145deg, #121916 0%, #1c2a24 52%, #0f1714 100%);
         box-shadow: 0 14px 32px rgba(18, 28, 24, 0.18);
         overflow: hidden;
@@ -432,27 +536,46 @@ function newIdempotencyKey(prefix: string): string {
         letter-spacing: 0.12em;
         font-variant-numeric: tabular-nums;
       }
-      .pay-hint {
-        margin: 0 0 0.85rem;
-        font-size: 0.8125rem;
-        color: var(--color-text-secondary, rgba(18, 25, 22, 0.72));
-        line-height: 1.45;
-      }
-      .pay-hint__fill {
-        display: inline;
-        margin-left: 0.25rem;
-        padding: 0;
-        border: 0;
-        background: none;
-        color: var(--accent, #0d9f70);
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
       .pay-form .input {
         font-variant-numeric: tabular-nums;
+      }
+      .payment-grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
+        gap: 1.25rem;
+        align-items: start;
+      }
+      .payment-visual,
+      .pay-form {
+        min-width: 0;
+      }
+      .demo-fill {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        min-height: 2.6rem;
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+        border-radius: 0.8rem;
+        color: var(--text);
+        background: var(--accent-dim);
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+      .demo-fill:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+      .payment-hint {
+        margin: 0.55rem 0 0;
+        color: var(--spotify-muted);
+        font-size: 0.72rem;
+        line-height: 1.45;
+        text-align: center;
       }
       .form-row {
         display: flex;
@@ -466,6 +589,93 @@ function newIdempotencyKey(prefix: string): string {
         flex-wrap: wrap;
         gap: 0.75rem;
         margin-top: 1rem;
+      }
+      .checkout-aside {
+        position: sticky;
+        top: 1rem;
+        padding: 1.35rem;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+        border-radius: 1.25rem;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) 22%, transparent), transparent 46%),
+          var(--spotify-card);
+        box-shadow: var(--shadow-sm);
+      }
+      .checkout-aside__badge {
+        display: inline-flex;
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        color: var(--accent);
+        background: var(--accent-dim);
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .checkout-aside__mark {
+        display: grid;
+        place-items: center;
+        width: 3.25rem;
+        height: 3.25rem;
+        margin: 1.25rem 0 1rem;
+        border-radius: 1rem;
+        color: var(--text-on-accent, #0c0b14);
+        background: var(--accent);
+        box-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 30%, transparent);
+        font-size: 1.25rem;
+        font-weight: 900;
+      }
+      .checkout-aside h2 {
+        margin: 0 0 0.55rem;
+        font-size: 1.15rem;
+      }
+      .checkout-aside p,
+      .checkout-aside li {
+        color: var(--spotify-muted);
+        font-size: 0.8rem;
+        line-height: 1.55;
+      }
+      .checkout-aside ul {
+        display: grid;
+        gap: 0.6rem;
+        margin: 1rem 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .checkout-aside li {
+        position: relative;
+        padding-left: 1.15rem;
+      }
+      .checkout-aside li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: 800;
+      }
+      @media (max-width: 900px) {
+        .checkout-layout,
+        .payment-grid {
+          grid-template-columns: 1fr;
+        }
+        .checkout-aside {
+          position: static;
+          order: -1;
+        }
+      }
+      @media (max-width: 600px) {
+        .checkout-summary {
+          grid-template-columns: 1fr;
+        }
+        .checkout-steps {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .form-row {
+          flex-direction: column;
+          gap: 0;
+        }
       }
     `,
   ],
@@ -553,6 +763,30 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
 
   backLink(): string {
     return this.scope() === 'organization' ? '/subscriptions/select-plan' : '/account/plans';
+  }
+
+  planLabel(value: string | number | null | undefined): string {
+    const key = String(value ?? '').trim().toLowerCase();
+    const labels: Record<string, string> = {
+      free: 'Free',
+      premium_individual: 'Premium Individual',
+      premium_duo: 'Premium Duo',
+      premium_family: 'Premium Familiar',
+    };
+    if (labels[key]) return labels[key];
+    if (/^\d+$/.test(key)) return `Plan #${key}`;
+    return key
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') || 'Plan';
+  }
+
+  periodLabel(value: string | null | undefined): string {
+    const key = String(value ?? '').trim().toLowerCase();
+    if (key === 'monthly') return this.lang() === 'es' ? 'Mensual' : 'Monthly';
+    if (key === 'annual' || key === 'yearly') return this.lang() === 'es' ? 'Anual' : 'Annual';
+    return key || '—';
   }
 
   resultLink(): string {
@@ -813,23 +1047,12 @@ export class CheckoutJourneyPage implements OnInit, OnDestroy {
   }
 
   fillDemoCard(): void {
-    const demo = DEMO_PAN_BY_BRAND[this.cardBrand];
-    this.pan = demo;
-    this.panDisplay = formatPanDisplay(demo, this.cardBrand);
-    this.cvv = this.cardBrand === 'amex' ? '1234' : '123';
-    this.expMonth = 12;
-    this.expYear = new Date().getFullYear() + 2;
-    this.expMonthText = '12';
-    this.expYearText = String(this.expYear);
+    const expiry = new Date();
+    this.onPanChange(DEMO_PAN_BY_BRAND[this.cardBrand]);
+    this.onCvvChange(this.cardBrand === 'amex' ? '1234' : '123');
+    this.onMonthChange('12');
+    this.onYearChange(String(expiry.getFullYear() + 2));
     this.dispatch({ type: 'SET_ERROR', errorCode: null });
-  }
-
-  demoPan(): string {
-    return DEMO_PAN_BY_BRAND[this.cardBrand];
-  }
-
-  formatPanDisplay(pan: string, brand: CardBrand): string {
-    return formatPanDisplay(pan, brand);
   }
 
   brandLabelKey(): string {

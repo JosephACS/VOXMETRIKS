@@ -1,11 +1,13 @@
 /**
- * VOXMETRIKS global typography — Inter only for UI.
- * JetBrains Mono reserved for codes / IDs (--font-mono), not body copy.
+ * VOXMETRIKS global typography — editorial display for headlines, Inter for
+ * interface copy, JetBrains Mono for measurable data.
  */
 
 :root {
-  --font-sans: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-sans: var(--font-body);
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Big Shoulders Display', 'Inter', sans-serif;
 
   /* Type scale */
   --type-page-title-size: 1.875rem; /* 30px */
@@ -37,6 +39,31 @@
   --type-button-lh: 1.25;
 }
 
+/* Editorial display hierarchy: compact, uppercase headlines; quiet mono data. */
+h1, h2, h3,
+.type-page-title,
+.type-section-title,
+.type-card-title,
+.vx-hero__title,
+.home-hero h1,
+.np-title,
+.media-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.015em;
+}
+
+.mono,
+.font-mono,
+[class*='mono'],
+.media-meta,
+.track-status,
+.track-error,
+.np-source-note {
+  font-family: var(--font-mono);
+}
+
 @media (max-width: 767px) {
   :root {
     --type-page-title-size: 1.5rem; /* 24px */
@@ -65,7 +92,7 @@ optgroup,
 [role='dialog'],
 [role='menu'],
 [role='listbox'] {
-  font-family: var(--font-sans);
+  font-family: var(--font-body, var(--font-sans));
 }
 
 body {
@@ -85,11 +112,12 @@ body {
 .org-page h1,
 .crm-page > h1,
 .page-shell > h1 {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-size: var(--type-page-title-size);
   font-weight: var(--type-page-title-weight);
   line-height: var(--type-page-title-lh);
-  letter-spacing: -0.02em;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: var(--text);
 }
 
@@ -100,11 +128,12 @@ body {
 .crm-card > h2,
 .ent-section-card__title,
 .section-card__title {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-size: var(--type-section-title-size);
   font-weight: var(--type-section-title-weight);
   line-height: var(--type-section-title-lh);
-  letter-spacing: -0.015em;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: var(--text);
 }
 

@@ -14,6 +14,7 @@ import { StatsService } from '../packages/analytics/services/stats.service';
 import { ListenStatsService } from '../packages/streaming/services/listen-stats.service';
 import { FavoritesService } from '../packages/streaming/services/favorites.service';
 import { PlayableTrack } from '../shared/models/player.models';
+import { SpotifyIntegrationService } from '../core/integrations/spotify/spotify-integration.service';
 
 function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
   return {
@@ -29,19 +30,15 @@ function sampleTrack(overrides: Partial<PlayableTrack> = {}): PlayableTrack {
 
 function createMockEngine() {
   const engine = {
-    isYoutube: false,
     loadedId: null as number | null,
     setVolume: vi.fn(),
     primeDemo: vi.fn(),
-    startYoutube: vi.fn(),
     startDemo: vi.fn((_url: string, trackId: number) => {
       engine.loadedId = trackId;
       return Promise.resolve(true);
     }),
-    markLoaded: vi.fn((trackId: number) => { engine.loadedId = trackId; }),
     pause: vi.fn(),
     playDemo: vi.fn(() => Promise.resolve(true)),
-    playYoutube: vi.fn(),
     seek: vi.fn((s: number) => s),
     getCurrentTime: vi.fn(() => 0),
     getDuration: vi.fn((_f: number) => 180),
@@ -97,11 +94,19 @@ describe('Playback Spotify UX Phase 1', () => {
         {
           provide: TracksService,
           useValue: {
-            getAudioSource: () => of({ status: 'not_found', youtube_video_id: null }),
+            // Queue/transport specs need a playable source. Terminal resolver
+            // behaviour and auto-skip are covered by the dedicated resolver tests.
+            getAudioSource: () => of({
+              track_id: 42,
+              status: 'ok',
+              provider: 'deezer',
+              playable_url: 'https://cdn.test/preview.mp3',
+            }),
             listTracks: () => of({ items: [], total: 0 }),
           },
         },
         { provide: TrackCoverService, useValue: { cover$: () => of(null) } },
+        { provide: SpotifyIntegrationService, useValue: { connected: () => false } },
         { provide: StatsService, useValue: { getTopTracks: () => of([]) } },
         { provide: ListenStatsService, useValue: { tick: vi.fn(), reload: vi.fn(), minutesToday: () => 0 } },
         {

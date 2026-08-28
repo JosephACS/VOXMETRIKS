@@ -16,7 +16,7 @@ Mapa de **11 familias** → Specs históricas relacionadas → packages actuales
 | 8 | Suscripciones / billing / royalties | 018, 019, 030, 040, 052 | `subscriptions`, `billing`, `royalties` | Billing/subs y checkout simulado profesional implementados; royalties **simulado/diferido** | Pasarela/payouts reales; **colisión histórica ID 030** |
 | 9 | ELT / warehouse / calidad | 007–012, 014, 048 | `analytics`, ELT `analytics/elt`, `infrastructure/airflow`, explorer | Implementado (ELT DuckDB + orquestación Airflow demo verificada) | Single-writer; Airflow manual, sin HA |
 | 10 | Operativo / táctico / estratégico | 007, 023, 024, 028, 040, **049** | `workpanel`, `reporting`, `simple_reports`, `complex_reports`, `business_analytics`, `engagement` | Reportes simples, Workpanel y reportes complejos: **implementados**. Spec **049** cerrada: Estratégico AGG (OE-01…OE-08 + `agg_strategic_kpi_period`) con smoke desktop/móvil. Business analytics: **parcial** (ROI no certificado; sin IA estratégica). | Metas comerciales diferidas; ROI no certificado |
-| 11 | Platform Ops / compliance / runtime | 011, 026, 027, 039, 041, 042, 047; activa 055 | `platform_ops`, `compliance`, `compose.yml`, `scripts/start_demo.ps1` | Ops funcional; recorrido profesional Platform Admin en consolidación; compliance parcial | Docker opcional en PATH; compliance parcial |
+| 11 | Platform Ops / compliance / runtime | 011, 026, 027, 039, 041, 042, 047; activa 055 | `platform_ops`, `compliance`, `compose.yml`, `scripts/start.ps1` | Ops funcional; recorrido profesional Platform Admin en consolidación; compliance parcial | Docker opcional en PATH; compliance parcial |
 
 ## Notas
 

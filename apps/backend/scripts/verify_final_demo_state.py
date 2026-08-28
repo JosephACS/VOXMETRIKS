@@ -115,6 +115,23 @@ def main() -> int:
     from app.core.config import get_settings
 
     settings = get_settings()
+    release_checks = {
+        "controlled_demo": settings.is_controlled_demo,
+        "user_limit_10": settings.max_app_users == 10,
+        "simulated_payments": settings.resolved_payment_provider == "academic_mock",
+        "docs_closed": not settings.docs_enabled,
+        "explicit_cors": bool(settings.cors_origin_list)
+        and "*" not in settings.cors_origin_list,
+        "non_default_secret": len(settings.secret_key) >= 32
+        and settings.secret_key != "change-me-in-production",
+        "youtube_search_configured": bool(settings.youtube_api_key.strip()),
+        "google_sign_in_configured": bool(settings.google_client_id.strip()),
+    }
+    for name, passed in release_checks.items():
+        print(f"{'OK' if passed else 'FAIL'} release_config {name}")
+        if not passed:
+            core_ok = False
+
     media_root = Path(getattr(settings, "media_storage_root", None) or "data/media")
     if not media_root.is_absolute():
         media_root = (_BACKEND / media_root).resolve()
@@ -201,7 +218,7 @@ def main() -> int:
         ):
             print(
                 "WARN warehouse locked by another process; skip DB asserts "
-                "(re-run after stop_demo, or rely on /health + login smoke)."
+                "(re-run after stop.ps1, or rely on /health + login smoke)."
             )
             warns.append("WARN warehouse locked; DB verifies skipped")
             for w in warns:

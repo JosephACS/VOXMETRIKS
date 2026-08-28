@@ -111,7 +111,7 @@
 
 .kpi-orange,
 .kpi-green { color: var(--accent); }
-.kpi-purple { color: #b794f6; }
+.kpi-accent { color: var(--accent); }
 .kpi-blue { color: var(--color-info); }
 
 .kpi-body { display: flex; flex-direction: column; gap: 0.15rem; }
@@ -197,7 +197,7 @@
 }
 
 .legend-dot.pop { background: var(--chart-fill-h); }
-.legend-dot.energy { background: #1ed896; }
+.legend-dot.energy { background: #e8a33d; }
 
 .skel-chart {
   height: 200px;
@@ -237,7 +237,7 @@
 
 .e-bar {
   width: 100%;
-  background: linear-gradient(180deg, #1ed896 0%, #148f5e 100%);
+  background: linear-gradient(180deg, #e8a33d 0%, #f0b555 100%);
   border-radius: 4px 4px 0 0;
   position: relative;
   min-height: 6px;
@@ -346,7 +346,7 @@
 
 .b-pop { background: var(--chart-fill-h); }
 
-.b-energy { background: linear-gradient(90deg, #148f5e, #1ed896); }
+.b-energy { background: linear-gradient(90deg, #f0b555, #e8a33d); }
 
 .bubble-bar-val {
   font-size: 0.65rem;

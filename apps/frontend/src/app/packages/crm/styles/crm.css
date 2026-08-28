@@ -135,7 +135,7 @@
 
 .crm-alert--ok {
   background: var(--accent-dim);
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
   color: var(--accent);
 }
 
@@ -188,13 +188,13 @@
 
 .crm-badge--prospect,
 .crm-badge--qualification { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
-.crm-badge--qualified { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
-.crm-badge--proposal { border-color: rgba(168, 85, 247, 0.45); color: #c084fc; }
+.crm-badge--qualified { border-color: rgba(232, 163, 61, 0.45); color: var(--accent); }
+.crm-badge--proposal { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
 .crm-badge--negotiation { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
 .crm-badge--won,
 .crm-badge--closed_won {
   background: var(--accent-dim);
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
   color: var(--accent);
 }
 .crm-badge--lost,
@@ -206,13 +206,13 @@
 .crm-badge--canceled { color: var(--spotify-muted); }
 .crm-badge--draft { color: var(--spotify-muted); }
 .crm-badge--sent { border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; }
-.crm-badge--approved { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
+.crm-badge--approved { border-color: rgba(232, 163, 61, 0.45); color: var(--accent); }
 .crm-badge--rejected { border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
 .crm-badge--pending { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
-.crm-badge--active { border-color: rgba(30, 216, 150, 0.45); color: var(--accent); }
+.crm-badge--active { border-color: rgba(232, 163, 61, 0.45); color: var(--accent); }
 .crm-badge--converted {
   background: var(--accent-dim);
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
   color: var(--accent);
 }
 
@@ -264,7 +264,7 @@
 }
 
 .crm-board-item:hover {
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
   background: var(--spotify-card-hover);
 }
 
@@ -318,7 +318,7 @@
 }
 
 .crm-wizard-step--active {
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
   color: var(--accent);
   background: var(--accent-dim);
 }

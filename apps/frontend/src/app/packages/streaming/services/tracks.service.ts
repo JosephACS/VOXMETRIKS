@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   Track, TrackCreate, TrackUpdate,
@@ -8,6 +9,7 @@ import {
   TrackSearchParams, DeleteResponse,
   TrackSearchResult, TrackDetail, AudioSource, CoverArt,
 } from '../../../shared/models/api.models';
+import { CatalogCacheService } from '../../../core/services/catalog-cache.service';
 
 export interface MusicSearchExternalItem {
   video_id: string;
@@ -26,17 +28,10 @@ export interface MusicSearchResponse {
   local: { items: TrackSearchResult[]; total: number; page: number; limit: number };
   external: MusicSearchExternalItem[];
   missing_local?: TrackSearchResult[];
+  match_mode?: 'exact' | 'related';
   external_available: boolean;
-}
-
-export interface MusicAdoptResponse {
-  track_id: number;
-  created: boolean;
-  video_id: string;
-  title?: string;
-  channel_title?: string;
-  duration_ms?: number | null;
-  thumbnail?: string;
+  catalog_source?: 'spotify';
+  audio_fallback?: 'deezer';
 }
 
 /**
@@ -47,14 +42,24 @@ export interface MusicAdoptResponse {
 @Injectable({ providedIn: 'root' })
 export class TracksService {
   private readonly http = inject(HttpClient);
+  private readonly cache = inject(CatalogCacheService);
   private readonly API_URL = `${environment.apiUrl}/tracks`;
 
-  listTracks(page = 1, limit = 50, search?: string, genreId?: number, artistId?: number): Observable<PaginatedResponse<Track>> {
+  listTracks(
+    page = 1,
+    limit = 50,
+    search?: string,
+    genreId?: number,
+    artistId?: number,
+    playableOnly = false,
+  ): Observable<PaginatedResponse<Track>> {
     let params = new HttpParams().set('page', page).set('limit', limit);
     if (search?.trim())   params = params.set('search', search.trim());
     if (genreId  != null) params = params.set('genre_id', genreId);
     if (artistId != null) params = params.set('artist_id', artistId);
-    return this.http.get<PaginatedResponse<Track>>(this.API_URL, { params });
+    params = params.set('playable_only', playableOnly ? 'true' : 'false');
+    const key = `tracks:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<PaginatedResponse<Track>>(this.API_URL, { params }));
   }
 
   getTracks(p?: TrackSearchParams): Observable<PaginatedResponse<Track>> {
@@ -62,32 +67,58 @@ export class TracksService {
     if (p?.search)            params = params.set('search', p.search);
     if (p?.artist_id != null) params = params.set('artist_id', p.artist_id);
     if (p?.genre_id  != null) params = params.set('genre_id', p.genre_id);
-    return this.http.get<PaginatedResponse<Track>>(this.API_URL, { params });
+    params = params.set('playable_only', p?.playable_only ? 'true' : 'false');
+    const key = `tracks:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<PaginatedResponse<Track>>(this.API_URL, { params }));
   }
 
   getTrackById(id: number): Observable<Track> {
-    return this.http.get<Track>(`${this.API_URL}/${id}`);
+    return this.cachedGet(`track:${id}`, () => this.http.get<Track>(`${this.API_URL}/${id}`));
   }
 
   getTrackFeatures(id: number): Observable<AudioFeatures> {
-    return this.http.get<AudioFeatures>(`${this.API_URL}/${id}/features`);
+    return this.cachedGet(`track-features:${id}`, () => this.http.get<AudioFeatures>(`${this.API_URL}/${id}/features`));
   }
 
   createTrack(body: TrackCreate): Observable<Track> {
-    return this.http.post<Track>(this.API_URL, body);
+    return this.http.post<Track>(this.API_URL, body).pipe(
+      tap(() => this.invalidateCatalogCache()),
+    );
   }
 
   updateTrack(id: number, body: TrackUpdate): Observable<Track> {
-    return this.http.put<Track>(`${this.API_URL}/${id}`, body);
+    return this.http.put<Track>(`${this.API_URL}/${id}`, body).pipe(
+      tap(() => {
+        this.invalidateCatalogCache();
+        this.cache.invalidate(`track:${id}`);
+        this.cache.invalidate(`track-features:${id}`);
+        this.cache.invalidate(`track-detail:${id}`);
+        this.cache.invalidate(`track-cover:${id}`);
+      }),
+    );
   }
 
   deleteTrack(id: number): Observable<DeleteResponse> {
-    return this.http.delete<DeleteResponse>(`${this.API_URL}/${id}`);
+    return this.http.delete<DeleteResponse>(`${this.API_URL}/${id}`).pipe(
+      tap(() => {
+        this.invalidateCatalogCache();
+        this.cache.invalidate(`track:${id}`);
+        this.cache.invalidate(`track-features:${id}`);
+        this.cache.invalidate(`track-detail:${id}`);
+        this.cache.invalidate(`track-cover:${id}`);
+      }),
+    );
   }
 
-  searchTracks(q: string, page = 1, limit = 20): Observable<PaginatedResponse<TrackSearchResult>> {
-    const params = new HttpParams().set('q', q).set('page', page).set('limit', limit);
-    return this.http.get<PaginatedResponse<TrackSearchResult>>(`${this.API_URL}/search`, { params });
+  searchTracks(q: string, page = 1, limit = 20, playableOnly = false): Observable<PaginatedResponse<TrackSearchResult>> {
+    const params = new HttpParams()
+      .set('q', q)
+      .set('page', page)
+      .set('limit', limit)
+      .set('playable_only', playableOnly ? 'true' : 'false');
+    return this.cachedGet(`track-search:${params.toString()}`, () =>
+      this.http.get<PaginatedResponse<TrackSearchResult>>(`${this.API_URL}/search`, { params }),
+    );
   }
 
   musicSearch(
@@ -95,38 +126,21 @@ export class TracksService {
     page = 1,
     limit = 20,
     allowExternal = true,
+    includeRelated = false,
   ): Observable<MusicSearchResponse> {
     const params = new HttpParams()
       .set('q', q)
       .set('page', page)
       .set('limit', limit)
-      .set('allow_external', allowExternal ? 'true' : 'false');
-    return this.http.get<MusicSearchResponse>(`${this.API_URL}/music-search`, { params });
-  }
-
-  adoptYoutubeResult(
-    videoId: string,
-    trackId?: number,
-    opts?: { requirePreferred?: boolean },
-  ): Observable<MusicAdoptResponse> {
-    const body: {
-      video_id: string;
-      track_id?: number;
-      require_preferred?: boolean;
-    } = { video_id: videoId };
-    if (trackId != null) body.track_id = trackId;
-    if (opts?.requirePreferred) body.require_preferred = true;
-    return this.http.post<MusicAdoptResponse>(`${this.API_URL}/music-search/adopt`, body);
-  }
-
-  repairYoutubeSource(videoId: string): Observable<Record<string, unknown>> {
-    return this.http.post<Record<string, unknown>>(`${this.API_URL}/music-search/repair-source`, {
-      video_id: videoId,
-    });
+      .set('allow_external', allowExternal ? 'true' : 'false')
+      .set('include_related', includeRelated ? 'true' : 'false');
+    return this.cachedGet(`music-search:${params.toString()}`, () =>
+      this.http.get<MusicSearchResponse>(`${this.API_URL}/music-search`, { params }),
+    );
   }
 
   getTrackDetail(id: number): Observable<TrackDetail> {
-    return this.http.get<TrackDetail>(`${this.API_URL}/${id}/detail`);
+    return this.cachedGet(`track-detail:${id}`, () => this.http.get<TrackDetail>(`${this.API_URL}/${id}/detail`));
   }
 
   getAudioSource(
@@ -165,6 +179,24 @@ export class TracksService {
   }
 
   getCover(id: number): Observable<CoverArt> {
-    return this.http.get<CoverArt>(`${this.API_URL}/${id}/cover`);
+    return this.cachedGet(`track-cover:${id}`, () => this.http.get<CoverArt>(`${this.API_URL}/${id}/cover`), 10 * 60_000);
+  }
+
+  private cachedGet<T>(key: string, request: () => Observable<T>, ttlMs = 60_000): Observable<T> {
+    const cached = this.cache.get<T>(key, ttlMs);
+    if (cached !== null) return of(cached);
+    return request().pipe(
+      tap((value) => this.cache.set(key, value, ttlMs)),
+      catchError((error) => {
+        this.cache.invalidate(key);
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private invalidateCatalogCache(): void {
+    this.cache.invalidate('tracks:');
+    this.cache.invalidate('track-search:');
+    this.cache.invalidate('music-search:');
   }
 }

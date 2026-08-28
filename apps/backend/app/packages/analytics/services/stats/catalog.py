@@ -27,11 +27,20 @@ def get_energia_distribution(conn: duckdb.DuckDBPyConnection) -> List[Dict[str, 
 
 
 def get_top_tracks_by_popularity(
-    conn: duckdb.DuckDBPyConnection, limit: int = 10
+    conn: duckdb.DuckDBPyConnection,
+    limit: int = 10,
+    *,
+    playable_only: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Top tracks — prefer pre-aggregated ``agg_tracks_populares`` when populated."""
+    """Top tracks — prefer pre-aggregated data when populated.
+
+    The consumer catalog is Spotify-backed, so metadata rails must not hide
+    songs merely because a Deezer preview has not been resolved yet. Callers
+    that explicitly need only known playable rows can opt into
+    ``playable_only=True``.
+    """
     lim = int(limit)
-    playable = playable_track_sql(conn)
+    playable = playable_track_sql(conn) if playable_only else "1=1"
     if table_exists(conn, "agg_tracks_populares"):
         agg_count = conn.execute(
             "SELECT COUNT(*) FROM agg_tracks_populares WHERE popularity IS NOT NULL"

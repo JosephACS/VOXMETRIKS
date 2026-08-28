@@ -14,8 +14,9 @@ from app.packages.streaming.services.audio.cache import (
     read_cache,
     write_cache,
 )
-from app.packages.streaming.services.audio.models import ResolvedSource, TrackContext
-from app.packages.streaming.services.audio.resolver import AudioResolver
+from app.packages.streaming.services.audio.deezer_provider import DeezerProvider
+from app.packages.streaming.services.audio.models import ResolvedSource
+from app.packages.streaming.services.audio.resolver import _DEFAULT_CHAIN, AudioResolver
 from app.packages.streaming.services.audio.youtube_provider import YouTubeProvider
 
 
@@ -64,22 +65,94 @@ def test_cached_source_is_reused(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="abc123",
-            youtube_video_id="abc123",
+            source_ref="deezer-abc123",
+            playable_url="https://cdn.test/preview.mp3",
             query="Test Song Test Artist official audio",
             confidence_score=0.9,
         ),
     )
-    yt = MagicMock(spec=YouTubeProvider)
-    yt.name = "youtube"
-    resolver = AudioResolver(providers=[yt])
+    deezer = MagicMock(spec=DeezerProvider)
+    deezer.name = "deezer"
+    resolver = AudioResolver(providers=[deezer])
     result = resolver.resolve(conn, 10, force=False)
     assert result is not None
     assert result.status == STATUS_OK
-    assert result.source_ref == "abc123"
-    yt.resolve.assert_not_called()
+    assert result.source_ref == "deezer-abc123"
+    deezer.resolve.assert_not_called()
+
+
+def test_cached_audius_source_is_reused(conn):
+    """Legacy Audius cache entries are removed from the active resolver."""
+    write_cache(
+        conn,
+        ResolvedSource(
+            track_id=10,
+            provider="audius",
+            status=STATUS_OK,
+            source_ref="aud-1",
+            playable_url="https://api.audius.co/v1/tracks/aud-1/stream",
+            query="Test Song Test Artist",
+            confidence_score=0.8,
+        ),
+    )
+    assert read_cache(conn, 10) is None
+
+
+def test_cached_deezer_preview_is_reused(conn):
+    """A resolved Deezer preview is a normal cacheable playback source."""
+    write_cache(
+        conn,
+        ResolvedSource(
+            track_id=10,
+            provider="deezer",
+            status=STATUS_OK,
+            source_ref="deezer-1",
+            playable_url="https://cdns-preview.dzcdn.net/preview.mp3",
+            query='track:"Test Song" artist:"Test Artist"',
+            confidence_score=0.86,
+        ),
+    )
+    deezer = MagicMock(spec=DeezerProvider)
+    deezer.name = "deezer"
+    resolver = AudioResolver(providers=[deezer])
+    result = resolver.resolve(conn, 10, force=False)
+    assert result is not None
+    assert result.provider == "deezer"
+    assert result.playable_url is not None
+    deezer.resolve.assert_not_called()
+
+
+def test_default_chain_is_deezer_preview():
+    assert [provider.name for provider in _DEFAULT_CHAIN] == ["deezer"]
+
+
+def test_youtube_falls_back_to_deezer_preview(conn):
+    yt = MagicMock(spec=YouTubeProvider)
+    yt.name = "youtube"
+    yt.resolve.return_value = ResolvedSource(
+        track_id=10, provider="youtube", status=STATUS_NOT_FOUND, query="q"
+    )
+    deezer = MagicMock(spec=DeezerProvider)
+    deezer.name = "deezer"
+    deezer.resolve.return_value = ResolvedSource(
+        track_id=10,
+        provider="deezer",
+        status=STATUS_OK,
+        source_ref="deezer-1",
+        playable_url="https://cdns-preview.dzcdn.net/preview.mp3",
+        query="q",
+        confidence_score=0.8,
+    )
+    resolver = AudioResolver(providers=[yt, deezer])
+    result = resolver.resolve(conn, 10, force=True)
+    assert result is not None
+    assert result.provider == "deezer"
+    assert result.playable_url is not None
+    cached = read_cache(conn, 10)
+    assert cached is not None
+    assert cached["provider"] == "deezer"
 
 
 def test_youtube_falls_back_to_audius(conn):
@@ -105,8 +178,7 @@ def test_youtube_falls_back_to_audius(conn):
     assert result.provider == "audius"
     assert result.playable_url is not None
     cached = read_cache(conn, 10)
-    assert cached is not None
-    assert cached["provider"] == "audius"
+    assert cached is None
 
 
 def test_all_providers_fail_returns_not_found(conn):
@@ -145,8 +217,8 @@ def test_skip_provider_on_fallback(conn):
     yt.resolve.assert_not_called()
 
 
-def test_skip_provider_not_found_does_not_poison_ok_cache(conn):
-    """Partial fallback failure must not wipe a previously playable YouTube cache."""
+def test_custom_skip_provider_does_not_mutate_legacy_cache(conn):
+    """Legacy provider rows are removed and cannot poison the active cache."""
     write_cache(
         conn,
         ResolvedSource(
@@ -173,9 +245,7 @@ def test_skip_provider_not_found_does_not_poison_ok_cache(conn):
     assert result is not None
     assert result.status == STATUS_NOT_FOUND
     cached = read_cache(conn, 10)
-    assert cached is not None
-    assert cached["status"] == STATUS_OK
-    assert cached["youtube_video_id"] == "good-id"
+    assert cached is None
 
 
 def test_migrate_audio_source_columns_idempotent(conn):
@@ -193,28 +263,27 @@ def test_migrate_audio_source_columns_idempotent(conn):
 
 
 def test_cache_stores_confirmed_youtube_source(conn):
-    yt = MagicMock(spec=YouTubeProvider)
-    yt.name = "youtube"
-    yt.resolve.return_value = ResolvedSource(
+    deezer = MagicMock(spec=DeezerProvider)
+    deezer.name = "deezer"
+    deezer.resolve.return_value = ResolvedSource(
         track_id=10,
-        provider="youtube",
+        provider="deezer",
         status=STATUS_OK,
-        source_ref="vidOK12345",
-        youtube_video_id="vidOK12345",
-        query="Test Song Test Artist official audio",
+        source_ref="deezer-OK12345",
+        playable_url="https://cdn.test/preview.mp3",
+        query="Test Song Test Artist",
         confidence_score=0.91,
     )
-    resolver = AudioResolver(providers=[yt])
+    resolver = AudioResolver(providers=[deezer])
     result = resolver.resolve(conn, 10, force=True)
     assert result is not None
     assert result.status == STATUS_OK
     cached = read_cache(conn, 10)
-    assert cached["youtube_video_id"] == "vidOK12345"
+    assert cached["source_ref"] == "deezer-OK12345"
     assert cached["status"] == STATUS_OK
 
 
 def test_manual_youtube_override_cached(conn):
-    from unittest.mock import patch
 
     from app.packages.streaming.services.audio_source_service import (
         save_manual_youtube_source,
@@ -230,8 +299,9 @@ def test_manual_youtube_override_cached(conn):
     assert out is not None
     assert out["status"] == STATUS_OK
     assert out["youtube_video_id"] == "abcdefghijk"
-    cached = read_cache(conn, 10)
-    assert cached["query"].startswith("manual:")
+    # Manual YouTube administration is legacy-only and must not repopulate
+    # the active Spotify/Deezer cache.
+    assert read_cache(conn, 10) is None
 
 
 def test_mark_unavailable_caches_not_found(conn):
@@ -261,8 +331,7 @@ def test_truly_unavailable_when_providers_empty(conn):
     assert result.status == STATUS_NOT_FOUND
     # Persist via write_cache path used by resolve()
     cached = read_cache(conn, 10)
-    assert cached is not None
-    assert cached["status"] == STATUS_NOT_FOUND
+    assert cached is None
 
 
 def test_write_cache_resets_failure_count_on_ok(conn):
@@ -270,10 +339,10 @@ def test_write_cache_resets_failure_count_on_ok(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="failvid0001",
-            youtube_video_id="failvid0001",
+            source_ref="deezer-0001",
+            playable_url="https://cdn.test/preview.mp3",
             query="q",
             confidence_score=0.9,
         ),
@@ -290,10 +359,10 @@ def test_write_cache_resets_failure_count_on_ok(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="failvid0001",
-            youtube_video_id="failvid0001",
+            source_ref="deezer-0001",
+            playable_url="https://cdn.test/preview.mp3",
             query="q-retry",
             confidence_score=0.95,
         ),
@@ -309,10 +378,10 @@ def test_write_cache_preserve_failure_count(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="failvid0002",
-            youtube_video_id="failvid0002",
+            source_ref="deezer-0002",
+            playable_url="https://cdn.test/preview.mp3",
             query="q",
             confidence_score=0.9,
         ),
@@ -324,10 +393,10 @@ def test_write_cache_preserve_failure_count(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="failvid0002",
-            youtube_video_id="failvid0002",
+            source_ref="deezer-0002",
+            playable_url="https://cdn.test/preview.mp3",
             query="metadata refresh",
             confidence_score=0.95,
         ),
@@ -385,14 +454,14 @@ def test_write_cache_local_published_can_replace_external(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="youtube",
+            provider="deezer",
             status=STATUS_OK,
-            youtube_video_id="extvid00001",
-            source_ref="extvid00001",
+            source_ref="deezer-extvid00001",
+            playable_url="https://cdn.test/preview.mp3",
             query="q",
         ),
     )
-    assert read_cache(conn, 10)["provider"] == "youtube"
+    assert read_cache(conn, 10)["provider"] == "deezer"
     write_cache(
         conn,
         ResolvedSource(
@@ -415,9 +484,10 @@ def test_write_cache_new_insert_starts_failure_count_zero(conn):
         conn,
         ResolvedSource(
             track_id=10,
-            provider="audius",
+            provider="deezer",
             status=STATUS_OK,
-            source_ref="aud1",
+            source_ref="deezer-aud1",
+            playable_url="https://cdn.test/preview.mp3",
             query="q",
         ),
     )

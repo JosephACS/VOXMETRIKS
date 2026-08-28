@@ -16,7 +16,7 @@ Run (from apps/backend):
 
 ``DB_PATH`` may point to a path that does not exist yet — the seed creates the
 parent directory and an empty DuckDB file, then ensures identity tables before
-platform RBAC (so default ``SEED_DEMO_CRM_USERS`` stays enabled). No prior ELT
+platform RBAC (set ``SEED_DEMO_CRM_USERS=true`` for CRM bootstrap users). No prior ELT
 or warehouse gold tables are required.
 
 Optional cleanup of pytest / Golden Path pollution first:

@@ -82,35 +82,55 @@
           <section class="settings-section" data-testid="settings-profile">
             <h2>{{ 'settings.profile.title' | t:lang() }}</h2>
             <p class="section-desc">{{ 'settings.profile.desc' | t:lang() }}</p>
-            <div class="info-card">
-              <div class="info-row">
+            <div class="profile-identity-card">
+              <div class="profile-avatar" aria-hidden="true">{{ userInitial() }}</div>
+              <div class="profile-identity-copy">
+                <strong>{{ currentUser()?.username ?? 'Usuario' }}</strong>
+                <span>{{ currentUser()?.email }}</span>
+              </div>
+              <span class="profile-role-chip">{{ roleLabel() }}</span>
+            </div>
+
+            <div class="profile-facts" aria-label="Información de la cuenta">
+              <div class="profile-fact">
                 <span class="info-label">{{ 'settings.profile.username' | t:lang() }}</span>
-                <span class="info-value">{{ currentUser()?.username }}</span>
+                <strong class="info-value">{{ currentUser()?.username }}</strong>
               </div>
-              <div class="info-row">
+              <div class="profile-fact">
                 <span class="info-label">{{ 'settings.profile.email' | t:lang() }}</span>
-                <span class="info-value">{{ currentUser()?.email }}</span>
+                <strong class="info-value">{{ currentUser()?.email }}</strong>
               </div>
-              <div class="info-row">
+              <div class="profile-fact">
                 <span class="info-label">{{ 'settings.profile.role' | t:lang() }}</span>
-                <span class="info-value">{{ roleLabel() }}</span>
+                <strong class="info-value">{{ roleLabel() }}</strong>
               </div>
             </div>
-            <p class="section-desc" role="status">{{ 'settings.profile.emailReadonly' | t:lang() }}</p>
-            <div class="setting-row">
-              <div class="setting-info">
-                <label class="setting-title" for="settings-favorite-genre">{{ 'settings.business.favoriteGenre' | t:lang() }}</label>
-              </div>
-              <input id="settings-favorite-genre" type="text" class="setting-control text-input"
-                [ngModel]="favoriteGenre()" [disabled]="prefsSaving()"
-                (ngModelChange)="favoriteGenre.set($event)" (blur)="onFavoriteGenreBlur()" autocomplete="off" />
+            <p class="profile-note" role="status">{{ 'settings.profile.emailReadonly' | t:lang() }}</p>
+
+            <h3 class="subsection-title profile-shortcuts-title">{{ 'settings.profile.shortcutsTitle' | t:lang() }}</h3>
+            <div class="profile-shortcuts">
+              <a routerLink="/users" class="profile-shortcut">
+                <span class="profile-shortcut-icon" [innerHTML]="icon('activity', 18)"></span>
+                <span>
+                  <strong>{{ 'settings.profile.listeningProfile' | t:lang() }}</strong>
+                  <small>{{ 'settings.profile.listeningProfileHint' | t:lang() }}</small>
+                </span>
+              </a>
+              <button type="button" class="profile-shortcut" (click)="selectTab('preferences')">
+                <span class="profile-shortcut-icon" [innerHTML]="icon('settings', 18)"></span>
+                <span>
+                  <strong>{{ 'settings.profile.preferences' | t:lang() }}</strong>
+                  <small>{{ 'settings.profile.preferencesHint' | t:lang() }}</small>
+                </span>
+              </button>
+              <button type="button" class="profile-shortcut" (click)="selectTab('security')">
+                <span class="profile-shortcut-icon" [innerHTML]="icon('lock', 18)"></span>
+                <span>
+                  <strong>{{ 'settings.profile.security' | t:lang() }}</strong>
+                  <small>{{ 'settings.profile.securityHint' | t:lang() }}</small>
+                </span>
+              </button>
             </div>
-            @if (prefsFeedback() === 'ok') {
-              <div class="prefs-toast ok" role="status">{{ 'settings.business.saved' | t:lang() }}</div>
-            }
-            @if (prefsFeedback() === 'error') {
-              <div class="prefs-toast error" role="alert">{{ 'settings.business.error' | t:lang() }}</div>
-            }
           </section>
         }
 
@@ -455,6 +475,85 @@
 
           </section>
 
+        }
+
+
+        @case ('connections') {
+          <section class="settings-section spotify-settings" data-testid="settings-connections">
+            <div class="connection-heading">
+              <div>
+                <span class="connection-kicker">MÚSICA CONECTADA</span>
+                <h2>Spotify</h2>
+                <p class="section-desc">Usa tu escucha real para personalizar Voxmetriks y preparar la reproducción desde tu propia cuenta.</p>
+              </div>
+              <span class="connection-status" [class.is-connected]="spotify.connected()">
+                <span class="status-dot"></span>
+                {{ spotify.connected() ? 'Conectado' : spotify.status() === 'connecting' ? 'Conectando…' : 'Sin conectar' }}
+              </span>
+            </div>
+
+            @if (spotify.connected()) {
+              <div class="spotify-profile-card">
+                <div class="spotify-avatar">
+                  @if (spotify.profile()?.images?.[0]?.url) {
+                    <img [src]="spotify.profile()!.images![0].url" alt="" />
+                  } @else {
+                    <span>{{ (spotify.profile()?.display_name || 'S').charAt(0).toUpperCase() }}</span>
+                  }
+                </div>
+                <div>
+                  <strong>{{ spotify.profile()?.display_name || 'Cuenta de Spotify' }}</strong>
+                  <span>{{ spotify.profile()?.email || spotify.profile()?.id }}</span>
+                  <small>
+                    {{ spotify.profile()?.product === 'premium' ? 'Premium · reproducción completa disponible' : 'Cuenta Free · recomendaciones disponibles; reproducción SDK requiere Premium' }}
+                  </small>
+                </div>
+                <button type="button" class="connection-secondary" (click)="disconnectSpotify()">Desconectar</button>
+              </div>
+
+              <div class="spotify-capabilities">
+                <div>
+                  <span [innerHTML]="icon('target', 18)"></span>
+                  <strong>Recomendaciones tuyas</strong>
+                  <small>Combinamos top, recientes y biblioteca de Spotify con el motor Voxmetriks.</small>
+                </div>
+                <div>
+                  <span [innerHTML]="icon('music', 18)"></span>
+                  <strong>Catálogo enlazado</strong>
+                  <small>Los resultados conservan el Spotify ID para abrirse y reproducirse cuando corresponda.</small>
+                </div>
+                <div>
+                  <span [innerHTML]="icon('lock', 18)"></span>
+                  <strong>Sin entregar tu clave</strong>
+                  <small>La autorización usa PKCE y los tokens viven únicamente en esta sesión del navegador.</small>
+                </div>
+              </div>
+            } @else {
+              <div class="spotify-connect-intro">
+                <span class="spotify-connect-intro__icon" [innerHTML]="icon('music', 22)"></span>
+                <div>
+                  <strong>Personaliza tu experiencia con Spotify</strong>
+                  <small>Autoriza tu cuenta una sola vez. Nunca te pediremos contraseña, Client ID ni datos técnicos.</small>
+                </div>
+              </div>
+
+              @if (!spotify.configured()) {
+                <div class="prefs-toast error" role="alert">La integración de Spotify todavía no fue habilitada por el administrador de VOXMETRIKS.</div>
+              }
+
+              @if (spotify.errorMessage()) {
+                <div class="prefs-toast error" role="alert">{{ spotify.errorMessage() }}</div>
+              }
+
+              <div class="connection-actions">
+                <button type="button" class="refresh-health-btn spotify-connect" [disabled]="spotifyBusy() || !spotify.configured()" (click)="connectSpotify()">
+                  Conectar con Spotify
+                </button>
+              </div>
+            }
+
+            <p class="spotify-note">Voxmetriks sigue usando su propio dataset para analítica, BI, empresa y recomendaciones explicables. Spotify aporta señales personales y reproducción autorizada; no reemplaza tu plataforma.</p>
+          </section>
         }
 
 

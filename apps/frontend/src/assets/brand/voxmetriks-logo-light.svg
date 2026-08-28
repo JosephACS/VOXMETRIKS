@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 72" fill="none" role="img" aria-label="VOXMETRIKS — Music Intelligence">
+  <defs>
+    <mask id="vx-light-wave-cut">
+      <rect width="120" height="120" fill="white"/>
+      <path d="M34 55c8 0 7-13 14-13 8 0 7 27 14 27s7-20 14-20c6 0 6 9 13 9" stroke="black" stroke-width="6" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g transform="translate(2.5 2.5) scale(0.56)">
+    <rect x="6" y="6" width="108" height="108" rx="31" fill="#1a1712"/>
+    <rect x="6.75" y="6.75" width="106.5" height="106.5" rx="30.25" stroke="#b5650a" stroke-opacity="0.28" stroke-width="1.5"/>
+    <path d="M20 18h16l24 59 24-59h16L68 101c-2.8 7.2-13.2 7.2-16 0L20 18Z" fill="#fffdf8" mask="url(#vx-light-wave-cut)" transform="translate(0 1) scale(1 0.98)"/>
+  </g>
+  <text x="84" y="33" fill="#1a1712" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="740" letter-spacing="3">VOXMETRIKS</text>
+  <path d="M85 43H110" stroke="#b5650a" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="118" y="47" fill="#7a725f" font-family="Inter, Arial, sans-serif" font-size="7.5" font-weight="620" letter-spacing="2.5">MUSIC INTELLIGENCE</text>
+</svg>

@@ -34,8 +34,8 @@ function i18nStub() {
         'home.chip.explorer': `Nivel ${params?.['level'] ?? 1}`,
         'home.chip.streak': `Racha ${params?.['count'] ?? 0}`,
         'home.chip.streakOne': 'Racha 1',
-        'home.catalogDemo.title': 'Catálogo global de demostración',
-        'home.catalogDemo.subtitle': 'Indicadores del warehouse importado',
+        'home.catalog.title': 'Catálogo global',
+        'home.catalog.subtitle': 'Indicadores del warehouse importado',
         'home.stat.events': 'Eventos',
         'home.stat.tracks': 'Tracks',
         'home.stat.artists': 'Artistas',
@@ -155,8 +155,8 @@ describe('Home presentation consolidation', () => {
       const root = fixture.nativeElement as HTMLElement;
       const strips = root.querySelectorAll('[data-testid="home-catalog-demo"]');
       expect(strips.length).toBe(1);
-      expect(strips[0].getAttribute('aria-label')).toContain('Catálogo global de demostración');
-      expect(strips[0].textContent).toContain('Catálogo global de demostración');
+      expect(strips[0].getAttribute('aria-label')).toContain('Catálogo global');
+      expect(strips[0].textContent).toContain('Catálogo global');
       expect(strips[0].textContent).toContain('Indicadores del warehouse importado');
 
       const head = strips[0].querySelector('.catalog-demo__head') as HTMLElement | null;

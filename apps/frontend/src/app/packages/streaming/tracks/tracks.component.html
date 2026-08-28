@@ -47,6 +47,17 @@
     </div>
   }
 
+  @if (!isLoading() && !hasError() && totalPages() > 1) {
+    <nav class="pagination catalog-pagination" aria-label="Paginación del catálogo">
+      <button class="page-btn" [disabled]="page() <= 1" (click)="goTo(page() - 1)" aria-label="Página anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      @if (page() > 3) { <button class="page-btn" (click)="goTo(1)">1</button> @if (page() > 4) { <span class="page-ellipsis">…</span> } }
+      @for (p of pageNumbers; track p) { <button class="page-btn" [class.active]="p === page()" [attr.aria-current]="p === page() ? 'page' : null" (click)="goTo(p)">{{ p }}</button> }
+      @if (page() < totalPages() - 2) { @if (page() < totalPages() - 3) { <span class="page-ellipsis">…</span> } <button class="page-btn" (click)="goTo(totalPages())">{{ totalPages() }}</button> }
+      <button class="page-btn" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)" aria-label="Página siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <span class="page-info">{{ 'common.pageInfo' | t: { page: page(), total: totalPages() }:lang() }}</span>
+    </nav>
+  }
+
   @if (hasError()) {
     <div class="error-card">
       <div class="error-icon" [innerHTML]="icon('alert', 20)"></div>
@@ -92,16 +103,6 @@
       }
     </div>
 
-    @if (!isLoading() && totalPages() > 1) {
-      <div class="pagination">
-        <button class="page-btn" [disabled]="page() <= 1" (click)="goTo(page() - 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-        @if (page() > 3) { <button class="page-btn" (click)="goTo(1)">1</button> @if (page() > 4) { <span class="page-ellipsis">…</span> } }
-        @for (p of pageNumbers; track p) { <button class="page-btn" [class.active]="p === page()" (click)="goTo(p)">{{ p }}</button> }
-        @if (page() < totalPages() - 2) { @if (page() < totalPages() - 3) { <span class="page-ellipsis">…</span> } <button class="page-btn" (click)="goTo(totalPages())">{{ totalPages() }}</button> }
-        <button class="page-btn" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-        <span class="page-info">{{ 'common.pageInfo' | t: { page: page(), total: totalPages() }:lang() }}</span>
-      </div>
-    }
   }
 </div>
 

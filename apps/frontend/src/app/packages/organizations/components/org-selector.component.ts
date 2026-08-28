@@ -46,7 +46,7 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         cursor: pointer;
       }
       .org-selector-btn:focus-visible {
-        outline: 2px solid #1ed896;
+        outline: 2px solid #e8a33d;
         outline-offset: 2px;
       }
       .org-selector-name {
@@ -101,7 +101,7 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         font-size: 0.8125rem;
       }
       .org-selector-search:focus {
-        outline: 2px solid #1ed896;
+        outline: 2px solid #e8a33d;
         outline-offset: 1px;
       }
       .org-selector-list {
@@ -129,7 +129,7 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
       .org-selector-item:hover,
       .org-selector-item:focus-visible,
       .org-selector-item--focused {
-        background: var(--shell-hover-strong, color-mix(in srgb, #1ed896 12%, transparent));
+        background: var(--shell-hover-strong, color-mix(in srgb, #e8a33d 12%, transparent));
         outline: none;
       }
       .org-selector-item--active {
@@ -156,8 +156,8 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         text-transform: uppercase;
         padding: 0.12rem 0.4rem;
         border-radius: 999px;
-        background: var(--accent-dim, rgba(30, 216, 150, 0.18));
-        color: var(--accent, #1ed896);
+        background: var(--accent-dim, rgba(232, 163, 61, 0.18));
+        color: var(--accent, #e8a33d);
       }
       .org-selector-status {
         font-size: 0.75rem;
@@ -180,7 +180,7 @@ import { productOrgDisplayName } from '../../../shared/utils/product-presentatio
         cursor: pointer;
       }
       .org-selector-link:hover {
-        background: color-mix(in srgb, #1ed896 12%, transparent);
+        background: color-mix(in srgb, #e8a33d 12%, transparent);
       }
       .org-selector-error {
         color: #f97066;

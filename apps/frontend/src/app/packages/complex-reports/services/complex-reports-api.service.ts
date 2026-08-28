@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { OrganizationContextService } from '../../organizations/services/organization-context.service';
+import { CatalogCacheService } from '../../../core/services/catalog-cache.service';
 
 export interface ComplexCatalogItem {
   id: string;
@@ -58,6 +60,7 @@ export interface ComplexReportData {
 export class ComplexReportsApiService {
   private readonly http = inject(HttpClient);
   private readonly orgCtx = inject(OrganizationContextService);
+  private readonly cache = inject(CatalogCacheService);
   private readonly base = `${environment.apiUrl}/reports/complex`;
 
   catalog(opts?: { module?: string; category?: string; q?: string }): Observable<ComplexCatalogResponse> {
@@ -65,10 +68,11 @@ export class ComplexReportsApiService {
     if (opts?.module) params = params.set('module', opts.module);
     if (opts?.category) params = params.set('category', opts.category);
     if (opts?.q) params = params.set('q', opts.q);
-    return this.http.get<ComplexCatalogResponse>(`${this.base}/catalog`, {
+    const key = `complex-report-catalog:${this.orgCtx.organizationId() ?? 'none'}:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<ComplexCatalogResponse>(`${this.base}/catalog`, {
       params,
       headers: this.orgHeaders(),
-    });
+    }));
   }
 
   data(
@@ -79,10 +83,11 @@ export class ComplexReportsApiService {
     if (opts.from) params = params.set('from', opts.from);
     if (opts.to) params = params.set('to', opts.to);
     if (opts.limit) params = params.set('limit', String(opts.limit));
-    return this.http.get<ComplexReportData>(`${this.base}/${reportId}/data`, {
+    const key = `complex-report-data:${this.orgCtx.organizationId() ?? 'none'}:${reportId}:${params.toString()}`;
+    return this.cachedGet(key, () => this.http.get<ComplexReportData>(`${this.base}/${reportId}/data`, {
       params,
       headers: this.orgHeaders(),
-    });
+    }), 30_000);
   }
 
   private orgHeaders(): HttpHeaders {
@@ -90,5 +95,17 @@ export class ComplexReportsApiService {
     let headers = new HttpHeaders();
     if (orgId != null) headers = headers.set('X-Organization-Id', String(orgId));
     return headers;
+  }
+
+  private cachedGet<T>(key: string, request: () => Observable<T>, ttlMs = 60_000): Observable<T> {
+    const cached = this.cache.get<T>(key, ttlMs);
+    if (cached !== null) return of(cached);
+    return request().pipe(
+      tap((value) => this.cache.set(key, value, ttlMs)),
+      catchError((error) => {
+        this.cache.invalidate(key);
+        return throwError(() => error);
+      }),
+    );
   }
 }

@@ -5,12 +5,14 @@
 !.env.example
 !**/.env.example
 !**/.env.e2e.example
-!.env.demo.example
+!**/.env.development.example
+!.env.development.example
 apps/frontend/.env
 apps/frontend/.env.local
 
-# Demo runtime / laptop bundles
+# Runtime / laptop bundles
 runtime/
+scripts/.runtime-pids/
 scripts/.demo-pids/
 data/media/
 apps/backend/data/media/
@@ -111,6 +113,7 @@ logs/
 apps/backend/logs/
 
 # Review / agent temp artifacts
+.qa-temp/
 apps/backend/_*.txt
 apps/frontend/_*.txt
 apps/backend/tests/_*.json

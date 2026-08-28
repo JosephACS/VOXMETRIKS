@@ -60,7 +60,11 @@ Variables relevantes (`.env`):
 | `EMAIL_SMOKE_TEST_TO` | Destinatario del smoke real (`python apps/backend/scripts/email_smtp_smoke.py --send`) |
 | `FRONTEND_BASE_URL` | Base URL del frontend para enlaces en correos (p. ej. `http://127.0.0.1:4200`) |
 | `APP_PUBLIC_BASE_URL` | Alias legado de `FRONTEND_BASE_URL` |
-| `YOUTUBE_API_KEY` | Opcional; contrato YouTube Data API / proveedores aprobados para resolución de audio |
+| `spotifyClientId` (frontend) | Client ID público de Spotify; PKCE no usa Client Secret en el navegador |
+| `PAYMENT_PROVIDER` | `manual_transfer` (default) · `academic_mock` solo fuera de producción |
+| `SEED_DEMO_USERS` / `SEED_DEMO_CRM_USERS` | Default `false`; nunca en producción |
+| `BOOTSTRAP_ADMIN_EMAIL` / `PASSWORD` | Primer admin vía `scripts/bootstrap_admin.py` |
+| `SECRET_KEY` | Obligatorio cambiar en producción |
 
 Sin PocketBase, coloca Parquet en:
 
@@ -132,44 +136,31 @@ npm start
 
 Abrir http://localhost:4200
 
-| Usuario | Contraseña | Rol |
-|---------|------------|-----|
-| `demo` o `demo@voxmetrik.io` | `demo123` | Usuario estándar |
-| `admin` o `admin@voxmetrik.io` | `admin123` | Admin de plataforma (incluye Data Ops / ELT y Platform Ops) |
-| `engineer` o `engineer@voxmetrik.io` | `engineer123` | Ingeniero de datos — Data Ops (`/workpanel`, `/elt-pipeline`, `/explorer`, reportes técnicos); **sin** Platform Ops |
+### Primer acceso (producción / local limpio)
 
-### Cuentas demo (B2C + B2B) — seed opt-in
-
-Estado y rutas de demostración: [STATUS.md](STATUS.md).
-
-```bash
-cd apps/backend
-# limpia orgs/planes de pytest (no toca dim_track / catálogo musical)
-python scripts/cleanup_test_organizations.py --apply --retire-test-plans
-
-set VOXMETRIKS_SEED_DEMO_ACCOUNTS=1
-set DEMO_ACCOUNT_PASSWORD=TU_SECRETO_LOCAL
-python scripts/seed_integrated_demo.py
-# re-ejecutar = idempotente
+```powershell
+# Opción A — registro desde la UI
+# Opción B — bootstrap admin
+$env:BOOTSTRAP_ADMIN_EMAIL="ops@example.com"
+$env:BOOTSTRAP_ADMIN_PASSWORD="TuPasswordSeguro12"
+.\apps\backend\.venv\Scripts\python.exe apps\backend\scripts\bootstrap_admin.py
 ```
 
-Contraseña: variable **`DEMO_ACCOUNT_PASSWORD`** (solo hash en DB; placeholder en `.env.example`).
+En Windows también puedes usar el arranque unificado:
 
-| Username | Demostración | Rutas |
-|----------|--------------|-------|
-| `listener.free` | Free personal | `/home`, `/account/plans` |
-| `listener.premium` | Premium Individual | `/account/subscription`, `/account/billing` |
-| `household.owner` | Familiar + miembros | `/account/household` |
-| `platform.admin` | Catálogos / ops | `/platform-ops` |
-| `sales.manager` | CRM comercial | `/crm/*` |
-| `organization.owner` | Org Professional | `/organizations/*`, `/subscriptions/*` |
-| `finance.manager` | Billing org | `/billing/*` |
+```powershell
+.\scripts\setup.ps1
+.\scripts\start.ps1
+.\scripts\stop.ps1
+```
 
-Planes **personales** (`/account/*`) ≠ planes **empresariales** (`/subscriptions/*`).
+### Seeds DEV (opt-in, nunca producción)
 
-**Regalías (Spec 030 histórica):** `/royalties`, `/payouts` — fondos distribuibles + payout **simulado** (no banco real). Ver `.specify/history/030-royalties-settlements-and-simulated-payouts/`.
+Ver `apps/backend/.env.development.example`. Requiere `VOXMETRIKS_SEED_DEMO_ACCOUNTS=1` y no debe usarse con `ENVIRONMENT=production`.
 
-**Distribución artística (Spec 031 histórica):** `/artist/*`, `/catalog-review/*` — subir privado → revisar → publicar. Media en `data/media/`. Cuenta `demo.artist`. Ver `.specify/history/031-artist-music-submission-catalog-review-and-release-publishing/`.
+**Regalías (Spec 030):** `/royalties`, `/payouts` — sin transferencias bancarias reales.
+
+**Distribución artística (Spec 031):** `/artist/*`, `/catalog-review/*` — media en `data/media/`.
 
 ---
 
@@ -240,7 +231,7 @@ El warehouse DuckDB **no** se versiona (`.gitignore`); se genera con el pipeline
 
 Stack **aparte**: `infrastructure/airflow/compose.yml` (Airflow 3.3 + Postgres de metadata + LocalExecutor). No forma parte del Compose de aplicación.
 
-1. Detener demo/runtime de aplicación (`make down` / `start_demo.ps1`) — DuckDB es single-writer.
+1. Detener demo/runtime de aplicación (`make down` / `start.ps1`) — DuckDB es single-writer.
 2. Copiar `infrastructure/airflow/.env.example` → `.env` y **editar placeholders** (`replace-me`, JWT). `make airflow-up` se detiene si faltan o siguen inseguros.
 3. `make airflow-up` → UI en http://localhost:8081
 4. `make airflow-list` / Trigger manual del DAG `voxmetriks_elt` (`schedule=None`)

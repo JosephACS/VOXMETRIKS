@@ -293,7 +293,7 @@ import { productVisibleColumns } from '../../../shared/reports/report-presentati
       }
       .context-back {
         font-weight: 600;
-        color: var(--accent, #1ed896);
+        color: var(--accent, #e8a33d);
       }
       .sr-search {
         position: relative;

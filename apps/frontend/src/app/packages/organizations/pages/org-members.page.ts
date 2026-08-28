@@ -15,49 +15,62 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   imports: [CommonModule, RouterLink, TranslatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
-    <section class="org-page" data-testid="org-members-page">
-      <h1>{{ 'organizations.members.title' | t:lang() }}</h1>
-      <p class="lede">{{ 'organizations.members.lede' | t:lang() }}</p>
+    <section class="org-page org-page--members" data-testid="org-members-page">
+      <header class="org-page__header org-page__header--split">
+        <div>
+          <span class="org-page__eyebrow">Equipo y acceso</span>
+          <h1>{{ 'organizations.members.title' | t:lang() }}</h1>
+          <p class="lede">{{ 'organizations.members.lede' | t:lang() }}</p>
+        </div>
+        <div class="org-actions org-members-head-actions">
+          @if (ctx.hasPermission('member.invite')) {
+            <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">Invitar persona</a>
+          }
+          @if (ctx.hasPermission('role.view')) {
+            <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']">Roles y permisos</a>
+          }
+        </div>
+      </header>
 
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert">{{ error() }}</div>
       }
 
-      <div class="org-actions" style="margin-bottom: 1rem">
-        @if (ctx.hasPermission('member.invite')) {
-          <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">{{
-            'organizations.invitations.title' | t:lang()
-          }}</a>
-        }
-        @if (ctx.hasPermission('role.view')) {
-          <a class="org-btn org-btn--ghost" [routerLink]="['/organizations', orgId, 'roles']">{{
-            'organizations.roles.title' | t:lang()
-          }}</a>
-        }
+      <div class="org-members-summary" aria-label="Resumen del equipo">
+        <article><span>Total</span><strong>{{ total }}</strong><small>personas registradas</small></article>
+        <article><span>Activos</span><strong>{{ activeCount() }}</strong><small>con acceso al espacio</small></article>
+        <article><span>Administración</span><strong>{{ adminCount() }}</strong><small>con permisos de gestión</small></article>
       </div>
 
       @if (loading()) {
-        <p class="org-muted">{{ 'organizations.members.loading' | t:lang() }}</p>
+        <div class="org-card org-loading-card"><span class="org-spinner"></span><p>{{ 'organizations.members.loading' | t:lang() }}</p></div>
       } @else if (!items().length) {
-        <div class="org-card">
+        <div class="org-card org-members-empty">
+          <span aria-hidden="true">+</span>
+          <strong>Tu equipo empieza aquí</strong>
           <p class="org-muted">{{ 'organizations.members.empty' | t:lang() }}</p>
+          @if (ctx.hasPermission('member.invite')) {
+            <a class="org-btn" [routerLink]="['/organizations', orgId, 'invitations']">Enviar invitación</a>
+          }
         </div>
       } @else {
-        <div class="org-card">
+        <div class="org-card org-members-card">
+          <div class="org-members-card__head">
+            <div><span class="org-section-kicker">Personas</span><h2>Accesos del espacio</h2></div>
+            <span class="org-role-count">{{ total }} {{ total === 1 ? 'miembro' : 'miembros' }}</span>
+          </div>
           <ul class="org-member-list">
             @for (m of items(); track m.id) {
               <li class="org-member-row">
-                <div>
-                  <strong>{{ memberDisplayName(m) }}</strong>
-                  @if (m.user_id === currentUserId) {
-                    <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
-                  }
-                  <div class="org-muted">
-                    {{ m.status_label || humanMemberStatus(m.status) }}
-                    @if (m.roles?.length) {
-                      · {{ roleLabels(m) }}
+                <span class="org-avatar" aria-hidden="true">{{ memberInitials(m) }}</span>
+                <div class="org-member-row__copy">
+                  <div class="org-member-row__name">
+                    <strong>{{ memberDisplayName(m) }}</strong>
+                    @if (m.user_id === currentUserId) {
+                      <span class="org-badge">{{ 'organizations.members.you' | t:lang() }}</span>
                     }
                   </div>
+                  <div class="org-muted">{{ roleLabels(m) || 'Sin rol asignado' }} · {{ m.status_label || humanMemberStatus(m.status) }}</div>
                 </div>
                 <div class="org-actions">
                   @if (canSuspend() && m.status === 'active' && m.user_id !== currentUserId) {
@@ -85,34 +98,22 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
                       class="org-btn org-btn--ghost"
                       [routerLink]="['/organizations', orgId, 'roles']"
                       [queryParams]="{ member: m.id }"
-                      >{{ 'organizations.roles.title' | t:lang() }}</a
+                      >{{ 'organizations.roles.manageMember' | t:lang() }}</a
                     >
                   }
                 </div>
               </li>
             }
           </ul>
-          <p class="org-muted">
-            {{ 'common.page' | t:lang() }} {{ page }} · {{ 'common.total' | t:lang() }} {{ total }}
-          </p>
-          <div class="org-actions">
-            <button
-              type="button"
-              class="org-btn org-btn--ghost"
-              [disabled]="page <= 1"
-              (click)="go(page - 1)"
-            >
-              {{ 'common.prev' | t:lang() }}
-            </button>
-            <button
-              type="button"
-              class="org-btn org-btn--ghost"
-              [disabled]="page * limit >= total"
-              (click)="go(page + 1)"
-            >
-              {{ 'common.next' | t:lang() }}
-            </button>
-          </div>
+          @if (total > limit) {
+            <div class="org-members-pager">
+              <p class="org-muted">{{ 'common.page' | t:lang() }} {{ page }} · {{ 'common.total' | t:lang() }} {{ total }}</p>
+              <div class="org-actions">
+                <button type="button" class="org-btn org-btn--ghost" [disabled]="page <= 1" (click)="go(page - 1)">{{ 'common.prev' | t:lang() }}</button>
+                <button type="button" class="org-btn org-btn--ghost" [disabled]="page * limit >= total" (click)="go(page + 1)">{{ 'common.next' | t:lang() }}</button>
+              </div>
+            </div>
+          }
         </div>
       }
     </section>
@@ -159,7 +160,29 @@ export class OrgMembersPageComponent implements OnInit {
   }
 
   roleLabels(m: Membership): string {
-    return (m.roles || []).map((r) => r.label).join(', ');
+    return (m.roles || []).map((r) => this.humanRole(r.code || r.label)).join(', ');
+  }
+
+  memberInitials(m: Membership): string {
+    return this.memberDisplayName(m).split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  }
+
+  activeCount(): number {
+    return this.items().filter((member) => member.status === 'active').length;
+  }
+
+  adminCount(): number {
+    return this.items().filter((member) => (member.roles || []).some((role) => ['owner', 'organization_admin', 'org_admin', 'admin'].includes((role.code || '').toLowerCase()))).length;
+  }
+
+  private humanRole(code: string): string {
+    const value = (code || '').toLowerCase();
+    if (value === 'owner') return 'Propietario';
+    if (['organization_admin', 'org_admin', 'admin', 'administrator'].includes(value)) return 'Administrador';
+    if (value === 'billing_admin') return 'Facturación';
+    if (value === 'sales_manager') return 'Gestión comercial';
+    if (value === 'viewer') return 'Solo lectura';
+    return code.replace(/_/g, ' ');
   }
 
   async ngOnInit(): Promise<void> {

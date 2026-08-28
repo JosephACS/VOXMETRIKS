@@ -21,6 +21,8 @@ export function playableFromTrack(
     audioUrl: '',
     coverGradient: coverArt.gradientFor(t.id_track),
     explicit: t.explicit,
+    spotifyTrackId: t.spotify_track_id,
+    spotifyUri: t.spotify_track_id ? `spotify:track:${t.spotify_track_id}` : undefined,
   };
 }
 

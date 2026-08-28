@@ -99,14 +99,23 @@ def _migrate_user_role(conn: duckdb.DuckDBPyConnection) -> None:
 
 
 def _seed_demo_users(conn: duckdb.DuckDBPyConnection) -> None:
-    # Demo accounts (demo/admin/engineer) are seeded only outside production.
-    # In production this is always disabled regardless of SEED_DEMO_USERS.
+    # Optional DEV bootstrap accounts (demo/admin/engineer) — never production.
+    # Gated by seed_demo_users_enabled (SEED_DEMO_USERS + non-production).
+    # Passwords here are local-only fallbacks; prefer DEMO_ACCOUNT_PASSWORD when set.
     if not get_settings().seed_demo_users_enabled:
         return
+    import os
+
+    shared = (
+        os.environ.get("DEMO_ACCOUNT_PASSWORD")
+        or os.environ.get("DEMO_PASSWORD")
+        or os.environ.get("VOXMETRIKS_DEMO_PASSWORD")
+        or ""
+    ).strip()
     defaults = [
-        ("demo", "demo@voxmetrik.io", "demo123", "user", "Premium", "Pop"),
-        ("admin", "admin@voxmetrik.io", "admin123", "admin", "Premium", "Rock"),
-        ("engineer", "engineer@voxmetrik.io", "engineer123", "engineer", "Premium", "Electronic"),
+        ("demo", "demo@voxmetrik.io", shared or "demo123", "user", "Premium", "Pop"),
+        ("admin", "admin@voxmetrik.io", shared or "admin123", "admin", "Premium", "Rock"),
+        ("engineer", "engineer@voxmetrik.io", shared or "engineer123", "engineer", "Premium", "Electronic"),
     ]
     for username, email, pwd, role, plan, genre in defaults:
         row = conn.execute(

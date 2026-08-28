@@ -61,9 +61,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
           #scroller
           class="h-scroll"
           [class.is-dragging]="dragging()"
+          [class.is-gliding]="gliding()"
           (scroll)="onScroll()"
           (pointerdown)="onPointerDown($event)"
-          (wheel)="onWheel($event)"
         >
           <ng-content />
         </div>
@@ -86,42 +86,44 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   `,
   styles: [`
     .h-section {
-      margin-bottom: 1.25rem;
+      margin-bottom: 2rem;
       position: relative;
     }
     .h-head {
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
-      margin-bottom: 0.6rem;
-      padding: 0 0.7rem;
+      margin-bottom: 0.95rem;
+      padding: 0 0.15rem;
     }
     .h-head h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: clamp(1.35rem, 2vw, 1.75rem);
+      font-weight: 690;
       margin: 0;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
     }
     .h-sub {
-      font-size: 0.75rem;
+      max-width: 38rem;
+      font-size: 0.76rem;
       color: var(--text-muted);
     }
     .h-link {
       margin-left: auto;
-      font-size: 0.6875rem;
-      font-weight: 600;
+      font-size: 0.625rem;
+      font-weight: 680;
       color: var(--shell-fg-muted, var(--text-muted));
       text-decoration: none;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.11em;
       white-space: nowrap;
       z-index: 3;
     }
-    .h-link:hover { color: #1ed896; }
+    .h-link:hover { color: var(--vx-accent, #e8a33d); }
 
     .h-scroll-wrap {
       position: relative;
-      margin: 0 -0.25rem;
+      margin: 0 -0.2rem;
     }
     .h-scroll-wrap.has-overflow::before,
     .h-scroll-wrap.has-overflow::after {
@@ -150,18 +152,19 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 
     .h-scroll {
       display: flex;
-      gap: 0.3rem;
+      gap: 1rem;
       overflow-x: auto;
       overflow-y: hidden;
       overscroll-behavior-x: contain;
-      padding: 0.25rem 0.25rem 0.75rem;
+      padding: 0.35rem 0.2rem 1.15rem;
       scroll-snap-type: x proximity;
       scroll-padding-inline: 0.5rem;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       cursor: grab;
-      touch-action: pan-x;
+      touch-action: pan-x pan-y pinch-zoom;
+      contain: layout style paint;
     }
     .h-scroll::-webkit-scrollbar { display: none; }
     .h-scroll.is-dragging {
@@ -169,6 +172,10 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       scroll-behavior: auto;
       scroll-snap-type: none;
       user-select: none;
+    }
+    .h-scroll.is-gliding {
+      scroll-behavior: auto;
+      scroll-snap-type: none;
     }
     .h-scroll.is-dragging ::ng-deep * {
       pointer-events: none;
@@ -179,8 +186,8 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       top: 50%;
       transform: translateY(calc(-50% - 8px));
       z-index: 4;
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border: none;
       border-radius: 50%;
       display: flex;
@@ -188,8 +195,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       justify-content: center;
       cursor: pointer;
       color: #fff;
-      background: rgba(18, 18, 18, 0.82);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      background: rgba(9, 10, 15, 0.82);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
       border: 1px solid rgba(255, 255, 255, 0.12);
       opacity: 0;
       pointer-events: none;
@@ -205,13 +213,13 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       pointer-events: auto;
     }
     .h-arrow:hover {
-      background: rgba(30, 216, 150, 0.95);
-      color: #06150f;
+      background: rgba(247, 245, 252, 0.96);
+      color: #090a0f;
       transform: translateY(calc(-50% - 8px)) scale(1.06);
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
     }
     .h-arrow:focus-visible {
-      outline: 2px solid #1ed896;
+      outline: 2px solid var(--vx-accent, #e8a33d);
       outline-offset: 2px;
     }
     .h-arrow:active {
@@ -258,14 +266,20 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
   canScrollLeft = signal(false);
   canScrollRight = signal(false);
   dragging = signal(false);
+  gliding = signal(false);
 
   private resizeObs: ResizeObserver | null = null;
   private mutationObs: MutationObserver | null = null;
   private dragStartX = 0;
+  private dragStartY = 0;
   private dragScrollLeft = 0;
   private dragMoved = false;
   private dragArmed = false;
   private pointerId: number | null = null;
+  private lastPointerX = 0;
+  private lastPointerAt = 0;
+  private scrollVelocity = 0;
+  private glideFrame: number | null = null;
 
   ngAfterViewInit(): void {
     const el = this.scrollerRef.nativeElement;
@@ -289,6 +303,7 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
     this.resizeObs?.disconnect();
     this.mutationObs?.disconnect();
     this.endDrag();
+    this.cancelGlide();
   }
 
   @HostListener('document:pointermove', ['$event'])
@@ -296,7 +311,13 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
     if ((!this.dragArmed && !this.dragging()) || this.pointerId !== e.pointerId) return;
     const el = this.scrollerRef.nativeElement;
     const dx = e.clientX - this.dragStartX;
-    if (!this.dragMoved && Math.abs(dx) > 6) {
+    const dy = e.clientY - this.dragStartY;
+    if (!this.dragMoved && Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      this.dragArmed = false;
+      this.pointerId = null;
+      return;
+    }
+    if (!this.dragMoved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy) * 1.15) {
       this.dragMoved = true;
       this.dragging.set(true);
       try {
@@ -306,7 +327,14 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
       }
     }
     if (!this.dragMoved) return;
+    e.preventDefault();
     el.scrollLeft = this.dragScrollLeft - dx;
+    const now = performance.now();
+    const elapsed = Math.max(1, now - this.lastPointerAt);
+    const instantVelocity = (this.lastPointerX - e.clientX) / elapsed;
+    this.scrollVelocity = this.scrollVelocity * 0.68 + instantVelocity * 0.32;
+    this.lastPointerX = e.clientX;
+    this.lastPointerAt = now;
   }
 
   @HostListener('document:pointerup', ['$event'])
@@ -324,40 +352,26 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
     this.updateScrollState();
   }
 
-  onWheel(e: WheelEvent): void {
-    const el = this.scrollerRef.nativeElement;
-    if (!this.hasOverflow()) return;
-
-    // Native trackpads already pan-x; shift+wheel or dominant horizontal delta help mouse users.
-    const absX = Math.abs(e.deltaX);
-    const absY = Math.abs(e.deltaY);
-    if (e.shiftKey && absY > 0) {
-      e.preventDefault();
-      el.scrollBy({ left: e.deltaY, behavior: 'auto' });
-      return;
-    }
-    if (absX > absY && absX > 0) {
-      // Let the browser handle native horizontal wheel; just refresh arrows.
-      this.updateScrollState();
-    }
-  }
-
   onPointerDown(e: PointerEvent): void {
     if (e.pointerType === 'touch') return; // native swipe
     if (e.button !== 0) return;
     const target = e.target as HTMLElement | null;
-    // Don't start drag from cards / interactive controls — clicks must navigate/play.
-    if (target?.closest(
-      'button, a, input, [role="button"], app-media-card, .media-card, .pl-card, .artist-chip, .genre-chip, .continue-tile',
-    )) return;
+    // Keep native controls clickable. Card surfaces are draggable; the click is
+    // suppressed only when the pointer really moved past the drag threshold.
+    if (target?.closest('button, a, input, select, textarea, [contenteditable="true"]')) return;
 
     const el = this.scrollerRef.nativeElement;
+    this.cancelGlide();
     this.dragArmed = true;
     this.dragMoved = false;
     this.dragging.set(false);
     this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
     this.dragScrollLeft = el.scrollLeft;
     this.pointerId = e.pointerId;
+    this.lastPointerX = e.clientX;
+    this.lastPointerAt = performance.now();
+    this.scrollVelocity = 0;
   }
 
   scrollByPage(direction: -1 | 1): void {
@@ -409,7 +423,11 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
     this.dragging.set(false);
     this.pointerId = null;
     this.dragMoved = false;
-    this.updateScrollState();
+    if (wasDrag && Math.abs(this.scrollVelocity) > 0.08) {
+      this.startGlide(this.scrollVelocity);
+    } else {
+      this.updateScrollState();
+    }
 
     // Suppress the click that follows a drag so play/navigation don't fire.
     if (wasDrag) {
@@ -421,5 +439,38 @@ export class HorizontalSectionComponent implements AfterViewInit, OnDestroy {
       el.addEventListener('click', suppress, true);
       window.setTimeout(() => el.removeEventListener('click', suppress, true), 0);
     }
+  }
+
+  private startGlide(initialVelocity: number): void {
+    this.cancelGlide();
+    const el = this.scrollerRef.nativeElement;
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    let velocity = Math.max(-2.4, Math.min(2.4, initialVelocity));
+    let last = performance.now();
+    this.gliding.set(true);
+
+    const step = (now: number) => {
+      const elapsed = Math.min(32, now - last);
+      last = now;
+      const before = el.scrollLeft;
+      el.scrollLeft = Math.max(0, Math.min(max, before + velocity * elapsed));
+      velocity *= Math.pow(0.92, elapsed / 16.67);
+
+      const hitEdge = el.scrollLeft === before && Math.abs(velocity) > 0.02;
+      if (Math.abs(velocity) < 0.025 || hitEdge) {
+        this.cancelGlide();
+        this.updateScrollState();
+        return;
+      }
+      this.glideFrame = requestAnimationFrame(step);
+    };
+
+    this.glideFrame = requestAnimationFrame(step);
+  }
+
+  private cancelGlide(): void {
+    if (this.glideFrame !== null) cancelAnimationFrame(this.glideFrame);
+    this.glideFrame = null;
+    this.gliding.set(false);
   }
 }

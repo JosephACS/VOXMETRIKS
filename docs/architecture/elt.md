@@ -28,7 +28,7 @@ Ambos reutilizan `bronze_extract`, `silver_transform`, `gold_load_staging`, `gol
 
 Antes de `make airflow-trigger` o de disparar el DAG en la UI:
 
-1. Detener `start_demo.ps1` y/o `make down`.
+1. Detener `start.ps1` y/o `make down`.
 2. Ejecutar el DAG.
 3. Apagar Airflow (`make airflow-down`).
 4. Volver a levantar la aplicación.

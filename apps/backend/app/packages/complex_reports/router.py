@@ -7,17 +7,36 @@ import duckdb
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
-from app.core.database import get_conn
+from app.core.database import get_write_conn
 from app.packages.complex_reports.queries import run_complex_report
 from app.packages.complex_reports.registry import ACCESS_ROLES, all_reports, get_report
-from app.packages.identity.services.auth_deps import (
-    require_staff_identity,
-    resolve_optional_org_membership,
-)
+from app.packages.identity.services.auth_deps import require_user_id
 from app.packages.identity.services.data_classification import report_data_classification
-from app.packages.identity.services.user_service import _fetch_user
+from app.packages.reporting.presentation.dependencies import resolve_report_access_context
 
 complex_reports_router = APIRouter(prefix="/reports/complex", tags=["Complex Reports"])
+
+
+def _role(user_id: int, conn) -> str:
+    """Compatibility helper retained for older integrations and tests."""
+
+    from app.packages.identity.services.user_service import _fetch_user
+
+    user = _fetch_user(conn, user_id)
+    return str((user or {}).get("role") or "user").lower()
+
+
+def resolve_complex_report_access(
+    user_id: int = Depends(require_user_id),
+    conn: duckdb.DuckDBPyConnection = Depends(get_write_conn),
+    x_organization_id: Optional[str] = Header(default=None, alias="X-Organization-Id"),
+) -> dict:
+    return resolve_report_access_context(
+        user_id=user_id,
+        conn=conn,
+        identity_role=_role(user_id, conn),
+        x_organization_id=x_organization_id,
+    )
 
 
 from app.packages.complex_reports.ownership import MODULE_LABELS, get_complex_ownership
@@ -84,11 +103,6 @@ class ComplexDataOut(BaseModel):
     columns: list[ColumnOut] = Field(default_factory=list)
 
 
-def _role(user_id: int, conn: duckdb.DuckDBPyConnection) -> str:
-    user = _fetch_user(conn, user_id)
-    return (user.get("role") or "user").lower() if user else "user"
-
-
 def _to_complex_item(r) -> CatalogItem:
     own = get_complex_ownership(r.id)
     return CatalogItem(
@@ -120,10 +134,9 @@ def catalog(
     module: Optional[str] = Query(default=None),
     category: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None),
-    user_id: int = Depends(require_staff_identity),
-    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+    access: dict = Depends(resolve_complex_report_access),
 ) -> CatalogResponse:
-    role = _role(user_id, conn)
+    role = str(access["access_role"])
     items = []
     for r in all_reports():
         if role not in ACCESS_ROLES.get(r.access, {"admin"}):
@@ -152,13 +165,12 @@ def catalog(
 @complex_reports_router.get("/{report_id}", response_model=CatalogItem)
 def definition(
     report_id: str,
-    user_id: int = Depends(require_staff_identity),
-    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
+    access: dict = Depends(resolve_complex_report_access),
 ) -> CatalogItem:
     r = get_report(report_id)
     if r is None:
         raise HTTPException(status_code=404, detail="Informe no encontrado")
-    role = _role(user_id, conn)
+    role = str(access["access_role"])
     if role not in ACCESS_ROLES.get(r.access, {"admin"}):
         raise HTTPException(status_code=403, detail="No autorizado")
     return _to_complex_item(r)
@@ -169,25 +181,16 @@ def data(
     date_from: Optional[str] = Query(default=None, alias="from"),
     date_to: Optional[str] = Query(default=None, alias="to"),
     limit: int = Query(default=20, ge=1, le=100),
-    user_id: int = Depends(require_staff_identity),
-    conn: duckdb.DuckDBPyConnection = Depends(get_conn),
-    x_organization_id: Optional[str] = Header(None, alias="X-Organization-Id"),
+    access: dict = Depends(resolve_complex_report_access),
 ) -> ComplexDataOut:
     r = get_report(report_id)
     if r is None:
         raise HTTPException(status_code=404, detail="Informe no encontrado")
-    role = _role(user_id, conn)
+    role = str(access["access_role"])
     if role not in ACCESS_ROLES.get(r.access, {"admin"}):
         raise HTTPException(status_code=403, detail="No autorizado")
-    org_id = None
-    if x_organization_id is not None and str(x_organization_id).strip() != "":
-        try:
-            raw = int(str(x_organization_id).strip())
-        except ValueError:
-            raise HTTPException(status_code=400, detail="X-Organization-Id inválido")
-        org_id = resolve_optional_org_membership(
-            user_id=user_id, organization_id=raw, conn=conn
-        )
+    conn = access["conn"]
+    org_id = access.get("organization_id")
     try:
         payload = run_complex_report(
             conn,

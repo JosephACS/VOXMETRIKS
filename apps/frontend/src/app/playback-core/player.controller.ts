@@ -31,13 +31,11 @@ export class PlayerController {
   toggleShuffle(): void { this.player.toggleShuffle(); }
   cycleRepeat(): void { this.player.cycleRepeat(); }
   setRepeatMode(mode: RepeatMode): void { this.player.setRepeatMode(mode); }
-  toggleAutoplay(): void { this.player.toggleAutoplay(); }
 
   addToQueue(track: PlayableTrack): boolean { return this.player.addToQueue(track); }
   playNextInQueue(track: PlayableTrack): void { this.player.playNextInQueue(track); }
   removeFromQueue(index: number): boolean { return this.player.removeFromQueue(index); }
   moveInQueue(from: number, to: number): boolean { return this.player.moveInQueue(from, to); }
-  clearQueue(): void { this.player.clearQueue(); }
   clearPendingQueue(): void { this.player.clearPendingQueue(); }
 
   retryCurrent(): void { this.player.retryCurrent(); }
@@ -46,7 +44,6 @@ export class PlayerController {
   toggleExpandedView(): void { this.player.toggleExpandedView(); }
   clearCover(): void { this.player.clearCover(); }
   stopPlayback(): void { this.player.stopPlayback(); }
-  formatTime(sec: number): string { return this.player.formatTime(sec); }
 
   fromTrack(t: Track, artistName?: string): PlayableTrack {
     return this.player.fromTrack(t, artistName);

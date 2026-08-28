@@ -10,7 +10,8 @@ const LABEL_KEYS: Record<DataSourceKind, TranslationKey> = {
   local: 'data.local',
   synthetic: 'data.synthetic',
   mixed: 'data.mixed',
-  demo: 'data.demo',
+  // Legacy kind — same user-facing label as synthetic (avoid "Demo" copy).
+  demo: 'data.synthetic',
 };
 
 @Component({
@@ -36,9 +37,9 @@ const LABEL_KEYS: Record<DataSourceKind, TranslationKey> = {
       white-space: nowrap;
     }
     .data-source-badge--live {
-      color: var(--accent, #1ed896);
-      background: rgba(30, 216, 150, 0.12);
-      border: 1px solid rgba(30, 216, 150, 0.28);
+      color: var(--accent, #e8a33d);
+      background: rgba(232, 163, 61, 0.12);
+      border: 1px solid rgba(232, 163, 61, 0.28);
     }
     .data-source-badge--local {
       color: #60a5fa;
@@ -51,13 +52,13 @@ const LABEL_KEYS: Record<DataSourceKind, TranslationKey> = {
       border: 1px solid rgba(251, 191, 36, 0.28);
     }
     .data-source-badge--mixed {
-      color: #c084fc;
-      background: rgba(192, 132, 252, 0.12);
-      border: 1px solid rgba(192, 132, 252, 0.28);
+      color: var(--accent-hover, #f0b555);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
     }
     .data-source-badge--demo {
       color: var(--play-btn-fg, #000);
-      background: var(--accent, #1ed896);
+      background: var(--accent, #e8a33d);
       border: 1px solid transparent;
     }
   `],

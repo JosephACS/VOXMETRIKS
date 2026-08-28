@@ -66,7 +66,7 @@ import { RouterLink } from '@angular/router';
         text-decoration: none;
       }
       .vx-ent-page-header__back:hover {
-        color: var(--vx-accent, #1ed896);
+        color: var(--vx-accent, #e8a33d);
         text-decoration: underline;
       }
       .vx-ent-page-header__badge {

@@ -3,6 +3,8 @@ import { RouterLink } from '@angular/router';
 import { homePathForRole } from '../../core/navigation/nav-access.policy';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { SpaceContextService } from '../../core/spaces/space-context.service';
+import { homePathForSpace } from '../../core/spaces/space.models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
@@ -56,6 +58,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 })
 export class HttpErrorPageComponent {
   private readonly auth = inject(AuthService);
+  private readonly spaceCtx = inject(SpaceContextService);
   readonly lang = inject(I18nService).lang;
 
   @Input() code = '500';
@@ -68,6 +71,8 @@ export class HttpErrorPageComponent {
   get resolvedCtaLink(): string {
     if (this.ctaLink) return this.ctaLink;
     if (!this.auth.isAuthenticated()) return '/login';
+    const activeSpace = this.spaceCtx.activeSpace();
+    if (activeSpace) return homePathForSpace(activeSpace);
     return homePathForRole(this.auth.role());
   }
 }

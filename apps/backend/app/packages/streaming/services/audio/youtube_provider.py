@@ -24,9 +24,11 @@ from .metadata_normalize import (
 from .models import ResolvedSource, TrackContext
 from .youtube_scoring import (
     build_search_query,
+    is_youtube_music_candidate,
     parse_iso8601_duration,
     pick_best_youtube_candidate_detailed,
     score_youtube_candidate,
+    youtube_music_origin,
 )
 
 logger = logging.getLogger(__name__)
@@ -220,6 +222,9 @@ class YouTubeProvider(AudioProvider):
                     expected_title=meta.original_title,
                     expected_artists=list(meta.artists),
                     channel_title=item.get("channel_title") or "",
+                    category_id=str(item.get("category_id") or ""),
+                    licensed_content=bool(item.get("licensed_content")),
+                    music_origin=str(item.get("music_origin") or ""),
                 )
                 ranked.append(
                     {
@@ -253,6 +258,12 @@ class YouTubeProvider(AudioProvider):
             return []
         raw = self._collect_candidates(query.strip(), api_key)
         artists = list(expected_artists or [])
+        # When the query is entirely external we do not yet know which words
+        # belong to the title and which belong to the artist. YouTube relevance
+        # plus the music-catalog signals remain the identity gate; applying the
+        # whole free-text query as a strict title would reject valid official
+        # results such as "song + artist" searches.
+        score_title = (expected_title or query) if artists else ""
         ranked: List[Dict[str, Any]] = []
         seen: set[str] = set()
         for item in raw:
@@ -264,11 +275,27 @@ class YouTubeProvider(AudioProvider):
                 item.get("title", ""),
                 video_duration_sec=int(item.get("duration_sec") or 0),
                 track_duration_ms=None,
-                expected_title=expected_title or query,
+                expected_title=score_title,
                 expected_artists=artists,
                 channel_title=item.get("channel_title") or "",
+                category_id=str(item.get("category_id") or ""),
+                licensed_content=bool(item.get("licensed_content")),
+                music_origin=str(item.get("music_origin") or ""),
             )
-            ranked.append({**item, "query": query, "score": score, "origin": "youtube"})
+            # Free-text discovery is intentionally stricter than resolver
+            # recovery: do not show clips, covers, fan lyrics or mismatched
+            # variants merely because Content ID marked them as licensed.
+            if score < 0:
+                continue
+            ranked.append(
+                {
+                    **item,
+                    "query": query,
+                    "score": score,
+                    "origin": "youtube",
+                    "accepted": True,
+                }
+            )
         ranked.sort(key=lambda c: c.get("score") or -999, reverse=True)
         return ranked[: max(5, min(int(max_results), 10))]
 
@@ -329,14 +356,20 @@ class YouTubeProvider(AudioProvider):
             expected_title=expected_title,
             expected_artists=expected_artists,
         )
-        # Recovery path: if the best embed was excluded, accept next-best playable score.
-        if picked is None and exclude_ids:
+        # A catalog match can legitimately be published as a lyrics/visualizer
+        # upload (for example "Ik Tera"). Keep the strict official/plain pass
+        # first, then accept a secondary variant only when title, artist and
+        # duration still identify the same recording.
+        if picked is None:
             picked = pick_best_youtube_candidate_detailed(
                 candidates,
                 track_duration_ms,
                 expected_title=expected_title,
                 expected_artists=expected_artists,
                 min_accept_score=0.0,
+                # A matching lyrics/visualizer upload is better than declaring
+                # the song unavailable. Artist/title/duration gates still apply.
+                allow_secondary_variants=True,
             )
         return picked, True, ranked_ids
 
@@ -360,6 +393,9 @@ class YouTubeProvider(AudioProvider):
                 expected_title=expected_title,
                 expected_artists=expected_artists,
                 channel_title=item.get("channel_title") or item.get("uploader") or "",
+                category_id=str(item.get("category_id") or ""),
+                licensed_content=bool(item.get("licensed_content")),
+                music_origin=str(item.get("music_origin") or ""),
             )
             if score < 0:
                 continue
@@ -405,57 +441,75 @@ class YouTubeProvider(AudioProvider):
         details = self._fetch_video_details(video_ids, api_key)
         if details is None:
             return [], False
-        return [details[vid] for vid in video_ids if vid in details], True
+        candidates = [details[vid] for vid in video_ids if vid in details]
+        # Keep the discovery surface aligned with the YouTube Music catalog:
+        # Topic/Art Tracks, partner-licensed recordings and official uploads.
+        return [item for item in candidates if is_youtube_music_candidate(item)], True
 
     def _fetch_video_details(
         self, video_ids: List[str], api_key: str
     ) -> Optional[Dict[str, Dict[str, Any]]]:
         if not video_ids:
             return {}
-        try:
-            resp = httpx.get(
-                _YT_VIDEOS_URL,
-                params={
-                    "key": api_key,
-                    "id": ",".join(video_ids),
-                    "part": "contentDetails,snippet,status",
-                },
-                timeout=_REQUEST_TIMEOUT,
-            )
-        except httpx.HTTPError as exc:
-            logger.warning("YouTube videos.list failed: %s", exc)
-            return None
-        if resp.status_code != 200:
-            return None
-
         out: Dict[str, Dict[str, Any]] = {}
-        for item in resp.json().get("items") or []:
-            vid = item.get("id")
-            if not vid:
-                continue
-            snippet = item.get("snippet") or {}
-            status = item.get("status") or {}
-            details = item.get("contentDetails") or {}
-            if status.get("privacyStatus") not in (None, "public", "unlisted"):
-                continue
-            if status.get("embeddable") is False:
-                continue
-            duration_sec = parse_iso8601_duration(details.get("duration") or "")
-            thumbs = snippet.get("thumbnails") or {}
-            thumb = (
-                (thumbs.get("high") or {}).get("url")
-                or (thumbs.get("medium") or {}).get("url")
-                or (thumbs.get("default") or {}).get("url")
-                or ""
-            )
-            out[vid] = {
-                "video_id": vid,
-                "title": snippet.get("title") or "",
-                "channel_title": snippet.get("channelTitle") or "",
-                "channel_id": snippet.get("channelId") or "",
-                "duration_sec": duration_sec,
-                "thumbnail": thumb,
-                "published_at": snippet.get("publishedAt") or "",
-                "embeddable": bool(status.get("embeddable", True)),
-            }
+        # videos.list accepts at most 50 ids. Chunking keeps maintenance jobs
+        # correct when revalidating the complete playable catalog at once.
+        for start in range(0, len(video_ids), 50):
+            batch = video_ids[start : start + 50]
+            try:
+                resp = httpx.get(
+                    _YT_VIDEOS_URL,
+                    params={
+                        "key": api_key,
+                        "id": ",".join(batch),
+                        "part": "contentDetails,snippet,status",
+                    },
+                    timeout=_REQUEST_TIMEOUT,
+                )
+            except httpx.HTTPError as exc:
+                logger.warning("YouTube videos.list failed: %s", exc)
+                return None
+            if resp.status_code != 200:
+                return None
+
+            for item in resp.json().get("items") or []:
+                vid = item.get("id")
+                if not vid:
+                    continue
+                snippet = item.get("snippet") or {}
+                status = item.get("status") or {}
+                details = item.get("contentDetails") or {}
+                if status.get("privacyStatus") not in (None, "public", "unlisted"):
+                    continue
+                if status.get("embeddable") is False:
+                    continue
+                duration_sec = parse_iso8601_duration(details.get("duration") or "")
+                thumbs = snippet.get("thumbnails") or {}
+                thumb = (
+                    (thumbs.get("high") or {}).get("url")
+                    or (thumbs.get("medium") or {}).get("url")
+                    or (thumbs.get("default") or {}).get("url")
+                    or ""
+                )
+                category_id = str(snippet.get("categoryId") or "")
+                licensed_content = bool(details.get("licensedContent"))
+                origin = youtube_music_origin(
+                    title=snippet.get("title") or "",
+                    channel_title=snippet.get("channelTitle") or "",
+                    category_id=category_id,
+                    licensed_content=licensed_content,
+                )
+                out[vid] = {
+                    "video_id": vid,
+                    "title": snippet.get("title") or "",
+                    "channel_title": snippet.get("channelTitle") or "",
+                    "channel_id": snippet.get("channelId") or "",
+                    "duration_sec": duration_sec,
+                    "thumbnail": thumb,
+                    "published_at": snippet.get("publishedAt") or "",
+                    "embeddable": bool(status.get("embeddable", True)),
+                    "category_id": category_id,
+                    "licensed_content": licensed_content,
+                    "music_origin": origin,
+                }
         return out

@@ -1,4 +1,4 @@
-"""Resolve real cover-art image URLs for catalog tracks via the iTunes Search API.
+"""Resolve source-bound or catalog cover-art image URLs for tracks.
 
 The iTunes Search API is free and needs no API key. We never re-host images; we
 store the resolved artwork URL (Apple CDN) and let the browser load it, with a
@@ -6,9 +6,9 @@ gradient fallback in the UI. Results are cached in ``app_track_cover`` /
 ``app_artist_cover`` so each entity is looked up only once.
 
 Resolution order for tracks:
-  1. Song search (track + artist)
-  2. Song search (track only)
-  3. Artist search (primary artist name)
+  1. iTunes song search (track + artist)
+  2. iTunes song search (track only)
+  3. iTunes artist search (primary artist name)
 """
 
 from __future__ import annotations
@@ -244,7 +244,10 @@ def cover_urls_for_tracks(
         """,
         ids,
     ).fetchall()
-    return {int(r[0]): str(r[1]) for r in rows if r[1]}
+    covers = {int(r[0]): str(r[1]) for r in rows if r[1]}
+    # Artwork is catalog-owned; do not derive covers from external player
+    # sources, which may be stale or point at a different recording.
+    return covers
 
 
 def resolve_cover(

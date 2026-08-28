@@ -66,7 +66,7 @@ interface TrackRow {
                       @if (coverUrl(row.release); as src) {
                         <img [src]="src" alt="" loading="lazy" (error)="onCoverError($event)" />
                       } @else {
-                        <img class="cat-cover__mark" src="/assets/images/voxmetrik-icon.webp" alt="" />
+                        <img class="cat-cover__mark" src="/assets/brand/voxmetriks-mark.svg" alt="" />
                       }
                     </div>
                     <div>
@@ -195,7 +195,7 @@ export class ArtistTracksListPage implements OnInit {
     if (parent && !parent.querySelector('.cat-cover__mark')) {
       const mark = document.createElement('img');
       mark.className = 'cat-cover__mark';
-      mark.src = '/assets/images/voxmetrik-icon.webp';
+      mark.src = '/assets/brand/voxmetriks-mark.svg';
       mark.alt = '';
       parent.appendChild(mark);
     }

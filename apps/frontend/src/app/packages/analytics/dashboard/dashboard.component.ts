@@ -64,7 +64,7 @@ export class DashboardComponent implements OnInit {
   readonly streamSeries = computed((): ChartSeries[] => {
     const series = this.trendPoints();
     return [
-      { name: 'Streams', data: series.map((p) => p.total_streams), color: '#1ed896', yAxisIndex: 0 },
+      { name: 'Streams', data: series.map((p) => p.total_streams), color: '#e8a33d', yAxisIndex: 0 },
       { name: 'Usuarios', data: series.map((p) => p.unique_users), color: '#38bdf8', yAxisIndex: 1 },
     ];
   });
@@ -87,7 +87,7 @@ export class DashboardComponent implements OnInit {
     {
       name: 'Participación %',
       data: (this.overview()?.device_usage ?? []).map((d) => d.share_pct),
-      color: '#a855f7',
+      color: '#e8a33d',
     },
   ]);
 

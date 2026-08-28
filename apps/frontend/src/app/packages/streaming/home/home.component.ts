@@ -40,7 +40,6 @@ import {
   artistAffinityPct,
   fmtNumber,
   formatDurationMin,
-  recoCompatibilityPct,
   trackDurationLabel,
   trackProgressPct,
 } from './home-format.util';
@@ -133,15 +132,6 @@ export class HomeComponent implements OnInit {
     if (!artists.length) return this.i18n.t('home.reco.becauseGeneric');
     return this.i18n.t('home.reco.because', { artist: artists[index % artists.length] });
   }
-  recoMeta(id: number): string {
-    return this.i18n.t('home.reco.compat', { pct: recoCompatibilityPct(id) });
-  }
-  recoBadge(index: number): string {
-    const mode = index % 3;
-    if (mode === 0) return this.i18n.t('home.reco.badgeNew');
-    if (mode === 1) return this.i18n.t('home.reco.badgeSimilar');
-    return this.i18n.t('home.reco.badgeMatch');
-  }
   activityFeed = computed(() =>
     this.rawHistory().slice(0, 6).map((e) => ({
       ...e,
@@ -156,12 +146,6 @@ export class HomeComponent implements OnInit {
     if (v == null) return null;
     return { text: `${v >= 0 ? '+' : ''}${v}%`, positive: v >= 0 };
   });
-  playlistBadge(index: number): string | undefined {
-    if (index === 0) return this.i18n.t('home.badge.popular');
-    if (index === 1) return this.i18n.t('home.badge.new');
-    if (index === 2) return this.i18n.t('home.badge.editorsPick');
-    return undefined;
-  }
   trackProgress = trackProgressPct;
   trackDuration = trackDurationLabel;
   genreBars = computed(() => genreBars(this.genres()));

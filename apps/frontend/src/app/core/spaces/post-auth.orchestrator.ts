@@ -21,6 +21,14 @@ export function returnUrlAllowedForManifest(
   return manifest.spaces.some((s) => s.kind === needed);
 }
 
+/** Keep previously issued product links usable after route consolidation. */
+export function canonicalPostAuthPath(path: string): string {
+  if (!isSafeReturnUrl(path)) return path;
+  const parsed = new URL(path, 'https://voxmetriks.local');
+  if (parsed.pathname !== '/home') return path;
+  return `/discover${parsed.search}${parsed.hash}`;
+}
+
 export function resolvePostAuthPath(input: {
   manifest: SessionBootstrap;
   returnUrl: string | null;
@@ -28,9 +36,10 @@ export function resolvePostAuthPath(input: {
 }): string {
   const { manifest, returnUrl, householdPath } = input;
   if (returnUrl && returnUrlAllowedForManifest(returnUrl, manifest)) {
-    const needed = kindRequiredByPath(returnUrl);
+    const canonicalReturnUrl = canonicalPostAuthPath(returnUrl);
+    const needed = kindRequiredByPath(canonicalReturnUrl);
     if (needed === 'personal' && householdPath) return householdPath;
-    return returnUrl;
+    return canonicalReturnUrl;
   }
   if (pendingHas(manifest, 'choose_space') && manifest.spaces.length > 1) {
     return '/welcome/spaces';

@@ -52,8 +52,8 @@ export class TrackDetailComponent implements OnInit {
     const t = this.track();
     if (!t) return [];
     return [
-      { label: 'Energía', value: (t.energy ?? 0) * 100, color: '#1ed896' },
-      { label: 'Bailabilidad', value: (t.danceability ?? 0) * 100, color: '#7c3aed' },
+      { label: 'Energía', value: (t.energy ?? 0) * 100, color: '#e8a33d' },
+      { label: 'Bailabilidad', value: (t.danceability ?? 0) * 100, color: '#e8a33d' },
       { label: 'Valencia', value: (t.valence ?? 0) * 100, color: '#10b981' },
       { label: 'Acústica', value: (t.acousticness ?? 0) * 100, color: '#3b82f6' },
     ];

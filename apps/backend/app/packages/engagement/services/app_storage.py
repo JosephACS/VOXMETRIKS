@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import duckdb
 
+from app.core.config import get_settings
 from app.core.schema_bootstrap import schema_ready
 from app.core.time_util import utc_now
 from app.packages.identity.services.user_storage import ensure_user_tables, migrate_user_scoping
@@ -17,12 +18,16 @@ def _demo_user_id(conn: duckdb.DuckDBPyConnection) -> int | None:
 
 
 def _seed_demo_library(conn: duckdb.DuckDBPyConnection) -> None:
-    """Seed demo playlists/favorites if demo user has none.
+    """Optional DEV library seed for the demo user (playlists/favorites).
 
+    Runs only when seed_demo_users_enabled (same gate as identity bootstrap).
     Requires warehouse gold table ``dim_track``. If missing (empty app DB /
     no ELT), skip favorites/playlists seed so lifespan can still complete.
     """
     from app.core.database import table_exists
+
+    if not get_settings().seed_demo_users_enabled:
+        return
 
     ensure_user_tables(conn)
     uid = _demo_user_id(conn)

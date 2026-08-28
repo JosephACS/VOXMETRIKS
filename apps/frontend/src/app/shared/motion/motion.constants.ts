@@ -5,14 +5,14 @@
 
 export const MOTION_DURATION = {
   instant: 0,
-  fast: 150,
-  normal: 220,
-  slow: 320,
-  slower: 400,
+  fast: 120,
+  normal: 170,
+  slow: 230,
+  slower: 300,
 } as const;
 
 export const MOTION_EASING = {
-  standard: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  standard: 'cubic-bezier(0.2, 0.82, 0.2, 1)',
   out: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
   inOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
 } as const;
@@ -36,4 +36,4 @@ export function motionTiming(
 }
 
 /** Standard route / panel enter animation timing. */
-export const MOTION_ROUTE_ENTER = motionTiming('slow', 'standard');
+export const MOTION_ROUTE_ENTER = motionTiming('normal', 'standard');

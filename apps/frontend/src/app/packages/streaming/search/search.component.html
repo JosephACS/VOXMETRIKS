@@ -131,40 +131,25 @@
         </div>
       }
 
-      @if (externalResults().length) {
-        <h2 class="vx-section-label">{{ 'search.externalSection' | t: { count: externalResults().length }:lang() }}</h2>
-        <p class="external-hint">{{ statusMessage() || ('search.externalHint' | t:lang()) }}</p>
-        <div class="external-list">
-          @for (item of externalResults(); track item.video_id) {
-            <div class="vx-music-row external-card" [class.is-adopting]="adoptingVideoId() === item.video_id">
-              <button
-                type="button"
-                class="r-play"
-                (click)="playExternal(item, $event)"
-                [disabled]="adoptingVideoId() === item.video_id"
-                aria-label="Reproducir"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </button>
-              <div class="vx-music-cover vx-music-cover--placeholder" aria-hidden="true">
-                {{ item.title.charAt(0) }}
-              </div>
-              <div class="vx-music-meta">
-                <span class="vx-music-title">{{ item.title }}</span>
-                <span class="vx-music-sub">{{ item.channel_title || 'YouTube' }} · {{ formatDuration(item.duration_sec) }}</span>
-              </div>
-              <div class="external-actions">
-                <button type="button" class="ext-btn" (click)="playExternal(item, $event)" [disabled]="!!adoptingVideoId()">
-                  Reproducir
-                </button>
-                <button type="button" class="ext-btn ext-btn--secondary" (click)="addExternal(item, $event)" [disabled]="!!adoptingVideoId()">
-                  Añadir
-                </button>
-              </div>
+      @if (!artistResults().length && externalArtistResults().length) {
+        <h2 class="vx-section-label">Artistas encontrados</h2>
+        <div class="artist-row artist-row--external">
+          @for (a of externalArtistResults(); track a.id) {
+            <div class="artist-chip artist-chip--external">
+              <span class="vx-music-cover vx-music-cover--artist" [style.background]="'linear-gradient(135deg, var(--accent), var(--vx-surface-elevated))'">
+                @if (a.imageUrl) {
+                  <img [src]="a.imageUrl" [alt]="a.name" loading="lazy" />
+                } @else {
+                  {{ a.name.charAt(0) }}
+                }
+              </span>
+              <span>{{ a.name }}</span>
+              <small class="artist-source">{{ a.source === 'spotify' ? 'Spotify' : 'Deezer' }}</small>
             </div>
           }
         </div>
       }
+
     </div>
   }
 </div>

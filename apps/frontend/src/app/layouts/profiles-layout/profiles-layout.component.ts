@@ -36,8 +36,8 @@ import { RouterOutlet } from '@angular/router';
         position: fixed;
         inset: 0;
         background:
-          radial-gradient(ellipse 80% 55% at 50% -10%, rgba(30, 216, 150, 0.16), transparent 55%),
-          radial-gradient(ellipse 50% 40% at 90% 80%, rgba(30, 216, 150, 0.06), transparent 50%),
+          radial-gradient(ellipse 80% 55% at 50% -10%, rgba(232, 163, 61, 0.16), transparent 55%),
+          radial-gradient(ellipse 50% 40% at 90% 80%, rgba(232, 163, 61, 0.06), transparent 50%),
           linear-gradient(180deg, #0a0e12 0%, #07090c 45%, #050708 100%);
         pointer-events: none;
         z-index: 0;
@@ -46,8 +46,8 @@ import { RouterOutlet } from '@angular/router';
         position: fixed;
         inset: 0;
         background-image:
-          linear-gradient(90deg, rgba(30, 216, 150, 0.025) 1px, transparent 1px),
-          linear-gradient(0deg, rgba(30, 216, 150, 0.025) 1px, transparent 1px);
+          linear-gradient(90deg, rgba(232, 163, 61, 0.025) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(232, 163, 61, 0.025) 1px, transparent 1px);
         background-size: 56px 56px;
         mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
         pointer-events: none;

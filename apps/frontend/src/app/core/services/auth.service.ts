@@ -1,10 +1,9 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, Injector } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AppUser, AuthResponse, AuthConfig } from '../../shared/models/api.models';
 import { UiPreferencesService } from './ui-preferences.service';
-import { SessionCleanupCoordinator } from '../spaces/session-cleanup.coordinator';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -40,8 +39,7 @@ function unverifiedLoginFromError(e: unknown): LoginResult | null {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly ui = inject(UiPreferencesService);
-  /** Optional so auth keeps working in tests that do not provide product-space collaborators. */
-  private readonly cleanup = inject(SessionCleanupCoordinator, { optional: true });
+  private readonly injector = inject(Injector);
   private readonly API = `${environment.apiUrl}/users`;
   private readonly AUTH_KEY = 'voxmetrik_auth_token';
   private readonly USER_KEY = 'voxmetrik_user';
@@ -221,7 +219,11 @@ export class AuthService {
     sessionStorage.removeItem(this.AUTH_KEY);
     sessionStorage.removeItem(this.USER_KEY);
     this.authState.set({ isAuthenticated: false, user: null, token: null });
-    this.cleanup?.clearPrivateClientState();
+    void import('../spaces/session-cleanup.coordinator')
+      .then(({ SessionCleanupCoordinator }) =>
+        this.injector.get(SessionCleanupCoordinator).clearPrivateClientState(),
+      )
+      .catch(() => undefined);
   }
 
   /** Apply a fresh auth session (e.g. after PIN unlock switch). */

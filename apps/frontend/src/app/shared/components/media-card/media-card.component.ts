@@ -1,13 +1,13 @@
 import {
-  Component, Input, Output, EventEmitter, inject, DestroyRef, signal, effect, viewChild,
+  Component, Input, Output, EventEmitter, inject, DestroyRef, signal, effect, computed, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { DeferVisibleDirective } from '../../directives/defer-visible.directive';
-import { TrackActionsComponent } from '../track-actions/track-actions.component';
 import { CoverMosaicComponent } from '../cover-mosaic/cover-mosaic.component';
 import { PlayerController } from '../../../playback-core/player.controller';
+import { PlaybackStore } from '../../../playback-core/playback.store';
 import { CoverArtService } from '../../services/cover-art.service';
 import { TrackCoverService } from '../../services/track-cover.service';
 import { PlayableTrack } from '../../models/player.models';
@@ -15,10 +15,11 @@ import { PlayableTrack } from '../../models/player.models';
 @Component({
   selector: 'app-media-card',
   standalone: true,
-  imports: [CommonModule, RouterModule, DeferVisibleDirective, TrackActionsComponent, CoverMosaicComponent],
+  imports: [CommonModule, RouterModule, DeferVisibleDirective, CoverMosaicComponent],
   template: `
     <article
       class="media-card"
+      [class.is-current]="isCurrent()"
       [routerLink]="!track && link ? link : null"
       (click)="onCardClick()"
     >
@@ -40,22 +41,18 @@ import { PlayableTrack } from '../../models/player.models';
         @if (badge != null) {
           <span class="media-badge">{{ badge }}</span>
         }
-        @if (tag) {
-          <span class="media-tag">{{ tag }}</span>
-        }
         @if (track) {
-          <div class="card-actions" (click)="$event.stopPropagation()">
-            <app-track-actions
-              [track]="track"
-              [queue]="queue"
-              [artistId]="track.artistId ?? coverArtistId"
-              size="sm"
-            />
-          </div>
-          <button type="button" class="play-overlay" (click)="onPlay($event)" [attr.aria-label]="'Reproducir ' + title">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <button type="button" class="play-overlay" (click)="onPlay($event)" [attr.aria-label]="isCurrent() && playback.isPlaying() ? 'Pausar ' + title : 'Reproducir ' + title">
+            @if (isCurrent() && playback.isPlaying()) {
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            } @else {
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            }
           </button>
         }
+        <svg class="card-waveform" viewBox="0 0 180 34" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 20 C12 7 20 30 34 18 S58 7 72 20 S96 29 110 16 S135 7 150 20 S169 26 180 16" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".76" />
+        </svg>
       </div>
       <div class="media-info">
         @if (link) {
@@ -71,32 +68,37 @@ import { PlayableTrack } from '../../models/player.models';
   styles: [`
     :host {
       display: block;
-      flex: 0 0 184px;
+      flex: 0 0 212px;
       min-width: 0;
-      max-width: 184px;
+      max-width: 212px;
       scroll-snap-align: start;
     }
     .media-card {
       width: 100%;
       box-sizing: border-box;
       cursor: pointer;
-      padding: 0.7rem;
-      border-radius: 10px;
+      padding: 0;
+      border-radius: 18px;
       background: transparent;
-      transition: var(--motion-transition-interactive);
+      transition:
+        transform 260ms cubic-bezier(0.2, 0.82, 0.2, 1),
+        filter 220ms ease;
     }
     .media-card:hover {
-      background: var(--shell-hover, rgba(255,255,255,0.055));
+      transform: translate3d(0, -5px, 0);
     }
     .media-cover {
       position: relative;
       width: 100%;
       aspect-ratio: 1 / 1;
       height: auto;
-      border-radius: 7px;
+      border-radius: 18px;
       overflow: hidden;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-      transition: box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
+      border: 1px solid rgba(255, 255, 255, 0.075);
+      box-shadow: 0 18px 42px rgba(0,0,0,0.32);
+      transition:
+        box-shadow 260ms cubic-bezier(0.2, 0.82, 0.2, 1),
+        border-color 220ms ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -112,6 +114,7 @@ import { PlayableTrack } from '../../models/player.models';
       object-fit: cover;
       z-index: 0;
       animation: coverFade 0.3s ease;
+      transition: transform 720ms cubic-bezier(0.2, 0.82, 0.2, 1), filter 320ms ease;
     }
     .cover-skel {
       position: absolute;
@@ -141,8 +144,17 @@ import { PlayableTrack } from '../../models/player.models';
       letter-spacing: 0.02em;
     }
     .media-card:hover .media-cover {
-      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+      border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 42%, rgba(255,255,255,.12));
+      box-shadow: 0 28px 62px rgba(0,0,0,0.5), 0 0 0 1px color-mix(in srgb, var(--vx-accent, #e8a33d) 14%, transparent);
     }
+    .media-card.is-current .media-cover {
+      border-color: color-mix(in srgb, var(--accent) 58%, rgba(255,255,255,.12));
+      box-shadow: 0 28px 62px rgba(0,0,0,.5), 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+    .media-card.is-current .card-waveform { opacity: 1; transform: translateY(0); }
+    .media-card:hover .cover-img,
+    .media-card.is-previewing .cover-img { transform: scale(1.055); }
+    .media-card.is-previewing .cover-img { filter: saturate(1.06) brightness(.72); }
     .media-badge {
       position: absolute;
       top: 0.45rem;
@@ -152,9 +164,9 @@ import { PlayableTrack } from '../../models/player.models';
       font-family: var(--font-mono, monospace);
       padding: 2px 6px;
       border-radius: 999px;
-      background: rgba(0, 0, 0, 0.55);
-      color: #1ed896;
-      backdrop-filter: blur(4px);
+      background: rgba(7, 8, 12, 0.68);
+      color: #fff;
+      backdrop-filter: blur(12px);
       z-index: 1;
     }
     .media-tag {
@@ -167,9 +179,10 @@ import { PlayableTrack } from '../../models/player.models';
       font-weight: 800;
       padding: 3px 9px;
       border-radius: 999px;
-      background: #1ed896;
-      color: #06150f;
-      border: none;
+      background: rgba(7, 8, 12, 0.72);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(12px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
       z-index: 2;
       text-transform: uppercase;
@@ -186,8 +199,8 @@ import { PlayableTrack } from '../../models/player.models';
       height: 42px;
       border-radius: 50%;
       border: none;
-      background: #1ed896;
-      color: #000;
+      background: rgba(247, 245, 252, 0.94);
+      color: #090a0f;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -195,14 +208,14 @@ import { PlayableTrack } from '../../models/player.models';
       transform: translateY(8px);
       transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1), transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
       cursor: pointer;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
-      z-index: 2;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.42);
+      z-index: 5;
     }
     .media-card:hover .play-overlay {
       opacity: 1;
       transform: translateY(0);
     }
-    .play-overlay:hover { transform: scale(1.08); background: #fff; }
+    .play-overlay:hover { transform: scale(1.08); background: var(--vx-accent, #e8a33d); }
     .card-actions {
       position: absolute;
       top: 0.45rem;
@@ -215,11 +228,81 @@ import { PlayableTrack } from '../../models/player.models';
       z-index: 3;
     }
     .media-card:hover .card-actions { opacity: 1; }
-    .media-info { padding: 0.65rem 0.1rem 0; min-width: 0; }
+    .preview-stage {
+      position: absolute;
+      inset: auto 0 0;
+      z-index: 3;
+      min-height: 48%;
+      padding: 1rem 1rem .8rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: .6rem;
+      color: #fff;
+      opacity: 0;
+      transform: translateY(8px);
+      background: linear-gradient(180deg, transparent, rgba(5,6,10,.82) 68%, rgba(5,6,10,.94));
+      transition: opacity 220ms ease, transform 260ms cubic-bezier(.2,.82,.2,1);
+      pointer-events: none;
+    }
+    .media-card.is-preview-armed .preview-stage,
+    .media-card.is-previewing .preview-stage {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .preview-stage__eyebrow {
+      max-width: calc(100% - 50px);
+      font: 650 .58rem/1.2 var(--font-mono, monospace);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.76);
+    }
+    .preview-stage__wave {
+      height: 20px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .preview-stage__wave i {
+      width: 2px;
+      height: 5px;
+      border-radius: 99px;
+      background: var(--vx-accent, #e8a33d);
+      opacity: .72;
+    }
+    .media-card.is-previewing .preview-stage__wave i {
+      animation: mediaPreviewWave .72s ease-in-out infinite alternate;
+    }
+    .preview-stage__wave i:nth-child(2) { animation-delay: -.18s !important; }
+    .preview-stage__wave i:nth-child(3) { animation-delay: -.42s !important; }
+    .preview-stage__wave i:nth-child(4) { animation-delay: -.08s !important; }
+    .preview-stage__wave i:nth-child(5) { animation-delay: -.32s !important; }
+    .preview-stage__wave i:nth-child(6) { animation-delay: -.56s !important; }
+    @keyframes mediaPreviewWave { to { height: 19px; opacity: 1; } }
+    .preview-stage__progress {
+      height: 2px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255,255,255,.2);
+    }
+    .preview-stage__progress span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: #fff;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    .media-card.is-previewing .preview-stage__progress span {
+      animation: mediaPreviewProgress 15s linear forwards;
+    }
+    @keyframes mediaPreviewProgress { to { transform: scaleX(1); } }
+    .media-info { padding: 0.8rem 0.15rem 0; min-width: 0; }
     .media-title {
       display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-size: 0.94rem;
+      font-weight: 650;
       color: var(--text);
       text-decoration: none;
       white-space: nowrap;
@@ -227,7 +310,7 @@ import { PlayableTrack } from '../../models/player.models';
       text-overflow: ellipsis;
       line-height: 1.3;
     }
-    .media-title:hover { text-decoration: underline; }
+    .media-title:hover { color: var(--vx-accent, #e8a33d); }
     .media-sub {
       display: block;
       font-size: 0.75rem;
@@ -246,10 +329,19 @@ import { PlayableTrack } from '../../models/player.models';
       margin-top: 0.15rem;
       font-family: var(--font-mono, monospace);
     }
+    @media (prefers-reduced-motion: reduce) {
+      .media-card,
+      .cover-img,
+      .preview-stage { transition: none; }
+      .media-card:hover { transform: none; }
+      .media-card.is-previewing .preview-stage__wave i,
+      .media-card.is-previewing .preview-stage__progress span { animation: none; }
+    }
   `],
 })
 export class MediaCardComponent {
   private readonly controller = inject(PlayerController);
+  readonly playback = inject(PlaybackStore);
   private covers = inject(CoverArtService);
   private coverSvc = inject(TrackCoverService);
   private destroyRef = inject(DestroyRef);
@@ -259,7 +351,7 @@ export class MediaCardComponent {
   @Input({ required: true }) title!: string;
   @Input() subtitle?: string;
   @Input() meta?: string;
-  @Input() gradient = 'linear-gradient(135deg, #1ed896, #121212)';
+  @Input() gradient = 'linear-gradient(135deg, #e8a33d, #17130c)';
   @Input() link?: string;
   @Input() track?: PlayableTrack;
   @Input() queue: PlayableTrack[] = [];
@@ -284,6 +376,7 @@ export class MediaCardComponent {
 
   coverUrl = signal<string | null>(null);
   coverLoading = signal(false);
+  readonly isCurrent = computed(() => !!this.track && this.playback.isCurrentTrack(this.track.id));
 
   constructor() {
     effect(() => {
@@ -339,6 +432,11 @@ export class MediaCardComponent {
   onPlay(e: Event) {
     e.stopPropagation();
     if (!this.track) return;
+    if (this.isCurrent()) {
+      this.controller.toggle();
+      this.played.emit(this.track);
+      return;
+    }
     this.controller.playTrack(this.track, this.queue.length ? this.queue : undefined);
     this.played.emit(this.track);
   }
@@ -349,4 +447,5 @@ export class MediaCardComponent {
       this.onPlay(new Event('click'));
     }
   }
+
 }

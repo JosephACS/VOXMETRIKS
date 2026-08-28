@@ -8,8 +8,9 @@ export interface PlayableTrack {
   audioUrl: string;
   coverGradient: string;
   explicit?: boolean;
-  /** Resolved YouTube video id for real full-length playback (lazy-loaded). */
-  youtubeVideoId?: string;
+  /** Spotify catalog identity for connected playback and personalized mixes. */
+  spotifyTrackId?: string;
+  spotifyUri?: string;
 }
 
 /** Playback engine status (transport). */

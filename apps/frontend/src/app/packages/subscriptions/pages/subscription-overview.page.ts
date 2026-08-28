@@ -280,8 +280,8 @@ type OverviewTab = 'usage' | 'addons' | 'invoices';
         cursor: pointer;
       }
       .overview-tab.is-active {
-        background: color-mix(in srgb, var(--vx-accent, #1ed896) 14%, transparent);
-        color: var(--vx-accent, var(--accent, #1ed896));
+        background: color-mix(in srgb, var(--vx-accent, #e8a33d) 14%, transparent);
+        color: var(--vx-accent, var(--accent, #e8a33d));
       }
       .access-banner {
         margin-bottom: 0.85rem;

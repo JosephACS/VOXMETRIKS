@@ -195,9 +195,9 @@
 }
 
 .retry-btn {
-  border: 1px solid rgba(30, 216, 150, 0.35);
+  border: 1px solid rgba(232, 163, 61, 0.35);
   border-radius: 999px;
-  background: rgba(30, 216, 150, 0.08);
+  background: rgba(232, 163, 61, 0.08);
   color: var(--accent);
   cursor: pointer;
   font-weight: 700;
@@ -205,7 +205,7 @@
 }
 
 .retry-btn:hover {
-  background: rgba(30, 216, 150, 0.16);
+  background: rgba(232, 163, 61, 0.16);
 }
 
 .external-hint {
@@ -221,6 +221,30 @@
   gap: 0.25rem;
 }
 
+.external-card {
+  min-height: 76px;
+  padding-block: 0.45rem;
+  border: 1px solid transparent;
+}
+
+.external-card:hover {
+  border-color: var(--listener-line, var(--glass-border));
+  background: color-mix(in srgb, var(--listener-surface, var(--bg-card)) 88%, var(--accent) 4%);
+}
+
+.external-card .vx-music-cover {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  overflow: hidden;
+}
+
+.external-card .vx-music-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .external-card.is-adopting {
   opacity: 0.65;
 }
@@ -231,7 +255,7 @@
 
 .external-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.35rem;
   flex-shrink: 0;
 }

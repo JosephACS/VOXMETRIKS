@@ -1,56 +1,51 @@
-import { YoutubeEngineService } from '../youtube-engine.service';
+import { SpotifyPlaybackService } from '../../../core/integrations/spotify/spotify-playback.service';
 
 export interface PlaybackEngineHooks {
   onEnded: () => void;
-  onYtPlay: () => void;
-  onYtPause: () => void;
-  onYtEnded: () => void;
-  onYtError: () => void;
-  onYtBuffering: () => void;
+  onSpotifyPlay: () => void;
+  onSpotifyPause: () => void;
+  onSpotifyEnded: () => void;
+  onSpotifyError: () => void;
   onDemoMetadata: (duration: number) => void;
   onDemoWaiting: () => void;
   onDemoPlaying: () => void;
 }
 
-/** HTML Audio + YouTube engine coordination. */
+/** HTML Audio for Deezer previews/local audio plus Spotify Web Playback SDK. */
 export class PlayerPlaybackEngine {
   readonly audio = new Audio();
-  private usingYt = false;
+  private usingSpotify = false;
   private loadedTrackId: number | null = null;
-  private activeYoutubeVideoId: string | null = null;
   private tickTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    private readonly yt: YoutubeEngineService,
+    private readonly spotify: SpotifyPlaybackService,
     hooks: PlaybackEngineHooks,
   ) {
     this.audio.preload = 'metadata';
     this.audio.addEventListener('ended', () => {
-      if (!this.usingYt) hooks.onEnded();
+      if (!this.usingSpotify) hooks.onEnded();
     });
     this.audio.addEventListener('loadedmetadata', () => {
-      if (!this.usingYt) hooks.onDemoMetadata(this.audio.duration || 0);
+      if (!this.usingSpotify) hooks.onDemoMetadata(this.audio.duration || 0);
     });
     this.audio.addEventListener('waiting', () => {
-      if (!this.usingYt) hooks.onDemoWaiting();
+      if (!this.usingSpotify) hooks.onDemoWaiting();
     });
     this.audio.addEventListener('playing', () => {
-      if (!this.usingYt) hooks.onDemoPlaying();
+      if (!this.usingSpotify) hooks.onDemoPlaying();
     });
 
-    this.yt.onPlay = () => { if (this.usingYt) hooks.onYtPlay(); };
-    this.yt.onPause = () => { if (this.usingYt) hooks.onYtPause(); };
-    this.yt.onEnded = () => { if (this.usingYt) hooks.onYtEnded(); };
-    this.yt.onError = () => { if (this.usingYt) hooks.onYtError(); };
-    this.yt.onBuffering = () => { if (this.usingYt) hooks.onYtBuffering(); };
+    this.spotify.setHooks({
+      onPlay: () => { if (this.usingSpotify) hooks.onSpotifyPlay(); },
+      onPause: () => { if (this.usingSpotify) hooks.onSpotifyPause(); },
+      onEnded: () => { if (this.usingSpotify) hooks.onSpotifyEnded(); },
+      onError: () => { if (this.usingSpotify) hooks.onSpotifyError(); },
+    });
   }
 
-  get isYoutube(): boolean {
-    return this.usingYt;
-  }
-
-  get currentYoutubeVideoId(): string | null {
-    return this.usingYt ? this.activeYoutubeVideoId : null;
+  get isSpotify(): boolean {
+    return this.usingSpotify;
   }
 
   get loadedId(): number | null {
@@ -59,37 +54,35 @@ export class PlayerPlaybackEngine {
 
   setVolume(vol: number): void {
     this.audio.volume = vol;
-    this.yt.setVolume(vol * 100);
+    this.spotify.setVolume(vol);
   }
 
   primeDemo(url: string): void {
     this.audio.src = url;
   }
 
-  startYoutube(videoId: string, autoplay: boolean): void {
-    this.usingYt = true;
-    this.activeYoutubeVideoId = videoId;
+  startSpotify(uri: string, trackId: number, autoplay: boolean): Promise<boolean> {
+    this.usingSpotify = true;
+    this.loadedTrackId = trackId;
     this.audio.pause();
-    this.yt.load(videoId, autoplay);
+    return this.spotify.start(uri, autoplay);
   }
 
   startDemo(url: string, trackId: number, autoplay: boolean): Promise<boolean> {
-    this.usingYt = false;
-    this.activeYoutubeVideoId = null;
+    this.usingSpotify = false;
     this.loadedTrackId = trackId;
-    this.yt.stop();
     this.audio.src = url;
     if (!autoplay) return Promise.resolve(true);
     return this.audio.play().then(() => true).catch(() => false);
   }
 
-  markLoaded(trackId: number, youtube: boolean): void {
+  markSpotifyLoaded(trackId: number): void {
     this.loadedTrackId = trackId;
-    this.usingYt = youtube;
+    this.usingSpotify = true;
   }
 
   pause(): void {
-    if (this.usingYt) this.yt.pause();
+    if (this.usingSpotify) this.spotify.pause();
     else this.audio.pause();
   }
 
@@ -97,14 +90,14 @@ export class PlayerPlaybackEngine {
     return this.audio.play().then(() => true).catch(() => false);
   }
 
-  playYoutube(): void {
-    this.yt.play();
+  playSpotify(): Promise<boolean> {
+    return this.spotify.resume();
   }
 
   seek(seconds: number): number {
     const target = Math.max(0, seconds);
-    if (this.usingYt) {
-      this.yt.seekTo(target);
+    if (this.usingSpotify) {
+      this.spotify.seek(target);
       return target;
     }
     this.audio.currentTime = target;
@@ -112,12 +105,13 @@ export class PlayerPlaybackEngine {
   }
 
   getCurrentTime(): number {
-    return this.usingYt ? (this.yt.getCurrentTime() || 0) : (this.audio.currentTime || 0);
+    return this.usingSpotify ? this.spotify.getCurrentTime() : (this.audio.currentTime || 0);
   }
 
   getDuration(fallback: number): number {
-    if (this.usingYt) return this.yt.getDuration() || fallback;
-    return this.audio.duration || fallback;
+    return this.usingSpotify
+      ? this.spotify.getDuration() || fallback
+      : this.audio.duration || fallback;
   }
 
   stopAll(): void {
@@ -126,9 +120,8 @@ export class PlayerPlaybackEngine {
       this.audio.removeAttribute('src');
       this.audio.load();
     } catch { /* ignore */ }
-    this.yt.stop();
-    this.usingYt = false;
-    this.activeYoutubeVideoId = null;
+    this.spotify.stop();
+    this.usingSpotify = false;
     this.loadedTrackId = null;
   }
 

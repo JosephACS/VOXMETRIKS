@@ -186,7 +186,7 @@
 
 **POST `/login` — Request:**
 ```json
-{ "login": "demo", "password": "demo123", "remember": true }
+{ "login": "ops@example.com", "password": "<your-password>", "remember": true }
 ```
 
 **Response 200:**

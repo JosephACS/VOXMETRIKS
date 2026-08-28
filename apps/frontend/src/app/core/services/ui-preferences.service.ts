@@ -16,6 +16,7 @@ export interface UiPreferences {
 }
 
 const STORAGE_KEY = 'voxmetrik_ui_prefs';
+const THEME_CHOICE_KEY = 'voxmetrik_theme_choice';
 
 const DEFAULTS: UiPreferences = {
   theme: 'system',
@@ -30,6 +31,8 @@ const DEFAULTS: UiPreferences = {
 @Injectable({ providedIn: 'root' })
 export class UiPreferencesService {
   private readonly prefs = signal<UiPreferences>(this.load());
+  private hasExplicitThemeChoice = this.loadThemeChoiceFlag();
+  private themeAnimationToken = 0;
 
   readonly theme = computed(() => this.prefs().theme);
   readonly language = computed(() => this.prefs().language);
@@ -54,17 +57,45 @@ export class UiPreferencesService {
   }
 
   setTheme(theme: AppTheme): void {
+    this.hasExplicitThemeChoice = true;
+    this.persistThemeChoiceFlag();
     this.patch({ theme });
   }
 
-  /** Flip between explicit dark/light for the topbar toggle (persists preference). */
+  /** Flip between explicit dark/light without rasterizing the page into a snapshot. */
   toggleDarkLight(): void {
     const next = this.isVisuallyDark() ? 'light' : 'dark';
-    this.setTheme(next);
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      this.setTheme(next);
+      return;
+    }
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      this.setTheme(next);
+      return;
+    }
+
+    const token = ++this.themeAnimationToken;
+    const root = document.documentElement;
+    root.classList.remove('theme-changed');
+    root.classList.add('theme-changing');
+
+    window.setTimeout(() => {
+      if (token !== this.themeAnimationToken) return;
+      this.setTheme(next);
+      root.classList.add('theme-changed');
+
+      window.setTimeout(() => {
+        if (token !== this.themeAnimationToken) return;
+        root.classList.remove('theme-changing', 'theme-changed');
+      }, 150);
+    }, 75);
   }
 
-  /** Maps API dark_mode flag to local theme (dark / light). */
+  /** Hydrates the account theme only until this browser has made an explicit choice. */
   syncThemeFromDarkMode(darkMode: boolean): void {
+    if (this.hasExplicitThemeChoice) return;
     this.patch({ theme: darkMode ? 'dark' : 'light' });
   }
 
@@ -116,7 +147,7 @@ export class UiPreferencesService {
     document.documentElement.setAttribute('data-theme', resolved);
     document.documentElement.style.colorScheme = resolved;
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute('content', resolved === 'dark' ? '#0C1110' : '#F3F6F4');
+    meta?.setAttribute('content', resolved === 'dark' ? '#0B0D12' : '#C6C4CF');
   }
 
   private applyCompact(): void {
@@ -152,6 +183,28 @@ export class UiPreferencesService {
   private persist(prefs: UiPreferences): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    } catch {
+      /* ignore quota errors */
+    }
+  }
+
+  private loadThemeChoiceFlag(): boolean {
+    try {
+      if (localStorage.getItem(THEME_CHOICE_KEY) === '1') return true;
+
+      // Preserve explicit dark/light choices created by earlier app versions.
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const theme = JSON.parse(raw)?.theme;
+      return theme === 'dark' || theme === 'light';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistThemeChoiceFlag(): void {
+    try {
+      localStorage.setItem(THEME_CHOICE_KEY, '1');
     } catch {
       /* ignore quota errors */
     }

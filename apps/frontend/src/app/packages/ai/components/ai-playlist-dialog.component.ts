@@ -72,7 +72,7 @@ import { NotificationService } from '../../../core/services/notification.service
     .btn-primary, .btn-secondary {
       padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer;
     }
-    .btn-primary { background: #1ed896; color: #000; }
+    .btn-primary { background: #e8a33d; color: #000; }
     .btn-secondary { background: #333; color: #eee; }
     .close { position: absolute; top: 0.5rem; right: 0.75rem; background: none; border: none; color: #888; font-size: 1.25rem; cursor: pointer; }
     .meta { font-size: 0.8rem; color: #888; }

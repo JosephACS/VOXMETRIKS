@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.core.database import get_conn
 from app.packages.analytics.services.smart.smart_service import SmartRecommendationService
 from app.packages.identity.services.auth_deps import get_optional_user_id
 
 router = APIRouter(prefix="/smart", tags=["Smart Recommendations"])
+
+
+class SpotifyTasteRequest(BaseModel):
+    """Consent-derived Spotify ids; tokens never enter the VOX API."""
+
+    top_track_ids: list[str] = Field(default_factory=list, max_length=50)
+    recent_track_ids: list[str] = Field(default_factory=list, max_length=50)
+    saved_track_ids: list[str] = Field(default_factory=list, max_length=50)
+    limit: int = Field(default=20, ge=1, le=50)
 
 
 def _svc(conn: duckdb.DuckDBPyConnection = Depends(get_conn)) -> SmartRecommendationService:
@@ -45,6 +55,27 @@ def smart_recommendations(
     svc: SmartRecommendationService = Depends(_svc),
 ):
     return {"user_id": user_id, "tracks": svc.get_recommendations(user_id, limit=limit)}
+
+
+@router.post(
+    "/spotify-taste",
+    summary="VOX recommendations seeded by consented Spotify taste signals",
+)
+def spotify_taste_recommendations(
+    body: SpotifyTasteRequest,
+    user_id: int = Depends(_require_user),
+    svc: SmartRecommendationService = Depends(_svc),
+):
+    return {
+        "user_id": user_id,
+        **svc.get_spotify_taste_recommendations(
+            user_id,
+            top_track_ids=body.top_track_ids,
+            recent_track_ids=body.recent_track_ids,
+            saved_track_ids=body.saved_track_ids,
+            limit=body.limit,
+        ),
+    }
 
 
 @router.get("/discover-weekly", summary="Weekly personalized playlist")

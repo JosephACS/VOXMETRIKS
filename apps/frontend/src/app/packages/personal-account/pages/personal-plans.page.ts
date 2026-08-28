@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { catchError, finalize, forkJoin, of, timeout } from 'rxjs';
 import { I18nService } from '../../../core/services/i18n.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ENTERPRISE_UI_IMPORTS } from '../../../shared/components/enterprise';
@@ -21,38 +22,71 @@ import {
       <app-enterprise-page-header
         [title]="'personal.plans.title' | t:lang()"
         [subtitle]="'personal.plans.subtitle' | t:lang()"
-      >
-        <a routerLink="/account/subscription" class="btn btn--secondary">{{
-          'personal.nav.subscription' | t:lang()
-        }}</a>
-      </app-enterprise-page-header>
-
-      <div class="period-toggle" role="group">
-        <button
-          type="button"
-          class="btn"
-          [class.btn--primary]="period() === 'monthly'"
-          [class.btn--secondary]="period() !== 'monthly'"
-          (click)="period.set('monthly')"
-        >
-          {{ 'personal.plans.monthly' | t:lang() }}
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [class.btn--primary]="period() === 'annual'"
-          [class.btn--secondary]="period() !== 'annual'"
-          (click)="period.set('annual')"
-        >
-          {{ 'personal.plans.annual' | t:lang() }}
-        </button>
-      </div>
+      />
 
       @if (loading()) {
-        <app-enterprise-loading-skeleton [rows]="3" />
+        <div class="plan-loading" aria-busy="true" aria-live="polite">
+          <div class="plan-loading__summary">
+            <span></span><strong></strong><small></small>
+          </div>
+          <div class="plan-loading__grid">
+            @for (_ of [1, 2]; track _) {
+              <div class="plan-loading__card">
+                <strong></strong><span></span><span></span><span></span><button disabled></button>
+              </div>
+            }
+          </div>
+        </div>
       } @else if (error()) {
         <app-enterprise-error-state [message]="error()!" (retry)="load()" />
       } @else {
+        <section class="account-commerce-hub" aria-label="Plan y pagos">
+          <div class="account-commerce-hub__summary">
+            <span class="account-commerce-hub__eyebrow">{{ 'personal.accountHub.currentEyebrow' | t:lang() }}</span>
+            <strong>{{ sub()?.plan_name || ('personal.accountHub.freePlan' | t:lang()) }}</strong>
+            <span>{{ accountStatusHintKey() | t:lang() }}</span>
+          </div>
+          <div class="account-commerce-hub__actions">
+            <a routerLink="/account/subscription" class="btn btn--primary">
+              {{ 'personal.accountHub.manage' | t:lang() }}
+            </a>
+            <a routerLink="/account/billing" class="btn btn--secondary">
+              {{ 'personal.accountHub.billing' | t:lang() }}
+            </a>
+          </div>
+          <p class="account-commerce-hub__notice">
+            <span aria-hidden="true">✓</span>
+            {{ 'personal.accountHub.mockNotice' | t:lang() }}
+          </p>
+        </section>
+
+        <div class="plan-picker-heading">
+          <div>
+            <h2>{{ 'personal.nav.plans' | t:lang() }}</h2>
+            <p>{{ 'personal.plans.subtitle' | t:lang() }}</p>
+          </div>
+          <div class="period-toggle" role="group">
+            <button
+              type="button"
+              class="btn"
+              [class.btn--primary]="period() === 'monthly'"
+              [class.btn--secondary]="period() !== 'monthly'"
+              (click)="period.set('monthly')"
+            >
+              {{ 'personal.plans.monthly' | t:lang() }}
+            </button>
+            <button
+              type="button"
+              class="btn"
+              [class.btn--primary]="period() === 'annual'"
+              [class.btn--secondary]="period() !== 'annual'"
+              (click)="period.set('annual')"
+            >
+              {{ 'personal.plans.annual' | t:lang() }}
+            </button>
+          </div>
+        </div>
+
         <div class="plan-grid">
           @for (p of plans(); track p.code) {
             <article
@@ -92,7 +126,7 @@ import {
               }
               <p class="muted">{{ p.description }}</p>
               <ul class="plan-benefits">
-                @for (f of displayFeatures(p); track f) {
+                @for (f of displayFeatures(p).slice(0, 6); track f) {
                   <li>{{ f }}</li>
                 }
               </ul>
@@ -144,28 +178,45 @@ export class PersonalPlansPage implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.listPlans().subscribe({
-      next: (res) => {
-        this.plans.set(res.items);
-        this.api.getSubscription().subscribe({
-          next: (s) => {
-            this.sub.set(s);
-            this.loading.set(false);
-          },
-          error: () => {
-            this.loading.set(false);
-          },
-        });
+    forkJoin({
+      plans: this.api.listPlans().pipe(timeout(8_000)),
+      subscription: this.api.getSubscription().pipe(
+        timeout(8_000),
+        catchError(() => of(null)),
+      ),
+    }).pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: ({ plans, subscription }) => {
+        this.plans.set(plans.items);
+        this.sub.set(subscription);
       },
       error: () => {
         this.error.set(this.i18n.t('common.loadFailed'));
-        this.loading.set(false);
       },
     });
   }
 
   isCurrent(p: PersonalPlan): boolean {
-    return this.sub()?.plan_code === p.code && this.sub()?.status === 'active';
+    const sub = this.sub();
+    if (!sub) return false;
+    const status = (sub.status || '').toLowerCase();
+    const keepsAccess = ['active', 'trialing', 'processing', 'past_due', 'canceling'].includes(status);
+    if (!keepsAccess) return false;
+    if (sub.plan_code === p.code) return true;
+    return this.foldPlanName(sub.plan_name) === this.foldPlanName(p.display_name);
+  }
+
+  private foldPlanName(value: string | null | undefined): string {
+    return (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/gi, '')
+      .toLowerCase();
+  }
+
+  accountStatusHintKey(): string {
+    return (this.sub()?.status || '').toLowerCase() === 'processing'
+      ? 'personal.accountHub.processingHint'
+      : 'personal.accountHub.activeHint';
   }
 
   canManageBilling(): boolean {

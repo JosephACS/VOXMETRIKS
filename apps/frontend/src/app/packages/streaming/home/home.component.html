@@ -65,7 +65,7 @@
       @if (recoForYou().length) {
         <div data-testid="home-recommendations">
           <app-horizontal-section [title]="'home.section.reco' | t" [subtitle]="'home.section.recoSub' | t" link="/recommendations">
-            @for (t of recoForYou(); track t.id_track; let i = $index) {
+            @for (t of recoForYou(); track t.id_track) {
               <app-media-card
                 [title]="cleanTitle(t.nombre_track)"
                 [subtitle]="t.nombre_artista ?? '—'"
@@ -75,8 +75,6 @@
                 [link]="'/tracks/' + t.id_track"
                 [track]="controller.fromTrack(t)"
                 [queue]="recoForYouPlayable()"
-                [tag]="recoBadge(i)"
-                [meta]="recoMeta(t.id_track)"
               />
             }
           </app-horizontal-section>
@@ -88,7 +86,7 @@
           <app-horizontal-section
             [title]="'home.section.discover' | t"
             [subtitle]="'home.section.discoverHint' | t"
-            link="/insights/tracks"
+            link="/tracks"
           >
             @for (t of discoverShown(); track t.id_track) {
               <app-media-card
@@ -251,7 +249,7 @@
                 link="/playlists"
                 [queryParams]="{ tab: 'catalog' }"
               >
-                @for (pl of playlists(); track pl.id; let i = $index) {
+                @for (pl of playlists(); track pl.id) {
                   <app-media-card
                     [title]="pl.name"
                     [subtitle]="('home.section.playlistSub' | t:{ count: pl.total_tracks })"
@@ -259,7 +257,6 @@
                     [mosaicTrackIds]="pl.preview_track_ids?.length ? pl.preview_track_ids : (pl.cover_track_id ? [pl.cover_track_id] : [])"
                     [mosaicSeed]="'pl-cat-' + pl.id"
                     [link]="'/playlists/catalog/' + pl.id"
-                    [tag]="playlistBadge(i)"
                   />
                 }
               </app-horizontal-section>

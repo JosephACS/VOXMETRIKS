@@ -1,4 +1,5 @@
 import {
+  canonicalPostAuthPath,
   extractInvitationNavigation,
   resolvePostAuthPath,
   returnUrlAllowedForManifest,
@@ -32,6 +33,19 @@ describe('post-auth orchestrator (050)', () => {
     expect(
       resolvePostAuthPath({ manifest: m, returnUrl: '/discover', householdPath: null }),
     ).toBe('/discover');
+  });
+
+  it('migrates the retired /home destination to the current discover route', () => {
+    expect(canonicalPostAuthPath('/home?design=global-system-v1')).toBe(
+      '/discover?design=global-system-v1',
+    );
+    expect(
+      resolvePostAuthPath({
+        manifest: manifest(),
+        returnUrl: '/home?design=global-system-v1',
+        householdPath: null,
+      }),
+    ).toBe('/discover?design=global-system-v1');
   });
 
   it('ignores unauthorized org destinations when the user has no org space', () => {

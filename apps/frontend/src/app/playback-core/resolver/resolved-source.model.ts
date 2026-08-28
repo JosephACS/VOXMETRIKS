@@ -1,13 +1,13 @@
 import { AudioSource } from '../../shared/models/api.models';
 
-/** Provider identifiers returned by the backend Audio Resolver. */
+/** Providers used by the playback path. Spotify is resolved client-side. */
 export type AudioProviderId =
-  | 'youtube'
-  | 'audius'
+  | 'spotify'
+  | 'deezer'
   | 'demo'
   | 'preview'
-  | 'pending'
   | 'local_published'
+  | 'pending'
   | 'none';
 
 /** Normalized playback source — engine-agnostic. */
@@ -15,8 +15,8 @@ export interface ResolvedPlaybackSource {
   trackId: number;
   provider: AudioProviderId;
   status: AudioSource['status'];
-  youtubeVideoId?: string;
   streamUrl?: string;
+  spotifyUri?: string;
   confidenceScore?: number | null;
 }
 
@@ -40,22 +40,15 @@ export function availabilityFromSource(src: ResolvedPlaybackSource): AudioAvaila
 
 export function mapAudioSourceResponse(src: AudioSource): ResolvedPlaybackSource {
   const provider = normalizeProvider(src.provider);
-  const youtubeVideoId =
-    src.youtube_video_id ?? (provider === 'youtube' ? src.source_ref ?? undefined : undefined);
-  const streamProviders: AudioProviderId[] = [
-    'audius',
-    'demo',
-    'preview',
-    'local_published',
-  ];
   const streamUrl =
-    streamProviders.includes(provider) && src.playable_url ? src.playable_url : undefined;
+    ['deezer', 'demo', 'preview', 'local_published'].includes(provider) && src.playable_url
+      ? src.playable_url
+      : undefined;
 
   return {
     trackId: src.track_id,
     provider,
     status: src.status,
-    youtubeVideoId: youtubeVideoId ?? undefined,
     streamUrl,
     confidenceScore: src.confidence_score,
   };
@@ -63,8 +56,8 @@ export function mapAudioSourceResponse(src: AudioSource): ResolvedPlaybackSource
 
 function normalizeProvider(raw: string): AudioProviderId {
   if (
-    raw === 'youtube' ||
-    raw === 'audius' ||
+    raw === 'spotify' ||
+    raw === 'deezer' ||
     raw === 'demo' ||
     raw === 'preview' ||
     raw === 'pending' ||
@@ -77,11 +70,13 @@ function normalizeProvider(raw: string): AudioProviderId {
 
 export function isPlayableSource(src: ResolvedPlaybackSource): boolean {
   if (src.status !== 'ok') return false;
-  if (src.provider === 'youtube') return !!src.youtubeVideoId;
-  if (src.provider === 'audius' || src.provider === 'local_published') {
-    return !!src.streamUrl;
-  }
-  if (src.provider === 'preview' || src.provider === 'demo') {
+  if (src.provider === 'spotify') return !!src.spotifyUri;
+  if (
+    src.provider === 'deezer' ||
+    src.provider === 'local_published' ||
+    src.provider === 'preview' ||
+    src.provider === 'demo'
+  ) {
     return !!src.streamUrl;
   }
   return false;

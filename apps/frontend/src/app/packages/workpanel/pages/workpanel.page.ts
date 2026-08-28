@@ -85,6 +85,38 @@ interface ShortcutItem {
           }
         </p>
 
+        @if (!isEngineerView()) {
+          <section class="wp-journey" aria-labelledby="wp-journey-title">
+            <div class="wp-journey__intro">
+              <span class="wp-journey__eyebrow">Ruta recomendada</span>
+              <h2 id="wp-journey-title">De la música a una decisión</h2>
+              <p>Avanza por el flujo completo o entra directamente en la tarea que necesitas resolver.</p>
+            </div>
+            <div class="wp-journey__steps">
+              <a class="wp-journey__step" routerLink="/welcome/spaces">
+                <span class="wp-journey__number">01</span>
+                <span><strong>Elige el contexto</strong><small>Personal, artista u organización</small></span>
+                <span class="wp-journey__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="wp-journey__step" routerLink="/catalog">
+                <span class="wp-journey__number">02</span>
+                <span><strong>Prepara el catálogo</strong><small>Revisa música, artistas y publicación</small></span>
+                <span class="wp-journey__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="wp-journey__step" routerLink="/reports">
+                <span class="wp-journey__number">03</span>
+                <span><strong>Entiende las señales</strong><small>Convierte datos en evidencia clara</small></span>
+                <span class="wp-journey__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="wp-journey__step wp-journey__step--primary" routerLink="/business-decisions">
+                <span class="wp-journey__number">04</span>
+                <span><strong>Toma una decisión</strong><small>Asigna, ejecuta y mide el resultado</small></span>
+                <span class="wp-journey__arrow" aria-hidden="true">→</span>
+              </a>
+            </div>
+          </section>
+        }
+
         @if (isEngineerView()) {
           <!-- ENGINEER: Estado técnico -->
           <section class="wp-hero" [class.wp-hero--ok]="!engineerNeedsAttention" [class.wp-hero--alert]="engineerNeedsAttention">
@@ -257,7 +289,7 @@ interface ShortcutItem {
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--vx-accent, var(--accent, #1ed896));
+        color: var(--vx-accent, var(--accent, #e8a33d));
       }
       .wp-title {
         margin: 0;
@@ -303,6 +335,88 @@ interface ShortcutItem {
         font-size: 0.75rem;
         color: var(--vx-text-secondary, var(--color-text-muted, rgba(255, 255, 255, 0.45)));
       }
+      .wp-journey {
+        display: grid;
+        grid-template-columns: minmax(14rem, 0.72fr) minmax(0, 1.8fr);
+        gap: 1rem;
+        margin: 0 0 1rem;
+        padding: 1rem;
+        border: 1px solid color-mix(in srgb, var(--vx-accent, #e8a33d) 22%, var(--vx-border-subtle));
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at 0 0, color-mix(in srgb, var(--vx-accent, #e8a33d) 13%, transparent), transparent 18rem),
+          linear-gradient(125deg, var(--vx-surface, #141720), color-mix(in srgb, var(--vx-surface-elevated, #1b1f2a) 88%, #f0b555));
+        box-shadow: 0 18px 42px rgba(3, 5, 12, 0.16);
+      }
+      .wp-journey__intro {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0.35rem 0.5rem;
+      }
+      .wp-journey__eyebrow {
+        color: var(--vx-accent, #e8a33d);
+        font: 700 0.62rem/1 var(--font-mono, monospace);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .wp-journey__intro h2 {
+        margin: 0.55rem 0 0;
+        max-width: 16rem;
+        color: var(--vx-text, #fff);
+        font-size: clamp(1.25rem, 2vw, 1.75rem);
+        line-height: 1.04;
+        letter-spacing: -0.04em;
+      }
+      .wp-journey__intro p {
+        margin: 0.6rem 0 0;
+        max-width: 18rem;
+        color: var(--vx-text-secondary);
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+      .wp-journey__steps {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+      }
+      .wp-journey__step {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.65rem;
+        min-height: 4.35rem;
+        padding: 0.75rem;
+        color: var(--vx-text, #fff);
+        text-decoration: none;
+        border: 1px solid var(--vx-border-subtle);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--vx-surface-elevated, #1d2230) 74%, transparent);
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      }
+      .wp-journey__step:hover {
+        transform: translateY(-2px);
+        border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 38%, transparent);
+        background: color-mix(in srgb, var(--vx-accent, #e8a33d) 8%, var(--vx-surface-elevated, #1b1f2a));
+      }
+      .wp-journey__step--primary {
+        border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 38%, transparent);
+        background: linear-gradient(115deg, color-mix(in srgb, var(--vx-accent, #e8a33d) 18%, var(--vx-surface-elevated)), rgba(240, 181, 85,0.1));
+      }
+      .wp-journey__number {
+        color: var(--vx-accent, #e8a33d);
+        font: 700 0.64rem/1 var(--font-mono, monospace);
+      }
+      .wp-journey__step strong,
+      .wp-journey__step small { display: block; }
+      .wp-journey__step strong { font-size: 0.8rem; }
+      .wp-journey__step small {
+        margin-top: 0.18rem;
+        color: var(--vx-text-secondary);
+        font-size: 0.68rem;
+        line-height: 1.35;
+      }
+      .wp-journey__arrow { color: var(--vx-accent, #e8a33d); font-size: 1rem; }
       .wp-hero {
         margin-bottom: 0.9rem;
         padding: 1.1rem 1.2rem;
@@ -310,9 +424,17 @@ interface ShortcutItem {
         background: var(--vx-surface, var(--color-surface, #121212));
         border: 1px solid var(--vx-border-subtle, rgba(255, 255, 255, 0.08));
       }
+      @media (max-width: 900px) {
+        .wp-journey { grid-template-columns: 1fr; }
+        .wp-journey__intro h2,
+        .wp-journey__intro p { max-width: none; }
+      }
+      @media (max-width: 620px) {
+        .wp-journey__steps { grid-template-columns: 1fr; }
+      }
       .wp-hero--ok {
-        background: color-mix(in srgb, var(--vx-accent, #1ed896) 8%, var(--vx-surface, #121212));
-        border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 28%, transparent);
+        background: color-mix(in srgb, var(--vx-accent, #e8a33d) 8%, var(--vx-surface, #121212));
+        border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 28%, transparent);
       }
       .wp-hero--alert {
         border-color: color-mix(in srgb, var(--vx-warning, #fbbf24) 35%, transparent);
@@ -334,7 +456,7 @@ interface ShortcutItem {
         color: var(--vx-text, #fff);
       }
       .wp-hero--ok .wp-hero__value {
-        color: var(--vx-accent, #1ed896);
+        color: var(--vx-accent, #e8a33d);
       }
       .wp-hero__why {
         margin: 0.45rem 0 0;
@@ -377,7 +499,7 @@ interface ShortcutItem {
         border: 1px solid var(--vx-border-subtle, rgba(255, 255, 255, 0.08));
       }
       .wp-kpi:hover {
-        border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 30%, transparent);
+        border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 30%, transparent);
       }
       .wp-kpi__label {
         font-size: 0.75rem;
@@ -396,13 +518,13 @@ interface ShortcutItem {
         font-weight: 600;
       }
       .wp-kpi__delta.up {
-        color: var(--vx-accent, #1ed896);
+        color: var(--vx-accent, #e8a33d);
       }
       .wp-kpi__delta.down {
         color: var(--vx-error, #ef4444);
       }
       .wp-kpi--healthy .wp-kpi__value {
-        color: var(--vx-accent, #1ed896);
+        color: var(--vx-accent, #e8a33d);
       }
       .wp-kpi--empty {
         opacity: 0.72;
@@ -474,7 +596,7 @@ interface ShortcutItem {
         background: var(--vx-error, #ef4444);
       }
       .sev[data-sev='ok'] {
-        background: var(--vx-accent, #1ed896);
+        background: var(--vx-accent, #e8a33d);
       }
       .wp-priority__body,
       .wp-signal-list li > div {
@@ -507,12 +629,12 @@ interface ShortcutItem {
         background: transparent;
       }
       .wp-cta--primary {
-        background: var(--vx-accent, #1ed896);
+        background: var(--vx-accent, #e8a33d);
         color: var(--btn-on-accent, #0A1210);
         border-color: transparent;
       }
       .wp-cta--ghost {
-        color: var(--vx-accent, #1ed896);
+        color: var(--vx-accent, #e8a33d);
         border-color: transparent;
       }
       .wp-activity {
@@ -573,8 +695,8 @@ interface ShortcutItem {
         line-height: 1.35;
       }
       .wp-shortcut--primary {
-        border-color: color-mix(in srgb, var(--vx-accent, #1ed896) 35%, transparent);
-        background: color-mix(in srgb, var(--vx-accent, #1ed896) 10%, transparent);
+        border-color: color-mix(in srgb, var(--vx-accent, #e8a33d) 35%, transparent);
+        background: color-mix(in srgb, var(--vx-accent, #e8a33d) 10%, transparent);
       }
     `,
   ],
@@ -598,7 +720,7 @@ export class WorkpanelPage implements OnInit {
   }
 
   get pageTitle(): string {
-    return this.isEngineerView() ? 'Estado técnico' : 'Workpanel';
+    return this.isEngineerView() ? 'Estado técnico' : 'Centro de control';
   }
 
   get pageSubtitle(): string {

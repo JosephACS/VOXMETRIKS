@@ -5,6 +5,9 @@ export function sanitizeDisplayText(value?: string | null): string {
   raw = raw
     .replace(/\uFFFD/g, '')
     .replace(/\s*\[syn-\d+\]\s*$/i, '')
+    // Imported catalog rows can contain provider presentation labels. They do
+    // not describe the song and make the Spotify-first UI look like a video app.
+    .replace(/\s*(?:\[|\()(?:official\s+)?(?:animated\s+|music\s+|lyrics?\s+)?(?:video|audio)(?:\s+clip)?(?:\]|\))/gi, '')
     .replace(/\s*[—–\-·•∙‧]\s*#\d+\s*$/g, '')
     .replace(/\s+#\d{4,}\s*$/g, '')
     .replace(/\s+/g, ' ')

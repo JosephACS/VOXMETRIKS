@@ -37,7 +37,10 @@ services:
       # Con proxy Nginx same-origin, CORS es secundario; se mantiene para :8000 directo.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:4200,http://127.0.0.1:4200}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
-      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
+      # Demo bootstrap is opt-in (false by default). Never enable in production.
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
+      SEED_DEMO_CRM_USERS: ${SEED_DEMO_CRM_USERS:-false}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-manual_transfer}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:8080}
     volumes:
       # Persistencia DuckDB + capas Parquet (rw: DuckDB escribe; Parquet normalmente solo lectura lógica)

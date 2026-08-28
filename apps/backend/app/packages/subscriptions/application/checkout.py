@@ -23,6 +23,10 @@ from app.packages.billing.application.use_cases import (
     PaymentUseCases,
 )
 from app.packages.billing.domain import errors as billing_errors
+from app.packages.billing.domain.providers import (
+    configured_payment_is_simulated,
+    require_configured_payment_provider,
+)
 from app.packages.billing.infrastructure.schema import ensure_billing_tables
 from app.packages.subscriptions.application.use_cases import (
     _assert_org_active,
@@ -39,6 +43,13 @@ from app.packages.subscriptions.domain.errors import (
     ValidationError,
 )
 from app.packages.subscriptions.infrastructure.schema import ensure_subscription_tables
+
+
+def _checkout_payment_provider() -> str:
+    try:
+        return require_configured_payment_provider()
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
 
 CHECKOUT_STATUSES = frozenset(
     {
@@ -178,7 +189,7 @@ def _map_session(conn: duckdb.DuckDBPyConnection, row: tuple) -> dict[str, Any]:
         "updated_at": updated_at,
         "expires_at": expires_at,
         "completed_at": completed_at,
-        "is_simulated": True,
+        "is_simulated": configured_payment_is_simulated(),
         "payment_method": None,
     }
     if out["payment_method_id"]:
@@ -265,6 +276,7 @@ def create_checkout(
 ) -> dict[str, Any]:
     ensure_subscription_tables(conn)
     ensure_billing_tables(conn)
+    _checkout_payment_provider()
     if not idempotency_key or not idempotency_key.strip():
         raise CheckoutError("idempotency_key is required", code="validation_error")
     key = idempotency_key.strip()
@@ -457,6 +469,12 @@ def attach_payment_method(
 ) -> dict[str, Any]:
     ensure_subscription_tables(conn)
     ensure_billing_tables(conn)
+    provider = _checkout_payment_provider()
+    if not configured_payment_is_simulated():
+        raise ValidationError(
+            "Simulated card checkout requires PAYMENT_PROVIDER=academic_mock "
+            "(non-production / tests only). Default manual_transfer is ops recording, not card simulation."
+        )
     if not re.fullmatch(r"\d{4}", str(last4 or "")):
         raise CheckoutError("last4 must be exactly four digits", code="validation_error")
     if not simulation_token or simulation_token not in SIM_TOKEN_SCENARIO:
@@ -487,12 +505,13 @@ def attach_payment_method(
                 id, organization_id, provider_code, display_label, token_ref,
                 method_type, is_default, status, created_at, updated_at,
                 brand, last4, exp_month, exp_year, simulation_token
-            ) VALUES (?, ?, 'academic_mock', ?, ?, 'mock', ?, 'active', ?, ?,
+            ) VALUES (?, ?, ?, ?, ?, 'mock', ?, 'active', ?, ?,
                       ?, ?, ?, ?, ?)
             """,
             [
                 mid,
                 organization_id,
+                provider,
                 label,
                 f"pm_ref_{mid}",
                 bool(is_default),
@@ -527,6 +546,12 @@ def confirm_checkout(
 ) -> dict[str, Any]:
     ensure_subscription_tables(conn)
     ensure_billing_tables(conn)
+    provider = _checkout_payment_provider()
+    if not configured_payment_is_simulated():
+        raise ValidationError(
+            "Simulated payment confirmation requires PAYMENT_PROVIDER=academic_mock "
+            "(non-production / tests only)."
+        )
     if not idempotency_key or not idempotency_key.strip():
         raise CheckoutError("idempotency_key is required", code="validation_error")
     confirm_key = idempotency_key.strip()
@@ -578,7 +603,7 @@ def confirm_checkout(
             actor_user_id=actor_user_id,
             organization_id=organization_id,
             invoice_id=int(session["invoice_id"]),
-            provider_code=PaymentAttemptUseCases.MOCK_PROVIDER,
+            provider_code=provider,
             idempotency_key=confirm_key,
             amount=_quantize(session["amount"]),
             currency=str(session["currency"]),

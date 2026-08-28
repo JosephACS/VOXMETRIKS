@@ -11,7 +11,7 @@
   --listener-surface: color-mix(in srgb, var(--bg-surface, #121212) 88%, transparent);
   --listener-line: color-mix(in srgb, var(--text, #fff) 8%, transparent);
   --listener-muted: var(--text-muted, rgba(255, 255, 255, 0.45));
-  --listener-accent: var(--accent, #1ed896);
+  --listener-accent: var(--accent, #e8a33d);
 }
 
 html[data-theme='light'] .listener-surface,
@@ -22,22 +22,22 @@ html[data-theme='light'] .activity-page,
 html[data-theme='light'] .history-page,
 html[data-theme='light'] .settings-page,
 html[data-theme='light'] .home-layout {
-  --listener-surface: #FFFFFF;
+  --listener-surface: var(--vx-surface-elevated, #F5F3F8);
   --listener-line: var(--vx-border, rgba(10, 18, 15, 0.14));
   --listener-muted: var(--color-text-muted, #3A4741);
 }
 
-/* Light music rows: white tiles, clear ink */
+/* Light music rows: mineral tiles, clear ink and the same depth as dark. */
 html[data-theme='light'] .vx-music-row,
 html[data-theme='light'] .continue-tile {
-  background: #FFFFFF;
+  background: linear-gradient(145deg, var(--vx-surface-elevated, #F5F3F8), var(--vx-surface, #ECEBF1));
   border-color: var(--vx-border-subtle, rgba(10, 18, 15, 0.09));
-  box-shadow: 0 1px 2px rgba(10, 18, 15, 0.04);
+  box-shadow: var(--shadow-sm, 0 8px 20px rgba(90, 56, 12, 0.06));
 }
 
 html[data-theme='light'] .vx-music-row:hover,
 html[data-theme='light'] .continue-tile:hover {
-  background: color-mix(in srgb, var(--listener-accent, var(--accent)) 7%, #FFFFFF);
+  background: color-mix(in srgb, var(--listener-accent, var(--accent)) 8%, var(--vx-surface-elevated, #F5F3F8));
   border-color: color-mix(in srgb, var(--listener-accent, var(--accent)) 28%, transparent);
 }
 

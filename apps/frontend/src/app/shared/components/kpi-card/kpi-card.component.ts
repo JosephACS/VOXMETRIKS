@@ -104,11 +104,11 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 
     /* ── Color variants ── */
     .kpi-color-primary {
-      border-color: rgba(30, 216, 150, 0.18);
+      border-color: rgba(232, 163, 61, 0.18);
     }
     .kpi-color-primary:hover {
-      border-color: rgba(30, 216, 150, 0.35);
-      box-shadow: 0 8px 32px rgba(30, 216, 150, 0.12);
+      border-color: rgba(232, 163, 61, 0.35);
+      box-shadow: 0 8px 32px rgba(232, 163, 61, 0.12);
     }
     .kpi-color-primary .kpi-value-num { color: var(--color-primary); }
     .kpi-color-primary .kpi-accent {

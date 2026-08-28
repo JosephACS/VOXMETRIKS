@@ -61,7 +61,7 @@ python analytics/elt/pipelines/elt_pipeline.py
 ```
 
 ### ¿Credenciales demo?
-`demo` / `demo123` (solo development). Engineer: `admin` / `admin123`.
+Primer acceso: registro en la UI o `python apps/backend/scripts/bootstrap_admin.py` (`BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD`). Seeds DEV opcionales: ver `.env.development.example`.
 
 ### ¿Por qué no veo /docs en producción?
 `ENVIRONMENT=production` desactiva Swagger por seguridad. Usar [api.md](api/api.md).

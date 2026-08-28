@@ -113,10 +113,10 @@ import { ModuleContextView } from '../navigation/module-context';
         font-weight: 500;
       }
       .mod-chrome__crumbs a:hover {
-        color: var(--accent, #1ed896);
+        color: var(--accent, #e8a33d);
       }
       .mod-chrome__crumbs a:focus-visible {
-        outline: 2px solid var(--accent, #1ed896);
+        outline: 2px solid var(--accent, #e8a33d);
         outline-offset: 2px;
         border-radius: 2px;
       }
@@ -158,12 +158,12 @@ import { ModuleContextView } from '../navigation/module-context';
         background: var(--shell-hover, rgba(255, 255, 255, 0.06));
       }
       .mod-chrome__tab:focus-visible {
-        outline: 2px solid var(--accent, #1ed896);
+        outline: 2px solid var(--accent, #e8a33d);
         outline-offset: 1px;
       }
       .mod-chrome__tab.is-active {
         color: var(--bg-base, #0a0a0a);
-        background: var(--accent, #1ed896);
+        background: var(--accent, #e8a33d);
       }
       :host-context([data-theme='light']) .mod-chrome__tab.is-active {
         color: #04140f;

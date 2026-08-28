@@ -34,10 +34,14 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { DataSourceBadgeComponent } from '../../shared/components/data-source-badge/data-source-badge.component';
 
 import { PlayableTrack } from '../../shared/models/player.models';
+import {
+  SpotifyIntegrationService,
+  SpotifyTasteMixTrack,
+} from '../../core/integrations/spotify/spotify-integration.service';
 
 
 
-const ACCENTS = ['#7c3aed', '#1ed896', '#10b981', '#3b82f6', '#ec4899', '#f59e0b'];
+const ACCENTS = ['#e8a33d', '#d98a25', '#f0b555', '#c97816', '#e3a04a', '#b5650a'];
 
 
 
@@ -90,6 +94,7 @@ export class RecommendationsComponent implements OnInit {
   covers = inject(CoverArtService);
 
   player = inject(MusicPlayerService);
+  readonly spotify = inject(SpotifyIntegrationService);
 
 
 
@@ -106,6 +111,10 @@ export class RecommendationsComponent implements OnInit {
   data = signal<RecommendationPayload | null>(null);
 
   selectedMood = signal<string | null>(null);
+  spotifyMix = signal<SpotifyTasteMixTrack[]>([]);
+  spotifyCoverage = signal<{ spotify_signals: number; matched_catalog_tracks: number; match_percent: number } | null>(null);
+  spotifyLoading = signal(false);
+  spotifyError = signal(false);
 
 
 
@@ -134,6 +143,7 @@ export class RecommendationsComponent implements OnInit {
   forYouPlayable = computed(() => this.forYou().map((t) => this.toPlayable(t)));
 
   moodTracksPlayable = computed(() => this.moodTracks().map((t) => this.toPlayable(t)));
+  spotifyMixPlayable = computed(() => this.spotifyMix().map((t) => this.toPlayable(t)));
 
 
 
@@ -167,6 +177,8 @@ export class RecommendationsComponent implements OnInit {
 
   ngOnInit() {
 
+    if (this.spotify.connected()) this.loadSpotifyMix();
+
     this.userSvc.getMe().subscribe({
 
       next: (p) => {
@@ -191,6 +203,20 @@ export class RecommendationsComponent implements OnInit {
 
     });
 
+  }
+
+  loadSpotifyMix(): void {
+    if (!this.spotify.connected() || this.spotifyLoading()) return;
+    this.spotifyLoading.set(true);
+    this.spotifyError.set(false);
+    void this.spotify.buildTasteMix(16).then((mix) => {
+      this.spotifyMix.set(mix.tracks ?? []);
+      this.spotifyCoverage.set(mix.coverage);
+      this.spotifyLoading.set(false);
+    }).catch(() => {
+      this.spotifyError.set(true);
+      this.spotifyLoading.set(false);
+    });
   }
 
 
@@ -254,7 +280,7 @@ export class RecommendationsComponent implements OnInit {
 
 
 
-  toPlayable(t: RecTrack): PlayableTrack {
+  toPlayable(t: RecTrack | SpotifyTasteMixTrack): PlayableTrack {
 
     const id = t.id_track ?? 0;
 
@@ -271,6 +297,10 @@ export class RecommendationsComponent implements OnInit {
       audioUrl: '',
 
       coverGradient: this.covers.gradientFor(id),
+
+      spotifyTrackId: 'spotify_track_id' in t ? t.spotify_track_id ?? undefined : undefined,
+
+      spotifyUri: 'spotify_uri' in t ? t.spotify_uri ?? undefined : undefined,
 
     };
 

@@ -238,11 +238,18 @@ export class SpaceContextService {
       ]);
       this.applyManifest(remote);
       const spaces = this._available();
-      const chosen =
+      const candidate =
         spaces.find((s) => s.id === appSpaceIdFromKey(remote.active_space_key)) ??
         isPersistedSpaceStillValid(this.readPersisted(), spaces) ??
         spaces.find((s) => s.kind === 'personal') ??
         spaces[0];
+      const chosen = candidate
+        ? this.preferStaffSpaceForCurrentRoute(
+            candidate,
+            spaces,
+            (this.router.url || '').split('?')[0] || '/',
+          )
+        : candidate;
       if (!chosen) {
         this.failBootstrap(new Error('session_bootstrap_empty_spaces'));
         return;
@@ -286,8 +293,41 @@ export class SpaceContextService {
     spaces: AppSpace[],
     path = (this.router.url || '').split('?')[0] || '/',
   ): AppSpace {
+    if (isPersonalSurfacePath(path)) {
+      return spaces.find((space) => space.kind === 'personal') ?? chosen;
+    }
+
+    const organizationMatch = path.match(/^\/organizations\/(\d+)(?:\/|$)/);
+    if (organizationMatch) {
+      const organizationId = Number(organizationMatch[1]);
+      return (
+        spaces.find(
+          (space) =>
+            space.kind === 'organization' && space.organizationId === organizationId,
+        ) ?? chosen
+      );
+    }
+
+    // Enterprise/reporting routes are organization context even when the
+    // persisted space still points at Personal (for example after a refresh).
+    if (
+      path.startsWith('/business') ||
+      path.startsWith('/reports') ||
+      path.startsWith('/simple-reports') ||
+      path.startsWith('/complex-reports') ||
+      path.startsWith('/subscriptions') ||
+      path.startsWith('/billing') ||
+      path.startsWith('/royalties') ||
+      path.startsWith('/payouts')
+    ) {
+      return (
+        this.inferFromOrgContext(spaces) ??
+        spaces.find((space) => space.kind === 'organization') ??
+        chosen
+      );
+    }
+
     if (chosen.kind !== 'personal') return chosen;
-    if (isPersonalSurfacePath(path)) return chosen;
 
     const role = normalizeIdentityRole(this.auth.role());
     if (role === 'engineer') {

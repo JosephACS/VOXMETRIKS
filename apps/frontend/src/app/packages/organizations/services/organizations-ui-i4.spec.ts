@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -9,6 +10,7 @@ import { OrgNonePageComponent } from '../pages/org-none.page';
 import { OrgCreatePageComponent } from '../pages/org-create.page';
 import { OrgAcceptInvitePageComponent } from '../pages/org-accept-invite.page';
 import { OrgAuditPageComponent } from '../pages/org-audit.page';
+import { OrgRolesPageComponent } from '../pages/org-roles.page';
 import { OrganizationContextService } from './organization-context.service';
 import { OrganizationsApiService } from './organizations-api.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -164,6 +166,76 @@ describe('OrgCreatePageComponent (I4)', () => {
     await p2;
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Conflicto de slug');
+    http.verify();
+  });
+});
+
+describe('OrgRolesPageComponent professional access editor', () => {
+  it('loads real members and updates role selections without technical member IDs', async () => {
+    const context = {
+      roles: signal(['owner']),
+      hasPermission: () => true,
+      bootstrap: vi.fn().mockResolvedValue(undefined),
+    };
+    await TestBed.configureTestingModule({
+      imports: [OrgRolesPageComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        OrganizationsApiService,
+        { provide: OrganizationContextService, useValue: context },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: { get: () => '7' },
+              queryParamMap: { get: () => '101' },
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+    await TestBed.inject(I18nService).ensureEnterpriseEs();
+    const fixture = TestBed.createComponent(OrgRolesPageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiUrl}/organizations/7/roles`).flush([
+      { id: 1, code: 'owner', display_name: 'Owner', description: '', scope: 'organization', is_system: true, is_active: true },
+      { id: 2, code: 'analyst', display_name: 'Analyst', description: '', scope: 'organization', is_system: true, is_active: true },
+    ]);
+    http.expectOne(`${environment.apiUrl}/organizations/7/permissions`).flush([
+      { id: 1, code: 'report.view', description: '', domain: 'report', is_active: true },
+    ]);
+    http.expectOne((request) => request.url === `${environment.apiUrl}/organizations/7/members`).flush({
+      items: [{
+        id: 101,
+        organization_id: 7,
+        user_id: 1,
+        status: 'active',
+        created_at: '',
+        updated_at: '',
+        user: { display_name: 'María López', email: 'maria@example.com' },
+        roles: [{ code: 'owner', label: 'Propietario' }],
+      }],
+      page: 1,
+      limit: 100,
+      total: 1,
+    });
+    await vi.waitFor(() => expect(fixture.componentInstance.loading()).toBe(false));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('María López');
+    expect(fixture.nativeElement.textContent).not.toContain('Member ID');
+
+    const component = fixture.componentInstance;
+    component.toggleRole('analyst', true);
+    const save = component.applyRoles();
+    const request = http.expectOne(`${environment.apiUrl}/organizations/7/members/101/roles`);
+    expect(request.request.body).toEqual({ assign: ['analyst'], revoke: [] });
+    request.flush(['owner', 'analyst']);
+    await save;
+    expect(component.selectedRoleCodes()).toEqual(['owner', 'analyst']);
+    expect(context.bootstrap).toHaveBeenCalled();
     http.verify();
   });
 });

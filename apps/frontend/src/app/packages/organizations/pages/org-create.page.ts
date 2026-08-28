@@ -28,9 +28,12 @@ export function slugFromDisplayName(name: string): string {
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   styleUrls: ['../styles/organizations.css'],
   template: `
-    <section class="org-page" data-testid="org-create-page">
-      <h1>{{ 'organizations.create.title' | t:lang() }}</h1>
-      <p class="lede">{{ 'organizations.create.lede' | t:lang() }}</p>
+    <section class="org-page org-page--create" data-testid="org-create-page">
+      <header class="org-page__header">
+        <span class="org-page__eyebrow">{{ 'organizations.create.eyebrow' | t:lang() }}</span>
+        <h1>{{ 'organizations.create.title' | t:lang() }}</h1>
+        <p class="lede">{{ 'organizations.create.lede' | t:lang() }}</p>
+      </header>
 
       @if (error()) {
         <div class="org-alert org-alert--error" role="alert" #errorBox tabindex="-1">{{ error() }}</div>
@@ -41,85 +44,112 @@ export function slugFromDisplayName(name: string): string {
         </div>
       }
 
-      <form class="org-card org-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <label>
-          {{ 'organizations.create.name' | t:lang() }} *
-          <input formControlName="display_name" required maxlength="200" />
-        </label>
-        <label>
-          {{ 'organizations.create.legalName' | t:lang() }}
-          <input formControlName="legal_name" maxlength="200" />
-        </label>
-        <label>
-          {{ 'organizations.create.type' | t:lang() }} *
-          <select formControlName="organization_type">
-            @for (opt of catalogs()?.organization_types || []; track opt.code) {
-              <option [value]="opt.code">{{ opt.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          {{ 'organizations.create.country' | t:lang() }}
-          <select formControlName="country_code">
-            <option value="">—</option>
-            @for (opt of catalogs()?.countries || []; track opt.code) {
-              <option [value]="opt.code">{{ opt.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          <input type="checkbox" formControlName="activate" />
-          {{ 'organizations.create.activate' | t:lang() }}
-        </label>
+      <div class="org-create-shell">
+        <aside class="org-create-guide" aria-label="Proceso de creación">
+          <div class="org-create-guide__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12M8 20v-7h8v7M9 9h.01M15 9h.01" /></svg>
+          </div>
+          <span class="org-create-guide__kicker">{{ 'organizations.create.guideKicker' | t:lang() }}</span>
+          <h2>{{ 'organizations.create.guideTitle' | t:lang() }}</h2>
+          <p>{{ 'organizations.create.guideText' | t:lang() }}</p>
+          <ol class="org-create-steps">
+            <li class="is-current">
+              <span>1</span><div><strong>{{ 'organizations.create.stepProfile' | t:lang() }}</strong><small>{{ 'organizations.create.stepProfileHint' | t:lang() }}</small></div>
+            </li>
+            <li>
+              <span>2</span><div><strong>{{ 'organizations.create.stepPlan' | t:lang() }}</strong><small>{{ 'organizations.create.stepPlanHint' | t:lang() }}</small></div>
+            </li>
+            <li>
+              <span>3</span><div><strong>{{ 'organizations.create.stepTeam' | t:lang() }}</strong><small>{{ 'organizations.create.stepTeamHint' | t:lang() }}</small></div>
+            </li>
+          </ol>
+          <div class="org-owner-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.9 8 7 10 4.1-2 7-5.3 7-10V6l-7-3Zm-3 9 2 2 4-5" /></svg>
+            <span>{{ 'organizations.create.ownerNote' | t:lang() }}</span>
+          </div>
+        </aside>
 
-        <details class="org-advanced" [open]="advancedOpen()" data-testid="org-advanced">
-          <summary (click)="toggleAdvanced($event)">
-            {{ 'organizations.create.advanced' | t:lang() }}
-          </summary>
-          <label>
-            {{ 'organizations.create.slugLabel' | t:lang() }}
-            <input
-              #slugInput
-              formControlName="slug"
-              maxlength="48"
-              data-testid="org-slug-input"
-              (input)="markSlugEdited()"
-            />
-          </label>
-          <p class="org-muted">{{ 'organizations.create.slugHelp' | t:lang() }}</p>
-          <label>
-            {{ 'organizations.create.timezone' | t:lang() }}
-            <select formControlName="timezone">
-              <option value="">Automático</option>
-              @for (opt of catalogs()?.timezones || []; track opt.code) {
+        <form class="org-card org-form org-form--create" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="org-form-heading">
+            <span>{{ 'organizations.create.formStep' | t:lang() }}</span>
+            <h2>{{ 'organizations.create.primaryData' | t:lang() }}</h2>
+            <p>{{ 'organizations.create.primaryDataHint' | t:lang() }}</p>
+          </div>
+
+          <div class="org-field-grid">
+            <label>
+              {{ 'organizations.create.name' | t:lang() }} *
+              <input formControlName="display_name" required maxlength="200" autocomplete="organization" />
+            </label>
+            <label>
+              {{ 'organizations.create.legalName' | t:lang() }}
+              <input formControlName="legal_name" maxlength="200" autocomplete="organization" />
+            </label>
+          </div>
+
+          <fieldset class="org-type-fieldset">
+            <legend>{{ 'organizations.create.type' | t:lang() }} *</legend>
+            <div class="org-type-picker">
+              @for (opt of catalogs()?.organization_types || []; track opt.code) {
+                <label class="org-type-option" [class.is-selected]="form.controls.organization_type.value === opt.code">
+                  <input type="radio" formControlName="organization_type" [value]="opt.code" />
+                  <span class="org-type-option__icon" aria-hidden="true">{{ typeInitial(opt.code) }}</span>
+                  <span><strong>{{ opt.label }}</strong><small>{{ typeHint(opt.code) }}</small></span>
+                </label>
+              }
+            </div>
+          </fieldset>
+
+          <label class="org-country-field">
+            {{ 'organizations.create.country' | t:lang() }}
+            <select formControlName="country_code">
+              <option value="">{{ 'organizations.create.countryPlaceholder' | t:lang() }}</option>
+              @for (opt of catalogs()?.countries || []; track opt.code) {
                 <option [value]="opt.code">{{ opt.label }}</option>
               }
             </select>
+            <small>{{ 'organizations.create.countryHint' | t:lang() }}</small>
           </label>
-          <label>
-            {{ 'organizations.create.currency' | t:lang() }}
-            <select formControlName="default_currency">
-              <option value="">Automático</option>
-              @for (opt of catalogs()?.currencies || []; track opt.code) {
-                <option [value]="opt.code">{{ opt.label }}</option>
-              }
-            </select>
-          </label>
-        </details>
 
-        <div class="org-actions">
-          <button class="org-btn" type="submit" [disabled]="form.invalid || submitting() || success()">
-            {{
-              submitting()
-                ? ('organizations.create.submitting' | t:lang())
-                : ('organizations.create.title' | t:lang())
-            }}
-          </button>
-          <a class="org-btn org-btn--ghost" routerLink="/business">
-            {{ 'organizations.create.cancel' | t:lang() }}
-          </a>
-        </div>
-      </form>
+          <label class="org-check org-check--activate">
+            <input type="checkbox" formControlName="activate" />
+            <span><strong>{{ 'organizations.create.activate' | t:lang() }}</strong><small>{{ 'organizations.create.activateHint' | t:lang() }}</small></span>
+          </label>
+
+          <details class="org-advanced" [open]="advancedOpen()" data-testid="org-advanced">
+            <summary (click)="toggleAdvanced($event)">{{ 'organizations.create.advanced' | t:lang() }}</summary>
+            <div class="org-advanced-grid">
+              <label>
+                {{ 'organizations.create.slugLabel' | t:lang() }}
+                <input #slugInput formControlName="slug" maxlength="48" data-testid="org-slug-input" (input)="markSlugEdited()" />
+              </label>
+              <label>
+                {{ 'organizations.create.timezone' | t:lang() }}
+                <select formControlName="timezone">
+                  <option value="">{{ 'organizations.create.automatic' | t:lang() }}</option>
+                  @for (opt of catalogs()?.timezones || []; track opt.code) { <option [value]="opt.code">{{ opt.label }}</option> }
+                </select>
+              </label>
+              <label>
+                {{ 'organizations.create.currency' | t:lang() }}
+                <select formControlName="default_currency">
+                  <option value="">{{ 'organizations.create.automatic' | t:lang() }}</option>
+                  @for (opt of catalogs()?.currencies || []; track opt.code) { <option [value]="opt.code">{{ opt.label }}</option> }
+                </select>
+              </label>
+            </div>
+            <p class="org-muted">{{ 'organizations.create.slugHelp' | t:lang() }}</p>
+          </details>
+
+          <div class="org-actions org-actions--create">
+            <a class="org-btn org-btn--ghost" routerLink="/business">{{ 'organizations.create.cancel' | t:lang() }}</a>
+            <button class="org-btn" type="submit" [disabled]="form.invalid || submitting() || success()">
+              {{ submitting() ? ('organizations.create.submitting' | t:lang()) : ('organizations.create.continue' | t:lang()) }}
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   `,
 })
@@ -178,13 +208,41 @@ export class OrgCreatePageComponent implements OnInit {
         ],
         countries: [
           { code: 'EC', label: 'Ecuador' },
-          { code: 'MX', label: 'México' },
-          { code: 'CO', label: 'Colombia' },
-          { code: 'PE', label: 'Perú' },
-          { code: 'CL', label: 'Chile' },
           { code: 'AR', label: 'Argentina' },
-          { code: 'ES', label: 'España' },
+          { code: 'BO', label: 'Bolivia' },
+          { code: 'BR', label: 'Brasil' },
+          { code: 'CL', label: 'Chile' },
+          { code: 'CO', label: 'Colombia' },
+          { code: 'CR', label: 'Costa Rica' },
+          { code: 'DO', label: 'República Dominicana' },
+          { code: 'SV', label: 'El Salvador' },
+          { code: 'GT', label: 'Guatemala' },
+          { code: 'HN', label: 'Honduras' },
+          { code: 'MX', label: 'México' },
+          { code: 'NI', label: 'Nicaragua' },
+          { code: 'PA', label: 'Panamá' },
+          { code: 'PY', label: 'Paraguay' },
+          { code: 'PE', label: 'Perú' },
+          { code: 'PR', label: 'Puerto Rico' },
+          { code: 'UY', label: 'Uruguay' },
+          { code: 'VE', label: 'Venezuela' },
+          { code: 'CA', label: 'Canadá' },
           { code: 'US', label: 'Estados Unidos' },
+          { code: 'ES', label: 'España' },
+          { code: 'PT', label: 'Portugal' },
+          { code: 'GB', label: 'Reino Unido' },
+          { code: 'FR', label: 'Francia' },
+          { code: 'DE', label: 'Alemania' },
+          { code: 'IT', label: 'Italia' },
+          { code: 'NL', label: 'Países Bajos' },
+          { code: 'BE', label: 'Bélgica' },
+          { code: 'CH', label: 'Suiza' },
+          { code: 'IE', label: 'Irlanda' },
+          { code: 'AU', label: 'Australia' },
+          { code: 'NZ', label: 'Nueva Zelanda' },
+          { code: 'JP', label: 'Japón' },
+          { code: 'KR', label: 'Corea del Sur' },
+          { code: 'IN', label: 'India' },
         ],
         timezones: [{ code: 'UTC', label: 'UTC' }],
         currencies: [{ code: 'USD', label: 'USD' }],
@@ -194,6 +252,16 @@ export class OrgCreatePageComponent implements OnInit {
 
   markSlugEdited(): void {
     this.slugEdited = true;
+  }
+
+  typeInitial(code: string): string {
+    return ({ label: 'S', distributor: 'D', publisher: 'E', management: 'M', other: '+' } as Record<string, string>)[code] || '+';
+  }
+
+  typeHint(code: string): string {
+    const key = `organizations.create.typeHint.${code}`;
+    const translated = this.i18n.t(key);
+    return translated === key ? this.i18n.t('organizations.create.typeHint.other') : translated;
   }
 
   toggleAdvanced(event: Event): void {

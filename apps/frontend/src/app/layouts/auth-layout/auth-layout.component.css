@@ -1,7 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
-   Auth Layout — Polished v2.1
-   Fondo negro puro con partículas sutiles verdes
-═══════════════════════════════════════════════════════════ */
+/* VOXMETRIKS auth atmosphere — an abstract, low-noise signal field. */
 
 .auth-layout {
   position: relative;
@@ -10,50 +7,147 @@
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 1.5rem;
+  isolation: isolate;
   transition: background var(--motion-duration-slow) var(--motion-ease-standard);
 }
 
-/* ── Background: gradiente radial sutil ── */
 .auth-bg-gradient {
   position: absolute;
-  inset: 0;
+  inset: -18%;
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(30, 216, 150, 0.07) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 20%, rgba(30, 216, 150, 0.05) 0%, transparent 40%);
+    radial-gradient(ellipse at 20% 72%, rgba(232, 163, 61, 0.16) 0%, transparent 38%),
+    radial-gradient(ellipse at 82% 26%, rgba(240, 181, 85, 0.11) 0%, transparent 35%),
+    conic-gradient(from 210deg at 50% 52%, transparent, rgba(232, 163, 61, 0.055), transparent 28%);
   pointer-events: none;
+  animation: authAuroraDrift 9s ease-in-out infinite alternate;
+  will-change: transform;
 }
 
-/* ── Background grid — muy sutil ── */
 .auth-bg-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(90deg, rgba(30, 216, 150, 0.03) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(30, 216, 150, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(90deg, rgba(232, 163, 61, 0.038) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(240, 181, 85, 0.032) 1px, transparent 1px);
+  background-size: 64px 64px;
   pointer-events: none;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, black 12%, transparent 74%);
 }
 
-html[data-theme='light'] .auth-layout {
-  background: var(--bg-base);
+.auth-bg-orbits {
+  position: absolute;
+  width: min(72vw, 980px);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.34;
+  pointer-events: none;
+  animation: authOrbitBreathe 6s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.auth-bg-orbits span {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(232, 163, 61, 0.13);
+  border-radius: 50%;
+}
+
+.auth-bg-orbits span:nth-child(2) {
+  inset: 14%;
+  border-color: rgba(240, 181, 85, 0.11);
+}
+
+.auth-bg-orbits span:nth-child(3) {
+  inset: 29%;
+  border-style: dashed;
+  border-color: rgba(246, 243, 251, 0.1);
+  animation: authOrbitSpin 36s linear infinite;
+}
+
+.auth-bg-wave {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  bottom: -8vh;
+  width: min(94vw, 1500px);
+  height: 35vh;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(12px, 2.5vw, 42px);
+  opacity: 0.2;
+  pointer-events: none;
+  mask-image: linear-gradient(90deg, transparent, black 18%, black 82%, transparent);
+  contain: layout paint;
+}
+
+.auth-bg-wave i {
+  width: clamp(2px, 0.22vw, 4px);
+  height: var(--h);
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg, transparent, #f0b555 26%, #e8a33d 72%, transparent);
+  box-shadow: 0 0 18px rgba(232, 163, 61, 0.32);
+  transform-origin: bottom;
+  animation: authWavePulse 2.25s ease-in-out var(--d) infinite;
+}
+
+.auth-bg-scan {
+  position: absolute;
+  z-index: 0;
+  inset: -40% auto -40% -28%;
+  width: 18%;
+  pointer-events: none;
+  transform: rotate(14deg);
+  background: linear-gradient(90deg, transparent, rgba(232, 163, 61, 0.05), transparent);
+  animation: authScan 7.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+:host-context(html[data-theme='light']) .auth-layout {
+  background: #B9B7C3;
   background-image:
-    radial-gradient(ellipse 80% 55% at 50% -18%, rgba(15, 168, 118, 0.1), transparent),
-    radial-gradient(ellipse 50% 45% at 100% 0%, rgba(14, 18, 26, 0.03), transparent);
+    radial-gradient(ellipse 68% 52% at 12% 18%, rgba(181, 101, 10, 0.2), transparent 62%),
+    radial-gradient(ellipse 56% 48% at 92% 76%, rgba(240, 181, 85, 0.18), transparent 64%),
+    linear-gradient(145deg, #C9C6D1 0%, #AAA9B6 52%, #C2C1CA 100%);
 }
 
-html[data-theme='light'] .auth-bg-gradient {
+:host-context(html[data-theme='light']) .auth-bg-gradient {
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(15, 168, 118, 0.08) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 20%, rgba(14, 18, 26, 0.04) 0%, transparent 40%);
+    radial-gradient(ellipse at 18% 78%, rgba(181, 101, 10, 0.19) 0%, transparent 44%),
+    radial-gradient(ellipse at 82% 22%, rgba(49, 95, 154, 0.14) 0%, transparent 42%),
+    conic-gradient(from 210deg at 50% 52%, transparent, rgba(255, 255, 255, 0.15), transparent 28%);
 }
 
-html[data-theme='light'] .auth-bg-grid {
+:host-context(html[data-theme='light']) .auth-bg-grid {
   background-image:
-    linear-gradient(90deg, rgba(14, 18, 26, 0.04) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(14, 18, 26, 0.04) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(57, 46, 91, 0.075) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(49, 72, 108, 0.065) 1px, transparent 1px);
+}
+
+:host-context(html[data-theme='light']) .auth-bg-orbits {
+  opacity: 0.28;
+}
+
+:host-context(html[data-theme='light']) .auth-bg-orbits span {
+  border-color: rgba(181, 101, 10, 0.14);
+}
+
+:host-context(html[data-theme='light']) .auth-bg-wave {
+  opacity: 0.2;
+}
+
+:host-context(html[data-theme='light']) .auth-bg-wave i {
+  background: linear-gradient(180deg, transparent, #b5650a 26%, #b5650a 72%, transparent);
+  box-shadow: 0 0 16px rgba(181, 101, 10, 0.18);
+}
+
+:host-context(html[data-theme='light']) .auth-bg-scan {
+  background: linear-gradient(90deg, transparent, rgba(181, 101, 10, 0.07), transparent);
 }
 
 /* ── Container ── */
@@ -61,11 +155,11 @@ html[data-theme='light'] .auth-bg-grid {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1080px;
+  max-width: 1240px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: fadeInUp var(--motion-duration-normal) var(--motion-ease-standard) both;
 }
 
 /* Brand lives inside the login panel / hero — avoid duplicate logos here */
@@ -108,5 +202,42 @@ html[data-theme='light'] .auth-bg-grid {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes authAuroraDrift {
+  from { transform: translate3d(-2%, 1%, 0) rotate(-1deg) scale(1); }
+  to { transform: translate3d(3%, -2%, 0) rotate(2deg) scale(1.06); }
+}
+
+@keyframes authOrbitBreathe {
+  from { transform: translate(-50%, -50%) scale(0.96); opacity: 0.22; }
+  to { transform: translate(-50%, -50%) scale(1.04); opacity: 0.38; }
+}
+
+@keyframes authOrbitSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes authWavePulse {
+  0%, 100% { transform: scaleY(0.55); opacity: 0.36; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes authScan {
+  0%, 12% { transform: translateX(0) rotate(14deg); opacity: 0; }
+  28%, 70% { opacity: 1; }
+  88%, 100% { transform: translateX(820%) rotate(14deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-container,
+  .auth-bg-gradient,
+  .auth-bg-grid,
+  .auth-bg-orbits,
+  .auth-bg-orbits span,
+  .auth-bg-wave i,
+  .auth-bg-scan {
+    animation: none;
   }
 }

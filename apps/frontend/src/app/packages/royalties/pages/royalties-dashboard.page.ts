@@ -125,10 +125,7 @@ import { royaltiesAccess } from '../royalties-access';
             </div>
           </div>
           @if (metrics.income_note) {
-            <p class="muted">{{ metrics.income_note }}</p>
-          }
-          @if (metrics.simulated_only) {
-            <p class="muted">{{ 'royalties.payout.simulatedBanner' | t:lang() }}</p>
+            <p class="muted">{{ 'royalties.dashboard.incomeNote' | t:lang() }}</p>
           }
         }
       }

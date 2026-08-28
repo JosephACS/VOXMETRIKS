@@ -29,7 +29,6 @@ export interface Track {
 export interface AudioSource {
   track_id: number;
   provider: string;
-  youtube_video_id?: string | null;
   source_ref?: string | null;
   playable_url?: string | null;
   query?: string | null;
@@ -121,6 +120,7 @@ export interface TrackSearchParams {
   search?: string;
   artist_id?: number;
   genre_id?: number;
+  playable_only?: boolean;
 }
 
 export interface GenreSearchParams {
@@ -573,7 +573,7 @@ export interface UserPreferences {
   audio_quality: string;
   recommendations_enabled: boolean;
   privacy_public: boolean;
-  /** Opt-in UI hint for presentation demo accounts (demo.business). */
+  /** Opt-in UI hint for reduced presentation navigation. */
   presentation_nav?: boolean;
   presentation_role?: string;
   demo?: boolean;

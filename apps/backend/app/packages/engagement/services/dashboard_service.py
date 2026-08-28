@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import ceil
 from typing import Any, Dict, Optional
 
 import duckdb
@@ -34,9 +35,22 @@ def get_home_feed(
 ) -> Dict[str, Any]:
     """Aggregate home rails in one DuckDB connection."""
     page = max(1, min(int(discover_page), 200))
+    # Discovery is the complete Spotify-backed catalog. Audio availability is
+    # resolved only after play (Spotify SDK, then Deezer preview), so songs do
+    # not disappear merely because they have not been checked in this session.
     discover_rows, discover_total = get_tracks(
-        conn, page=page, limit=discover_limit, playable_only=True
+        conn, page=page, limit=discover_limit, playable_only=False
     )
+    # Daily rotation clients may request a page that no longer exists after a
+    # catalog refresh. Wrap it into the live range instead of returning empty.
+    if discover_total > 0 and not discover_rows and page > 1:
+        page_count = max(1, ceil(discover_total / discover_limit))
+        normalized_page = ((page - 1) % page_count) + 1
+        if normalized_page != page:
+            page = normalized_page
+            discover_rows, discover_total = get_tracks(
+                conn, page=page, limit=discover_limit, playable_only=False
+            )
     genre_rows, _ = get_genre_stats(conn, page=1, limit=genre_limit)
     artist_rows, _ = get_artists(conn, page=1, limit=artist_limit)
     # Split-collab artist expansion can map distinct names to the same source id_artista.

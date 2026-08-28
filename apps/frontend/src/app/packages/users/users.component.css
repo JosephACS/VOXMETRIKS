@@ -17,7 +17,7 @@
 
 .hero-banner {
   height: 140px;
-  background: linear-gradient(135deg, #1a1040 0%, #0f1225 40%, #1a0a2e 100%);
+  background: linear-gradient(135deg, #211b11 0%, #15130c 40%, #0b0c0b 100%);
   position: relative;
 }
 
@@ -93,8 +93,8 @@
 }
 
 .badge-premium {
-  background: rgba(30, 216, 150, 0.12);
-  border-color: rgba(30, 216, 150, 0.35);
+  background: rgba(232, 163, 61, 0.12);
+  border-color: rgba(232, 163, 61, 0.35);
   color: var(--accent);
 }
 
@@ -158,12 +158,12 @@
 
 .badge-demo {
   padding: 0.25rem 0.65rem;
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(232, 163, 61, 0.12);
+  border: 1px solid rgba(232, 163, 61, 0.25);
   border-radius: 2rem;
   font-size: 0.65rem;
   font-weight: 600;
-  color: #a78bfa;
+  color: #e8a33d;
   flex-shrink: 0;
 }
 
@@ -621,8 +621,8 @@
 }
 
 .profile-nav-card:hover {
-  border-color: rgba(30, 216, 150, 0.35);
-  background: rgba(30, 216, 150, 0.06);
+  border-color: rgba(232, 163, 61, 0.35);
+  background: rgba(232, 163, 61, 0.06);
 }
 
 .section-head-actions {
@@ -665,8 +665,8 @@
 
 .pref-status--on {
   color: var(--accent);
-  border-color: rgba(30, 216, 150, 0.35);
-  background: rgba(30, 216, 150, 0.08);
+  border-color: rgba(232, 163, 61, 0.35);
+  background: rgba(232, 163, 61, 0.08);
 }
 
 .chart-axis-label { fill: var(--text-muted); }

@@ -9,11 +9,8 @@ import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CoverArtService } from '../../../shared/services/cover-art.service';
 import { TrackCoverService } from '../../../shared/services/track-cover.service';
-import {
-  MusicSearchExternalItem,
-  TracksService,
-} from '../services/tracks.service';
-import { ArtistsService } from '../services/artists.service';
+import { TracksService } from '../services/tracks.service';
+import { ArtistsService, ExternalArtistResult } from '../services/artists.service';
 import { TrackSearchResult, Artista } from '../../../shared/models/api.models';
 import { primaryArtistName } from '../../../shared/utils/artist.util';
 import { TrackActionsComponent } from '../../../shared/components/track-actions/track-actions.component';
@@ -38,7 +35,6 @@ type SearchPhase =
   | 'external_empty'
   | 'external_unavailable'
   | 'external_error'
-  | 'adopting'
   | 'ai';
 
 @Component({
@@ -75,11 +71,9 @@ export class SearchComponent implements OnInit {
   trackTotal = signal(0);
   trackPage = signal(1);
   artistResults = signal<Artista[]>([]);
-  externalResults = signal<MusicSearchExternalItem[]>([]);
-  missingLocal = signal<TrackSearchResult[]>([]);
+  externalArtistResults = signal<ExternalArtistResult[]>([]);
   phase = signal<SearchPhase>('idle');
   statusMessage = signal('');
-  adoptingVideoId = signal<string | null>(null);
   isLoading = signal(false);
   searched = signal(false);
   hasError = signal(false);
@@ -129,7 +123,6 @@ export class SearchComponent implements OnInit {
         this.hasError.set(false);
         this.errorMessage.set('');
         this.trackPage.set(1);
-        this.externalResults.set([]);
         this.statusMessage.set('Buscando en VOXMETRIKS…');
         this.phase.set('local');
 
@@ -158,7 +151,7 @@ export class SearchComponent implements OnInit {
         }
 
         return combineLatest([
-          this.tracksSvc.musicSearch(term, 1, TRACK_PAGE_SIZE, allowExternal).pipe(
+          this.tracksSvc.musicSearch(term, 1, TRACK_PAGE_SIZE, false).pipe(
             map((res) => ({ ok: true as const, res })),
             catchError(() => of({
               ok: false as const,
@@ -187,8 +180,7 @@ export class SearchComponent implements OnInit {
         this.trackResults.set(result.tracks);
         this.trackTotal.set(result.total);
         this.artistResults.set([]);
-        this.externalResults.set([]);
-        this.missingLocal.set([]);
+        this.externalArtistResults.set([]);
         this.nlIntent.set(result.intent);
         this.phase.set('ai');
         this.statusMessage.set('');
@@ -200,9 +192,16 @@ export class SearchComponent implements OnInit {
         return;
       }
 
-      const { term, music, artists, allowExternal } = result;
+      const { term, music, artists } = result;
       this.nlIntent.set(null);
       this.artistResults.set(artists.items);
+      this.externalArtistResults.set([]);
+      if (!artists.items.length) {
+        const externalSearch = (this.artistsSvc as ArtistsService & {
+          searchExternal?: (name: string, limit?: number) => Observable<ExternalArtistResult[]>;
+        }).searchExternal;
+        externalSearch?.call(this.artistsSvc, term, 6).subscribe((items) => this.externalArtistResults.set(items));
+      }
 
       if (!music.ok || !music.res) {
         this.isLoading.set(false);
@@ -215,8 +214,8 @@ export class SearchComponent implements OnInit {
       const res = music.res;
       this.trackResults.set(res.local?.items ?? []);
       this.trackTotal.set(res.local?.total ?? 0);
-      this.externalResults.set(res.external ?? []);
-      this.missingLocal.set(res.missing_local ?? []);
+      // Playback sources are resolved by Spotify → Deezer; external video
+      // search results are intentionally not surfaced in the product UI.
       this.statusMessage.set(res.message || '');
       this.phase.set((res.phase as SearchPhase) || 'local');
       this.isLoading.set(false);
@@ -226,20 +225,6 @@ export class SearchComponent implements OnInit {
         this.errorMessage.set('Algunos resultados no se pudieron cargar. Intenta nuevamente.');
       } else {
         this.searchHistory.add(term, res.local?.total ?? 0, artists.items.length);
-      }
-
-      // Auto YouTube fallback when local typing pass found nothing playable.
-      if (
-        !allowExternal &&
-        (res.local?.total ?? 0) === 0 &&
-        !this.aiMode()
-      ) {
-        this.phase.set('external_loading');
-        this.statusMessage.set(
-          'No encontramos esta canción disponible en VOXMETRIKS. Buscando en YouTube…',
-        );
-        this.isLoading.set(true);
-        this.search$.next({ q: term, allowExternal: true });
       }
     });
 
@@ -255,8 +240,7 @@ export class SearchComponent implements OnInit {
     this.trackTotal.set(0);
     this.trackPage.set(1);
     this.artistResults.set([]);
-    this.externalResults.set([]);
-    this.missingLocal.set([]);
+    this.externalArtistResults.set([]);
     this.searched.set(false);
     this.hasError.set(false);
     this.errorMessage.set('');
@@ -264,7 +248,6 @@ export class SearchComponent implements OnInit {
     this.statusMessage.set('');
     this.phase.set('idle');
     this.isLoading.set(false);
-    this.adoptingVideoId.set(null);
   }
 
   private _looksNatural(term: string): boolean {
@@ -327,7 +310,7 @@ export class SearchComponent implements OnInit {
     return (
       this.trackResults().length > 0 ||
       this.artistResults().length > 0 ||
-      this.externalResults().length > 0
+      this.externalArtistResults().length > 0
     );
   }
 
@@ -335,7 +318,7 @@ export class SearchComponent implements OnInit {
     return this.covers.gradientFor(trackId);
   }
 
-  /** Catalog artwork only — never YouTube thumbnails as primary cover. */
+  /** Catalog artwork resolved from the app's cover service. */
   coverUrl$(trackId: number): Observable<string | null> {
     return this.trackCover.cover$(trackId);
   }
@@ -376,72 +359,4 @@ export class SearchComponent implements OnInit {
     this.controller.playTrack(track, this.trackQueue());
   }
 
-  preferredTrackIdForAdopt(): number | undefined {
-    const missing = this.missingLocal();
-    return missing.length === 1 ? missing[0].id_track : undefined;
-  }
-
-  playExternal(item: MusicSearchExternalItem, e?: Event) {
-    e?.preventDefault();
-    e?.stopPropagation();
-    this._adoptAndPlay(item);
-  }
-
-  addExternal(item: MusicSearchExternalItem, e?: Event) {
-    e?.preventDefault();
-    e?.stopPropagation();
-    this._adoptAndPlay(item, false);
-  }
-
-  private _adoptAndPlay(item: MusicSearchExternalItem, play = true) {
-    if (this.adoptingVideoId()) return;
-    this.adoptingVideoId.set(item.video_id);
-    this.phase.set('adopting');
-    this.statusMessage.set('Preparando la canción…');
-    const preferred = this.preferredTrackIdForAdopt();
-    // Exactly one local track without source → first adopt requires preferred binding.
-    this.tracksSvc.adoptYoutubeResult(
-      item.video_id,
-      preferred,
-      preferred != null ? { requirePreferred: true } : undefined,
-    ).pipe(
-      catchError((err) => {
-        // Backend rejected preferred Track → retry once without track_id.
-        const code = err?.error?.detail?.code || err?.error?.code;
-        if (preferred != null && (err?.status === 409 || code === 'TRACK_SOURCE_MISMATCH')) {
-          return this.tracksSvc.adoptYoutubeResult(item.video_id);
-        }
-        throw err;
-      }),
-    ).subscribe({
-      next: (adopted) => {
-        const synthetic: TrackSearchResult = {
-          id_track: adopted.track_id,
-          nombre_track: adopted.title || item.title,
-          nombre_artista: adopted.channel_title || item.channel_title,
-          popularity: undefined,
-        };
-        const existed = this.trackResults().some((r) => r.id_track === adopted.track_id);
-        this.trackResults.update((rows) => {
-          if (rows.some((r) => r.id_track === adopted.track_id)) return rows;
-          return [synthetic, ...rows];
-        });
-        if (!existed) this.trackTotal.update((n) => n + 1);
-        this.externalResults.update((rows) => rows.filter((r) => r.video_id !== item.video_id));
-        this.adoptingVideoId.set(null);
-        this.phase.set('local');
-        this.statusMessage.set('');
-        if (play) {
-          this.controller.playTrack(this.playable(synthetic), this.trackQueue());
-        }
-      },
-      error: () => {
-        this.adoptingVideoId.set(null);
-        this.phase.set('external_error');
-        this.statusMessage.set('No fue posible preparar la canción.');
-        this.hasError.set(true);
-        this.errorMessage.set('No fue posible preparar la canción.');
-      },
-    });
-  }
 }

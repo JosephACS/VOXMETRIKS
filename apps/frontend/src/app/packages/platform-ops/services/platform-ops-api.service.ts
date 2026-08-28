@@ -3,7 +3,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-  AudioCandidatesResponse,
   BackupRecord,
   BackgroundJob,
   FeatureFlag,
@@ -57,22 +56,6 @@ export class PlatformOpsApiService {
     return this.http.get<UnresolvedAudioList>(`${base}/platform-ops/audio-unresolved`, {
       params,
     });
-  }
-
-  searchAudioCandidates(trackId: number): Observable<AudioCandidatesResponse> {
-    return this.http.get<AudioCandidatesResponse>(
-      `${base}/platform-ops/audio-unresolved/${trackId}/candidates`,
-    );
-  }
-
-  saveManualAudio(
-    trackId: number,
-    body: { video_id?: string; url?: string; validate?: boolean },
-  ): Observable<AudioSource> {
-    return this.http.post<AudioSource>(
-      `${base}/platform-ops/audio-unresolved/${trackId}/manual`,
-      body,
-    );
   }
 
   markAudioUnavailable(trackId: number, reason: string): Observable<AudioSource> {

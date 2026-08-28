@@ -103,7 +103,7 @@
 .sbd-more {
   border: 0;
   background: transparent;
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -306,7 +306,7 @@
 }
 
 .vx-report-rec-card:hover {
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
 }
 
 .vx-report-rec-card span {
@@ -343,11 +343,11 @@
 }
 
 .vx-report-card:hover {
-  border-color: rgba(30, 216, 150, 0.28);
+  border-color: rgba(232, 163, 61, 0.28);
 }
 
 .vx-report-card--active {
-  border-color: rgba(30, 216, 150, 0.45);
+  border-color: rgba(232, 163, 61, 0.45);
 }
 
 .vx-report-card__title {
@@ -427,7 +427,7 @@
 }
 
 .vx-report-link-row a {
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   text-decoration: none;
   font-weight: 600;
 }
@@ -576,7 +576,7 @@
 }
 
 .vx-report-snapshot__card.is-accent .vx-report-snapshot__value {
-  color: #1ed896;
+  color: #e8a33d;
 }
 
 .vx-report-snapshot__label {
@@ -602,14 +602,17 @@
 .vx-report-snapshot__bar > i {
   display: block;
   height: 100%;
-  background: #1ed896;
+  background: #e8a33d;
   border-radius: 3px;
 }
 
 .vx-report-chart.sbd-chart {
   min-height: 0;
-  background: #0a0a0a;
-  border-radius: 12px;
+  background: var(--bg-card, #131410);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 @media (max-width: 520px) {
@@ -637,7 +640,7 @@
 
 .vx-report-breadcrumb a:hover,
 .vx-report-breadcrumb a:focus-visible {
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   outline: none;
 }
 
@@ -655,7 +658,7 @@
 
 .vx-report-kpi__value.is-accent,
 .sbd-kpi__value.is-accent {
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
 }
 
 .vx-report-kpis--2x2 {
@@ -684,7 +687,7 @@
   align-self: stretch;
   flex-shrink: 0;
   border-radius: 2px;
-  background: var(--accent, #1ed896);
+  background: var(--accent, #e8a33d);
 }
 
 .vx-report-insight p {
@@ -711,7 +714,7 @@
 
 .vx-report-unavailable__status {
   margin: 0 0 0.75rem;
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   font-weight: 600;
   font-size: 0.875rem;
 }
@@ -729,6 +732,147 @@
   gap: 0;
 }
 
+/* ── Surface pass: reports must read as panels in both themes ───────────── */
+.vx-report-filters,
+.vx-report-selector,
+.vx-report-toolbar,
+.vx-report-kpis,
+.vx-report-detail,
+.vx-report-table,
+.vx-report-snapshot,
+.vx-report-rec-row,
+.vx-report-cards {
+  border-color: var(--border);
+}
+
+.vx-report-filters,
+.vx-report-selector,
+.vx-report-toolbar,
+.vx-report-kpis {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-card);
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+}
+
+.vx-report-kpis {
+  padding-block: 1.25rem;
+}
+
+.vx-report-rec-card,
+.vx-report-card,
+.vx-report-snapshot__card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+.vx-report-rec-card:hover,
+.vx-report-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  transform: translateY(-1px);
+}
+
+.vx-report-card--active {
+  border-color: color-mix(in srgb, var(--accent) 62%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.vx-report-table,
+.vx-report-detail,
+.vx-report-unavailable,
+.vx-report-insight {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-card);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+  padding: 1.1rem 1.25rem;
+}
+
+.vx-report-table {
+  padding-block: 0.35rem;
+}
+
+.vx-report-field .input,
+.vx-report-field .select,
+.vx-report-filters input,
+.vx-report-filters select,
+.vx-report-selector input,
+.vx-report-selector select {
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.vx-report-field .input:focus,
+.vx-report-field .select:focus,
+.vx-report-filters input:focus,
+.vx-report-filters select:focus,
+.vx-report-selector input:focus,
+.vx-report-selector select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+html[data-theme='light'] .vx-report-page,
+html[data-theme='light'] .vx-report-page-header,
+html[data-theme='light'] .vx-report-page-header p,
+html[data-theme='light'] .vx-report-field,
+html[data-theme='light'] .vx-report-kpi__label,
+html[data-theme='light'] .vx-report-meta,
+html[data-theme='light'] .vx-report-group-label,
+html[data-theme='light'] .vx-report-link-row span {
+  color: var(--text-secondary);
+}
+
+html[data-theme='light'] .vx-report-page h1,
+html[data-theme='light'] .vx-report-page h2,
+html[data-theme='light'] .vx-report-page strong,
+html[data-theme='light'] .vx-report-kpi__value,
+html[data-theme='light'] .vx-report-card__title {
+  color: var(--text-primary);
+}
+
+html[data-theme='light'] .vx-report-filters,
+html[data-theme='light'] .vx-report-selector,
+html[data-theme='light'] .vx-report-toolbar,
+html[data-theme='light'] .vx-report-kpis,
+html[data-theme='light'] .vx-report-table,
+html[data-theme='light'] .vx-report-detail,
+html[data-theme='light'] .vx-report-unavailable,
+html[data-theme='light'] .vx-report-insight,
+html[data-theme='light'] .vx-report-rec-card,
+html[data-theme='light'] .vx-report-card,
+html[data-theme='light'] .vx-report-snapshot__card,
+html[data-theme='light'] .vx-report-chart.sbd-chart {
+  border-color: var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 18px 42px rgba(77, 52, 18, 0.08);
+}
+
+html[data-theme='light'] .vx-report-page button:not(.vx-report-more),
+html[data-theme='light'] .vx-report-page .btn,
+html[data-theme='light'] .vx-report-page .select,
+html[data-theme='light'] .vx-report-page input {
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+html[data-theme='light'] .vx-report-page .btn--secondary,
+html[data-theme='light'] .vx-report-page .btn--ghost {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+html[data-theme='light'] .vx-report-page .btn--secondary:hover,
+html[data-theme='light'] .vx-report-page .btn--ghost:hover {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+}
+
 .vx-lb-row {
   display: flex;
   align-items: center;
@@ -740,7 +884,7 @@
 .vx-lb-row--1 {
   padding: 0.7rem 0.5rem;
   border-radius: 8px;
-  background: rgba(30, 216, 150, 0.04);
+  background: rgba(232, 163, 61, 0.04);
   border-bottom-color: transparent;
 }
 
@@ -753,7 +897,7 @@
 }
 
 .vx-lb-row--1 .vx-lb-rank {
-  color: var(--accent, #1ed896);
+  color: var(--accent, #e8a33d);
   font-size: 1.15rem;
 }
 
@@ -794,7 +938,7 @@
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: rgba(30, 216, 150, 0.45);
+  color: rgba(232, 163, 61, 0.45);
 }
 
 .vx-lb-meta {
@@ -840,7 +984,7 @@
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: var(--accent, #1ed896);
+  background: var(--accent, #e8a33d);
 }
 
 .vx-lb-plays {

@@ -7,10 +7,140 @@
   padding: 0 0 calc(2rem + 88px);
 }
 
+.plan-loading { display: grid; gap: 1rem; margin-top: 0.35rem; }
+.plan-loading__summary,
+.plan-loading__card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--spotify-card);
+  overflow: hidden;
+}
+.plan-loading__summary { min-height: 132px; }
+.plan-loading__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.plan-loading__card { min-height: 280px; align-content: start; }
+.plan-loading :is(span, strong, small, button) {
+  display: block;
+  width: min(100%, 18rem);
+  height: 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-skeleton-base), var(--color-skeleton-shimmer), var(--color-skeleton-base));
+  background-size: 220% 100%;
+  animation: vx-shimmer 900ms linear infinite;
+}
+.plan-loading strong { width: min(72%, 14rem); height: 1.6rem; }
+.plan-loading small { width: min(55%, 11rem); }
+.plan-loading button { width: 100%; height: 2.65rem; margin-top: auto; }
+
+.account-commerce-hub {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 1.5rem;
+  align-items: center;
+  margin: 0.35rem 0 1.7rem;
+  padding: 1.35rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 1.15rem;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 38%),
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 10%, var(--spotify-card)), var(--spotify-card));
+  box-shadow: var(--shadow-md);
+}
+
+.account-commerce-hub__summary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.account-commerce-hub__eyebrow {
+  color: var(--accent);
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.account-commerce-hub__summary strong {
+  color: var(--text);
+  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  letter-spacing: -0.035em;
+}
+
+.account-commerce-hub__summary > span:last-child {
+  color: var(--spotify-muted);
+  font-size: 0.84rem;
+}
+
+.account-commerce-hub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+/* This summary intentionally stays dark in both themes, so its actions need
+   their own high-contrast treatment instead of inheriting light-page buttons. */
+.account-commerce-hub__actions .btn--secondary {
+  color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.account-commerce-hub__actions .btn--secondary:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.account-commerce-hub__notice {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  margin: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  color: var(--spotify-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.account-commerce-hub__notice span {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.plan-picker-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.plan-picker-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.plan-picker-heading p {
+  margin: 0.3rem 0 0;
+  color: var(--spotify-muted);
+  font-size: 0.8rem;
+}
+
 .personal-account-page .period-toggle {
   display: inline-flex;
   gap: 0.35rem;
-  margin: 0.35rem 0 1.35rem;
+  margin: 0;
   padding: 0.3rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -26,7 +156,7 @@
 
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -43,21 +173,22 @@
     var(--spotify-card);
   box-shadow: var(--shadow-sm);
   transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  min-height: 100%;
 }
 
 .plan-card:hover {
-  border-color: rgba(30, 216, 150, 0.28);
+  border-color: rgba(232, 163, 61, 0.28);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .plan-card--current {
-  border-color: rgba(30, 216, 150, 0.55);
-  box-shadow: 0 0 0 1px rgba(30, 216, 150, 0.2), var(--shadow-md);
+  border-color: rgba(232, 163, 61, 0.55);
+  box-shadow: 0 0 0 1px rgba(232, 163, 61, 0.2), var(--shadow-md);
 }
 
 .plan-card--recommended {
-  border-color: rgba(30, 216, 150, 0.35);
+  border-color: rgba(232, 163, 61, 0.35);
 }
 
 .plan-card header {
@@ -131,7 +262,7 @@
   height: 0.4rem;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(30, 216, 150, 0.12);
+  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.12);
 }
 
 .plan-card .btn {
@@ -185,6 +316,24 @@
 }
 
 @media (max-width: 640px) {
+  .account-commerce-hub {
+    grid-template-columns: 1fr;
+  }
+
+  .account-commerce-hub__actions {
+    justify-content: stretch;
+  }
+
+  .account-commerce-hub__actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .plan-picker-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .plan-grid {
     grid-template-columns: 1fr;
   }
@@ -200,4 +349,12 @@
   .personal-account-page .period-toggle .btn {
     flex: 1;
   }
+}
+
+@media (max-width: 900px) {
+  .plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-loading__grid { grid-template-columns: 1fr; }
 }

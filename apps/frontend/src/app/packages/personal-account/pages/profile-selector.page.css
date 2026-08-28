@@ -110,11 +110,11 @@
 .wl-card:hover .wl-avatar,
 .wl-card--focused .wl-avatar,
 .wl-card:focus-visible .wl-avatar {
-  box-shadow: 0 0 0 3px rgba(30, 216, 150, 0.85), 0 12px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.85), 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .wl-card--selected {
-  border-color: rgba(30, 216, 150, 0.55);
+  border-color: rgba(232, 163, 61, 0.55);
 }
 
 .wl-avatar {
@@ -168,7 +168,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #1ed896;
+  color: #e8a33d;
 }
 
 .who-listening__footer {
@@ -193,7 +193,7 @@
 .wl-check input {
   width: 1rem;
   height: 1rem;
-  accent-color: #1ed896;
+  accent-color: #e8a33d;
 }
 
 .who-listening__actions {
@@ -219,14 +219,14 @@
 
 .wl-btn:hover,
 .wl-btn:focus-visible {
-  background: rgba(30, 216, 150, 0.12);
-  border-color: rgba(30, 216, 150, 0.45);
+  background: rgba(232, 163, 61, 0.12);
+  border-color: rgba(232, 163, 61, 0.45);
   outline: none;
 }
 
 .wl-btn--primary {
-  background: #1ed896;
-  border-color: #1ed896;
+  background: #e8a33d;
+  border-color: #e8a33d;
   color: #04140e;
   font-weight: 600;
 }
@@ -296,7 +296,7 @@
 }
 
 .wl-modal__name {
-  color: #1ed896 !important;
+  color: #e8a33d !important;
   font-weight: 600;
 }
 
@@ -372,7 +372,7 @@
 .wl-pin-toggle {
   border: none;
   background: transparent;
-  color: rgba(30, 216, 150, 0.9);
+  color: rgba(232, 163, 61, 0.9);
   font-size: 0.78rem;
   cursor: pointer;
   padding: 0.35rem 0.5rem;

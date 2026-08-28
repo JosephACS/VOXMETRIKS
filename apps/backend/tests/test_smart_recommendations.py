@@ -5,13 +5,17 @@ from unittest.mock import patch
 import duckdb
 import pytest
 
+from app.packages.analytics.services.smart.discover_weekly import build_discover_weekly
 from app.packages.analytics.services.smart.feature_extractor import (
     audio_dna_profile,
     track_vector,
 )
-from app.packages.analytics.services.smart.similarity_engine import cosine_similarity, similar_tracks
-from app.packages.analytics.services.smart.discover_weekly import build_discover_weekly
 from app.packages.analytics.services.smart.home_composer import compose_home
+from app.packages.analytics.services.smart.similarity_engine import (
+    cosine_similarity,
+    similar_tracks,
+)
+from app.packages.analytics.services.smart.spotify_taste import rank_from_spotify_taste
 
 _MOCK_RANK = [
     {
@@ -43,7 +47,7 @@ def smart_conn():
     c.execute(
         """
         CREATE TABLE dim_track (
-            id_track INTEGER PRIMARY KEY, nombre_track VARCHAR,
+            id_track INTEGER PRIMARY KEY, spotify_track_id VARCHAR, nombre_track VARCHAR,
             id_artista INTEGER, id_genero INTEGER, popularity INTEGER,
             danceability DOUBLE, energy DOUBLE, speechiness DOUBLE,
             acousticness DOUBLE, instrumentalness DOUBLE, liveness DOUBLE,
@@ -54,9 +58,9 @@ def smart_conn():
     c.execute(
         """
         INSERT INTO dim_track VALUES
-        (1, 'Track A', 1, 1, 80, 0.8, 0.9, 0.05, 0.1, 0.0, 0.1, 0.7, 120),
-        (2, 'Track B', 2, 1, 70, 0.79, 0.88, 0.06, 0.12, 0.0, 0.12, 0.68, 118),
-        (3, 'Track C', 2, 1, 40, 0.05, 0.05, 0.9, 0.95, 0.9, 0.9, 0.05, 60)
+        (1, 'sp_track_a', 'Track A', 1, 1, 80, 0.8, 0.9, 0.05, 0.1, 0.0, 0.1, 0.7, 120),
+        (2, 'sp_track_b', 'Track B', 2, 1, 70, 0.79, 0.88, 0.06, 0.12, 0.0, 0.12, 0.68, 118),
+        (3, 'sp_track_c', 'Track C', 2, 1, 40, 0.05, 0.05, 0.9, 0.95, 0.9, 0.9, 0.05, 60)
         """
     )
     c.execute(
@@ -130,3 +134,29 @@ def test_home_compose_sections(smart_conn):
     assert home["user_id"] == 1
     assert isinstance(home["sections"], list)
     assert home["profile"]["audio_dna"] is not None
+
+
+def test_spotify_taste_reranks_and_reports_catalog_coverage(smart_conn):
+    with patch(
+        "app.packages.analytics.services.smart.spotify_taste.RankingEngine.rank_for_user",
+        return_value=[_MOCK_RANK[1], _MOCK_RANK[0]],
+    ):
+        result = rank_from_spotify_taste(
+            smart_conn,
+            app_user_id=1,
+            warehouse_user_id=1,
+            top_track_ids=["sp_track_a"],
+            recent_track_ids=["missing_from_catalog"],
+            saved_track_ids=[],
+            limit=2,
+        )
+
+    assert result["source"] == "spotify_taste_vox"
+    assert result["coverage"] == {
+        "spotify_signals": 2,
+        "matched_catalog_tracks": 1,
+        "match_percent": 50.0,
+    }
+    assert len(result["tracks"]) == 1
+    assert result["tracks"][0]["spotify_uri"] == "spotify:track:sp_track_b"
+    assert result["tracks"][0]["source"] == "spotify_taste_vox"

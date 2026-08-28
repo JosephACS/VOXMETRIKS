@@ -2,24 +2,40 @@
   <aside class="login-hero" aria-label="VOXMETRIKS">
     <div class="login-hero__glow" aria-hidden="true"></div>
     <div class="login-hero__grid" aria-hidden="true"></div>
+    <div class="login-hero__orbit" aria-hidden="true">
+      <span class="login-hero__orbit-ring login-hero__orbit-ring--outer"></span>
+      <span class="login-hero__orbit-ring login-hero__orbit-ring--inner"></span>
+      <i class="login-hero__orbit-node"></i>
+    </div>
+    <div class="login-hero__signal" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
     <div class="login-hero__content">
-      <app-brand-mark variant="horizontal" size="lg" [decorative]="true" />
+      <app-brand-mark variant="horizontal" size="lg" tone="auto" [decorative]="true" />
+      <span class="login-hero__eyebrow">{{ 'login.coverEyebrow' | t:lang() }}</span>
       <h2 class="login-hero__title">{{ 'login.coverTitle' | t:lang() }}</h2>
       <p class="login-hero__subtitle">{{ 'login.coverSub' | t:lang() }}</p>
       <ul class="login-hero__bullets">
         <li>
-          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          <span class="login-hero__bullet-icon" aria-hidden="true">01</span>
           {{ 'login.coverBullet1' | t:lang() }}
         </li>
         <li>
-          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          <span class="login-hero__bullet-icon" aria-hidden="true">02</span>
           {{ 'login.coverBullet2' | t:lang() }}
         </li>
         <li>
-          <span class="login-hero__bullet-icon" aria-hidden="true"></span>
+          <span class="login-hero__bullet-icon" aria-hidden="true">03</span>
           {{ 'login.coverBullet3' | t:lang() }}
         </li>
       </ul>
+      <div class="login-hero__capabilities" aria-hidden="true">
+        <span>CATALOG</span>
+        <i></i>
+        <span>AUDIENCE</span>
+        <i></i>
+        <span>OPERATIONS</span>
+      </div>
     </div>
   </aside>
 
@@ -48,6 +64,12 @@
         <button type="button" class="lang-btn" [class.active]="language() === 'es'" (click)="setLanguage('es')">{{ 'login.langEs' | t:lang() }}</button>
         <button type="button" class="lang-btn" [class.active]="language() === 'en'" (click)="setLanguage('en')">{{ 'login.langEn' | t:lang() }}</button>
       </div>
+    </div>
+
+    <div class="login-panel__meta" aria-hidden="true">
+      <span>{{ 'login.accessLabel' | t:lang() }}</span>
+      <i></i>
+      <strong>{{ 'login.signalLive' | t:lang() }}</strong>
     </div>
 
     @if (mode() !== 'verify' && mode() !== 'forgot' && mode() !== 'reset') {

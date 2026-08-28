@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Unified music search: local playable first, optional YouTube Data API fallback."""
+"""Spotify-backed catalog search.
+
+The consumer catalog comes from the Spotify dimension tables. Deezer is an
+audio-preview fallback only; external video results never become catalog data.
+"""
 
 from __future__ import annotations
 
@@ -22,12 +26,14 @@ from app.packages.catalog.services.track_source_match import (
     is_strong_match,
     parse_youtube_display,
 )
-from app.packages.catalog.services.tracks.playback_availability import playable_track_sql
-from app.packages.catalog.services.tracks.search import search_tracks
-from app.packages.streaming.services.audio.cache import write_cache
+from app.packages.catalog.services.tracks.playback_availability import (
+    playable_track_sql,
+    playback_status_for_cache,
+)
+from app.packages.catalog.services.tracks.search import search_tracks, search_tracks_fuzzy
+from app.packages.streaming.services.audio.cache import read_cache, write_cache
 from app.packages.streaming.services.audio.models import ResolvedSource
 from app.packages.streaming.services.audio.youtube_provider import YouTubeProvider
-from app.packages.streaming.services.audio.youtube_search_guard import search_with_guard
 from app.packages.streaming.services.audio_source_service import (
     YoutubeProviderUnavailableError,
     persist_validated_youtube_source,
@@ -35,7 +41,9 @@ from app.packages.streaming.services.audio_source_service import (
 
 logger = logging.getLogger(__name__)
 
-_MIN_LOCAL_HITS = 1
+# On a related search, enrich a very small local result set with provider
+# matches instead of making the user guess the exact catalog spelling.
+_MIN_LOCAL_HITS = 5
 
 # Soft in-memory adopt validation quotas (atomic under lock).
 _ADOPT_USER_MAX_PER_HOUR = 20
@@ -102,13 +110,10 @@ def music_search(
     page: int = 1,
     limit: int = 20,
     allow_external: bool = True,
+    include_related: bool = False,
     user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """
-    Single search UX:
-    1) Local playable tracks
-    2) If none adequate → YouTube candidates (not persisted until selected)
-    """
+    """Search the complete local Spotify-backed catalog."""
     raw = (q or "").strip()
     if len(raw) < 2:
         return {
@@ -117,12 +122,24 @@ def music_search(
             "local": {"items": [], "total": 0, "page": page, "limit": limit},
             "external": [],
             "message": "",
-            "external_available": bool(get_settings().youtube_api_key.strip()),
+            "external_available": False,
+            "catalog_source": "spotify",
+            "audio_fallback": "deezer",
         }
 
+    # Search the complete Spotify-backed catalog. Playback availability is
+    # resolved only when the user presses play (Spotify full track or Deezer
+    # preview), so a stale audio cache cannot hide catalog metadata.
     local_items, total, _, _ = search_tracks(
-        conn, raw, limit=limit, page=page, playable_only=True
+        conn, raw, limit=limit, page=page, playable_only=False
     )
+    match_mode = "exact"
+    if total == 0:
+        local_items, total = search_tracks_fuzzy(
+            conn, raw, limit=limit, page=page, playable_only=False
+        )
+        if total:
+            match_mode = "related"
     missing_candidates: List[Dict[str, Any]] = []
     if total == 0:
         all_local, _all_total, _, _ = search_tracks(
@@ -131,79 +148,32 @@ def music_search(
         for row in all_local:
             missing_candidates.append({**row, "playback_status": "missing"})
 
-    if total >= _MIN_LOCAL_HITS:
-        return {
-            "query": raw,
-            "phase": "local",
-            "local": {
-                "items": [{**i, "playback_status": "playable"} for i in local_items],
-                "total": total,
-                "page": page,
-                "limit": limit,
-            },
-            "external": [],
-            "missing_local": [],
-            "message": "",
-            "external_available": bool(get_settings().youtube_api_key.strip()),
-        }
-
-    external: List[Dict[str, Any]] = []
-    phase = "local_empty"
-    message = "No encontramos esta canción disponible en VOXMETRIKS."
-    if allow_external:
-        api_key = get_settings().youtube_api_key.strip()
-        if not api_key:
-            message = "Por ahora solo se muestran resultados disponibles en VOXMETRIKS."
-            phase = "external_unavailable"
-        else:
-            title_hint = missing_candidates[0].get("nombre_track") if missing_candidates else raw
-            artist_hint = missing_candidates[0].get("nombre_artista") if missing_candidates else ""
-            artists = [a.strip() for a in str(artist_hint or "").split(";") if a.strip()]
-            query = raw if not artists else f"{title_hint} {artists[0]}"
-            nq = _normalize_query(query)
-
-            def _fetch() -> List[Dict[str, Any]]:
-                return YouTubeProvider().search_query_candidates(
-                    query,
-                    max_results=8,
-                    expected_title=str(title_hint or raw),
-                    expected_artists=artists,
-                )
-
-            external, guard_status = search_with_guard(
-                normalized_query=nq,
-                user_id=user_id,
-                fetch=_fetch,
-            )
-            if guard_status == "quota_exhausted":
-                phase = "external_unavailable"
-                message = "Por ahora solo se muestran resultados disponibles en VOXMETRIKS."
-                external = []
-            elif guard_status == "error":
-                phase = "external_error"
-                message = "No fue posible buscar esta canción en este momento."
-                external = []
-            elif external:
-                phase = "external"
-                message = (
-                    "No encontramos esta canción disponible en VOXMETRIKS. "
-                    "Estos son resultados encontrados en YouTube."
-                )
-            else:
-                phase = "external_empty"
-                message = "No fue posible buscar esta canción en este momento."
-
+    # The product catalog is intentionally Spotify-backed. Keep the response
+    # shape for old clients, but never call or expose the legacy YouTube search.
     return {
         "query": raw,
         "normalized_query": _normalize_query(raw),
-        "phase": phase,
-        "local": {"items": [], "total": 0, "page": page, "limit": limit},
+        "phase": "local" if total else "local_empty",
+        "local": {
+            "items": [
+                {
+                    **i,
+                    "playback_status": playback_status_for_cache(read_cache(conn, int(i["id_track"]))),
+                }
+                for i in local_items
+            ],
+            "total": total,
+            "page": page,
+            "limit": limit,
+        },
         "missing_local": missing_candidates,
-        "external": external,
-        "message": message,
-        "external_available": bool(get_settings().youtube_api_key.strip()),
+        "external": [],
+        "message": "" if total else "No encontramos esa canción en el catálogo de Spotify.",
+        "match_mode": match_mode,
+        "external_available": False,
+        "catalog_source": "spotify",
+        "audio_fallback": "deezer",
     }
-
 
 def _load_track_row(
     conn: duckdb.DuckDBPyConnection, track_id: int

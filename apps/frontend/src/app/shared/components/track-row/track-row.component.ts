@@ -28,7 +28,9 @@ import { PlayableTrack } from '../../models/player.models';
         }
         <span class="tr-cover-overlay">
           @if (playback.isCurrentTrack(track.id) && playback.isPlaying()) {
-            <span class="eq-bars"><span></span><span></span><span></span></span>
+            <svg class="tr-active-wave" viewBox="0 0 48 22" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M1 13 C5 3 8 20 13 11 S21 4 25 12 S33 19 37 9 S43 7 47 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
           } @else {
             <svg class="play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           }
@@ -43,6 +45,9 @@ import { PlayableTrack } from '../../models/player.models';
           <span class="tr-meta">Energía {{ energyPct }}%</span>
         }
       </div>
+      <svg class="tr-waveform" viewBox="0 0 180 32" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 18 C12 8 20 27 34 17 S58 8 72 18 S96 26 110 15 S136 8 150 18 S169 23 180 14" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".72" />
+      </svg>
       @if (track.explicit) { <span class="tr-explicit" title="Contenido explícito" aria-label="Contenido explícito">E</span> }
       @if (showPopularity && popularity != null) {
         <div class="tr-pop">
@@ -59,7 +64,7 @@ import { PlayableTrack } from '../../models/player.models';
   styles: [`
     .track-row {
       display: grid;
-      grid-template-columns: 32px 48px 1fr auto auto 48px 72px;
+      grid-template-columns: 32px 48px minmax(0, 1fr) 88px auto auto 48px 72px;
       align-items: center;
       gap: 0.75rem;
       padding: 0.5rem 0.75rem;
@@ -67,8 +72,11 @@ import { PlayableTrack } from '../../models/player.models';
       transition: background 0.15s;
       cursor: pointer;
     }
-    .track-row:hover { background: var(--shell-hover); }
-    .track-row.playing { background: var(--accent-dim); }
+    .track-row:hover {
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    .track-row.playing { background: var(--accent-dim); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
     .tr-index {
       font-size: 0.8125rem;
       color: var(--text-muted);
@@ -143,7 +151,7 @@ import { PlayableTrack } from '../../models/player.models';
       text-overflow: ellipsis;
     }
     .tr-title:hover { text-decoration: underline; }
-    .track-row.playing .tr-title { color: #1ed896; }
+    .track-row.playing .tr-title { color: var(--accent-hover); }
     .tr-artist {
       font-size: 0.75rem;
       color: var(--text-muted);
@@ -157,7 +165,7 @@ import { PlayableTrack } from '../../models/player.models';
     }
     .tr-meta {
       font-size: 0.6875rem;
-      color: rgba(30, 216, 150, 0.75);
+      color: color-mix(in srgb, var(--accent) 75%, transparent);
       font-family: var(--font-mono, monospace);
     }
     .tr-explicit {
@@ -192,6 +200,26 @@ import { PlayableTrack } from '../../models/player.models';
     }
     .tr-actions { display: flex; align-items: center; gap: 0.15rem; justify-content: flex-end; opacity: 0; transition: opacity 0.15s; }
     .track-row:hover .tr-actions { opacity: 1; }
+    .tr-waveform {
+      width: 88px;
+      height: 28px;
+      opacity: .72;
+      pointer-events: none;
+    }
+    .track-row.playing .tr-waveform {
+      opacity: 1;
+      filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
+    }
+    .tr-active-wave {
+      width: 32px;
+      height: 18px;
+      color: var(--accent);
+      animation: trWavePulse .9s ease-in-out infinite;
+    }
+    @keyframes trWavePulse {
+      0%, 100% { transform: scaleY(.7); opacity: .7; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
     .eq-bars {
       display: flex;
       align-items: flex-end;
@@ -200,7 +228,7 @@ import { PlayableTrack } from '../../models/player.models';
     }
     .eq-bars span {
       width: 3px;
-      background: #1ed896;
+      background: var(--accent);
       animation: eq 0.8s ease-in-out infinite;
     }
     .eq-bars span:nth-child(2) { animation-delay: 0.15s; }
@@ -211,6 +239,7 @@ import { PlayableTrack } from '../../models/player.models';
     }
     @media (max-width: 768px) {
       .track-row { grid-template-columns: 28px 44px 1fr 40px; }
+      .tr-waveform { display: none; }
       .tr-pop, .tr-explicit, .tr-duration { display: none; }
     }
   `],

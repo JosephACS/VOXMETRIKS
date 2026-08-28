@@ -63,7 +63,7 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
     )
 
-    # Runtime environment — "development" (default) or "production".
+    # Runtime environment — development | demo | production.
     # Drives security hardening: demo-user seeding, dev_code exposure, API
     # docs availability and CORS wildcard handling. Defaults to development so
     # local/dev behaviour is unchanged unless ENVIRONMENT=production is set.
@@ -90,7 +90,9 @@ class Settings(BaseSettings):
     # Security / ops
     cors_origins: str = "http://localhost:4200,http://127.0.0.1:4200"
     health_verbose: bool = False
-    seed_demo_users: bool = True
+    # Opt-in DEV bootstrap only. Production always forces these off via
+    # seed_demo_users_enabled / seed_demo_crm_users_enabled.
+    seed_demo_users: bool = False
     auth_rate_limit: int = 20
     auth_rate_window_sec: int = 60
     # 0 = disabled. Local/dev defaults to no global limit so home covers +
@@ -98,6 +100,10 @@ class Settings(BaseSettings):
     # Paths ending in /cover and /audio-source stay exempt even when enabled.
     global_rate_limit: int = 0
     global_rate_window_sec: int = 60
+    # Controlled academic release: cap real application accounts without
+    # confusing them with the analytical user dimension in the warehouse.
+    # 0 keeps local development and tests unlimited.
+    max_app_users: int = 0
     # Set E2E=1 only in Playwright/pytest runs (.env.e2e, npm run e2e:backend).
     e2e_mode: bool = Field(default=False, validation_alias="E2E")
     # Spec 053 — invitation plaintext delivery. Fail-closed default: never return tokens.
@@ -160,8 +166,17 @@ class Settings(BaseSettings):
     # If None (default), any discount > 0 requires sales_manager approval.
     # If set to a float, discounts exceeding this % require approval.
     crm_discount_approval_threshold: float | None = None
-    # Seed demo CRM users (sales_agent@voxmetrik.io / sales_manager@voxmetrik.io)
-    seed_demo_crm_users: bool = True
+    # Opt-in DEV CRM bootstrap (sales_agent@ / sales_manager@). Never in production.
+    seed_demo_crm_users: bool = False
+
+    # Payment provider — default is ops-recorded manual transfer (not a card gateway).
+    # academic_mock is for tests / non-production simulated checkout ONLY.
+    # Forbidden when ENVIRONMENT=production (enforced by checkout helpers).
+    # Do not invent Stripe or other live credentials here.
+    payment_provider: str = Field(
+        default="manual_transfer",
+        validation_alias="PAYMENT_PROVIDER",
+    )
 
     # Audio playback — YouTube Data API v3 key (resolves real, full-length
     # playback via the official IFrame player). Leave blank to disable.
@@ -204,31 +219,54 @@ class Settings(BaseSettings):
         return self.environment.strip().lower() in {"production", "prod"}
 
     @property
+    def is_controlled_demo(self) -> bool:
+        """Hardened academic release with simulated payments and a small audience."""
+        return self.environment.strip().lower() in {"demo", "controlled_demo", "staging"}
+
+    @property
+    def is_controlled_release(self) -> bool:
+        """Security-sensitive behaviour shared by production and the final demo."""
+        return self.is_production or self.is_controlled_demo
+
+    @property
     def is_development(self) -> bool:
-        return not self.is_production
+        return not self.is_controlled_release
 
     @property
     def seed_demo_crm_users_enabled(self) -> bool:
-        """Seed demo CRM users only in development."""
-        if self.is_production:
+        """Optional DEV CRM bootstrap — never in production."""
+        if self.is_controlled_release:
             return False
         return self.seed_demo_crm_users
 
     @property
     def seed_demo_users_enabled(self) -> bool:
-        """Demo accounts are seeded only outside production.
+        """Optional DEV bootstrap accounts — never in production.
 
         In production they are never created regardless of SEED_DEMO_USERS;
-        in development the existing SEED_DEMO_USERS flag still applies.
+        outside production the SEED_DEMO_USERS flag must be explicitly true.
         """
-        if self.is_production:
+        if self.is_controlled_release:
             return False
         return self.seed_demo_users
 
     @property
+    def resolved_payment_provider(self) -> str:
+        """Normalize PAYMENT_PROVIDER (aliases → academic_mock)."""
+        raw = (self.payment_provider or "manual_transfer").strip().lower()
+        if raw in {"mock", "mock_payment"}:
+            return "academic_mock"
+        return raw or "manual_transfer"
+
+    @property
+    def payment_is_simulated(self) -> bool:
+        """True when the configured provider is the academic mock."""
+        return self.resolved_payment_provider == "academic_mock"
+
+    @property
     def docs_enabled(self) -> bool:
         """Interactive API docs (/docs, /redoc, /openapi.json) — off in production."""
-        return not self.is_production
+        return not self.is_controlled_release
 
     @property
     def resolved_frontend_base_url(self) -> str:
@@ -277,7 +315,7 @@ class Settings(BaseSettings):
             # production a "*" config is treated as "no explicit allow-list"
             # and collapses to an empty list so no cross-origin is granted
             # until real origins are configured via CORS_ORIGINS.
-            return [] if self.is_production else ["*"]
+            return [] if self.is_controlled_release else ["*"]
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
@@ -334,7 +372,7 @@ class Settings(BaseSettings):
         """
         if self.is_test_runtime:
             return self.global_rate_limit
-        if not self.is_production:
+        if not self.is_controlled_release:
             # Development: always unlimited unless an explicit positive override is set
             return self.global_rate_limit if self.global_rate_limit > 0 else 0
         if self.global_rate_limit <= 0:

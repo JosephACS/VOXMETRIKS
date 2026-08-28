@@ -1,4 +1,5 @@
 import { Injectable, Injector, ProviderToken, inject } from '@angular/core';
+import { SpotifyIntegrationService } from '../integrations/spotify/spotify-integration.service';
 import { ArtistContextService } from '../../packages/artist-space/services/artist-context.service';
 import { OrganizationContextService } from '../../packages/organizations/services/organization-context.service';
 import { HistoryService } from '../../packages/streaming/services/history.service';
@@ -23,6 +24,7 @@ export class SessionCleanupCoordinator {
 
   clearPrivateClientState(): void {
     this.run(() => this.resolve(MusicPlayerService)?.stopPlayback());
+    this.run(() => this.resolve(SpotifyIntegrationService)?.disconnect());
     this.run(() => this.resolve(OrganizationContextService)?.clearOrganizationScopedState());
     this.run(() => this.resolve(ArtistContextService)?.clear());
     this.run(() => this.resolve(SpaceContextService)?.clear());
